@@ -1,0 +1,103 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SFL Fleet Operational Console</title>
+  <link rel="stylesheet" href="/fleet/fleet-console.css">
+</head>
+<body>
+  <header class="shell-header">
+    <div>
+      <p class="eyebrow">SFL.FTLMP · Fleet & Vehicle Management</p>
+      <h1>Fleet operational console</h1>
+      <p class="muted">S166 command view for availability, compliance, workflow, integrations and go-live readiness.</p>
+    </div>
+    <form id="scopeForm" class="scope-card">
+      <label>Site scope
+        <input name="siteCode" value="ACCRA" maxlength="40">
+      </label>
+      <label>User role
+        <select name="role">
+          <option value="FLEET_MANAGER">Fleet Manager</option>
+          <option value="COMPLIANCE_OFFICER">Compliance Officer</option>
+          <option value="AUDITOR">Auditor</option>
+          <option value="FLEET_REPORTING_VIEWER">Reporting Viewer</option>
+        </select>
+      </label>
+      <button type="submit">Refresh console</button>
+    </form>
+  </header>
+
+  <main>
+    <section class="grid metrics" aria-label="Fleet dashboard indicators">
+      <article><span id="vehiclesAvailable">–</span><small>Vehicles available</small></article>
+      <article><span id="expiredCompliance">–</span><small>Expired compliance</small></article>
+      <article><span id="serviceDue">–</span><small>Service due/overdue</small></article>
+      <article><span id="assignmentConflicts">–</span><small>Assignment conflicts</small></article>
+      <article><span id="readinessBlockers">–</span><small>Readiness blockers</small></article>
+      <article><span id="integrationDeadLetters">–</span><small>Integration dead letters</small></article>
+    </section>
+
+    <section class="two-column">
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Operations snapshot</h2>
+          <button data-action="load-dashboard">Load</button>
+        </div>
+        <p id="snapshotMeta" class="muted">No snapshot loaded yet.</p>
+        <ul id="warnings" class="warnings"></ul>
+        <pre id="reconciliation"></pre>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Drilldown</h2>
+          <select id="drilldownIndicator">
+            <option value="EXPIRED_COMPLIANCE">Expired compliance</option>
+            <option value="SERVICE_DUE">Service due</option>
+            <option value="READINESS_BLOCKERS">Readiness blockers</option>
+            <option value="ASSIGNMENT_CONFLICTS">Assignment conflicts</option>
+          </select>
+        </div>
+        <button data-action="load-drilldown">Load drilldown</button>
+        <ul id="drilldownRows" class="rows"></ul>
+      </article>
+    </section>
+
+    <section class="two-column">
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Integration health</h2>
+          <button data-action="load-integrations">Check</button>
+        </div>
+        <pre id="integrationHealth"></pre>
+      </article>
+
+      <article class="panel">
+        <div class="panel-title">
+          <h2>Go-live readiness</h2>
+          <button data-action="load-readiness">Generate</button>
+        </div>
+        <p id="goLiveVerdict" class="verdict">Waiting for report.</p>
+        <ul id="goLiveBlockers" class="warnings"></ul>
+      </article>
+    </section>
+
+    <section class="panel">
+      <div class="panel-title">
+        <h2>Open workflow queue</h2>
+        <button data-action="load-workflow">Load open work</button>
+      </div>
+      <div id="workflowRows" class="table"></div>
+    </section>
+  </main>
+
+  <footer>
+    <span>SRS coverage: S166-01 → S166-05</span>
+    <span id="lastUpdated"></span>
+  </footer>
+
+  <script src="/fleet/fleet-console.js"></script>
+</body>
+</html>
