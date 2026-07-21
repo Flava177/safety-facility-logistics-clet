@@ -1,0 +1,149 @@
+package gh.edu.clet.sfl.fleetlogistics.fleet.api;
+
+import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.Arrays;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.oauth2.jwt.Jwt;
+import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
+import org.springframework.stereotype.Component;
+
+/**
+ * Produces the {@link ActorContext} every fleet command and query is authorised against.
+ *
+ * <p>Two sources, one interface — exactly the swap the workplan requires:
+ * <ul>
+ *   <li><strong>Production:</strong> the OIDC/JWT resource-server principal, using standard claims
+ *       ({@code sub}, {@code name}) plus the realm roles and site-scope claim. No provider-specific
+ *       type appears beyond this class.</li>
+ *   <li><strong>Development:</strong> the {@code X-SFL-*} headers, matching the convention already used
+ *       by the facilities service, active only when no authenticated JWT is present.</li>
+ * </ul>
+ */
+@Component
+public class FleetActorResolver {
+
+    static final String HEADER_USER = "X-SFL-User";
+    static final String HEADER_DISPLAY_NAME = "X-SFL-Display-Name";
+    static final String HEADER_ROLES = "X-SFL-Roles";
+    static final String HEADER_SITES = "X-SFL-Sites";
+    static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
+    static final String HEADER_SOURCE_CHANNEL = "X-SFL-Source-Channel";
+    static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
+
+    private static final String CLAIM_SITES = "site_scopes";
+    private static final String CLAIM_REALM_ACCESS = "realm_access";
+    private static final String CLAIM_ROLES = "roles";
+
+    /** Resolves the actor for the current request. */
+    public ActorContext resolve(HttpServletRequest request) {
+        String correlationId = CorrelationIdFilter.currentCorrelationId(request);
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        if (authentication instanceof JwtAuthenticationToken jwtToken) {
+            return fromJwt(jwtToken.getToken(), correlationId);
+        }
+        return fromHeaders(request, correlationId);
+    }
+
+    /** The declared source channel for the current request; defaults to {@code WEB}. */
+    public SourceChannel resolveSourceChannel(HttpServletRequest request) {
+        String header = request.getHeader(HEADER_SOURCE_CHANNEL);
+        if (header == null || header.isBlank()) {
+            return SourceChannel.WEB;
+        }
+        try {
+            return SourceChannel.valueOf(header.strip().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return SourceChannel.WEB;
+        }
+    }
+
+    /** The {@code Idempotency-Key} header, or {@code null} when the client did not supply one. */
+    public String resolveIdempotencyKey(HttpServletRequest request) {
+        String key = request.getHeader(HEADER_IDEMPOTENCY_KEY);
+        return key == null || key.isBlank() ? null : key.strip();
+    }
+
+    private ActorContext fromJwt(Jwt jwt, String correlationId) {
+        Set<SflRole> roles = realmRoles(jwt);
+        Set<String> sites = claimAsSet(jwt, CLAIM_SITES);
+        String displayName = jwt.getClaimAsString("name");
+        boolean serviceAccount = jwt.getClaimAsString("client_id") != null
+                && jwt.getClaimAsString("preferred_username") == null;
+        return new ActorContext(
+                new SiteScopedPrincipal(jwt.getSubject(), displayName, roles, sites, serviceAccount),
+                correlationId);
+    }
+
+    private ActorContext fromHeaders(HttpServletRequest request, String correlationId) {
+        String userId = header(request, HEADER_USER, "development-user");
+        Set<SflRole> roles = parseRoles(request.getHeader(HEADER_ROLES));
+        Set<String> sites = parseCsv(request.getHeader(HEADER_SITES));
+        return new ActorContext(
+                new SiteScopedPrincipal(userId, request.getHeader(HEADER_DISPLAY_NAME), roles, sites, false),
+                correlationId);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Set<SflRole> realmRoles(Jwt jwt) {
+        Object realmAccess = jwt.getClaim(CLAIM_REALM_ACCESS);
+        if (!(realmAccess instanceof java.util.Map<?, ?> claims)
+                || !(claims.get(CLAIM_ROLES) instanceof java.util.List<?> roles)) {
+            return Set.of();
+        }
+        return roles.stream()
+                .map(String::valueOf)
+                .map(FleetActorResolver::toRole)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private Set<String> claimAsSet(Jwt jwt, String claim) {
+        Object value = jwt.getClaim(claim);
+        if (value instanceof java.util.Collection<?> values) {
+            return values.stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet());
+        }
+        return parseCsv(jwt.getClaimAsString(claim));
+    }
+
+    private static Set<SflRole> parseRoles(String header) {
+        return parseCsv(header).stream()
+                .map(FleetActorResolver::toRole)
+                .filter(java.util.Objects::nonNull)
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    private static Set<String> parseCsv(String header) {
+        if (header == null || header.isBlank()) {
+            return Set.of();
+        }
+        return Arrays.stream(header.split(","))
+                .map(String::strip)
+                .filter(value -> !value.isBlank())
+                .collect(Collectors.toUnmodifiableSet());
+    }
+
+    /**
+     * Unknown role names are ignored rather than rejected: the identity provider is free to carry roles
+     * that mean nothing to this service, and an unknown role grants nothing.
+     */
+    private static SflRole toRole(String value) {
+        try {
+            return SflRole.valueOf(value.strip().toUpperCase(Locale.ROOT));
+        } catch (IllegalArgumentException exception) {
+            return null;
+        }
+    }
+
+    private static String header(HttpServletRequest request, String name, String fallback) {
+        String value = request.getHeader(name);
+        return value == null || value.isBlank() ? fallback : value.strip();
+    }
+}
