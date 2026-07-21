@@ -5,6 +5,8 @@ import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.ComplianceDocumentRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.DriverProfileRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.HrmsDriverDirectoryPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IdempotencyPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.NotificationPort;
@@ -20,6 +22,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditHashChain;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RegistrationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
@@ -253,7 +256,121 @@ public final class FleetTestDoubles {
         }
     }
 
+
+    // --- Driver register ----------------------------------------------------------------
+
+    /** In-memory driver register enforcing the same active-identifier uniqueness as the schema. */
+    public static final class InMemoryDriverProfileRepository implements DriverProfileRepository {
+
+        private final Map<UUID, DriverProfileReference> store = new LinkedHashMap<>();
+
+        @Override
+        public DriverProfileReference save(DriverProfileReference driver) {
+            store.put(driver.id(), driver);
+            return driver;
+        }
+
+        @Override
+        public Optional<DriverProfileReference> findById(UUID id) {
+            return Optional.ofNullable(store.get(id));
+        }
+
+        @Override
+        public Optional<DriverProfileReference> findByIdForUpdate(UUID id) {
+            return findById(id);
+        }
+
+        @Override
+        public Optional<DriverProfileReference> findActiveByStaffReference(SiteCode siteCode,
+                String staffReference) {
+            return store.values().stream()
+                    .filter(driver -> driver.siteCode().equals(siteCode))
+                    .filter(driver -> driver.staffReference().equalsIgnoreCase(staffReference.strip()))
+                    .filter(driver -> driver.lifecycleStatus().isEditable())
+                    .findFirst();
+        }
+
+        @Override
+        public Optional<DriverProfileReference> findActiveByLicenceNumber(SiteCode siteCode, String licenceNumber) {
+            String normalised = licenceNumber.strip().replaceAll("\s+", "");
+            return store.values().stream()
+                    .filter(driver -> driver.siteCode().equals(siteCode))
+                    .filter(driver -> driver.licence().number().equalsIgnoreCase(normalised))
+                    .filter(driver -> driver.lifecycleStatus().isEditable())
+                    .findFirst();
+        }
+
+        @Override
+        public DriverPage search(DriverSearchCriteria criteria, SiteScopeFilter scope) {
+            List<DriverProfileReference> matching = store.values().stream()
+                    .filter(driver -> scope.permits(driver.siteCode().value()))
+                    .filter(driver -> criteria.siteCode() == null
+                            || driver.siteCode().value().equalsIgnoreCase(criteria.siteCode()))
+                    .filter(driver -> criteria.lifecycleStatus() == null
+                            || driver.lifecycleStatus() == criteria.lifecycleStatus())
+                    .filter(driver -> criteria.eligibilityStatus() == null
+                            || driver.eligibilityStatus() == criteria.eligibilityStatus())
+                    .toList();
+            int size = criteria.size() <= 0 ? 20 : criteria.size();
+            int from = Math.min(criteria.page() * size, matching.size());
+            int to = Math.min(from + size, matching.size());
+            return new DriverPage(matching.subList(from, to), criteria.page(), size, matching.size(),
+                    Math.max((int) Math.ceil(matching.size() / (double) size), 1), "displayName: ASC");
+        }
+
+        @Override
+        public List<DriverProfileReference> findAllInScope(SiteScopeFilter scope) {
+            return store.values().stream()
+                    .filter(driver -> scope.permits(driver.siteCode().value()))
+                    .toList();
+        }
+
+        @Override
+        public List<DriverProfileReference> findExpiringOnOrBefore(LocalDate threshold) {
+            return store.values().stream()
+                    .filter(driver -> driver.lifecycleStatus().isEditable())
+                    .filter(driver -> !driver.licence().expiresOn().isAfter(threshold)
+                            || (driver.medicalClearanceExpiresOn() != null
+                            && !driver.medicalClearanceExpiresOn().isAfter(threshold)))
+                    .toList();
+        }
+
+        public int size() {
+            return store.size();
+        }
+    }
+
+    /** HRMS directory that accepts anything, and can be told to reject a specific reference. */
+    public static final class StubHrmsDirectory implements HrmsDriverDirectoryPort {
+
+        private final java.util.Set<String> unknownReferences = new java.util.HashSet<>();
+
+        public StubHrmsDirectory rejecting(String staffReference) {
+            unknownReferences.add(staffReference.toUpperCase(java.util.Locale.ROOT));
+            return this;
+        }
+
+        @Override
+        public void requireEmployedStaff(String staffReference, String siteCode) {
+            if (staffReference == null
+                    || unknownReferences.contains(staffReference.toUpperCase(java.util.Locale.ROOT))) {
+                throw gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException
+                        .of("HrmsStaff", staffReference);
+            }
+        }
+
+        @Override
+        public Optional<StaffDirectoryEntry> findStaff(String staffReference) {
+            if (staffReference == null
+                    || unknownReferences.contains(staffReference.toUpperCase(java.util.Locale.ROOT))) {
+                return Optional.empty();
+            }
+            return Optional.of(new StaffDirectoryEntry(staffReference, staffReference, null, null, true, null));
+        }
+    }
+
     // --- Cross-cutting ports ------------------------------------------------------------
+
 
     /** A real hash chain over an in-memory list, so tamper detection can be tested without a database. */
     public static final class RecordingAuditPort implements AuditPort {
