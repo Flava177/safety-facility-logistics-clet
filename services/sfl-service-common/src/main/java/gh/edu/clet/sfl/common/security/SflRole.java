@@ -1,0 +1,15 @@
+package gh.edu.clet.sfl.common.security;
+
+public enum SflRole {
+    SFL_ADMIN,
+    FACILITIES_DIRECTOR,
+    FACILITIES_MANAGER,
+    IFIMP_MAINTENANCE_SUPERVISOR,
+    IFIMP_TECHNICIAN,
+    IFIMP_REQUESTER,
+    VENDOR_TECHNICIAN,
+    COMMAND_ROLE,
+    AUDITOR,
+    DTI_ADMIN,
+    INTEGRATION_ENGINEER
+}

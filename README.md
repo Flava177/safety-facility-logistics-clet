@@ -1,0 +1,35 @@
+﻿# SFL Java Backend
+
+This repository is being realigned to the updated SFL SRS and Phase 1 microservices workflow plan.
+
+The active target architecture is four deployable Spring Boot microservices:
+
+- `services/sfl-facilities-service` for S152, S153 and S159.
+- `services/sfl-safety-security-service` for S160, S160a, S161, S162, S162a, S163 and S174.
+- `services/sfl-fleet-logistics-service` for S166, S168_fuel and S171.
+- `services/sfl-asset-visibility-service` for AVAMP-Lite and future S168 asset tagging/RFID/barcode inventory.
+
+The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` is retained only as Java migration/reference material while its IFIMP vertical slice is moved into the new service layout.
+
+## Source Documents
+
+- `docs/System Mappings and SRS/SFL_SRS.docx`
+- `docs/System Mappings and SRS/SFL_Phase1_Microservices_Build_Workflow_Plan.md`
+- `docs/System Mappings and SRS/CLET_Comprehensive_Digital_System_Mapping_v2.docx`
+- `docs/System Mappings and SRS/CLET_Cluster9_FSL_System_Architecture_Document_FULLY_INTEGRATED.docx`
+- `docs/System Mappings and SRS/SFL_Phase1_System_Architecture_Implementation_Guide_v2.md`
+
+The parent mapping document remains the source of truth for system IDs, Cluster 9 scope and phase classification. The microservices workflow plan is the source of truth for implementation architecture.
+
+## Build Foundation
+
+```powershell
+cd services
+..\mvnw.cmd test
+```
+
+Each service owns its database schema, outbox, inbox, package boundary and deployable artifact. Shared ecosystem services such as IAM, API gateway, notification, audit/evidence, integration gateway/event broker, reporting and document/object storage are integrated through adapters and are not duplicated inside SFL services.
+
+## Build vs Buy Rule
+
+Build CLET-owned workflow, governance, records, APIs, dashboards, audit/evidence references and integration adapters. Buy or integrate specialist platforms/hardware such as CCTV/VMS, access-control devices, biometric readers, fire/life-safety panels, intrusion panels, SMS/voice/signage providers, fuel provider feeds, GPS/telematics and RFID/barcode devices.

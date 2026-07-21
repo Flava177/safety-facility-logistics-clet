@@ -1,0 +1,101 @@
+services:
+  postgres:
+    image: postgres:18-alpine
+    environment:
+      POSTGRES_USER: ${SFL_POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${SFL_POSTGRES_DB:-sfl_microservices}
+    ports:
+      - "5434:5432"
+    volumes:
+      - sfl_microservices_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    environment:
+      RABBITMQ_DEFAULT_USER: ${SFL_RABBITMQ_USER:-sfl}
+      RABBITMQ_DEFAULT_PASS: ${SFL_RABBITMQ_PASSWORD:-change-me}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    command: ["start-dev"]
+    environment:
+      KEYCLOAK_ADMIN: ${SFL_KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${SFL_KEYCLOAK_ADMIN_PASSWORD:-change-me}
+    ports:
+      - "8080:8080"
+
+  sfl-facilities-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-facilities-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
+      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
+      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
+    ports:
+      - "8091:8080"
+    depends_on:
+      - postgres
+      - keycloak
+
+  sfl-safety-security-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-safety-security-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
+      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
+      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
+    ports:
+      - "8092:8080"
+    depends_on:
+      - postgres
+      - keycloak
+
+  sfl-fleet-logistics-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-fleet-logistics-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
+      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
+      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
+    ports:
+      - "8093:8080"
+    depends_on:
+      - postgres
+      - keycloak
+
+  sfl-asset-visibility-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-asset-visibility-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
+      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
+      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
+    ports:
+      - "8094:8080"
+    depends_on:
+      - postgres
+      - keycloak
+
+volumes:
+  sfl_microservices_postgres_data:

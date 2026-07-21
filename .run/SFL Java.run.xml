@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="SFL Java" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ACTIVE_PROFILES" value="local" />
+    <module name="sfl" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.SflApplication" />
+    <envs>
+      <env name="SFL_DB_URL" value="jdbc:postgresql://localhost:5434/sfl_java" />
+      <env name="SFL_DB_USERNAME" value="postgres" />
+      <env name="SFL_PORT" value="8081" />
+      <env name="SFL_SECURITY_ENABLED" value="false" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
+

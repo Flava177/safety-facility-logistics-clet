@@ -1,0 +1,47 @@
+spring:
+  application:
+    name: sfl-asset-visibility-service
+  datasource:
+    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5434/sfl_asset_visibility_service}
+    username: ${SFL_DB_USERNAME:postgres}
+    password: ${SFL_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: asset_visibility
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    default-schema: asset_visibility
+    schemas: asset_visibility
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+
+server:
+  port: ${SFL_PORT:8094}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+sfl:
+  service-boundary:
+    schema: asset_visibility
+    owns: "Asset visibility service for AVAMP-Lite and future S168"
+  security:
+    enabled: ${SFL_SECURITY_ENABLED:false}

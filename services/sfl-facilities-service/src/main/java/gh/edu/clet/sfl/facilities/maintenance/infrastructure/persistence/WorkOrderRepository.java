@@ -1,0 +1,11 @@
+package gh.edu.clet.sfl.facilities.maintenance.infrastructure.persistence;
+
+import java.util.List;
+import java.util.UUID;
+
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface WorkOrderRepository extends JpaRepository<WorkOrderRecord, UUID> {
+
+    List<WorkOrderRecord> findAllByOrderByCreatedAtDesc();
+}

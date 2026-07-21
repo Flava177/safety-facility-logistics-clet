@@ -1,0 +1,25 @@
+spring:
+  config:
+    activate:
+      on-profile: local
+  datasource:
+    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5434/sfl_java}
+    username: ${SFL_DB_USERNAME:postgres}
+    password: ${SFL_DB_PASSWORD:}
+  flyway:
+    clean-disabled: true
+  jpa:
+    hibernate:
+      ddl-auto: validate
+
+server:
+  port: ${SFL_PORT:8081}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+
+sfl:
+  security:
+    enabled: ${SFL_SECURITY_ENABLED:false}

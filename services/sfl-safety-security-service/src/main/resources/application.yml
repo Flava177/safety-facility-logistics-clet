@@ -1,0 +1,46 @@
+spring:
+  application:
+    name: sfl-safety-security-service
+  datasource:
+    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5434/sfl_safety_security_service}
+    username: ${SFL_DB_USERNAME:postgres}
+    password: ${SFL_DB_PASSWORD:}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: safety_security
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    default-schema: safety_security
+    schemas: safety_security
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+
+server:
+  port: ${SFL_PORT:8092}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+sfl:
+  service-boundary:
+    schema: safety_security
+    owns: "Safety and security service for S160, S160a, S161, S162, S162a, S163 and S174"
+

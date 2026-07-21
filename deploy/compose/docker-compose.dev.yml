@@ -1,0 +1,49 @@
+﻿services:
+  postgres:
+    image: postgres:18-alpine
+    container_name: sfl-dev-postgres
+    environment:
+      POSTGRES_USER: ${SFL_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      POSTGRES_DB: ${SFL_POSTGRES_DB:-sfl}
+    ports:
+      - "5432:5432"
+    volumes:
+      - sfl_postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7-alpine
+    container_name: sfl-dev-redis
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    volumes:
+      - sfl_redis_data:/data
+
+  rabbitmq:
+    image: rabbitmq:3-management-alpine
+    container_name: sfl-dev-rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${SFL_RABBITMQ_USER:-sfl}
+      RABBITMQ_DEFAULT_PASS: ${SFL_RABBITMQ_PASSWORD:-change-me}
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - sfl_rabbitmq_data:/var/lib/rabbitmq
+
+  keycloak:
+    image: quay.io/keycloak/keycloak:25.0
+    container_name: sfl-dev-keycloak
+    command: ["start-dev"]
+    environment:
+      KEYCLOAK_ADMIN: ${SFL_KEYCLOAK_ADMIN:-admin}
+      KEYCLOAK_ADMIN_PASSWORD: ${SFL_KEYCLOAK_ADMIN_PASSWORD:-change-me}
+    ports:
+      - "8080:8080"
+
+volumes:
+  sfl_postgres_data:
+  sfl_redis_data:
+  sfl_rabbitmq_data:
+
