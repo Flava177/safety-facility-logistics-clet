@@ -77,6 +77,38 @@ Every integration event should carry these fields:
 | `sfl.ftlmp.fuel-transaction-received.v1` | A fuel transaction is received from a vendor/source. |
 | `sfl.ftlmp.fuel-exception-detected.v1` | Fuel reconciliation identifies an exception. |
 
+#### S166 Fleet lifecycle additions
+
+Added July 2026 with the S166 Fleet and Vehicle Management slice. The three fleet events above already covered
+vehicle creation, readiness and location; `SRS-SFL-S166-01/02/03` also require change events for compliance,
+service, driver eligibility, assignment, inspection, workflow escalation and evidence. These follow the same
+naming rule and are documented in `docs/fleet/S166_Event_Contracts.md`.
+
+| Event | Trigger |
+|---|---|
+| `sfl.ftlmp.vehicle-updated.v1` | Mutable vehicle attributes change. |
+| `sfl.ftlmp.vehicle-lifecycle-changed.v1` | A vehicle moves between active/inactive/suspended/archived. |
+| `sfl.ftlmp.vehicle-availability-changed.v1` | Vehicle availability changes, including becoming unavailable. |
+| `sfl.ftlmp.vehicle-compliance-expiring.v1` | A compliance document enters the configured warning window. |
+| `sfl.ftlmp.vehicle-compliance-expired.v1` | A compliance document expires. |
+| `sfl.ftlmp.vehicle-service-due.v1` | Vehicle service becomes due by date or odometer. |
+| `sfl.ftlmp.vehicle-service-overdue.v1` | Vehicle service becomes overdue. |
+| `sfl.ftlmp.driver-registered.v1` | A driver profile reference is registered. |
+| `sfl.ftlmp.driver-eligibility-changed.v1` | Driver eligibility changes. |
+| `sfl.ftlmp.vehicle-assigned.v1` | A vehicle and driver are assigned to a trip. |
+| `sfl.ftlmp.trip-reassigned.v1` | A trip's vehicle or driver is replaced. |
+| `sfl.ftlmp.trip-cancelled.v1` | A trip is cancelled. |
+| `sfl.ftlmp.trip-completed.v1` | A trip is closed with required evidence. |
+| `sfl.ftlmp.vehicle-inspection-failed.v1` | An inspection fails or records a critical defect. |
+| `sfl.ftlmp.fleet-workflow-escalated.v1` | A fleet workflow item breaches its SLA or is escalated manually. |
+| `sfl.ftlmp.fleet-evidence-registered.v1` | A fleet evidence reference is registered. |
+| `sfl.ftlmp.fleet-audit-integrity-failed.v1` | Audit hash-chain replay detects tampering (critical compliance alert). |
+
+> **Known inconsistency (do not copy).** `sfl-facilities-service` currently publishes `sfl.facilities.work-order-created`
+> and `sfl-asset-visibility-service` publishes `sfl.avamp.*` without the `.vN` suffix, neither of which matches the
+> naming rule above. S166 follows this catalog. Renaming the earlier services is tracked as conflict **C-03** in
+> `docs/fleet/S166_Gap_And_Conflict_Report.md` and must happen before an external consumer binds those routing keys.
+
 ### SFL.AVAMP
 
 | Event | Trigger |
