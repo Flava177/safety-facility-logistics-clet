@@ -2,7 +2,6 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.e2e;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-import java.util.Map;
 import java.net.URI;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
