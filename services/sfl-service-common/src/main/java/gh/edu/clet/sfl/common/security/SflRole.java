@@ -11,5 +11,14 @@ public enum SflRole {
     COMMAND_ROLE,
     AUDITOR,
     DTI_ADMIN,
-    INTEGRATION_ENGINEER
+    INTEGRATION_ENGINEER,
+
+    // Fleet and logistics user classes (SRS S166). Added for the S166 slice; adding enum
+    // constants changes no existing signature and no existing service behaviour.
+    FLEET_LOGISTICS_OFFICER,
+    FLEET_MANAGER,
+    FLEET_DRIVER,
+    COMPLIANCE_OFFICER,
+    FLEET_REPORTING_VIEWER,
+    SERVICE_INTEGRATION
 }

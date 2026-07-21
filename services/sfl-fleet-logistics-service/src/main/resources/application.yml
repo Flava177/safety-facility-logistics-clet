@@ -19,6 +19,11 @@ spring:
     default-schema: fleet_logistics
     schemas: fleet_logistics
     locations: classpath:db/migration
+  rabbitmq:
+    host: ${SFL_RABBITMQ_HOST:localhost}
+    port: ${SFL_RABBITMQ_PORT:5672}
+    username: ${SFL_RABBITMQ_USERNAME:guest}
+    password: ${SFL_RABBITMQ_PASSWORD:guest}
   security:
     oauth2:
       resourceserver:
@@ -43,4 +48,33 @@ sfl:
   service-boundary:
     schema: fleet_logistics
     owns: "Fleet and logistics service for S166, S168_fuel and S171"
-
+  security:
+    # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
+    enabled: ${SFL_SECURITY_ENABLED:false}
+  fleet:
+    messaging:
+      # local    — events are delivered to the in-process transport and logged (no broker provisioned).
+      # rabbitmq — events are published to the sfl.events exchange.
+      # Selecting rabbitmq without a broker fails at startup rather than silently dropping events.
+      transport: ${SFL_FLEET_EVENT_TRANSPORT:local}
+      exchange: ${SFL_FLEET_EVENT_EXCHANGE:sfl.events}
+      drain-batch-size: 50
+    notification:
+      # recorded — notification intents are persisted and logged; no provider is procured for Phase 1.
+      provider: ${SFL_FLEET_NOTIFICATION_PROVIDER:recorded}
+    scheduling:
+      outbox:
+        enabled: ${SFL_FLEET_OUTBOX_SCHEDULER:true}
+        fixed-delay: PT5S
+        initial-delay: PT10S
+      sla:
+        enabled: ${SFL_FLEET_SLA_SCHEDULER:true}
+        fixed-delay: PT1M
+        initial-delay: PT30S
+      compliance:
+        enabled: ${SFL_FLEET_COMPLIANCE_SCHEDULER:true}
+        cron: ${SFL_FLEET_COMPLIANCE_CRON:0 5 1 * * *}
+      dashboard:
+        enabled: ${SFL_FLEET_DASHBOARD_SCHEDULER:true}
+        fixed-delay: PT5M
+        initial-delay: PT20S

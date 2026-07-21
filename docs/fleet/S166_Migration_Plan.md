@@ -4,7 +4,10 @@
 **Location:** `services/sfl-fleet-logistics-service/src/main/resources/db/migration`
 **Baseline:** `V1__service_foundation.sql` (existing: `service_metadata`, `outbox_messages`, `inbox_messages`)
 
-Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` and `S171` take `V9+`.
+Numbering deviates from workplan §4.3 — see conflict **C-05**. Migrations are numbered in **build order**,
+so each commit leaves the schema consistent: the cross-cutting platform foundation (audit, runtime
+configuration, notifications, idempotency, outbox delivery state) lands first because every feature slice
+depends on it. `S168_fuel` and `S171` take `V10+`.
 
 ## Rules applied to every migration
 
@@ -21,7 +24,21 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 
 ---
 
-## V2 — `V2__fleet_vehicle_register.sql` *(S166-01)*
+## V2 — `V2__fleet_platform_foundation.sql` *(cross-cutting: S166-02, -03, -04)*
+
+| Object | Notes |
+|---|---|
+| `fleet_append_only_guard()` | Trigger function that rejects UPDATE and DELETE; attached to every immutable table |
+| `fleet_audit_records` | **Append-only, hash-chained**: id, `sequence_no` UNIQUE, site scope, actor id/display name, action, resource type/id, `before_value JSONB`, `after_value JSONB`, correlation id, source channel, occurred at, `previous_hash`, `record_hash` |
+| `fleet_audit_chain_state` | Single-row chain head (`id = 1` check constraint) holding `head_hash` and `next_sequence`; appenders take a row lock here so concurrent writes cannot fork the chain |
+| `fleet_runtime_configuration` | Versioned config-without-code (`config_key`, nullable `site_code` for the platform default, value, type, effective window, updated by/at) seeded with the ten S166 thresholds |
+| `fleet_notification_intents` | Recorded workflow notifications (recipient type/recipient, kind, subject, context, status) |
+| `fleet_idempotency_keys` | `(operation, idempotency_key)` UNIQUE with a request fingerprint and the original result id |
+| `outbox_messages` (ALTER) | Adds `attempt_count`, `next_attempt_at`, `last_attempt_at`, `dead_lettered_at`, `actor_id`, `trace_parent`, `schema_version` plus a partial index for `FOR UPDATE SKIP LOCKED` draining |
+| Indexes | audit: `(site_scope, occurred_at DESC)`, `(resource_type, resource_id, occurred_at DESC)`, `(actor_id, occurred_at DESC)`, `(action, occurred_at DESC)`; config: one active row per key per scope (two partial unique indexes) |
+| Triggers | `fleet_audit_records` rejects UPDATE and DELETE |
+
+## V3 — `V3__fleet_vehicle_register.sql` *(S166-01)*
 
 | Object | Notes |
 |---|---|
@@ -34,7 +51,7 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 | Indexes | `(site_code, lifecycle_status, availability_status)`, `(site_code, service_status)`, `(expires_on) WHERE status IN ('ACTIVE','EXPIRING')`, `(vehicle_id, performed_on DESC)`, `(next_due_on)`, trigram-free `upper(registration_number)` search index |
 | Checks | odometer ≥ 0; `expires_on >= issued_on`; `next_due_odometer >= odometer_at_service` |
 
-## V3 — `V3__fleet_driver_register.sql` *(S166-01)*
+## V4 — `V4__fleet_driver_register.sql` *(S166-01)*
 
 | Object | Notes |
 |---|---|
@@ -43,7 +60,7 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 | `ux_fleet_drivers_site_licence_active` | `UNIQUE (site_code, upper(licence_number)) WHERE lifecycle_status <> 'ARCHIVED'` |
 | Indexes | `(site_code, lifecycle_status, eligibility_status)`, `(licence_expires_on)` |
 
-## V4 — `V4__fleet_trips_and_inspections.sql` *(S166-02, supporting S166-01)*
+## V5 — `V5__fleet_trips_and_inspections.sql` *(S166-02, supporting S166-01)*
 
 | Object | Notes |
 |---|---|
@@ -55,7 +72,7 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 | Indexes | `(site_code, status, planned_start DESC)`, `(vehicle_id, planned_start DESC)`, `(driver_id, planned_start DESC)`, `(vehicle_id, performed_at DESC)` on inspections |
 | Checks | `planned_end > planned_start`; `end_odometer >= start_odometer`; terminal statuses require their reason columns |
 
-## V5 — `V5__fleet_workflow_and_sla.sql` *(S166-02)*
+## V6 — `V6__fleet_workflow_and_sla.sql` *(S166-02)*
 
 | Object | Notes |
 |---|---|
@@ -63,24 +80,21 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 | `fleet_workflow_transitions` | **append-only**: item id, sequence, from/to status, action, actor, occurred at, reason, correlation id |
 | `fleet_workflow_comments` | **append-only**: item id, author, body, occurred at, correlation id |
 | `fleet_sla_rules` | runtime configuration: workflow type, priority, severity, site (nullable = any), operating mode (nullable = any), response minutes, resolution minutes, escalation role, effective from/to, version, updated by — *"evaluated using the runtime configuration active at evaluation time"* |
-| `fleet_runtime_configuration` | generic versioned key/value (`JSONB`) for freshness thresholds, compliance warning windows, inspection validity, required document types |
-| `fleet_notification_intents` | recorded notifications (recipient role/user, channel, template, payload, status) — the `NotificationPort` record of truth |
 | Triggers | `fleet_workflow_transitions` / `fleet_workflow_comments` reject UPDATE and DELETE |
 | Indexes | `(site_code, status, sla_due_at)`, `(assignee, status)`, `(status, sla_due_at) WHERE status NOT IN ('CLOSED','CANCELLED')`, `(item_id, sequence)` |
 
-## V6 — `V6__fleet_audit_and_evidence.sql` *(S166-03)*
+## V7 — `V7__fleet_evidence.sql` *(S166-03)*
 
 | Object | Notes |
 |---|---|
-| `fleet_audit_records` | **append-only, hash-chained**: id, `sequence_no BIGSERIAL UNIQUE`, site scope, actor id/display, action, resource type/id, `before_value JSONB`, `after_value JSONB`, correlation id, source channel, occurred at, `previous_hash`, `record_hash` |
 | `fleet_evidence_references` | id, evidence type, file reference (URI — no binary content), `hash_algorithm`, `hash_value`, uploader, related workflow/trip/inspection ids, retention class, legal hold, site, registered at, metadata |
 | `fleet_evidence_access_log` | **append-only**: evidence id, actor, action (`VIEW`/`EXPORT`), occurred at, correlation id, justification |
 | `fleet_evidence_export_requests` | id, evidence id, requester, justification, recipient, status, approver, approved/rejected at, decision reason, exported at |
-| Triggers | `fleet_audit_records`, `fleet_evidence_access_log` reject UPDATE and DELETE (`fleet_append_only_guard()`) |
-| Indexes | `(sequence_no)`, `(site_scope, occurred_at DESC)`, `(resource_type, resource_id, occurred_at DESC)`, `(actor_id, occurred_at DESC)`, `(related_workflow_id)`, `(retention_class)`, `(legal_hold) WHERE legal_hold` |
+| Triggers | `fleet_evidence_access_log` rejects UPDATE and DELETE (`fleet_append_only_guard()` from V2) |
+| Indexes | `(related_workflow_id)`, `(site_code, registered_at DESC)`, `(retention_class)`, `(legal_hold) WHERE legal_hold` |
 | Checks | `retention_class` `NOT NULL` (conflict **C-08**); `hash_value` `NOT NULL` |
 
-## V7 — `V7__fleet_integration_inbox_outbox.sql` *(S166-04)*
+## V8 — `V8__fleet_integration_inbox_outbox.sql` *(S166-04)*
 
 | Object | Notes |
 |---|---|
@@ -93,7 +107,7 @@ Numbering deviates from workplan §4.3 — see conflict **C-05**. `S168_fuel` an
 | `vehicle_telematics_positions` | vehicle id, site, latitude, longitude, speed, heading, recorded at (device), received at, provider message reference, inbox message id |
 | Indexes | `(vehicle_id, recorded_at DESC)`, `(source_system, processing_status, received_at DESC)`, `(capability) UNIQUE WHERE active` on endpoints |
 
-## V8 — `V8__fleet_dashboard_projection.sql` *(S166-05)*
+## V9 — `V9__fleet_dashboard_projection.sql` *(S166-05)*
 
 | Object | Notes |
 |---|---|
