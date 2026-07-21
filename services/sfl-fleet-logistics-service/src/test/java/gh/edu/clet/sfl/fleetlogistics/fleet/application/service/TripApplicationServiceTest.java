@@ -1,0 +1,429 @@
+package gh.edu.clet.sfl.fleetlogistics.fleet.application.service;
+
+import static gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures.ACCRA;
+import static gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures.NOW;
+import static gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures.TODAY;
+import static gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures.metadata;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AssignTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CancelTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CloseTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CreateTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.HoldTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RecordInspectionCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.StartTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.AssignmentConflictException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ClosureEvidenceMissingException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DriverIneligibleException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetErrorCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ReadinessBlockedException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DefectSeverity;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.LicenceClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.LicenceDetails;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleAvailabilityStatus;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleInspection;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceStatus;
+import gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures;
+import gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetTestDoubles;
+import gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetWorkflowTestDoubles;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDate;
+import java.time.ZoneOffset;
+import java.util.List;
+import java.util.UUID;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Test;
+
+/**
+ * Traces: SRS-SFL-S166-02 assignment, hold, cancellation and closure, and the readiness gating that
+ * makes an unfit assignment impossible.
+ */
+class TripApplicationServiceTest {
+
+    private static final Instant PERIOD_START = NOW.plus(Duration.ofHours(2));
+    private static final Instant PERIOD_END = NOW.plus(Duration.ofHours(6));
+    private static final UUID EVIDENCE_ID = UUID.fromString("44444444-4444-4444-4444-444444444444");
+
+    private FleetTestDoubles.InMemoryVehicleRepository vehicles;
+    private FleetTestDoubles.InMemoryDriverProfileRepository drivers;
+    private FleetTestDoubles.InMemoryComplianceDocumentRepository complianceDocuments;
+    private FleetWorkflowTestDoubles.InMemoryTripRepository trips;
+    private FleetWorkflowTestDoubles.InMemoryInspectionRepository inspections;
+    private FleetWorkflowTestDoubles.RecordingWorkflowRaiser workflowRaiser;
+    private FleetTestDoubles.RecordingAuditPort audit;
+    private FleetTestDoubles.RecordingEventPublisher events;
+    private TripApplicationService service;
+
+    private Vehicle vehicle;
+    private DriverProfileReference driver;
+
+    @BeforeEach
+    void setUp() {
+        vehicles = new FleetTestDoubles.InMemoryVehicleRepository();
+        drivers = new FleetTestDoubles.InMemoryDriverProfileRepository();
+        complianceDocuments = new FleetTestDoubles.InMemoryComplianceDocumentRepository();
+        trips = new FleetWorkflowTestDoubles.InMemoryTripRepository();
+        inspections = new FleetWorkflowTestDoubles.InMemoryInspectionRepository();
+        workflowRaiser = new FleetWorkflowTestDoubles.RecordingWorkflowRaiser();
+
+        Clock clock = Clock.fixed(NOW, ZoneOffset.UTC);
+        audit = new FleetTestDoubles.RecordingAuditPort(clock);
+        events = new FleetTestDoubles.RecordingEventPublisher();
+
+        FleetReadinessService readiness = new FleetReadinessService(complianceDocuments, inspections, trips,
+                drivers, new FleetTestDoubles.FixedRuntimeConfiguration(), clock);
+        service = new TripApplicationService(trips, vehicles, inspections, readiness, workflowRaiser,
+                new FleetAccessPolicy(), audit, events, new FleetTestDoubles.InMemoryIdempotencyPort(), clock);
+
+        vehicle = vehicles.save(FleetFixtures.vehicle());
+        driver = drivers.save(eligibleDriver());
+        giveVehicleFullCompliance();
+    }
+
+    // --- creation and assignment --------------------------------------------------------
+
+    @Test
+    @DisplayName("a compliant vehicle and eligible driver are assigned, audited and published")
+    void valid_assignment_succeeds() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThat(trip.status()).isEqualTo(TripStatus.ASSIGNED);
+        assertThat(trip.vehicleId()).isEqualTo(vehicle.id());
+        assertThat(trip.driverId()).isEqualTo(driver.id());
+        assertThat(vehicles.findById(vehicle.id()).orElseThrow().availabilityStatus())
+                .isEqualTo(VehicleAvailabilityStatus.ASSIGNED);
+        assertThat(audit.hasRecord(AuditAction.CREATE, "Trip")).isTrue();
+        assertThat(events.types()).contains(FleetEventType.VEHICLE_ASSIGNED);
+    }
+
+    @Test
+    @DisplayName("a trip may be planned without a vehicle or driver")
+    void a_trip_may_be_planned_first() {
+        Trip trip = service.create(createCommand(null, null, "idem-1"));
+
+        assertThat(trip.status()).isEqualTo(TripStatus.PLANNED);
+        assertThat(events.types()).doesNotContain(FleetEventType.VEHICLE_ASSIGNED);
+    }
+
+    @Test
+    @DisplayName("expired compliance blocks the assignment and names the document")
+    void expired_compliance_blocks_assignment() {
+        Vehicle vehicleWithExpiredInsurance = vehicles.save(FleetFixtures.vehicle(
+                UUID.fromString("77777777-7777-7777-7777-777777777777"), "GT-7777-26", ACCRA));
+        giveComplianceExcept(vehicleWithExpiredInsurance.id(), ComplianceDocumentType.INSURANCE_CERTIFICATE);
+        complianceDocuments.save(FleetFixtures.complianceDocument(vehicleWithExpiredInsurance.id(),
+                ComplianceDocumentType.INSURANCE_CERTIFICATE, TODAY.minusYears(1), TODAY.minusDays(1)));
+
+        assertThatThrownBy(() -> service.create(createCommand(vehicleWithExpiredInsurance.id(), driver.id(),
+                "idem-1")))
+                .isInstanceOf(ReadinessBlockedException.class)
+                .extracting(exception -> ((ReadinessBlockedException) exception).details())
+                .satisfies(details -> assertThat(details.get("blockerCodes").toString())
+                        .contains("COMPLIANCE_DOCUMENT_EXPIRED"));
+
+        assertThat(trips.size()).isZero();
+    }
+
+    @Test
+    @DisplayName("an ineligible driver blocks the assignment with the driver-specific error")
+    void ineligible_driver_blocks_assignment() {
+        DriverProfileReference expired = drivers.save(driverWithLicenceExpiring(TODAY.minusDays(1)));
+
+        assertThatThrownBy(() -> service.create(createCommand(vehicle.id(), expired.id(), "idem-1")))
+                .isInstanceOf(DriverIneligibleException.class)
+                .hasMessage(FleetErrorCode.FLEET_DRIVER_INELIGIBLE.message());
+    }
+
+    @Test
+    @DisplayName("an overlapping vehicle assignment is refused as a conflict")
+    void overlapping_vehicle_assignment_is_refused() {
+        service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        DriverProfileReference otherDriver = drivers.save(anotherEligibleDriver());
+
+        assertThatThrownBy(() -> service.create(createCommand(vehicle.id(), otherDriver.id(), "idem-2")))
+                .isInstanceOf(AssignmentConflictException.class)
+                .hasMessage(FleetErrorCode.FLEET_ASSIGNMENT_CONFLICT.message());
+    }
+
+    @Test
+    @DisplayName("an overlapping driver assignment is refused as a conflict")
+    void overlapping_driver_assignment_is_refused() {
+        service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        Vehicle otherVehicle = vehicles.save(FleetFixtures.vehicle(
+                UUID.fromString("55555555-5555-5555-5555-555555555555"), "GT-9999-26", ACCRA));
+        giveCompliance(otherVehicle.id());
+
+        assertThatThrownBy(() -> service.create(createCommand(otherVehicle.id(), driver.id(), "idem-2")))
+                .isInstanceOf(AssignmentConflictException.class);
+    }
+
+    @Test
+    @DisplayName("back-to-back trips on the same vehicle do not conflict")
+    void back_to_back_trips_do_not_conflict() {
+        service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        Trip second = service.create(new CreateTripCommand(vehicle.id(), driver.id(), "ACCRA",
+                "Return leg", "Kumasi Centre", "Accra HQ", OperatingMode.EXAMINATION, PERIOD_END,
+                PERIOD_END.plus(Duration.ofHours(4)), FleetTestDoubles.fleetOfficer("ACCRA"),
+                SourceChannel.WEB, "idem-2"));
+
+        assertThat(second.status()).isEqualTo(TripStatus.ASSIGNED);
+        assertThat(trips.size()).isEqualTo(2);
+    }
+
+    @Test
+    @DisplayName("an emergency-only vehicle is refused for a routine trip")
+    void emergency_only_vehicle_is_refused_for_routine_work() {
+        Vehicle ambulance = vehicles.save(FleetFixtures.emergencyOnlyVehicle());
+        giveCompliance(ambulance.id());
+
+        assertThatThrownBy(() -> service.create(new CreateTripCommand(ambulance.id(), driver.id(), "ACCRA",
+                "Campus shuttle", "Accra HQ", "Legon", OperatingMode.ROUTINE, PERIOD_START, PERIOD_END,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB, "idem-1")))
+                .isInstanceOf(ReadinessBlockedException.class)
+                .extracting(exception -> ((ReadinessBlockedException) exception).details())
+                .satisfies(details -> assertThat(details.get("blockerCodes").toString())
+                        .contains("EMERGENCY_ONLY_RESTRICTION"));
+    }
+
+    @Test
+    @DisplayName("a viewer cannot create a trip")
+    void viewer_cannot_create_a_trip() {
+        assertThatThrownBy(() -> service.create(new CreateTripCommand(vehicle.id(), driver.id(), "ACCRA",
+                "Shuttle", "A", "B", OperatingMode.ROUTINE, PERIOD_START, PERIOD_END,
+                FleetTestDoubles.reportingViewer("ACCRA"), SourceChannel.WEB, "idem-1")))
+                .isInstanceOf(FleetAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("reassignment needs a reason and releases the previous vehicle")
+    void reassignment_requires_a_reason_and_releases_the_previous_vehicle() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        Vehicle replacement = vehicles.save(FleetFixtures.vehicle(
+                UUID.fromString("55555555-5555-5555-5555-555555555555"), "GT-9999-26", ACCRA));
+        giveCompliance(replacement.id());
+
+        assertThatThrownBy(() -> service.assign(new AssignTripCommand(trip.id(), replacement.id(), driver.id(),
+                null, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("reason is required");
+
+        Trip reassigned = service.assign(new AssignTripCommand(trip.id(), replacement.id(), driver.id(),
+                "Original vehicle grounded", null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThat(reassigned.vehicleId()).isEqualTo(replacement.id());
+        assertThat(vehicles.findById(vehicle.id()).orElseThrow().currentTripId()).isNull();
+        assertThat(events.types()).contains(FleetEventType.TRIP_REASSIGNED);
+    }
+
+    // --- start, hold, cancel, close ------------------------------------------------------
+
+    @Test
+    @DisplayName("starting without a valid inspection is blocked")
+    void start_requires_an_inspection() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThatThrownBy(() -> service.start(new StartTripCommand(trip.id(), 42_000L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
+                .isInstanceOf(ReadinessBlockedException.class)
+                .extracting(exception -> ((ReadinessBlockedException) exception).details())
+                .satisfies(details -> assertThat(details.get("blockerCodes").toString())
+                        .contains("MANDATORY_INSPECTION_MISSING"));
+    }
+
+    @Test
+    @DisplayName("a clean pre-trip inspection lets the trip start and marks the vehicle in use")
+    void clean_inspection_allows_the_trip_to_start() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        service.recordInspection(inspectionCommand(trip.id(), List.of(), "idem-insp-1"));
+
+        Trip started = service.start(new StartTripCommand(trip.id(), 42_100L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThat(started.status()).isEqualTo(TripStatus.IN_PROGRESS);
+        assertThat(vehicles.findById(vehicle.id()).orElseThrow().availabilityStatus())
+                .isEqualTo(VehicleAvailabilityStatus.IN_USE);
+    }
+
+    @Test
+    @DisplayName("a critical inspection defect grounds the vehicle and raises a defect workflow item")
+    void critical_defect_takes_vehicle_out_of_service() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        VehicleInspection inspection = service.recordInspection(inspectionCommand(trip.id(),
+                List.of(new RecordInspectionCommand.Finding("BRAKES", "Brake failure",
+                        DefectSeverity.CRITICAL)), "idem-insp-1"));
+
+        assertThat(inspection.permitsUse()).isFalse();
+        assertThat(vehicles.findById(vehicle.id()).orElseThrow().serviceStatus())
+                .isEqualTo(VehicleServiceStatus.OUT_OF_SERVICE);
+        assertThat(events.types()).contains(FleetEventType.VEHICLE_INSPECTION_FAILED);
+        assertThat(workflowRaiser.raised()).anySatisfy(entry ->
+                assertThat(entry).startsWith("INSPECTION_DEFECT"));
+
+        // And the trip can no longer start.
+        assertThatThrownBy(() -> service.start(new StartTripCommand(trip.id(), 42_100L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
+                .isInstanceOf(ReadinessBlockedException.class);
+    }
+
+    @Test
+    @DisplayName("hold and resume return the trip to what it was doing")
+    void hold_and_resume() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        Trip held = service.holdOrResume(new HoldTripCommand(trip.id(), HoldTripCommand.HoldAction.HOLD,
+                "Awaiting fuel card", null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+        assertThat(held.status()).isEqualTo(TripStatus.ON_HOLD);
+
+        Trip resumed = service.holdOrResume(new HoldTripCommand(trip.id(), HoldTripCommand.HoldAction.RESUME,
+                null, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+        assertThat(resumed.status()).isEqualTo(TripStatus.ASSIGNED);
+    }
+
+    @Test
+    @DisplayName("only a privileged role may cancel, and the vehicle is released")
+    void cancellation_is_privileged_and_releases_the_vehicle() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThatThrownBy(() -> service.cancel(new CancelTripCommand(trip.id(), "No longer needed", null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
+                .isInstanceOf(gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception
+                        .UnauthorizedApprovalException.class);
+
+        Trip cancelled = service.cancel(new CancelTripCommand(trip.id(), "No longer needed", null,
+                FleetTestDoubles.fleetManager("ACCRA"), SourceChannel.WEB));
+
+        assertThat(cancelled.status()).isEqualTo(TripStatus.CANCELLED);
+        assertThat(vehicles.findById(vehicle.id()).orElseThrow().availabilityStatus())
+                .isEqualTo(VehicleAvailabilityStatus.AVAILABLE);
+        assertThat(events.types()).contains(FleetEventType.TRIP_CANCELLED);
+    }
+
+    @Test
+    @DisplayName("closure without evidence is blocked with the SRS wording")
+    void closure_requires_evidence() {
+        Trip inProgress = startedTrip();
+
+        assertThatThrownBy(() -> service.close(new CloseTripCommand(inProgress.id(), "Delivered", null,
+                42_500L, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
+                .isInstanceOf(ClosureEvidenceMissingException.class)
+                .hasMessage(FleetErrorCode.FLEET_CLOSURE_EVIDENCE_MISSING.message());
+    }
+
+    @Test
+    @DisplayName("a valid closure completes the trip, releases the vehicle and publishes completion")
+    void valid_closure_completes_the_trip() {
+        Trip inProgress = startedTrip();
+
+        Trip closed = service.close(new CloseTripCommand(inProgress.id(), "Materials delivered and signed for",
+                EVIDENCE_ID, 42_480L, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThat(closed.status()).isEqualTo(TripStatus.COMPLETED);
+        assertThat(closed.distanceCovered()).isEqualTo(380L);
+        Vehicle released = vehicles.findById(vehicle.id()).orElseThrow();
+        assertThat(released.availabilityStatus()).isEqualTo(VehicleAvailabilityStatus.AVAILABLE);
+        assertThat(released.odometer().value()).isEqualTo(42_480L);
+        assertThat(events.types()).contains(FleetEventType.TRIP_COMPLETED);
+        assertThat(audit.hasRecord(AuditAction.CLOSE, "Trip")).isTrue();
+    }
+
+    @Test
+    @DisplayName("the audit chain stays intact across a full trip lifecycle")
+    void audit_chain_stays_intact_across_the_lifecycle() {
+        Trip inProgress = startedTrip();
+        service.close(new CloseTripCommand(inProgress.id(), "Delivered", EVIDENCE_ID, 42_480L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThat(audit.verifyChain().intact()).isTrue();
+    }
+
+    @Test
+    @DisplayName("a replayed create returns the original trip rather than double-booking the vehicle")
+    void replayed_create_returns_the_original() {
+        Trip first = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        Trip replay = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThat(replay.id()).isEqualTo(first.id());
+        assertThat(trips.size()).isEqualTo(1);
+    }
+
+    // --- fixtures ------------------------------------------------------------------------
+
+    private Trip startedTrip() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        service.recordInspection(inspectionCommand(trip.id(), List.of(), "idem-insp-1"));
+        return service.start(new StartTripCommand(trip.id(), 42_100L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+    }
+
+    private CreateTripCommand createCommand(UUID vehicleId, UUID driverId, String idempotencyKey) {
+        return new CreateTripCommand(vehicleId, driverId, "ACCRA", "Deliver examination materials",
+                "Accra HQ", "Kumasi Centre", OperatingMode.EXAMINATION, PERIOD_START, PERIOD_END,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB, idempotencyKey);
+    }
+
+    private RecordInspectionCommand inspectionCommand(UUID tripId,
+            List<RecordInspectionCommand.Finding> findings, String idempotencyKey) {
+        return new RecordInspectionCommand(tripId, null, InspectionType.PRE_TRIP, 42_050L,
+                findings.isEmpty() ? null : EVIDENCE_ID, findings, "Pre-trip check",
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.MOBILE, idempotencyKey);
+    }
+
+    private void giveVehicleFullCompliance() {
+        giveCompliance(vehicle.id());
+    }
+
+    private void giveCompliance(UUID vehicleId) {
+        for (ComplianceDocumentType type : ComplianceDocumentType.values()) {
+            if (type.isMandatory()) {
+                complianceDocuments.save(FleetFixtures.complianceDocument(vehicleId, type,
+                        TODAY.minusMonths(6), TODAY.plusYears(1)));
+            }
+        }
+    }
+
+    private void giveComplianceExcept(UUID vehicleId, ComplianceDocumentType excludedType) {
+        for (ComplianceDocumentType type : ComplianceDocumentType.values()) {
+            if (type.isMandatory() && type != excludedType) {
+                complianceDocuments.save(FleetFixtures.complianceDocument(vehicleId, type,
+                        TODAY.minusMonths(6), TODAY.plusYears(1)));
+            }
+        }
+    }
+
+    private static DriverProfileReference eligibleDriver() {
+        return driverWithLicenceExpiring(TODAY.plusYears(1));
+    }
+
+    private static DriverProfileReference anotherEligibleDriver() {
+        return DriverProfileReference.register(UUID.fromString("66666666-6666-6666-6666-666666666666"),
+                "CLET/HR/00456", "Ama Owusu",
+                new LicenceDetails("GHA-DL-1122334", LicenceClass.D, TODAY.plusYears(1)), TODAY.plusYears(1),
+                ACCRA, "Transportation & Logistics Unit", metadata());
+    }
+
+    private static DriverProfileReference driverWithLicenceExpiring(LocalDate expiry) {
+        return DriverProfileReference.register(UUID.fromString("22222222-2222-2222-2222-222222222222"),
+                "CLET/HR/00123", "Kwame Mensah",
+                new LicenceDetails("GHA-DL-4477201", LicenceClass.D, expiry), TODAY.plusYears(1), ACCRA,
+                "Transportation & Logistics Unit", metadata());
+    }
+}
