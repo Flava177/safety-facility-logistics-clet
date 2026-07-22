@@ -22,8 +22,14 @@ Module: `services/sfl-fleet-logistics-service`, test root
 | Scheduler | `infrastructure/scheduling/` | yes | SLA evaluation, compliance expiry sweep, service-due sweep, dashboard refresh |
 | End-to-end scenario | `e2e/` | **Docker required** | the 16 critical scenarios below |
 
-Docker-dependent classes are annotated `@Testcontainers(disabledWithoutDocker = true)` so the suite still passes
-on machines without a Docker daemon; the skipped set is reported in the verification guide.
+Docker/PostgreSQL-dependent coverage has two paths:
+
+1. The critical E2E suite uses `SFL_TEST_DB_URL`, `SFL_TEST_DB_USERNAME` and `SFL_TEST_DB_PASSWORD` so it can run
+   against the local Docker Compose E2E database or a CI service container.
+2. The older Testcontainers probe remains annotated `@Testcontainers(disabledWithoutDocker = true)` and may skip
+   on Docker Desktop environments where the Java Docker client cannot auto-detect a valid Docker API endpoint.
+
+The verification guide records the exact local commands and the expected skipped set.
 
 ---
 
