@@ -29,6 +29,7 @@ import tools.jackson.databind.ObjectMapper;
 /** Secure integration intake and operations endpoints (SRS-SFL-S166-04). */
 @RestController
 @RequestMapping("/api/v1/fleet/integrations")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Integrations")
 class FleetIntegrationController {
 
     private static final TypeReference<Map<String, Object>> MAP_TYPE = new TypeReference<>() {

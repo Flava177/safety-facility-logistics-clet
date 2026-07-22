@@ -37,6 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Fleet workflow queue endpoints (SRS-SFL-S166-02). */
 @RestController
 @RequestMapping("/api/v1/fleet/workflow-items")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Workflow")
 class FleetWorkflowController {
 
     private final FleetWorkflowApplicationService workflowService;

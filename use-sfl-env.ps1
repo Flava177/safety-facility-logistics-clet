@@ -4,7 +4,7 @@
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"
 
-$env:SFL_DB_URL = "jdbc:postgresql://localhost:5434/sfl_fleet_db"
+$env:SFL_DB_URL = "jdbc:postgresql://localhost:5444/sfl_fleet_db"
 $env:SFL_DB_USERNAME = "sfl"
 $env:SFL_DB_PASSWORD = "sfl"
 

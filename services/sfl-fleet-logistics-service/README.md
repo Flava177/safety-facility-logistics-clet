@@ -21,6 +21,8 @@ Boundary rules:
 - Test plan: `docs/fleet/S166_Test_Plan.md`
 - Operations and verification guide: `docs/fleet/S166_Operations_And_Verification_Guide.md`
 - Operational console: `/fleet/index.html`
+- Swagger UI: `/swagger-ui.html`
+- OpenAPI JSON: `/v3/api-docs`
 
 ## Local verification
 
@@ -49,14 +51,48 @@ gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication
 Use Java 17 and these environment variables:
 
 ```text
-SFL_DB_URL=jdbc:postgresql://localhost:5434/sfl_fleet_db
+SFL_DB_URL=jdbc:postgresql://localhost:5444/sfl_fleet_db
 SFL_DB_USERNAME=sfl
 SFL_DB_PASSWORD=sfl
 SFL_SECURITY_ENABLED=false
 SFL_FLEET_EVENT_TRANSPORT=local
+SFL_FLEET_NOTIFICATION_PROVIDER=recorded
+SFL_RABBITMQ_HEALTH_ENABLED=false
 ```
 
 The service uses Spring Boot's embedded web server. No external Payara/Tomcat installation is required.
+
+Default local ports:
+
+| Component | Port |
+|---|---:|
+| Fleet app | `8093` |
+| Fleet PostgreSQL | `5444` |
+| Fleet E2E PostgreSQL | `55432` |
+
+## Swagger/OpenAPI
+
+With the Fleet service running locally, open:
+
+```text
+http://localhost:8093/swagger-ui.html
+http://localhost:8093/v3/api-docs
+```
+
+Swagger groups the S166 Fleet and Vehicle Management endpoints into System, Vehicles, Drivers, Trips, Workflow,
+Evidence, Audit, Integrations, and Dashboards and Reports.
+
+For local testing, click **Authorize** in Swagger UI and enter development header values such as:
+
+| Header | Example |
+|---|---|
+| `X-SFL-User` | `fleet.manager` |
+| `X-SFL-Display-Name` | `Fleet Manager` |
+| `X-SFL-Roles` | `FLEET_MANAGER,FLEET_OFFICER` |
+| `X-SFL-Sites` | `HQ,ACCRA` |
+| `X-SFL-Source-Channel` | `SWAGGER` |
+| `X-Correlation-ID` | `swagger-local` |
+| `Idempotency-Key` | A fresh unique value for each mutating request |
 
 ## Fleet schedulers
 

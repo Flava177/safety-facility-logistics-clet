@@ -5,6 +5,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
 /** CORS for the fleet console and the other SFL front ends. */
@@ -32,6 +33,12 @@ class FleetWebConfiguration {
                         .allowedOrigins(origins)
                         .allowedMethods("GET", "OPTIONS")
                         .allowedHeaders("*");
+            }
+
+            @Override
+            public void addViewControllers(ViewControllerRegistry registry) {
+                registry.addViewController("/fleet").setViewName("forward:/fleet/index.html");
+                registry.addViewController("/fleet/").setViewName("forward:/fleet/index.html");
             }
         };
     }
