@@ -1,6 +1,6 @@
 # S166 Fleet and Vehicle Management - Final Implementation Report
 
-Date: 2026-07-21
+Date: 2026-07-22
 Branch: `fleet`
 Service: `services/sfl-fleet-logistics-service`
 Schema: `fleet_logistics`
@@ -24,7 +24,8 @@ S166 is ready for review and pull request. The implementation covers the five fo
 |---|---:|---|
 | Fleet operational console / UI | Done | Static console served from `/fleet/index.html`; it calls the live operations dashboard, drilldown, integration health, readiness report and workflow queue endpoints. |
 | Compliance/service scheduled sweeps | Done | Scheduler recalculates compliance expiry and service due/overdue status, writes audit entries, publishes fleet events and raises workflow items through the existing workflow raiser. |
-| Testcontainers/end-to-end verification | Done | Postgres-backed E2E verifies Flyway schema creation, console delivery and the live dashboard endpoint. The class is Docker-gated with `@Testcontainers(disabledWithoutDocker = true)`. |
+| PostgreSQL end-to-end verification | Done | Critical E2E suite runs 16 SRS scenarios against the Docker PostgreSQL E2E database via `SFL_TEST_DB_URL`. A legacy Testcontainers auto-detection probe remains Docker-gated and may skip on Docker Desktop environments where the Java client cannot negotiate the Docker API. |
+| Local operations setup | Done | Added `compose.fleet-db.yml`, `use-sfl-env.ps1` and `S166_Operations_And_Verification_Guide.md` for Java 17, Docker PostgreSQL and IntelliJ/Spring Boot startup. |
 
 ## Reviewer entry points
 
@@ -48,6 +49,12 @@ S166 is ready for review and pull request. The implementation covers the five fo
 - `/api/v1/fleet/dashboards/operations/reconciliation`
 - `/api/v1/fleet/reports/go-live-readiness`
 
+### Local operations guide
+
+- `docs/fleet/S166_Operations_And_Verification_Guide.md`
+- `compose.fleet-db.yml`
+- `use-sfl-env.ps1`
+
 ### Scheduled jobs
 
 | Job | Property | Default |
@@ -60,7 +67,7 @@ S166 is ready for review and pull request. The implementation covers the five fo
 
 ## Persistence delivered
 
-The fleet schema is versioned with Flyway migrations `V1` through `V9`, including:
+The fleet schema is versioned with Flyway migrations `V1` through `V9.1`, including:
 
 - service foundation and schema ownership
 - fleet platform foundation
@@ -71,18 +78,37 @@ The fleet schema is versioned with Flyway migrations `V1` through `V9`, includin
 - evidence and audit governance
 - secure integration inbox
 - dashboard snapshots
+- corrective hash/fingerprint column type migration for PostgreSQL/Hibernate validation
 
 ## Verification
 
 Latest verification command:
 
 ```powershell
-mvn -pl sfl-fleet-logistics-service -am test -q
+cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
+.\use-sfl-env.ps1
+docker compose -f compose.fleet-db.yml up -d
+cd services
+mvn -pl sfl-fleet-logistics-service -am test
 ```
 
 Result: passed.
 
-Local Docker note: the Postgres E2E class is present and compiled, but skipped on this workstation because Docker is not available. It will execute automatically in an environment with Docker.
+Latest verified result:
+
+```text
+Tests run: 326, Failures: 0, Errors: 0, Skipped: 1
+```
+
+Critical PostgreSQL E2E result:
+
+```text
+FleetCriticalScenariosEndToEndTest
+Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
+```
+
+The one skipped test is the older Testcontainers Docker auto-detection probe. The production-relevant critical
+scenario suite ran against `jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db`.
 
 ## Review checklist
 
@@ -93,3 +119,5 @@ Local Docker note: the Postgres E2E class is present and compiled, but skipped o
 - State-changing flows write audit records and publish integration events through the outbox boundary.
 - Integration receivers use signature verification, allowlist validation, schema checks and idempotency.
 - Dashboard/report endpoints remain site-scoped and role-aware.
+- The service runs locally as a Spring Boot application with its embedded web server; no external Payara/Tomcat
+  installation is required.
