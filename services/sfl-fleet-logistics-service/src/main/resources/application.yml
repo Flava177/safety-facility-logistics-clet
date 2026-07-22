@@ -2,9 +2,9 @@ spring:
   application:
     name: sfl-fleet-logistics-service
   datasource:
-    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5434/sfl_fleet_logistics_service}
-    username: ${SFL_DB_USERNAME:postgres}
-    password: ${SFL_DB_PASSWORD:}
+    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5444/sfl_fleet_db}
+    username: ${SFL_DB_USERNAME:sfl}
+    password: ${SFL_DB_PASSWORD:sfl}
   jpa:
     open-in-view: false
     hibernate:
@@ -35,6 +35,9 @@ server:
   shutdown: graceful
 
 management:
+  health:
+    rabbit:
+      enabled: ${SFL_RABBITMQ_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
@@ -47,7 +50,7 @@ management:
 sfl:
   service-boundary:
     schema: fleet_logistics
-    owns: "Fleet and logistics service for S166, S168_fuel and S171"
+    owns: "Fleet and Vehicle Management service slice for S166; S168_fuel and S171 follow later"
   security:
     # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
     enabled: ${SFL_SECURITY_ENABLED:false}

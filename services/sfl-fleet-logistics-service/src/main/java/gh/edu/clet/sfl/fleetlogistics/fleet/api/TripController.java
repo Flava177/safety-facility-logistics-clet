@@ -43,6 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Trip and assignment endpoints (SRS-SFL-S166-02). */
 @RestController
 @RequestMapping("/api/v1/fleet/trips")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Trips")
 class TripController {
 
     private final TripApplicationService tripService;

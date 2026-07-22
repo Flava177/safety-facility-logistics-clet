@@ -1,0 +1,77 @@
+package gh.edu.clet.sfl.fleetlogistics.fleet.config;
+
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import io.swagger.v3.oas.models.tags.Tag;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+/** OpenAPI documentation for S166 Fleet and Vehicle Management. */
+@Configuration(proxyBeanMethods = false)
+class FleetOpenApiConfiguration {
+
+    private static final String HEADER_USER = "X-SFL-User";
+    private static final String HEADER_DISPLAY_NAME = "X-SFL-Display-Name";
+    private static final String HEADER_ROLES = "X-SFL-Roles";
+    private static final String HEADER_SITES = "X-SFL-Sites";
+    private static final String HEADER_SOURCE_CHANNEL = "X-SFL-Source-Channel";
+    private static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
+    private static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
+
+    @Bean
+    OpenAPI fleetOpenApi() {
+        return new OpenAPI()
+                .info(new Info()
+                        .title("SFL Fleet and Vehicle Management API")
+                        .description("""
+                                Phase 1 S166 Fleet and Vehicle Management service APIs.
+
+                                Local development uses actor headers when SFL_SECURITY_ENABLED=false. In Swagger UI,
+                                click Authorize and provide values such as:
+                                X-SFL-User=fleet.manager
+                                X-SFL-Display-Name=Fleet Manager
+                                X-SFL-Roles=FLEET_MANAGER,FLEET_OFFICER
+                                X-SFL-Sites=HQ,ACCRA
+                                X-SFL-Source-Channel=SWAGGER
+                                X-Correlation-ID=swagger-local
+                                Idempotency-Key=<unique value for mutating requests>
+                                """)
+                        .version("0.1.0-SNAPSHOT"))
+                .components(new Components()
+                        .addSecuritySchemes(HEADER_USER, headerScheme(HEADER_USER))
+                        .addSecuritySchemes(HEADER_DISPLAY_NAME, headerScheme(HEADER_DISPLAY_NAME))
+                        .addSecuritySchemes(HEADER_ROLES, headerScheme(HEADER_ROLES))
+                        .addSecuritySchemes(HEADER_SITES, headerScheme(HEADER_SITES))
+                        .addSecuritySchemes(HEADER_SOURCE_CHANNEL, headerScheme(HEADER_SOURCE_CHANNEL))
+                        .addSecuritySchemes(HEADER_CORRELATION_ID, headerScheme(HEADER_CORRELATION_ID))
+                        .addSecuritySchemes(HEADER_IDEMPOTENCY_KEY, headerScheme(HEADER_IDEMPOTENCY_KEY)))
+                .addSecurityItem(new SecurityRequirement()
+                        .addList(HEADER_USER)
+                        .addList(HEADER_DISPLAY_NAME)
+                        .addList(HEADER_ROLES)
+                        .addList(HEADER_SITES)
+                        .addList(HEADER_SOURCE_CHANNEL)
+                        .addList(HEADER_CORRELATION_ID)
+                        .addList(HEADER_IDEMPOTENCY_KEY))
+                .addTagsItem(new Tag().name("System").description("Service status and platform metadata"))
+                .addTagsItem(new Tag().name("Vehicles").description("Vehicle register, compliance and service history"))
+                .addTagsItem(new Tag().name("Drivers").description("Driver register and eligibility checks"))
+                .addTagsItem(new Tag().name("Trips").description("Trip planning, assignment, inspections and closure"))
+                .addTagsItem(new Tag().name("Workflow").description("Fleet workflow execution, SLA and transitions"))
+                .addTagsItem(new Tag().name("Evidence").description("Evidence references and export requests"))
+                .addTagsItem(new Tag().name("Audit").description("Audit records and hash-chain verification"))
+                .addTagsItem(new Tag().name("Integrations").description("Secure integration inbox and health"))
+                .addTagsItem(new Tag().name("Dashboards and Reports")
+                        .description("Operational dashboards, drill-downs and readiness reports"));
+    }
+
+    private static SecurityScheme headerScheme(String headerName) {
+        return new SecurityScheme()
+                .type(SecurityScheme.Type.APIKEY)
+                .in(SecurityScheme.In.HEADER)
+                .name(headerName);
+    }
+}

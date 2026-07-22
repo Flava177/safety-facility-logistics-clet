@@ -8,7 +8,7 @@ services:
       POSTGRES_USER: sfl
       POSTGRES_PASSWORD: sfl
     ports:
-      - "5434:5432"
+      - "5444:5432"
     volumes:
       - sfl_fleet_postgres_data:/var/lib/postgresql/data
     healthcheck:

@@ -36,7 +36,7 @@ The repository includes `compose.fleet-db.yml` with two PostgreSQL containers:
 
 | Container | Purpose | Host port | Database |
 |---|---|---:|---|
-| `sfl-fleet-postgres` | Local app/runtime database | `5434` | `sfl_fleet_db` |
+| `sfl-fleet-postgres` | Local app/runtime database | `5444` | `sfl_fleet_db` |
 | `sfl-fleet-e2e-postgres` | E2E verification database | `55432` | `sfl_fleet_e2e_db` |
 
 The image is `postgres:16-bookworm` to stay close to production-like Debian-based PostgreSQL behaviour and
@@ -91,17 +91,42 @@ That script sets:
 | Variable | Value |
 |---|---|
 | `JAVA_HOME` | `C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot` |
-| `SFL_DB_URL` | `jdbc:postgresql://localhost:5434/sfl_fleet_db` |
+| `SFL_DB_URL` | `jdbc:postgresql://localhost:5444/sfl_fleet_db` |
 | `SFL_DB_USERNAME` | `sfl` |
 | `SFL_DB_PASSWORD` | `sfl` |
 | `SFL_TEST_DB_URL` | `jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db` |
 | `SFL_TEST_DB_USERNAME` | `sfl` |
 | `SFL_TEST_DB_PASSWORD` | `sfl` |
+| `SFL_RABBITMQ_HEALTH_ENABLED` | `false` |
 
 These variables affect only the current PowerShell session. They do not change the global Java 11 setup used for
 SORMAS.
 
-## 4. Verification commands
+## 4. Local API exploration
+
+After starting the Fleet service from IntelliJ or Maven, the local review entry points are:
+
+| Endpoint | Purpose |
+|---|---|
+| `http://localhost:8093/actuator/health` | Liveness/readiness health |
+| `http://localhost:8093/api/v1/system/info` | Service metadata |
+| `http://localhost:8093/swagger-ui.html` | Interactive Swagger API tester |
+| `http://localhost:8093/v3/api-docs` | OpenAPI JSON |
+| `http://localhost:8093/fleet/` | Fleet operational console |
+
+In Swagger UI, use **Authorize** to set the development actor headers used when `SFL_SECURITY_ENABLED=false`:
+
+| Header | Suggested local value |
+|---|---|
+| `X-SFL-User` | `fleet.manager` |
+| `X-SFL-Display-Name` | `Fleet Manager` |
+| `X-SFL-Roles` | `FLEET_MANAGER,FLEET_OFFICER` |
+| `X-SFL-Sites` | `HQ,ACCRA` |
+| `X-SFL-Source-Channel` | `SWAGGER` |
+| `X-Correlation-ID` | `swagger-local` |
+| `Idempotency-Key` | A fresh unique value for each POST/PATCH request |
+
+## 5. Verification commands
 
 Run from the `services` reactor root:
 
@@ -133,7 +158,7 @@ FleetCriticalScenariosEndToEndTest
 Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-## 5. Running the Fleet service locally
+## 6. Running the Fleet service locally
 
 Start the DB and load the environment:
 
@@ -157,7 +182,7 @@ Open:
 - `http://localhost:8093/actuator/health`
 - `http://localhost:8093/api/v1/system/info`
 
-## 6. IntelliJ run configuration
+## 7. IntelliJ run configuration
 
 Use the Spring Boot application class:
 
@@ -176,7 +201,7 @@ C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL\services\sfl-fleet-logisti
 Set environment variables in the run configuration:
 
 ```text
-SFL_DB_URL=jdbc:postgresql://localhost:5434/sfl_fleet_db
+SFL_DB_URL=jdbc:postgresql://localhost:5444/sfl_fleet_db
 SFL_DB_USERNAME=sfl
 SFL_DB_PASSWORD=sfl
 SFL_SECURITY_ENABLED=false
@@ -185,7 +210,7 @@ SFL_FLEET_EVENT_TRANSPORT=local
 
 Start the Docker database before running the app.
 
-## 7. Embedded Tomcat note
+## 8. Embedded Tomcat note
 
 This service is a Spring Boot microservice. It should run with Spring Boot's embedded web server, not an external
 Payara domain. Payara is appropriate for SORMAS' Jakarta EE/GlassFish-style setup, but SFL should be run as a
