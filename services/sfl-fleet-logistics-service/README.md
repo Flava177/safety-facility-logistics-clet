@@ -1,6 +1,10 @@
 # sfl-fleet-logistics-service
 
-Fleet and logistics service for S166, S168_fuel and S171.
+Spring Boot service artifact that currently delivers `S166 Fleet and Vehicle Management`.
+
+Naming note: the artifact path remains `sfl-fleet-logistics-service` because the Phase 1 architecture groups
+S166, S168_fuel and S171 under the same deployable service boundary. This S166 deliverable is Fleet and Vehicle
+Management only; Logistics/dispatch work is a separate module and is not included here.
 
 Boundary rules:
 - Own this service's database schema only: `fleet_logistics`.
