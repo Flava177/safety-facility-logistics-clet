@@ -9,7 +9,7 @@
     </parent>
     <artifactId>sfl-fleet-logistics-service</artifactId>
     <name>sfl-fleet-logistics-service</name>
-    <description>Fleet and logistics service for S166, S168_fuel and S171</description>
+    <description>Service artifact for S166 Fleet and Vehicle Management, with future S168_fuel and S171 modules</description>
     <properties>
         <archunit.version>1.3.0</archunit.version>
         <testcontainers.version>1.21.3</testcontainers.version>
@@ -128,4 +128,3 @@
         </plugins>
     </build>
 </project>
-

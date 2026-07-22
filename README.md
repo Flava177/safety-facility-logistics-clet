@@ -6,7 +6,8 @@ The active target architecture is four deployable Spring Boot microservices:
 
 - `services/sfl-facilities-service` for S152, S153 and S159.
 - `services/sfl-safety-security-service` for S160, S160a, S161, S162, S162a, S163 and S174.
-- `services/sfl-fleet-logistics-service` for S166, S168_fuel and S171.
+- `services/sfl-fleet-logistics-service` as the service artifact for S166 Fleet and Vehicle Management, with
+  S168_fuel and S171 treated as separate future modules under the same technical boundary.
 - `services/sfl-asset-visibility-service` for AVAMP-Lite and future S168 asset tagging/RFID/barcode inventory.
 
 The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` is retained only as Java migration/reference material while its IFIMP vertical slice is moved into the new service layout.
