@@ -77,6 +77,29 @@ Every integration event should carry these fields:
 | `sfl.ftlmp.fuel-transaction-received.v1` | A fuel transaction is received from a vendor/source. |
 | `sfl.ftlmp.fuel-exception-detected.v1` | Fuel reconciliation identifies an exception. |
 
+#### S168_fuel lifecycle additions
+
+| Event | Trigger |
+|---|---|
+| `sfl.ftlmp.fuel-transaction-reconciled.v1` | A policy-versioned reconciliation passes. |
+| `sfl.ftlmp.fuel-transaction-rejected.v1` | A fuel record fails controlled validation. |
+| `sfl.ftlmp.fuel-anomaly-assigned.v1` | A fuel anomaly receives an accountable assignee and SLA. |
+| `sfl.ftlmp.fuel-anomaly-approved.v1` | A manager accepts a documented fuel exception. |
+| `sfl.ftlmp.fuel-anomaly-rejected.v1` | A manager rejects the transaction or explanation. |
+| `sfl.ftlmp.fuel-anomaly-escalated.v1` | An anomaly is manually or automatically escalated. |
+| `sfl.ftlmp.driver-logbook-submitted.v1` | A driver declares and submits a journey logbook. |
+| `sfl.ftlmp.driver-logbook-returned.v1` | A reviewer returns a logbook for correction. |
+| `sfl.ftlmp.driver-logbook-approved.v1` | A manager approves and locks a logbook. |
+| `sfl.ftlmp.driver-logbook-overdue.v1` | A scheduled compliance sweep detects an overdue logbook. |
+
+**Finance/Audit visibility.** Material fuel exceptions are surfaced to Finance/Audit through the
+`FinanceAuditVisibilityPort`, whose recorded adapter re-publishes `sfl.ftlmp.fuel-exception-detected.v1`
+with a `"visibility":"FINANCE_AUDIT"` payload marker and a `causationId` of the anomaly id. No Finance
+database is written directly; delivery rides the same transactional outbox and is therefore observable and
+replayable. Outbound delivery health and privileged dead-letter replay are exposed at
+`GET /api/v1/fuel/integrations/outbox/health` and `POST /api/v1/fuel/integrations/outbox/{messageId}/replay`
+(permission `FUEL_INTEGRATION_REPLAY`).
+
 #### S166 Fleet lifecycle additions
 
 Added July 2026 with the S166 Fleet and Vehicle Management slice. The three fleet events above already covered
