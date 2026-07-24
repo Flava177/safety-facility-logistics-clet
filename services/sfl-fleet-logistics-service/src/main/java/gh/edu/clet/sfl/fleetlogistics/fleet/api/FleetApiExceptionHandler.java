@@ -33,7 +33,7 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  *
  * <p>Scoped to the fleet controllers only, so the other services' handlers are unaffected.
  */
-@RestControllerAdvice(basePackages = "gh.edu.clet.sfl.fleetlogistics.fleet.api")
+@RestControllerAdvice(basePackages = "gh.edu.clet.sfl.fleetlogistics")
 class FleetApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(FleetApiExceptionHandler.class);

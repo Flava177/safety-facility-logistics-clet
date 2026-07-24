@@ -50,7 +50,7 @@ management:
 sfl:
   service-boundary:
     schema: fleet_logistics
-    owns: "Fleet and Vehicle Management service slice for S166; S168_fuel and S171 follow later"
+    owns: "S166 Fleet and Vehicle Management and S168_fuel Fuel Management and Driver Logbooks; S171 follows later"
   security:
     # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
     enabled: ${SFL_SECURITY_ENABLED:false}
@@ -81,3 +81,8 @@ sfl:
         enabled: ${SFL_FLEET_DASHBOARD_SCHEDULER:true}
         fixed-delay: PT5M
         initial-delay: PT20S
+  fuel:
+    scheduling:
+      enabled: ${SFL_FUEL_SCHEDULER:true}
+      fixed-delay: ${SFL_FUEL_SCHEDULER_DELAY:PT5M}
+      initial-delay: ${SFL_FUEL_SCHEDULER_INITIAL_DELAY:PT45S}
