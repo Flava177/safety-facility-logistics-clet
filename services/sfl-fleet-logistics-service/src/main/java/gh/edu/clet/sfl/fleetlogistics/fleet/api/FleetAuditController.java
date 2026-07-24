@@ -23,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Audit search and chain replay endpoints (SRS-SFL-S166-03). */
 @RestController
 @RequestMapping("/api/v1/fleet/audit")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Audit")
 class FleetAuditController {
 
     private final FleetAuditService auditService;

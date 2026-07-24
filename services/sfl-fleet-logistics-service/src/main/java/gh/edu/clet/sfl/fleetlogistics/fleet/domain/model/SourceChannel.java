@@ -15,6 +15,10 @@ public enum SourceChannel {
     INTEGRATION,
     /** A scheduled job inside this service (SLA evaluation, expiry sweeps, projections). */
     SCHEDULER,
+    /** A scheduled or unattended internal system process. */
+    SYSTEM,
+    /** A validated provider file or operator-assisted bulk import. */
+    IMPORT,
     /** Data migration or bulk load. */
     MIGRATION
 }

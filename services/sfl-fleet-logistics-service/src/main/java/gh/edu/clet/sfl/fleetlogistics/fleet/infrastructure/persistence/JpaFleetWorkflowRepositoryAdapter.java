@@ -21,15 +21,15 @@ import org.springframework.transaction.annotation.Transactional;
 @Component
 class JpaFleetWorkflowRepositoryAdapter implements FleetWorkflowRepository, SlaRuleRepository {
 
-    private final FleetWorkflowJpaRepositories.Items items;
-    private final FleetWorkflowJpaRepositories.Transitions transitions;
-    private final FleetWorkflowJpaRepositories.Comments comments;
-    private final FleetWorkflowJpaRepositories.SlaRules slaRules;
+    private final FleetWorkflowItemJpaRepository items;
+    private final WorkflowTransitionJpaRepository transitions;
+    private final WorkflowCommentJpaRepository comments;
+    private final SlaRuleJpaRepository slaRules;
     private final Clock clock;
 
-    JpaFleetWorkflowRepositoryAdapter(FleetWorkflowJpaRepositories.Items items,
-            FleetWorkflowJpaRepositories.Transitions transitions, FleetWorkflowJpaRepositories.Comments comments,
-            FleetWorkflowJpaRepositories.SlaRules slaRules, Clock clock) {
+    JpaFleetWorkflowRepositoryAdapter(FleetWorkflowItemJpaRepository items,
+            WorkflowTransitionJpaRepository transitions, WorkflowCommentJpaRepository comments,
+            SlaRuleJpaRepository slaRules, Clock clock) {
         this.items = items;
         this.transitions = transitions;
         this.comments = comments;

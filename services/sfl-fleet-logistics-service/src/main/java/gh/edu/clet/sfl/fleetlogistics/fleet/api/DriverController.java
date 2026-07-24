@@ -38,6 +38,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Driver profile reference endpoints (SRS-SFL-S166-01, with eligibility feeding SRS-SFL-S166-05). */
 @RestController
 @RequestMapping("/api/v1/fleet/drivers")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Drivers")
 class DriverController {
 
     private final DriverApplicationService driverService;

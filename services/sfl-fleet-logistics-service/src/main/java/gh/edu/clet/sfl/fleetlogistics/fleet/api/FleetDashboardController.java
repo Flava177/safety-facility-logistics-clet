@@ -22,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Operations dashboard and reporting endpoints (SRS-SFL-S166-05). */
 @RestController
 @RequestMapping("/api/v1/fleet")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Dashboards and Reports")
 class FleetDashboardController {
 
     private final FleetDashboardApplicationService dashboards;
