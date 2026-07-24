@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 /** Evidence metadata, access and export endpoints (SRS-SFL-S166-03). */
 @RestController
 @RequestMapping("/api/v1/fleet/evidence")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Evidence")
 class FleetEvidenceController {
 
     private final FleetEvidenceApplicationService evidenceService;

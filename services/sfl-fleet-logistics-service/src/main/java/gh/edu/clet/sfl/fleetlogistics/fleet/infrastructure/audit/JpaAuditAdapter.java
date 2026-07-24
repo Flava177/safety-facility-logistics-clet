@@ -17,6 +17,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Hash-chained, append-only audit writer (SRS-SFL-S166-03).
@@ -35,11 +36,14 @@ public class JpaAuditAdapter implements AuditPort {
     private final AuditRecordRepository auditRecords;
     private final AuditChainStateRepository chainState;
     private final Clock clock;
+    private final ObjectMapper objectMapper;
 
-    JpaAuditAdapter(AuditRecordRepository auditRecords, AuditChainStateRepository chainState, Clock clock) {
+    JpaAuditAdapter(AuditRecordRepository auditRecords, AuditChainStateRepository chainState, Clock clock,
+            ObjectMapper objectMapper) {
         this.auditRecords = auditRecords;
         this.chainState = chainState;
         this.clock = clock;
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -78,7 +82,7 @@ public class JpaAuditAdapter implements AuditPort {
                         query.action(), query.from(), query.to(),
                         PageRequest.of(Math.max(query.page(), 0), query.size() <= 0 ? 50 : query.size()))
                 .stream()
-                .map(AuditRecordEntity::toDomain)
+                .map(entity -> entity.toDomain(objectMapper))
                 .toList();
     }
 
@@ -86,7 +90,7 @@ public class JpaAuditAdapter implements AuditPort {
     @Transactional(readOnly = true)
     public AuditChainVerification verifyChain() {
         List<AuditEvent> ordered = auditRecords.findAllByOrderBySequenceNoAsc().stream()
-                .map(AuditRecordEntity::toDomain)
+                .map(entity -> entity.toDomain(objectMapper))
                 .toList();
         return AuditHashChain.verify(ordered, AuditHashChain.GENESIS_HASH);
     }

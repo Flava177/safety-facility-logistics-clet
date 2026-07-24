@@ -13,6 +13,9 @@ import jakarta.persistence.Table;
 import java.time.Instant;
 import java.util.UUID;
 import org.hibernate.annotations.ColumnTransformer;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.ObjectMapper;
 
 /**
  * Persistence image of an audit record. The table is append-only in the database as well as in code —
@@ -21,6 +24,9 @@ import org.hibernate.annotations.ColumnTransformer;
 @Entity
 @Table(name = "fleet_audit_records", schema = "fleet_logistics")
 public class AuditRecordEntity {
+
+    private static final TypeReference<Object> JSON_VALUE = new TypeReference<>() {
+    };
 
     @Id
     private UUID id;
@@ -100,6 +106,24 @@ public class AuditRecordEntity {
         return new AuditEvent(id, sequenceNo, SiteCode.of(siteScope), actorId, actorDisplayName, action,
                 resourceType, resourceId, beforeValue, afterValue, correlationId, sourceChannel, occurredAt,
                 previousHash, recordHash);
+    }
+
+    public AuditEvent toDomain(ObjectMapper objectMapper) {
+        return new AuditEvent(id, sequenceNo, SiteCode.of(siteScope), actorId, actorDisplayName, action,
+                resourceType, resourceId, canonicalJson(beforeValue, objectMapper),
+                canonicalJson(afterValue, objectMapper), correlationId, sourceChannel, occurredAt,
+                previousHash, recordHash);
+    }
+
+    private static String canonicalJson(String value, ObjectMapper objectMapper) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        try {
+            return CanonicalJson.write(objectMapper.readValue(value, JSON_VALUE));
+        } catch (JacksonException exception) {
+            throw new IllegalStateException("Could not canonicalise the stored audit JSON", exception);
+        }
     }
 
     public long sequenceNo() {

@@ -54,6 +54,7 @@ import org.springframework.web.bind.annotation.RestController;
  */
 @RestController
 @RequestMapping("/api/v1/fleet/vehicles")
+@io.swagger.v3.oas.annotations.tags.Tag(name = "Vehicles")
 class VehicleController {
 
     private final VehicleApplicationService vehicleService;
