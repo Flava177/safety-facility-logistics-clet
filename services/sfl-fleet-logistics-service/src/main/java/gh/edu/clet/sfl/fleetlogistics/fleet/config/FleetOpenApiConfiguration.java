@@ -9,7 +9,7 @@ import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** OpenAPI documentation for S166 Fleet and Vehicle Management. */
+/** OpenAPI documentation for S166 and S168_fuel in the FTLMP service boundary. */
 @Configuration(proxyBeanMethods = false)
 class FleetOpenApiConfiguration {
 
@@ -25,9 +25,10 @@ class FleetOpenApiConfiguration {
     OpenAPI fleetOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("SFL Fleet and Vehicle Management API")
+                        .title("SFL Fleet, Fuel and Driver Operations API")
                         .description("""
-                                Phase 1 S166 Fleet and Vehicle Management service APIs.
+                                Phase 1 S166 Fleet and Vehicle Management plus S168_fuel Fuel Management and
+                                Driver Logbooks APIs.
 
                                 Local development uses actor headers when SFL_SECURITY_ENABLED=false. In Swagger UI,
                                 click Authorize and provide values such as:
@@ -65,7 +66,14 @@ class FleetOpenApiConfiguration {
                 .addTagsItem(new Tag().name("Audit").description("Audit records and hash-chain verification"))
                 .addTagsItem(new Tag().name("Integrations").description("Secure integration inbox and health"))
                 .addTagsItem(new Tag().name("Dashboards and Reports")
-                        .description("Operational dashboards, drill-downs and readiness reports"));
+                        .description("Operational dashboards, drill-downs and readiness reports"))
+                .addTagsItem(new Tag().name("Fuel Transactions").description("Manual, provider and imported fuel records"))
+                .addTagsItem(new Tag().name("Driver Logbooks").description("Driver journey logbook and review workflow"))
+                .addTagsItem(new Tag().name("Fuel Reconciliation").description("Policy-versioned reconciliation"))
+                .addTagsItem(new Tag().name("Fuel Anomalies").description("Fuel exception investigation workflow"))
+                .addTagsItem(new Tag().name("Fuel Policies").description("Effective-dated fuel limits and rules"))
+                .addTagsItem(new Tag().name("Fuel Integrations").description("Provider imports, inbox and health"))
+                .addTagsItem(new Tag().name("Fuel Dashboards and Reports").description("Fuel KPIs, drilldown and exports"));
     }
 
     private static SecurityScheme headerScheme(String headerName) {

@@ -1,10 +1,18 @@
 # sfl-fleet-logistics-service
 
-Spring Boot service artifact that currently delivers `S166 Fleet and Vehicle Management`.
+Spring Boot service artifact that delivers `S166 Fleet and Vehicle Management` and
+`S168_fuel Fuel Management and Driver Logbooks`.
 
 Naming note: the artifact path remains `sfl-fleet-logistics-service` because the Phase 1 architecture groups
-S166, S168_fuel and S171 under the same deployable service boundary. This S166 deliverable is Fleet and Vehicle
-Management only; Logistics/dispatch work is a separate module and is not included here.
+S166, S168_fuel and S171 under the same deployable service boundary. Courier/dispatch remains the separate S171
+module and is not included in the fuel deliverable.
+
+## S168_fuel review entry points
+
+- Operational console: `http://localhost:8093/fuel/`
+- Swagger: `http://localhost:8093/swagger-ui.html`
+- OpenAPI JSON: `http://localhost:8093/v3/api-docs`
+- Requirements and final report: `docs/fuel/`
 
 Boundary rules:
 - Own this service's database schema only: `fleet_logistics`.

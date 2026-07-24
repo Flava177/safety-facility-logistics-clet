@@ -39,6 +39,8 @@ class FleetWebConfiguration {
             public void addViewControllers(ViewControllerRegistry registry) {
                 registry.addViewController("/fleet").setViewName("forward:/fleet/index.html");
                 registry.addViewController("/fleet/").setViewName("forward:/fleet/index.html");
+                registry.addViewController("/fuel").setViewName("forward:/fuel/index.html");
+                registry.addViewController("/fuel/").setViewName("forward:/fuel/index.html");
             }
         };
     }

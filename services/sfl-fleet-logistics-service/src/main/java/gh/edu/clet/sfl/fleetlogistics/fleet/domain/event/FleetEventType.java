@@ -32,7 +32,19 @@ public enum FleetEventType {
     FLEET_WORKFLOW_ESCALATED("sfl.ftlmp.fleet-workflow-escalated.v1", "FleetWorkflowItem"),
     FLEET_EVIDENCE_REGISTERED("sfl.ftlmp.fleet-evidence-registered.v1", "EvidenceReference"),
     FLEET_AUDIT_INTEGRITY_FAILED("sfl.ftlmp.fleet-audit-integrity-failed.v1", "AuditChain"),
-    VEHICLE_LOCATION_RECEIVED("sfl.ftlmp.vehicle-location-received.v1", "Vehicle");
+    VEHICLE_LOCATION_RECEIVED("sfl.ftlmp.vehicle-location-received.v1", "Vehicle"),
+    FUEL_TRANSACTION_RECEIVED("sfl.ftlmp.fuel-transaction-received.v1", "FuelTransaction"),
+    FUEL_TRANSACTION_RECONCILED("sfl.ftlmp.fuel-transaction-reconciled.v1", "FuelTransaction"),
+    FUEL_TRANSACTION_REJECTED("sfl.ftlmp.fuel-transaction-rejected.v1", "FuelTransaction"),
+    FUEL_EXCEPTION_DETECTED("sfl.ftlmp.fuel-exception-detected.v1", "FuelAnomalyCase"),
+    FUEL_ANOMALY_ASSIGNED("sfl.ftlmp.fuel-anomaly-assigned.v1", "FuelAnomalyCase"),
+    FUEL_ANOMALY_APPROVED("sfl.ftlmp.fuel-anomaly-approved.v1", "FuelAnomalyCase"),
+    FUEL_ANOMALY_REJECTED("sfl.ftlmp.fuel-anomaly-rejected.v1", "FuelAnomalyCase"),
+    FUEL_ANOMALY_ESCALATED("sfl.ftlmp.fuel-anomaly-escalated.v1", "FuelAnomalyCase"),
+    DRIVER_LOGBOOK_SUBMITTED("sfl.ftlmp.driver-logbook-submitted.v1", "DriverLogbook"),
+    DRIVER_LOGBOOK_RETURNED("sfl.ftlmp.driver-logbook-returned.v1", "DriverLogbook"),
+    DRIVER_LOGBOOK_APPROVED("sfl.ftlmp.driver-logbook-approved.v1", "DriverLogbook"),
+    DRIVER_LOGBOOK_OVERDUE("sfl.ftlmp.driver-logbook-overdue.v1", "DriverLogbook");
 
     private final String eventType;
     private final String defaultAggregateType;
