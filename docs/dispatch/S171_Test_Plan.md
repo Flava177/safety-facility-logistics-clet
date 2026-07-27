@@ -55,5 +55,5 @@ site and drives the application services directly (as the fuel E2E suite does).
 ## Regression gate
 
 `mvn -pl sfl-fleet-logistics-service -am test` must keep all S166 and S168 tests green. Runtime
-verification: PostgreSQL on 5444, app on 8093, `/actuator/health` UP, `/v3/api-docs`, Swagger UI, and
+verification: PostgreSQL on 5443, app on 8093, `/actuator/health` UP, `/v3/api-docs`, Swagger UI, and
 `/dispatch/`.

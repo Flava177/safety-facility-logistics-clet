@@ -21,7 +21,7 @@ $env:Path="$env:JAVA_HOME\bin;$env:Path"
 ```powershell
 docker compose -f compose.emergency-db.yml up -d emergency-postgres
 
-$env:SFL_DB_URL='jdbc:postgresql://localhost:5445/sfl_emergency_notification_db'
+$env:SFL_EMERGENCY_NOTIFICATION_DB_URL='jdbc:postgresql://localhost:5445/sfl_emergency_notification_service'
 $env:SFL_DB_USERNAME='sfl'
 $env:SFL_DB_PASSWORD='sfl'
 $env:SFL_SECURITY_ENABLED='false'
@@ -65,7 +65,7 @@ database explicitly:
 ```powershell
 docker compose -f compose.emergency-db.yml up -d emergency-e2e-postgres
 
-$env:SFL_TEST_DB_URL='jdbc:postgresql://localhost:55433/sfl_emergency_e2e_db'
+$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL='jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
 $env:SFL_TEST_DB_USERNAME='sfl'
 $env:SFL_TEST_DB_PASSWORD='sfl'
 mvn -pl sfl-emergency-notification-service -am test
@@ -78,7 +78,7 @@ S174 reactor: BUILD SUCCESS
 Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
 ```
 
-The PostgreSQL E2E scenarios ran against the supplied `sfl-emg-e2e` Postgres container on `localhost:55433`.
+The PostgreSQL E2E scenarios ran against the supplied emergency notification Postgres container on `localhost:55445`.
 
 ## S166/S168/S171 regression gate
 

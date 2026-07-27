@@ -7,11 +7,13 @@ import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
  * Resolves a real PostgreSQL for the end-to-end suite: an externally supplied database
- * ({@code SFL_TEST_DB_URL}) takes precedence, else Testcontainers, else the class is skipped with a reason.
+ * ({@code SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL}, falling back to {@code SFL_TEST_DB_URL}) takes precedence,
+ * else Testcontainers, else the class is skipped with a reason.
  */
 public abstract class EmergencyPostgresSupport {
 
-    static final String URL_PROPERTY = "SFL_TEST_DB_URL";
+    static final String URL_PROPERTY = "SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL";
+    static final String FALLBACK_URL_PROPERTY = "SFL_TEST_DB_URL";
     static final String USERNAME_PROPERTY = "SFL_TEST_DB_USERNAME";
     static final String PASSWORD_PROPERTY = "SFL_TEST_DB_PASSWORD";
     private static final String IMAGE = "postgres:16-bookworm";
@@ -24,7 +26,8 @@ public abstract class EmergencyPostgresSupport {
 
     public static String unavailableReason() {
         return "No PostgreSQL available. Set " + URL_PROPERTY
-                + " (e.g. jdbc:postgresql://localhost:55432/sfl_emergency_e2e_db) or make Docker reachable.";
+                + " (e.g. jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e), set "
+                + FALLBACK_URL_PROPERTY + ", or make Docker reachable.";
     }
 
     @DynamicPropertySource
@@ -45,6 +48,9 @@ public abstract class EmergencyPostgresSupport {
     private static ResolvedDatabase fromEnvironment() {
         String url = property(URL_PROPERTY);
         if (url == null || url.isBlank()) {
+            url = property(FALLBACK_URL_PROPERTY);
+        }
+        if (url == null || url.isBlank()) {
             return null;
         }
         String username = property(USERNAME_PROPERTY);
@@ -59,7 +65,8 @@ public abstract class EmergencyPostgresSupport {
             }
             @SuppressWarnings("resource")
             PostgreSQLContainer<?> container = new PostgreSQLContainer<>(IMAGE)
-                    .withDatabaseName("sfl_emergency_e2e_db").withUsername("sfl").withPassword("sfl");
+                    .withDatabaseName("sfl_emergency_notification_service_e2e").withUsername("sfl")
+                    .withPassword("sfl");
             container.start();
             return new ResolvedDatabase(container.getJdbcUrl(), container.getUsername(), container.getPassword());
         } catch (RuntimeException | LinkageError exception) {

@@ -1,39 +1,39 @@
 services:
-  fleet-postgres:
+  fleet-vehicle-postgres:
     image: postgres:16-bookworm
-    container_name: sfl-fleet-postgres
+    container_name: sfl-fleet-vehicle-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: sfl_fleet_db
+      POSTGRES_DB: sfl__fleet_vehicle_service
       POSTGRES_USER: sfl
       POSTGRES_PASSWORD: sfl
     ports:
-      - "5444:5432"
+      - "5443:5432"
     volumes:
-      - sfl_fleet_postgres_data:/var/lib/postgresql/data
+      - sfl_fleet_vehicle_postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_fleet_db"]
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl__fleet_vehicle_service"]
       interval: 10s
       timeout: 5s
       retries: 10
 
-  fleet-e2e-postgres:
+  fleet-vehicle-e2e-postgres:
     image: postgres:16-bookworm
-    container_name: sfl-fleet-e2e-postgres
+    container_name: sfl-fleet-vehicle-e2e-postgres
     restart: unless-stopped
     environment:
-      POSTGRES_DB: sfl_fleet_e2e_db
+      POSTGRES_DB: sfl__fleet_vehicle_service_e2e
       POSTGRES_USER: sfl
       POSTGRES_PASSWORD: sfl
     ports:
-      - "55432:5432"
+      - "55443:5432"
     tmpfs:
       - /var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_fleet_e2e_db"]
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl__fleet_vehicle_service_e2e"]
       interval: 10s
       timeout: 5s
       retries: 10
 
 volumes:
-  sfl_fleet_postgres_data:
+  sfl_fleet_vehicle_postgres_data:

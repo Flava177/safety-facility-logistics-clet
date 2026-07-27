@@ -1,14 +1,58 @@
 services:
-  postgres:
-    image: postgres:18-alpine
+  facilities-postgres:
+    image: postgres:16-bookworm
     environment:
-      POSTGRES_USER: ${SFL_POSTGRES_USER:-postgres}
-      POSTGRES_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
-      POSTGRES_DB: ${SFL_POSTGRES_DB:-sfl_microservices}
+      POSTGRES_USER: ${SFL_FACILITIES_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_FACILITIES_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_FACILITIES_POSTGRES_DB:-sfl_facilities_service}
     ports:
-      - "5434:5432"
+      - "5441:5432"
     volumes:
-      - sfl_microservices_postgres_data:/var/lib/postgresql/data
+      - sfl_facilities_postgres_data:/var/lib/postgresql/data
+
+  safety-security-postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${SFL_SAFETY_SECURITY_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_SAFETY_SECURITY_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_SAFETY_SECURITY_POSTGRES_DB:-sfl_safety_security_service}
+    ports:
+      - "5442:5432"
+    volumes:
+      - sfl_safety_security_postgres_data:/var/lib/postgresql/data
+
+  fleet-vehicle-postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${SFL_FLEET_LOGISTICS_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_FLEET_LOGISTICS_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_FLEET_LOGISTICS_POSTGRES_DB:-sfl__fleet_vehicle_service}
+    ports:
+      - "5443:5432"
+    volumes:
+      - sfl_fleet_vehicle_postgres_data:/var/lib/postgresql/data
+
+  asset-visibility-postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${SFL_ASSET_VISIBILITY_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_ASSET_VISIBILITY_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_ASSET_VISIBILITY_POSTGRES_DB:-sfl_asset_visibility_service}
+    ports:
+      - "5444:5432"
+    volumes:
+      - sfl_asset_visibility_postgres_data:/var/lib/postgresql/data
+
+  emergency-notification-postgres:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_USER: ${SFL_EMERGENCY_NOTIFICATION_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_EMERGENCY_NOTIFICATION_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_EMERGENCY_NOTIFICATION_POSTGRES_DB:-sfl_emergency_notification_service}
+    ports:
+      - "5445:5432"
+    volumes:
+      - sfl_emergency_notification_postgres_data:/var/lib/postgresql/data
 
   redis:
     image: redis:7-alpine
@@ -39,14 +83,14 @@ services:
       dockerfile: services/sfl-facilities-service/Dockerfile
     environment:
       SFL_PORT: 8080
-      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
-      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
-      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_FACILITIES_DB_URL: jdbc:postgresql://facilities-postgres:5432/sfl_facilities_service
+      SFL_FACILITIES_DB_USERNAME: ${SFL_FACILITIES_POSTGRES_USER:-sfl}
+      SFL_FACILITIES_DB_PASSWORD: ${SFL_FACILITIES_POSTGRES_PASSWORD:-sfl}
       SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
     ports:
       - "8091:8080"
     depends_on:
-      - postgres
+      - facilities-postgres
       - keycloak
 
   sfl-safety-security-service:
@@ -55,14 +99,14 @@ services:
       dockerfile: services/sfl-safety-security-service/Dockerfile
     environment:
       SFL_PORT: 8080
-      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
-      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
-      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_SAFETY_SECURITY_DB_URL: jdbc:postgresql://safety-security-postgres:5432/sfl_safety_security_service
+      SFL_SAFETY_SECURITY_DB_USERNAME: ${SFL_SAFETY_SECURITY_POSTGRES_USER:-sfl}
+      SFL_SAFETY_SECURITY_DB_PASSWORD: ${SFL_SAFETY_SECURITY_POSTGRES_PASSWORD:-sfl}
       SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
     ports:
       - "8092:8080"
     depends_on:
-      - postgres
+      - safety-security-postgres
       - keycloak
 
   sfl-fleet-logistics-service:
@@ -71,14 +115,14 @@ services:
       dockerfile: services/sfl-fleet-logistics-service/Dockerfile
     environment:
       SFL_PORT: 8080
-      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
-      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
-      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_FLEET_LOGISTICS_DB_URL: jdbc:postgresql://fleet-vehicle-postgres:5432/sfl__fleet_vehicle_service
+      SFL_FLEET_LOGISTICS_DB_USERNAME: ${SFL_FLEET_LOGISTICS_POSTGRES_USER:-sfl}
+      SFL_FLEET_LOGISTICS_DB_PASSWORD: ${SFL_FLEET_LOGISTICS_POSTGRES_PASSWORD:-sfl}
       SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
     ports:
       - "8093:8080"
     depends_on:
-      - postgres
+      - fleet-vehicle-postgres
       - keycloak
 
   sfl-asset-visibility-service:
@@ -87,14 +131,14 @@ services:
       dockerfile: services/sfl-asset-visibility-service/Dockerfile
     environment:
       SFL_PORT: 8080
-      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
-      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
-      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_ASSET_VISIBILITY_DB_URL: jdbc:postgresql://asset-visibility-postgres:5432/sfl_asset_visibility_service
+      SFL_ASSET_VISIBILITY_DB_USERNAME: ${SFL_ASSET_VISIBILITY_POSTGRES_USER:-sfl}
+      SFL_ASSET_VISIBILITY_DB_PASSWORD: ${SFL_ASSET_VISIBILITY_POSTGRES_PASSWORD:-sfl}
       SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
     ports:
       - "8094:8080"
     depends_on:
-      - postgres
+      - asset-visibility-postgres
       - keycloak
 
   sfl-emergency-notification-service:
@@ -103,15 +147,19 @@ services:
       dockerfile: services/sfl-emergency-notification-service/Dockerfile
     environment:
       SFL_PORT: 8080
-      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
-      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
-      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_EMERGENCY_NOTIFICATION_DB_URL: jdbc:postgresql://emergency-notification-postgres:5432/sfl_emergency_notification_service
+      SFL_EMERGENCY_NOTIFICATION_DB_USERNAME: ${SFL_EMERGENCY_NOTIFICATION_POSTGRES_USER:-sfl}
+      SFL_EMERGENCY_NOTIFICATION_DB_PASSWORD: ${SFL_EMERGENCY_NOTIFICATION_POSTGRES_PASSWORD:-sfl}
       SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
     ports:
       - "8095:8080"
     depends_on:
-      - postgres
+      - emergency-notification-postgres
       - keycloak
 
 volumes:
-  sfl_microservices_postgres_data:
+  sfl_facilities_postgres_data:
+  sfl_safety_security_postgres_data:
+  sfl_fleet_vehicle_postgres_data:
+  sfl_asset_visibility_postgres_data:
+  sfl_emergency_notification_postgres_data:

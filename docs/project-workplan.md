@@ -10,7 +10,7 @@ Status: in progress, mostly complete.
 - IntelliJ run configuration
 - Health/version endpoints
 - First IFIMP facility-fault vertical slice
-- Local development database `sfl_java`
+- Local development databases per deployable service
 
 ## Phase 1: Developer experience and architecture guardrails
 

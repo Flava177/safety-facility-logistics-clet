@@ -24,7 +24,7 @@ Module: `services/sfl-fleet-logistics-service`, test root
 
 Docker/PostgreSQL-dependent coverage has two paths:
 
-1. The critical E2E suite uses `SFL_TEST_DB_URL`, `SFL_TEST_DB_USERNAME` and `SFL_TEST_DB_PASSWORD` so it can run
+1. The critical E2E suite uses `SFL_FLEET_LOGISTICS_TEST_DB_URL`, `SFL_TEST_DB_USERNAME` and `SFL_TEST_DB_PASSWORD` so it can run
    against the local Docker Compose E2E database or a CI service container.
 2. The older Testcontainers probe remains annotated `@Testcontainers(disabledWithoutDocker = true)` and may skip
    on Docker Desktop environments where the Java Docker client cannot auto-detect a valid Docker API endpoint.

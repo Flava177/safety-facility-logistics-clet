@@ -2,9 +2,9 @@ spring:
   application:
     name: sfl-facilities-service
   datasource:
-    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5434/sfl_facilities_service}
-    username: ${SFL_DB_USERNAME:postgres}
-    password: ${SFL_DB_PASSWORD:}
+    url: ${SFL_FACILITIES_DB_URL:${SFL_DB_URL:jdbc:postgresql://localhost:5441/sfl_facilities_service}}
+    username: ${SFL_FACILITIES_DB_USERNAME:${SFL_DB_USERNAME:sfl}}
+    password: ${SFL_FACILITIES_DB_PASSWORD:${SFL_DB_PASSWORD:sfl}}
   jpa:
     open-in-view: false
     hibernate:

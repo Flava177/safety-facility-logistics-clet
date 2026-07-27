@@ -29,7 +29,6 @@ until each slice has API, behavior, persistence, authorization, and test parity 
 ## Consequences
 
 - Existing EF Core migrations are not reused by Flyway.
-- Java development starts on a separate `sfl_java` database.
+- Java microservice development uses one owned PostgreSQL database per deployable service.
 - Data migration will be scripted and reconciled before cutover.
 - The C# tree is removed only after the final parity and rollback gate is approved.
-

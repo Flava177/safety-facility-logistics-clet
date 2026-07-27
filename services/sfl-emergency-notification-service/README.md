@@ -17,11 +17,11 @@ provider-neutral ports only.
 
 ```powershell
 cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
-docker compose -f compose.emergency-db.yml up -d emergency-postgres
+docker compose -f compose.service-dbs.yml up -d emergency-notification-postgres
 
 $env:JAVA_HOME='C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 $env:Path="$env:JAVA_HOME\bin;$env:Path"
-$env:SFL_DB_URL='jdbc:postgresql://localhost:5445/sfl_emergency_notification_db'
+$env:SFL_EMERGENCY_NOTIFICATION_DB_URL='jdbc:postgresql://localhost:5445/sfl_emergency_notification_service'
 $env:SFL_DB_USERNAME='sfl'
 $env:SFL_DB_PASSWORD='sfl'
 $env:SFL_SECURITY_ENABLED='false'
@@ -34,8 +34,8 @@ mvn -pl sfl-emergency-notification-service -am spring-boot:run
 
 ```powershell
 cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
-docker compose -f compose.emergency-db.yml up -d emergency-e2e-postgres
-$env:SFL_TEST_DB_URL='jdbc:postgresql://localhost:55433/sfl_emergency_e2e_db'
+docker compose -f compose.service-dbs.yml up -d emergency-notification-e2e-postgres
+$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL='jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
 $env:SFL_TEST_DB_USERNAME='sfl'
 $env:SFL_TEST_DB_PASSWORD='sfl'
 

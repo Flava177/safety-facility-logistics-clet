@@ -1,28 +1,39 @@
 services:
-  emergency-postgres:
+  emergency-notification-postgres:
     image: postgres:16-bookworm
     container_name: sfl-emergency-notification-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${SFL_EMERGENCY_POSTGRES_USER:-sfl}
       POSTGRES_PASSWORD: ${SFL_EMERGENCY_POSTGRES_PASSWORD:-sfl}
-      POSTGRES_DB: ${SFL_EMERGENCY_POSTGRES_DB:-sfl_emergency_notification_db}
+      POSTGRES_DB: ${SFL_EMERGENCY_POSTGRES_DB:-sfl_emergency_notification_service}
     ports:
       - "5445:5432"
     volumes:
       - sfl_emergency_notification_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_emergency_notification_service"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
-  emergency-e2e-postgres:
+  emergency-notification-e2e-postgres:
     image: postgres:16-bookworm
     container_name: sfl-emergency-notification-e2e-postgres
+    restart: unless-stopped
     environment:
       POSTGRES_USER: ${SFL_EMERGENCY_TEST_POSTGRES_USER:-sfl}
       POSTGRES_PASSWORD: ${SFL_EMERGENCY_TEST_POSTGRES_PASSWORD:-sfl}
-      POSTGRES_DB: ${SFL_EMERGENCY_TEST_POSTGRES_DB:-sfl_emergency_e2e_db}
+      POSTGRES_DB: ${SFL_EMERGENCY_TEST_POSTGRES_DB:-sfl_emergency_notification_service_e2e}
     ports:
-      - "55433:5432"
-    volumes:
-      - sfl_emergency_notification_e2e_postgres_data:/var/lib/postgresql/data
+      - "55445:5432"
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_emergency_notification_service_e2e"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
 volumes:
   sfl_emergency_notification_postgres_data:
-  sfl_emergency_notification_e2e_postgres_data:

@@ -2,9 +2,9 @@ spring:
   application:
     name: sfl-fleet-logistics-service
   datasource:
-    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5444/sfl_fleet_db}
-    username: ${SFL_DB_USERNAME:sfl}
-    password: ${SFL_DB_PASSWORD:sfl}
+    url: ${SFL_FLEET_LOGISTICS_DB_URL:${SFL_DB_URL:jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service}}
+    username: ${SFL_FLEET_LOGISTICS_DB_USERNAME:${SFL_DB_USERNAME:sfl}}
+    password: ${SFL_FLEET_LOGISTICS_DB_PASSWORD:${SFL_DB_PASSWORD:sfl}}
   jpa:
     open-in-view: false
     hibernate:
