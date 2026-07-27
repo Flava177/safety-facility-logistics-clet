@@ -24,7 +24,7 @@ S166 is ready for review and pull request. The implementation covers the five fo
 |---|---:|---|
 | Fleet operational console / UI | Done | Static console served from `/fleet/index.html`; it calls the live operations dashboard, drilldown, integration health, readiness report and workflow queue endpoints. |
 | Compliance/service scheduled sweeps | Done | Scheduler recalculates compliance expiry and service due/overdue status, writes audit entries, publishes fleet events and raises workflow items through the existing workflow raiser. |
-| PostgreSQL end-to-end verification | Done | Critical E2E suite runs 16 SRS scenarios against the Docker PostgreSQL E2E database via `SFL_TEST_DB_URL`. A legacy Testcontainers auto-detection probe remains Docker-gated and may skip on Docker Desktop environments where the Java client cannot negotiate the Docker API. |
+| PostgreSQL end-to-end verification | Done | Critical E2E suite runs 16 SRS scenarios against the Docker PostgreSQL E2E database via `SFL_FLEET_LOGISTICS_TEST_DB_URL`. A legacy Testcontainers auto-detection probe remains Docker-gated and may skip on Docker Desktop environments where the Java client cannot negotiate the Docker API. |
 | Local operations setup | Done | Added `compose.fleet-db.yml`, `use-sfl-env.ps1` and `S166_Operations_And_Verification_Guide.md` for Java 17, Docker PostgreSQL and IntelliJ/Spring Boot startup. |
 
 ## Reviewer entry points
@@ -108,7 +108,7 @@ Tests run: 16, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 The one skipped test is the older Testcontainers Docker auto-detection probe. The production-relevant critical
-scenario suite ran against `jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db`.
+scenario suite ran against `jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e`.
 
 ## Review checklist
 

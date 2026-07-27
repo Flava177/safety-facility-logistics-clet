@@ -58,7 +58,7 @@ cd services
 mvn -pl sfl-fleet-logistics-service -am test -q
 ```
 
-The critical PostgreSQL E2E suite uses `SFL_TEST_DB_URL` and runs against the local Docker E2E database. The older
+The critical PostgreSQL E2E suite uses `SFL_FLEET_LOGISTICS_TEST_DB_URL` and runs against the local Docker E2E database. The older
 Testcontainers probe may skip on Docker Desktop environments where the Java Docker client cannot auto-detect a
 valid Docker API endpoint.
 
@@ -73,7 +73,7 @@ gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication
 Use Java 17 and these environment variables:
 
 ```text
-SFL_DB_URL=jdbc:postgresql://localhost:5444/sfl_fleet_db
+SFL_FLEET_LOGISTICS_DB_URL=jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service
 SFL_DB_USERNAME=sfl
 SFL_DB_PASSWORD=sfl
 SFL_SECURITY_ENABLED=false
@@ -89,8 +89,8 @@ Default local ports:
 | Component | Port |
 |---|---:|
 | Fleet app | `8093` |
-| Fleet PostgreSQL | `5444` |
-| Fleet E2E PostgreSQL | `55432` |
+| Fleet/logistics PostgreSQL | `5443` |
+| Fleet/logistics E2E PostgreSQL | `55443` |
 
 ## Swagger/OpenAPI
 

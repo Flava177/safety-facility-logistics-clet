@@ -12,4 +12,4 @@
 ## Regression gate
 
 `mvn -pl sfl-fleet-logistics-service -am test` must keep all S166 tests green. Runtime verification covers
-PostgreSQL on 5444, app on 8093, health, OpenAPI, Swagger and `/fuel/`.
+PostgreSQL on 5443, app on 8093, health, OpenAPI, Swagger and `/fuel/`.

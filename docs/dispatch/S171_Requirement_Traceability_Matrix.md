@@ -46,6 +46,6 @@ Class names below are the **as-built** artifacts. Tests: `dispatch/domain/Dispat
 - Verified by `mvn -pl sfl-fleet-logistics-service -am test` — **389 tests, 0 failures, 0 errors, 1
   skipped** (the placeholder `FleetPostgresEndToEndTest`), covering S166 fleet, S168 fuel and S171
   dispatch. The 36 S171 tests (19 E2E scenarios incl. CT-05, 13 domain, 2 event, 2 architecture) all
-  pass against Testcontainers/`SFL_TEST_DB_URL` PostgreSQL. S166 + S168 regression suites remain green.
+  pass against Testcontainers/`SFL_FLEET_LOGISTICS_TEST_DB_URL` PostgreSQL. S166 + S168 regression suites remain green.
 - Runtime endpoints (`/actuator/health`, `/v3/api-docs`, Swagger UI, `/dispatch/`) are wired and served
   in a normal environment; see the operations guide for the exact boot commands.
