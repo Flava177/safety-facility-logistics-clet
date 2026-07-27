@@ -25,10 +25,10 @@ class FleetOpenApiConfiguration {
     OpenAPI fleetOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("SFL Fleet, Fuel and Driver Operations API")
+                        .title("SFL Fleet, Fuel, Driver and Dispatch Operations API")
                         .description("""
-                                Phase 1 S166 Fleet and Vehicle Management plus S168_fuel Fuel Management and
-                                Driver Logbooks APIs.
+                                Phase 1 S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver
+                                Logbooks, and S171 Mailroom / Courier and Dispatch Tracking APIs.
 
                                 Local development uses actor headers when SFL_SECURITY_ENABLED=false. In Swagger UI,
                                 click Authorize and provide values such as:
@@ -73,7 +73,25 @@ class FleetOpenApiConfiguration {
                 .addTagsItem(new Tag().name("Fuel Anomalies").description("Fuel exception investigation workflow"))
                 .addTagsItem(new Tag().name("Fuel Policies").description("Effective-dated fuel limits and rules"))
                 .addTagsItem(new Tag().name("Fuel Integrations").description("Provider imports, inbox and health"))
-                .addTagsItem(new Tag().name("Fuel Dashboards and Reports").description("Fuel KPIs, drilldown and exports"));
+                .addTagsItem(new Tag().name("Fuel Dashboards and Reports").description("Fuel KPIs, drilldown and exports"))
+                .addTagsItem(new Tag().name("Dispatch Items")
+                        .description("Mailroom / Courier and Dispatch Tracking: courier item register and lifecycle"))
+                .addTagsItem(new Tag().name("Inbound Mail")
+                        .description("Inbound mail registration and internal distribution with acknowledgement"))
+                .addTagsItem(new Tag().name("Dispatch Manifests")
+                        .description("Dispatch manifests: items, seal IDs, counts, trip link and dispatch"))
+                .addTagsItem(new Tag().name("Chain of Custody")
+                        .description("Unbroken chain-of-custody handovers and gap detection"))
+                .addTagsItem(new Tag().name("Dispatch Receipts")
+                        .description("Destination receipt confirmation and variance handling (edge-capable)"))
+                .addTagsItem(new Tag().name("Return Reconciliation")
+                        .description("Return-leg / reverse-logistics reconciliation against the manifest"))
+                .addTagsItem(new Tag().name("Dispatch Exceptions")
+                        .description("Accountable dispatch exception/case workflow and SLA"))
+                .addTagsItem(new Tag().name("Dispatch Integrations")
+                        .description("Optional scanner/carrier ingestion, secure inbox and outbox health/replay"))
+                .addTagsItem(new Tag().name("Dispatch Dashboards and Reports")
+                        .description("Mailroom / Courier and Dispatch Tracking dashboards and CSV exports"));
     }
 
     private static SecurityScheme headerScheme(String headerName) {

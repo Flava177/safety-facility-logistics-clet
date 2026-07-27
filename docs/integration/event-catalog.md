@@ -127,6 +127,36 @@ naming rule and are documented in `docs/fleet/S166_Event_Contracts.md`.
 | `sfl.ftlmp.fleet-evidence-registered.v1` | A fleet evidence reference is registered. |
 | `sfl.ftlmp.fleet-audit-integrity-failed.v1` | Audit hash-chain replay detects tampering (critical compliance alert). |
 
+#### S171 Mailroom / Courier and Dispatch Tracking additions
+
+Added July 2026 with the S171 slice (`SRS-SFL-S171-01…06`). `sfl.ftlmp.dispatch-created.v1` and
+`sfl.ftlmp.dispatch-received.v1` were the two pre-seeded catalog names and are reused verbatim; the remainder are
+justified lifecycle events documented in `docs/dispatch/S171_Event_Contracts.md`. Payloads carry references and
+classifications only — never signature binaries, unmasked recipient PII or seal secrets. State changes and outbox
+records commit atomically through the shared transactional outbox. Inbound scanner/carrier events reuse the secure
+integration inbox.
+
+| Event | Trigger |
+|---|---|
+| `sfl.ftlmp.dispatch-item-registered.v1` | A courier item is registered in the outbound register. |
+| `sfl.ftlmp.inbound-item-registered.v1` | An inbound mail item is registered. |
+| `sfl.ftlmp.inbound-item-distributed.v1` | An inbound item is distributed with a recorded acknowledgement (item closed). |
+| `sfl.ftlmp.inbound-item-undelivered.v1` | A scheduled sweep flags an undelivered/unclaimed inbound item after its window. |
+| `sfl.ftlmp.dispatch-created.v1` | A dispatch manifest is created. |
+| `sfl.ftlmp.dispatch-dispatched.v1` | A sealed manifest is dispatched (leaves the warehouse). |
+| `sfl.ftlmp.custody-handover-recorded.v1` | A chain-of-custody hop is recorded. |
+| `sfl.ftlmp.custody-gap-detected.v1` | A missing handover / broken seal / count mismatch is detected (blocks closure). |
+| `sfl.ftlmp.dispatch-received.v1` | A clean destination receipt is confirmed. |
+| `sfl.ftlmp.dispatch-receipt-variance.v1` | A receipt variance opens an exception (seal/tamper variants surface to SSEMP). |
+| `sfl.ftlmp.dispatch-return-reconciled.v1` | A return leg reconciles cleanly against the manifest. |
+| `sfl.ftlmp.dispatch-return-discrepancy.v1` | A return shortfall/extra/broken seal blocks custody closure. |
+| `sfl.ftlmp.dispatch-scan-mismatch.v1` | A scanned item does not match its manifest entry. |
+| `sfl.ftlmp.dispatch-exception-assigned.v1` | A dispatch exception case receives an accountable owner/SLA. |
+| `sfl.ftlmp.dispatch-exception-approved.v1` | A manager accepts the documented dispatch exception. |
+| `sfl.ftlmp.dispatch-exception-rejected.v1` | A manager rejects the explanation. |
+| `sfl.ftlmp.dispatch-exception-escalated.v1` | Manual or SLA escalation of a dispatch exception occurs. |
+| `sfl.ftlmp.dispatch-security-variance.v1` | A security-relevant variance (seal/tamper/custody gap) is surfaced to SSEMP. |
+
 > **Known inconsistency (do not copy).** `sfl-facilities-service` currently publishes `sfl.facilities.work-order-created`
 > and `sfl-asset-visibility-service` publishes `sfl.avamp.*` without the `.vN` suffix, neither of which matches the
 > naming rule above. S166 follows this catalog. Renaming the earlier services is tracked as conflict **C-03** in
