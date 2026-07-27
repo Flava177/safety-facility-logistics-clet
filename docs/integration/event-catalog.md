@@ -65,6 +65,26 @@ Every integration event should carry these fields:
 | `sfl.ssemp.emergency-notification-activated.v1` | A mass notification campaign is approved and activated. |
 | `sfl.ssemp.emergency-notification-status-received.v1` | Delivery or acknowledgement status is received from the notification provider. |
 
+#### S174 Emergency Mass Notification additions
+
+Added July 2026 with the S174 slice (separate deployable `sfl-emergency-notification-service`; see
+[ADR 0004](../adr/0004-s174-emergency-notification-as-separate-service.md)). The two events above are the
+pre-seeded catalog names and are reused verbatim; the remainder are justified lifecycle events documented
+in `docs/emergency/S174_Event_Contracts.md`. Payloads carry references and classifications only — never
+message bodies, unmasked recipient PII or provider secrets.
+
+| Event | Trigger |
+|---|---|
+| `sfl.ssemp.emergency-template-created.v1` | A notification template is created. |
+| `sfl.ssemp.emergency-activation-submitted.v1` | A routine activation is submitted for approval. |
+| `sfl.ssemp.emergency-activation-approved.v1` | A routine activation is approved. |
+| `sfl.ssemp.emergency-break-glass-activated.v1` | A break-glass activation fires without pre-approval (declared emergency). |
+| `sfl.ssemp.emergency-after-action-approved.v1` | After-the-fact approval/justification is recorded for a break-glass activation. |
+| `sfl.ssemp.emergency-all-clear-sent.v1` | An all-clear is issued for an active activation. |
+| `sfl.ssemp.emergency-acknowledgement-received.v1` | A recipient acknowledgement is recorded. |
+| `sfl.ssemp.emergency-activation-closed.v1` | An activation is closed with reason/summary/evidence. |
+| `sfl.ssemp.emergency-drill-completed.v1` | A drill run completes and records performance metrics. |
+
 ### SFL.FTLMP
 
 | Event | Trigger |

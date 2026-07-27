@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: sfl-emergency-notification-service
+  datasource:
+    url: ${SFL_DB_URL:jdbc:postgresql://localhost:5445/sfl_emergency_notification_db}
+    username: ${SFL_DB_USERNAME:sfl}
+    password: ${SFL_DB_PASSWORD:sfl}
+  jpa:
+    open-in-view: false
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: emergency_notification
+        jdbc:
+          time_zone: UTC
+  flyway:
+    enabled: true
+    default-schema: emergency_notification
+    schemas: emergency_notification
+    locations: classpath:db/migration
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+
+server:
+  port: ${SFL_PORT:8095}
+  shutdown: graceful
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
+  endpoint:
+    health:
+      probes:
+        enabled: true
+
+sfl:
+  service-boundary:
+    schema: emergency_notification
+    owns: "S174 Emergency Mass Notification System (SFL.SSEMP / Emergency Communications)"
+  security:
+    # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
+    enabled: ${SFL_SECURITY_ENABLED:false}
+  emergency:
+    # Outbound provider delivery uses a self-contained transactional outbox with a recorded local sink
+    # (no broker required for Phase 1); failed deliveries dead-letter and are replayable.
+    messaging:
+      transport: ${SFL_EMERGENCY_EVENT_TRANSPORT:local}
+      max-attempts: ${SFL_EMERGENCY_OUTBOX_MAX_ATTEMPTS:5}
+    scheduling:
+      # Unacknowledged-escalation, dashboard-refresh and stale-integration sweeps. Individual sweeps are
+      # also toggled by runtime configuration (emergency.scheduling.*-enabled).
+      enabled: ${SFL_EMERGENCY_SCHEDULER:true}
+      fixed-delay: ${SFL_EMERGENCY_SCHEDULER_DELAY:PT1M}
+      initial-delay: ${SFL_EMERGENCY_SCHEDULER_INITIAL_DELAY:PT30S}

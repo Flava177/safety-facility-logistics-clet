@@ -20,6 +20,7 @@
         <module>sfl-safety-security-service</module>
         <module>sfl-fleet-logistics-service</module>
         <module>sfl-asset-visibility-service</module>
+        <module>sfl-emergency-notification-service</module>
     </modules>
     <properties>
         <java.version>17</java.version>
