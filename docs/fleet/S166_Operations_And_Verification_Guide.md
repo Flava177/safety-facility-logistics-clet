@@ -36,8 +36,8 @@ The repository includes `compose.fleet-db.yml` with two PostgreSQL containers:
 
 | Container | Purpose | Host port | Database |
 |---|---|---:|---|
-| `sfl-fleet-postgres` | Local app/runtime database | `5444` | `sfl_fleet_db` |
-| `sfl-fleet-e2e-postgres` | E2E verification database | `55432` | `sfl_fleet_e2e_db` |
+| `sfl-fleet-vehicle-postgres` | Local app/runtime database | `5443` | `sfl__fleet_vehicle_service` |
+| `sfl-fleet-vehicle-e2e-postgres` | E2E verification database | `55443` | `sfl__fleet_vehicle_service_e2e` |
 
 The image is `postgres:16-bookworm` to stay close to production-like Debian-based PostgreSQL behaviour and
 avoid Alpine-specific native-library surprises.
@@ -69,13 +69,13 @@ docker compose -f compose.fleet-db.yml down -v
 Open the app database:
 
 ```powershell
-docker exec -it sfl-fleet-postgres psql -U sfl -d sfl_fleet_db
+docker exec -it sfl-fleet-vehicle-postgres psql -U sfl -d sfl__fleet_vehicle_service
 ```
 
 Open the E2E database:
 
 ```powershell
-docker exec -it sfl-fleet-e2e-postgres psql -U sfl -d sfl_fleet_e2e_db
+docker exec -it sfl-fleet-vehicle-e2e-postgres psql -U sfl -d sfl__fleet_vehicle_service_e2e
 ```
 
 ## 3. Environment variables
@@ -91,10 +91,10 @@ That script sets:
 | Variable | Value |
 |---|---|
 | `JAVA_HOME` | `C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot` |
-| `SFL_DB_URL` | `jdbc:postgresql://localhost:5444/sfl_fleet_db` |
+| `SFL_FLEET_LOGISTICS_DB_URL` | `jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service` |
 | `SFL_DB_USERNAME` | `sfl` |
 | `SFL_DB_PASSWORD` | `sfl` |
-| `SFL_TEST_DB_URL` | `jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db` |
+| `SFL_FLEET_LOGISTICS_TEST_DB_URL` | `jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e` |
 | `SFL_TEST_DB_USERNAME` | `sfl` |
 | `SFL_TEST_DB_PASSWORD` | `sfl` |
 | `SFL_RABBITMQ_HEALTH_ENABLED` | `false` |
@@ -151,7 +151,7 @@ Tests run: 326, Failures: 0, Errors: 0, Skipped: 1
 ```
 
 The skipped test is the older Testcontainers auto-detection probe. The critical E2E suite uses
-`SFL_TEST_DB_URL` and ran all 16 scenarios against the local Docker PostgreSQL E2E database:
+`SFL_FLEET_LOGISTICS_TEST_DB_URL` and ran all 16 scenarios against the local Docker PostgreSQL E2E database:
 
 ```text
 FleetCriticalScenariosEndToEndTest
@@ -201,7 +201,7 @@ C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL\services\sfl-fleet-logisti
 Set environment variables in the run configuration:
 
 ```text
-SFL_DB_URL=jdbc:postgresql://localhost:5444/sfl_fleet_db
+SFL_FLEET_LOGISTICS_DB_URL=jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service
 SFL_DB_USERNAME=sfl
 SFL_DB_PASSWORD=sfl
 SFL_SECURITY_ENABLED=false

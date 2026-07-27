@@ -28,9 +28,29 @@ The parent mapping document remains the source of truth for system IDs, Cluster 
 ## Build Foundation
 
 ```powershell
+docker compose -f compose.service-dbs.yml up -d
 cd services
 ..\mvnw.cmd test
 ```
+
+## Local Service Databases
+
+Each deployable owns a separate PostgreSQL database boundary. Start the local runtime and E2E databases with:
+
+```powershell
+docker compose -f compose.service-dbs.yml up -d
+```
+
+For single-service work, use `compose.facilities-db.yml`, `compose.safety-security-db.yml`,
+`compose.fleet-db.yml`, `compose.asset-visibility-db.yml` or `compose.emergency-db.yml`.
+
+| Service | Runtime DB | Runtime port | E2E DB | E2E port |
+|---|---|---:|---|---:|
+| `sfl-facilities-service` | `sfl_facilities_service` | `5441` | `sfl_facilities_service_e2e` | `55441` |
+| `sfl-safety-security-service` | `sfl_safety_security_service` | `5442` | `sfl_safety_security_service_e2e` | `55442` |
+| `sfl-fleet-logistics-service` | `sfl__fleet_vehicle_service` | `5443` | `sfl__fleet_vehicle_service_e2e` | `55443` |
+| `sfl-asset-visibility-service` | `sfl_asset_visibility_service` | `5444` | `sfl_asset_visibility_service_e2e` | `55444` |
+| `sfl-emergency-notification-service` | `sfl_emergency_notification_service` | `5445` | `sfl_emergency_notification_service_e2e` | `55445` |
 
 ## S174 Emergency Notification
 
@@ -46,7 +66,7 @@ Local S174 entry points:
 Local database support:
 
 ```powershell
-docker compose -f compose.emergency-db.yml up -d
+docker compose -f compose.service-dbs.yml up -d
 cd services
 mvn -pl sfl-emergency-notification-service -am test
 ```

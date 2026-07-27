@@ -12,7 +12,7 @@ connected. GPS/telematics and RFID are Phase-2 — provider-neutral ports + reco
 
 Technical identity is unchanged: artifact `sfl-fleet-logistics-service`, schema `fleet_logistics`, base
 package `gh.edu.clet.sfl.fleetlogistics` (new feature package `…​.dispatch`), port `8093`, PostgreSQL host
-port `5444`, database `sfl_fleet_db`, platform token `ftlmp`.
+port `5443`, database `sfl__fleet_vehicle_service`, platform token `ftlmp`.
 
 ## Requirement-set reconciliation
 

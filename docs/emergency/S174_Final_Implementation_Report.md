@@ -63,7 +63,7 @@ Full services reactor: BUILD SUCCESS; Surefire reports: tests=452, failures=0, e
 Safety-security service has no local tests yet; it compiles in the full services reactor
 ```
 
-The PostgreSQL-backed S174 E2E suite ran against the supplied `sfl-emg-e2e` container on `localhost:55433`.
+The PostgreSQL-backed S174 E2E suite ran against the supplied emergency notification E2E database on `localhost:55445`.
 The remaining skipped test is an existing Docker/Testcontainers-gated probe outside S174.
 
 Command idempotency is implemented for activation creation and break-glass creation so retried requests do not

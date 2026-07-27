@@ -4,7 +4,7 @@
 
 1. Start PostgreSQL: `docker compose -f compose.fleet-db.yml up -d fleet-postgres`.
 2. Load Java 17 with `./use-sfl-env.ps1` or select Temurin 17 for the IntelliJ module.
-3. Run `FleetLogisticsServiceApplication`. It uses `sfl_fleet_db` on host port 5444 and HTTP port 8093.
+3. Run `FleetLogisticsServiceApplication`. It uses `sfl__fleet_vehicle_service` on host port 5443 and HTTP port 8093.
 4. Verify `/actuator/health`, `/swagger-ui.html`, `/v3/api-docs`, and `/fuel/` on localhost:8093.
 
 Development requests use `X-SFL-User`, `X-SFL-Display-Name`, `X-SFL-Roles`, `X-SFL-Sites`,

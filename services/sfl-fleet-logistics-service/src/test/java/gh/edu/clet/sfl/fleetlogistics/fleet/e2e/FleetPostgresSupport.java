@@ -22,9 +22,10 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * three steps:
  *
  * <ol>
- *   <li><strong>An externally supplied database</strong> — {@code SFL_TEST_DB_URL} (env var or system
- *       property). This is what CI service containers provide, and what a developer can point at a
- *       {@code docker run postgres} started by the Docker CLI.</li>
+ *   <li><strong>An externally supplied database</strong> — {@code SFL_FLEET_LOGISTICS_TEST_DB_URL}
+ *       (preferred) or {@code SFL_TEST_DB_URL} (env var or system property). This is what CI service
+ *       containers provide, and what a developer can point at a {@code docker run postgres} started by
+ *       the Docker CLI.</li>
  *   <li><strong>Testcontainers</strong> — used when Docker auto-detection succeeds.</li>
  *   <li><strong>Skip</strong> — with a message naming both escape hatches, so a skipped run is never
  *       mistaken for a passing one.</li>
@@ -35,7 +36,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
  */
 public abstract class FleetPostgresSupport {
 
-    static final String URL_PROPERTY = "SFL_TEST_DB_URL";
+    static final String URL_PROPERTY = "SFL_FLEET_LOGISTICS_TEST_DB_URL";
+    static final String FALLBACK_URL_PROPERTY = "SFL_TEST_DB_URL";
     static final String USERNAME_PROPERTY = "SFL_TEST_DB_USERNAME";
     static final String PASSWORD_PROPERTY = "SFL_TEST_DB_PASSWORD";
     private static final String IMAGE = "postgres:16-bookworm";
@@ -53,8 +55,9 @@ public abstract class FleetPostgresSupport {
     /** Explains, for a skipped run, what to do about it. */
     public static String unavailableReason() {
         return "No PostgreSQL available. Either set " + URL_PROPERTY
-                + " (for example jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db) or make Docker reachable "
-                + "to Testcontainers. See docs/fleet/S166_Operations_And_Verification_Guide.md.";
+                + " (for example jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e), set "
+                + FALLBACK_URL_PROPERTY + ", or make Docker reachable to Testcontainers. "
+                + "See docs/fleet/S166_Operations_And_Verification_Guide.md.";
     }
 
     @DynamicPropertySource
@@ -78,6 +81,9 @@ public abstract class FleetPostgresSupport {
     private static ResolvedDatabase fromEnvironment() {
         String url = property(URL_PROPERTY);
         if (url == null || url.isBlank()) {
+            url = property(FALLBACK_URL_PROPERTY);
+        }
+        if (url == null || url.isBlank()) {
             return null;
         }
         String username = property(USERNAME_PROPERTY);
@@ -93,7 +99,7 @@ public abstract class FleetPostgresSupport {
             }
             @SuppressWarnings("resource")
             PostgreSQLContainer<?> container = new PostgreSQLContainer<>(IMAGE)
-                    .withDatabaseName("sfl_fleet_e2e_db")
+                    .withDatabaseName("sfl__fleet_vehicle_service_e2e")
                     .withUsername("sfl")
                     .withPassword("sfl");
             container.start();
