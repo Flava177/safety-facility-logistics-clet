@@ -1,6 +1,6 @@
 # sfl-safety-security-service
 
-Safety and security service for S160, S160a, S161, S162, S162a, S163 and S174.
+Safety and security service for S160, S160a, S161, S162, S162a and S163.
 
 Boundary rules:
 - Own this service's database schema only: $(System.Collections.Hashtable.Schema).

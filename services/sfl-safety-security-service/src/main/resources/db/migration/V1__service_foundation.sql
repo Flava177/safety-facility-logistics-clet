@@ -7,7 +7,7 @@ CREATE TABLE safety_security.service_metadata (
 );
 
 INSERT INTO safety_security.service_metadata (service_name, boundary_description)
-VALUES ('sfl-safety-security-service', 'Safety and security service for S160, S160a, S161, S162, S162a, S163 and S174')
+VALUES ('sfl-safety-security-service', 'Safety and security service for S160, S160a, S161, S162, S162a and S163')
 ON CONFLICT (service_name) DO NOTHING;
 
 CREATE TABLE safety_security.outbox_messages (

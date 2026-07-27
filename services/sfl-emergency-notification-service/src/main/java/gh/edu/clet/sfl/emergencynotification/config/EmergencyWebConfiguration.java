@@ -1,0 +1,45 @@
+package gh.edu.clet.sfl.emergencynotification.config;
+
+import java.util.Arrays;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.web.servlet.config.annotation.CorsRegistry;
+import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
+import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
+
+/** CORS for the emergency console and the SFL front ends, and the console view routes. */
+@Configuration(proxyBeanMethods = false)
+class EmergencyWebConfiguration {
+
+    @Bean
+    WebMvcConfigurer emergencyCorsConfigurer(
+            @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8093,http://localhost:8095,"
+                    + "http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
+        String[] origins = Arrays.stream(allowedOrigins.split(","))
+                .map(String::strip)
+                .filter(origin -> !origin.isBlank())
+                .toArray(String[]::new);
+
+        return new WebMvcConfigurer() {
+            @Override
+            public void addCorsMappings(CorsRegistry registry) {
+                registry.addMapping("/api/**")
+                        .allowedOrigins(origins)
+                        .allowedMethods("GET", "POST", "PATCH", "PUT", "OPTIONS")
+                        .allowedHeaders("*")
+                        .exposedHeaders("Location", "X-Correlation-ID");
+                registry.addMapping("/actuator/**")
+                        .allowedOrigins(origins)
+                        .allowedMethods("GET", "OPTIONS")
+                        .allowedHeaders("*");
+            }
+
+            @Override
+            public void addViewControllers(ViewControllerRegistry registry) {
+                registry.addViewController("/emergency").setViewName("forward:/emergency/index.html");
+                registry.addViewController("/emergency/").setViewName("forward:/emergency/index.html");
+            }
+        };
+    }
+}

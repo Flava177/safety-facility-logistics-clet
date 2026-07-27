@@ -28,5 +28,12 @@ public enum SflRole {
     LOGISTICS_COORDINATOR,
     CENTRE_MANAGER,
     MAILROOM_OFFICER,
-    SECURITY_OFFICER
+    SECURITY_OFFICER,
+
+    // Emergency Mass Notification user classes (SRS S174). Added for the S174 slice; adding enum
+    // constants changes no existing signature and no existing service behaviour.
+    EMERGENCY_COORDINATOR,
+    SOC_OPERATOR,
+    SECURITY_DIRECTOR,
+    HSE_MANAGER
 }

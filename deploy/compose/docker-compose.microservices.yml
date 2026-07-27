@@ -97,5 +97,21 @@ services:
       - postgres
       - keycloak
 
+  sfl-emergency-notification-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-emergency-notification-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_DB_URL: jdbc:postgresql://postgres:5432/sfl_microservices
+      SFL_DB_USERNAME: ${SFL_POSTGRES_USER:-postgres}
+      SFL_DB_PASSWORD: ${SFL_POSTGRES_PASSWORD:-change-me}
+      SFL_IAM_ISSUER: http://keycloak:8080/realms/sfl
+    ports:
+      - "8095:8080"
+    depends_on:
+      - postgres
+      - keycloak
+
 volumes:
   sfl_microservices_postgres_data:

@@ -1,0 +1,28 @@
+services:
+  emergency-postgres:
+    image: postgres:16-bookworm
+    container_name: sfl-emergency-notification-postgres
+    environment:
+      POSTGRES_USER: ${SFL_EMERGENCY_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_EMERGENCY_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_EMERGENCY_POSTGRES_DB:-sfl_emergency_notification_db}
+    ports:
+      - "5445:5432"
+    volumes:
+      - sfl_emergency_notification_postgres_data:/var/lib/postgresql/data
+
+  emergency-e2e-postgres:
+    image: postgres:16-bookworm
+    container_name: sfl-emergency-notification-e2e-postgres
+    environment:
+      POSTGRES_USER: ${SFL_EMERGENCY_TEST_POSTGRES_USER:-sfl}
+      POSTGRES_PASSWORD: ${SFL_EMERGENCY_TEST_POSTGRES_PASSWORD:-sfl}
+      POSTGRES_DB: ${SFL_EMERGENCY_TEST_POSTGRES_DB:-sfl_emergency_e2e_db}
+    ports:
+      - "55433:5432"
+    volumes:
+      - sfl_emergency_notification_e2e_postgres_data:/var/lib/postgresql/data
+
+volumes:
+  sfl_emergency_notification_postgres_data:
+  sfl_emergency_notification_e2e_postgres_data:
