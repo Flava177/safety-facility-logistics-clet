@@ -1,11 +1,25 @@
 # sfl-fleet-logistics-service
 
-Spring Boot service artifact that delivers `S166 Fleet and Vehicle Management` and
-`S168_fuel Fuel Management and Driver Logbooks`.
+Spring Boot service artifact that delivers `S166 Fleet and Vehicle Management`,
+`S168_fuel Fuel Management and Driver Logbooks` and
+`S171 Mailroom / Courier and Dispatch Tracking`.
 
 Naming note: the artifact path remains `sfl-fleet-logistics-service` because the Phase 1 architecture groups
-S166, S168_fuel and S171 under the same deployable service boundary. Courier/dispatch remains the separate S171
-module and is not included in the fuel deliverable.
+S166, S168_fuel and S171 under the same deployable service boundary. S171 is the courier/dispatch feature
+package `gh.edu.clet.sfl.fleetlogistics.dispatch` inside this deployable (schema `fleet_logistics`).
+
+## S171 review entry points
+
+- Operational console: `http://localhost:8093/dispatch/`
+- Swagger UI: `http://localhost:8093/swagger-ui.html` — Dispatch Items, Inbound Mail, Dispatch Manifests,
+  Chain of Custody, Dispatch Receipts, Return Reconciliation, Dispatch Exceptions, Dispatch Integrations,
+  Dispatch Dashboards and Reports
+- OpenAPI JSON: `http://localhost:8093/v3/api-docs`
+- REST base path: `/api/v1/dispatch`
+- Final implementation report: `docs/dispatch/S171_Final_Implementation_Report.md`
+- Operations and verification guide: `docs/dispatch/S171_Operations_And_Verification_Guide.md`
+- Requirement traceability matrix: `docs/dispatch/S171_Requirement_Traceability_Matrix.md`
+- Migrations: `V16`–`V20` (schema `fleet_logistics`); runtime toggle `SFL_DISPATCH_SCHEDULER`.
 
 ## S168_fuel review entry points
 
