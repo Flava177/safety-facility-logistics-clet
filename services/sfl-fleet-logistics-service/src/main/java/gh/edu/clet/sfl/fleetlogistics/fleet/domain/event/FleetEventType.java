@@ -44,7 +44,28 @@ public enum FleetEventType {
     DRIVER_LOGBOOK_SUBMITTED("sfl.ftlmp.driver-logbook-submitted.v1", "DriverLogbook"),
     DRIVER_LOGBOOK_RETURNED("sfl.ftlmp.driver-logbook-returned.v1", "DriverLogbook"),
     DRIVER_LOGBOOK_APPROVED("sfl.ftlmp.driver-logbook-approved.v1", "DriverLogbook"),
-    DRIVER_LOGBOOK_OVERDUE("sfl.ftlmp.driver-logbook-overdue.v1", "DriverLogbook");
+    DRIVER_LOGBOOK_OVERDUE("sfl.ftlmp.driver-logbook-overdue.v1", "DriverLogbook"),
+
+    // Mailroom / Courier and Dispatch Tracking events (SRS S171). dispatch-created and dispatch-received
+    // are the pre-seeded catalog names; the remainder are justified S171 lifecycle events.
+    DISPATCH_ITEM_REGISTERED("sfl.ftlmp.dispatch-item-registered.v1", "CourierItem"),
+    INBOUND_ITEM_REGISTERED("sfl.ftlmp.inbound-item-registered.v1", "CourierItem"),
+    INBOUND_ITEM_DISTRIBUTED("sfl.ftlmp.inbound-item-distributed.v1", "CourierItem"),
+    INBOUND_ITEM_UNDELIVERED("sfl.ftlmp.inbound-item-undelivered.v1", "CourierItem"),
+    DISPATCH_CREATED("sfl.ftlmp.dispatch-created.v1", "Dispatch"),
+    DISPATCH_DISPATCHED("sfl.ftlmp.dispatch-dispatched.v1", "Dispatch"),
+    CUSTODY_HANDOVER_RECORDED("sfl.ftlmp.custody-handover-recorded.v1", "CustodyHandover"),
+    CUSTODY_GAP_DETECTED("sfl.ftlmp.custody-gap-detected.v1", "DispatchExceptionCase"),
+    DISPATCH_RECEIVED("sfl.ftlmp.dispatch-received.v1", "DispatchReceipt"),
+    DISPATCH_RECEIPT_VARIANCE("sfl.ftlmp.dispatch-receipt-variance.v1", "DispatchReceipt"),
+    DISPATCH_RETURN_RECONCILED("sfl.ftlmp.dispatch-return-reconciled.v1", "ReturnReconciliation"),
+    DISPATCH_RETURN_DISCREPANCY("sfl.ftlmp.dispatch-return-discrepancy.v1", "ReturnReconciliation"),
+    DISPATCH_SCAN_MISMATCH("sfl.ftlmp.dispatch-scan-mismatch.v1", "DispatchExceptionCase"),
+    DISPATCH_EXCEPTION_ASSIGNED("sfl.ftlmp.dispatch-exception-assigned.v1", "DispatchExceptionCase"),
+    DISPATCH_EXCEPTION_APPROVED("sfl.ftlmp.dispatch-exception-approved.v1", "DispatchExceptionCase"),
+    DISPATCH_EXCEPTION_REJECTED("sfl.ftlmp.dispatch-exception-rejected.v1", "DispatchExceptionCase"),
+    DISPATCH_EXCEPTION_ESCALATED("sfl.ftlmp.dispatch-exception-escalated.v1", "DispatchExceptionCase"),
+    DISPATCH_SECURITY_VARIANCE("sfl.ftlmp.dispatch-security-variance.v1", "DispatchExceptionCase");
 
     private final String eventType;
     private final String defaultAggregateType;

@@ -41,6 +41,8 @@ class FleetWebConfiguration {
                 registry.addViewController("/fleet/").setViewName("forward:/fleet/index.html");
                 registry.addViewController("/fuel").setViewName("forward:/fuel/index.html");
                 registry.addViewController("/fuel/").setViewName("forward:/fuel/index.html");
+                registry.addViewController("/dispatch").setViewName("forward:/dispatch/index.html");
+                registry.addViewController("/dispatch/").setViewName("forward:/dispatch/index.html");
             }
         };
     }
