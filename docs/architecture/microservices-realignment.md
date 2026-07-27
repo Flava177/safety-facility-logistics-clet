@@ -8,7 +8,8 @@ The repository had three overlapping implementation directions:
 
 1. A legacy .NET implementation under `src/SFL.*`, `tests/SFL.*`, `SFL.slnx` and Visual Studio artifacts.
 2. A single Spring Boot application under `src/main` with IFIMP facilities and maintenance code.
-3. The updated SRS/workflow decision requiring four deployable Spring Boot microservices.
+3. The updated SRS/workflow decision originally requiring four deployable Spring Boot microservices, now with
+   S174 Emergency Mass Notification separated as a fifth deployable by ADR 0004.
 
 The .NET implementation has now been removed from this Java project. The single Spring Boot app remains only as migration/reference material until its useful IFIMP code is moved into `services/sfl-facilities-service`.
 
@@ -19,7 +20,7 @@ The .NET implementation has now been removed from this Java project. The single 
 - IFIMP code exists only in the old single-app package layout.
 - Safety/security, fleet/logistics and asset visibility service foundations did not exist before this realignment.
 - Service-local migration, outbox and idempotent inbox conventions needed to be established per microservice.
-- Docker/local development needs to move from one app to four service artifacts.
+- Docker/local development needs to move from one app to five service artifacts.
 
 ## Replacement Wording For SRS
 
@@ -29,7 +30,7 @@ Replace any SRS wording equivalent to:
 
 with:
 
-> The implementation baseline is a Spring Boot microservices architecture composed of four deployable bounded-context services: `sfl-facilities-service`, `sfl-safety-security-service`, `sfl-fleet-logistics-service` and `sfl-asset-visibility-service`. Each service owns its database schema, migrations, API boundary, domain model, outbox and idempotent inbox. Cross-service workflows use APIs, events and sagas through the wider CLET microservices ecosystem; services must not share databases or depend on another service's internal persistence model.
+> The implementation baseline is a Spring Boot microservices architecture composed of five deployable bounded-context services: `sfl-facilities-service`, `sfl-safety-security-service`, `sfl-fleet-logistics-service`, `sfl-asset-visibility-service` and `sfl-emergency-notification-service`. Each service owns its database schema, migrations, API boundary, domain model, outbox and idempotent inbox. Cross-service workflows use APIs, events and sagas through the wider CLET microservices ecosystem; services must not share databases or depend on another service's internal persistence model. S174 is separated from the original safety-security grouping by ADR 0004 for emergency notification availability, retry, callback, degraded-mode and blast-radius reasons.
 
 Replace any SRS wording equivalent to:
 
@@ -37,7 +38,7 @@ Replace any SRS wording equivalent to:
 
 with:
 
-> SFL Phase 1 is implemented as four deployable Spring Boot service artifacts, integrated through the enterprise API gateway, IAM, event broker, audit/evidence, notification, reporting and document/object-storage services.
+> SFL Phase 1 is implemented as five deployable Spring Boot service artifacts, integrated through the enterprise API gateway, IAM, event broker, audit/evidence, notification, reporting and document/object-storage services.
 
 ## Target Structure
 
@@ -49,6 +50,7 @@ services/
   sfl-safety-security-service/
   sfl-fleet-logistics-service/
   sfl-asset-visibility-service/
+  sfl-emergency-notification-service/
 ```
 
 Each deployable service follows:
@@ -73,7 +75,7 @@ src/main/resources/db/migration/
 ## Step-by-Step Implementation Sequence
 
 1. Remove legacy .NET implementation files from the Java project.
-2. Add the four-service Maven workspace under `services/`.
+2. Add the service Maven workspace under `services/`.
 3. Add shared conventions for DTOs, errors, site-scoped principals and integration event envelopes.
 4. Add service-local Flyway migrations for metadata, outbox and inbox tables.
 5. Verify the service workspace builds independently.
@@ -82,13 +84,13 @@ src/main/resources/db/migration/
 8. Add safety/security service foundations and purchased-system adapter ports.
 9. Add fleet/logistics service foundations and fuel/dispatch workflows.
 10. Add cross-service sagas for hall readiness, emergency incident response and secure dispatch.
-11. Add local Docker Compose for the four services plus Postgres, broker, Redis and IAM.
+11. Add local Docker Compose for the services plus Postgres, broker, Redis and IAM.
 12. Add contract, architecture, API, integration and event tests.
 
 ## Current Foundation Changes
 
 - Removed .NET source/test/project artifacts from the IntelliJ project.
-- Added `services/` Maven workspace for the four SFL microservices.
+- Added `services/` Maven workspace for SFL microservices, now including the ADR-0004 S174 emergency notification deployable.
 - Added `sfl-service-common` shared convention module.
 - Added one service-local `V1__service_foundation.sql` migration per deployable service.
 - Updated root README and root app description to make the old single app a migration reference, not the target architecture.

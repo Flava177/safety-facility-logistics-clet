@@ -1,0 +1,714 @@
+package gh.edu.clet.sfl.emergencynotification.infrastructure.persistence;
+
+import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository;
+import gh.edu.clet.sfl.emergencynotification.domain.model.Acknowledgement;
+import gh.edu.clet.sfl.emergencynotification.domain.model.AudienceGroup;
+import gh.edu.clet.sfl.emergencynotification.domain.model.ChannelStatus;
+import gh.edu.clet.sfl.emergencynotification.domain.model.ChannelType;
+import gh.edu.clet.sfl.emergencynotification.domain.model.DeliveryReceipt;
+import gh.edu.clet.sfl.emergencynotification.domain.model.DeliveryStatus;
+import gh.edu.clet.sfl.emergencynotification.domain.model.DrillRun;
+import gh.edu.clet.sfl.emergencynotification.domain.model.EmergencyScenario;
+import gh.edu.clet.sfl.emergencynotification.domain.model.NotificationActivation;
+import gh.edu.clet.sfl.emergencynotification.domain.model.NotificationChannel;
+import gh.edu.clet.sfl.emergencynotification.domain.model.NotificationTemplate;
+import gh.edu.clet.sfl.emergencynotification.domain.model.Priority;
+import gh.edu.clet.sfl.emergencynotification.domain.model.RecipientZone;
+import gh.edu.clet.sfl.emergencynotification.domain.model.RecordLifecycle;
+import gh.edu.clet.sfl.emergencynotification.domain.model.RecordMetadata;
+import gh.edu.clet.sfl.emergencynotification.domain.model.SiteCode;
+import gh.edu.clet.sfl.emergencynotification.domain.model.SourceChannel;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.time.Instant;
+import java.time.OffsetDateTime;
+import java.time.ZoneOffset;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.UUID;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.dao.OptimisticLockingFailureException;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
+import org.springframework.stereotype.Repository;
+
+/**
+ * JDBC persistence for S174 (schema {@code emergency_notification}). Preserves optimistic locking on
+ * mutable records, site scope, callback/delivery idempotency and audit correlation. Instant values bind as
+ * UTC {@link OffsetDateTime} (pgjdbc cannot infer a type for Instant; columns are TIMESTAMPTZ).
+ */
+@Repository
+public class JdbcEmergencyRepository implements EmergencyRepository {
+
+    private final JdbcTemplate jdbc;
+
+    public JdbcEmergencyRepository(JdbcTemplate jdbc) {
+        this.jdbc = jdbc;
+    }
+
+    // ---- Templates -------------------------------------------------------------------------------
+
+    @Override
+    public NotificationTemplate saveTemplate(NotificationTemplate t) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.notification_templates SET title=?, body=?, channels=?,
+                    break_glass_eligible=?, lifecycle=?, last_modified_by=?, last_modified_at=?, source_channel=?,
+                    correlation_id=?, version=version+1 WHERE id=? AND version=?
+                """, t.title(), t.body(), csv(t.channels()), t.breakGlassEligible(), t.lifecycle().name(),
+                t.metadata().lastModifiedBy(), ts(t.metadata().lastModifiedAt()), t.metadata().sourceChannel().name(),
+                t.metadata().correlationId(), t.id(), t.metadata().version());
+        if (updated == 0 && findTemplate(t.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.notification_templates (id,site_code,template_code,title,body,
+                        channels,break_glass_eligible,lifecycle,created_by,created_at,last_modified_by,last_modified_at,
+                        source_channel,correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, t.id(), t.siteCode().value(), t.templateCode(), t.title(), t.body(), csv(t.channels()),
+                    t.breakGlassEligible(), t.lifecycle().name(), t.metadata().createdBy(), ts(t.metadata().createdAt()),
+                    t.metadata().lastModifiedBy(), ts(t.metadata().lastModifiedAt()), t.metadata().sourceChannel().name(),
+                    t.metadata().correlationId(), t.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("NotificationTemplate version conflict");
+        }
+        return findTemplate(t.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<NotificationTemplate> findTemplate(UUID id) {
+        return one("SELECT * FROM emergency_notification.notification_templates WHERE id=?", this::template, id);
+    }
+
+    @Override
+    public Optional<NotificationTemplate> findTemplateByCode(String siteCode, String templateCode) {
+        return one("SELECT * FROM emergency_notification.notification_templates WHERE site_code=? AND template_code=?",
+                this::template, siteCode, templateCode);
+    }
+
+    @Override
+    public List<NotificationTemplate> findTemplates(List<String> sites, int limit) {
+        return list("SELECT * FROM emergency_notification.notification_templates WHERE site_code = ANY (?) "
+                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::template);
+    }
+
+    // ---- Scenarios -------------------------------------------------------------------------------
+
+    @Override
+    public EmergencyScenario saveScenario(EmergencyScenario s) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.emergency_scenarios SET name=?, priority=?, default_template_id=?,
+                    break_glass_eligible=?, lifecycle=?, last_modified_by=?, last_modified_at=?, source_channel=?,
+                    correlation_id=?, version=version+1 WHERE id=? AND version=?
+                """, s.name(), s.priority().name(), s.defaultTemplateId(), s.breakGlassEligible(), s.lifecycle().name(),
+                s.metadata().lastModifiedBy(), ts(s.metadata().lastModifiedAt()), s.metadata().sourceChannel().name(),
+                s.metadata().correlationId(), s.id(), s.metadata().version());
+        if (updated == 0 && findScenario(s.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.emergency_scenarios (id,site_code,scenario_code,name,priority,
+                        default_template_id,break_glass_eligible,lifecycle,created_by,created_at,last_modified_by,
+                        last_modified_at,source_channel,correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, s.id(), s.siteCode().value(), s.scenarioCode(), s.name(), s.priority().name(),
+                    s.defaultTemplateId(), s.breakGlassEligible(), s.lifecycle().name(), s.metadata().createdBy(),
+                    ts(s.metadata().createdAt()), s.metadata().lastModifiedBy(), ts(s.metadata().lastModifiedAt()),
+                    s.metadata().sourceChannel().name(), s.metadata().correlationId(), s.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("EmergencyScenario version conflict");
+        }
+        return findScenario(s.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<EmergencyScenario> findScenario(UUID id) {
+        return one("SELECT * FROM emergency_notification.emergency_scenarios WHERE id=?", this::scenario, id);
+    }
+
+    @Override
+    public Optional<EmergencyScenario> findScenarioByCode(String siteCode, String scenarioCode) {
+        return one("SELECT * FROM emergency_notification.emergency_scenarios WHERE site_code=? AND scenario_code=?",
+                this::scenario, siteCode, scenarioCode);
+    }
+
+    @Override
+    public List<EmergencyScenario> findScenarios(List<String> sites, int limit) {
+        return list("SELECT * FROM emergency_notification.emergency_scenarios WHERE site_code = ANY (?) "
+                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::scenario);
+    }
+
+    // ---- Audience groups -------------------------------------------------------------------------
+
+    @Override
+    public AudienceGroup saveAudienceGroup(AudienceGroup a) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.audience_groups SET name=?, directory_reference=?, recipient_count=?,
+                    lifecycle=?, last_modified_by=?, last_modified_at=?, source_channel=?, correlation_id=?,
+                    version=version+1 WHERE id=? AND version=?
+                """, a.name(), a.directoryReference(), a.recipientCount(), a.lifecycle().name(),
+                a.metadata().lastModifiedBy(), ts(a.metadata().lastModifiedAt()), a.metadata().sourceChannel().name(),
+                a.metadata().correlationId(), a.id(), a.metadata().version());
+        if (updated == 0 && findAudienceGroup(a.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.audience_groups (id,site_code,group_code,name,directory_reference,
+                        recipient_count,lifecycle,created_by,created_at,last_modified_by,last_modified_at,source_channel,
+                        correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, a.id(), a.siteCode().value(), a.groupCode(), a.name(), a.directoryReference(),
+                    a.recipientCount(), a.lifecycle().name(), a.metadata().createdBy(), ts(a.metadata().createdAt()),
+                    a.metadata().lastModifiedBy(), ts(a.metadata().lastModifiedAt()), a.metadata().sourceChannel().name(),
+                    a.metadata().correlationId(), a.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("AudienceGroup version conflict");
+        }
+        return findAudienceGroup(a.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<AudienceGroup> findAudienceGroup(UUID id) {
+        return one("SELECT * FROM emergency_notification.audience_groups WHERE id=?", this::audience, id);
+    }
+
+    @Override
+    public Optional<AudienceGroup> findAudienceGroupByCode(String siteCode, String groupCode) {
+        return one("SELECT * FROM emergency_notification.audience_groups WHERE site_code=? AND group_code=?",
+                this::audience, siteCode, groupCode);
+    }
+
+    @Override
+    public List<AudienceGroup> findAudienceGroups(List<String> sites, int limit) {
+        return list("SELECT * FROM emergency_notification.audience_groups WHERE site_code = ANY (?) "
+                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::audience);
+    }
+
+    // ---- Recipient zones -------------------------------------------------------------------------
+
+    @Override
+    public RecipientZone saveRecipientZone(RecipientZone z) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.recipient_zones SET name=?, location_reference=?, lifecycle=?,
+                    last_modified_by=?, last_modified_at=?, source_channel=?, correlation_id=?, version=version+1
+                    WHERE id=? AND version=?
+                """, z.name(), z.locationReference(), z.lifecycle().name(), z.metadata().lastModifiedBy(),
+                ts(z.metadata().lastModifiedAt()), z.metadata().sourceChannel().name(), z.metadata().correlationId(),
+                z.id(), z.metadata().version());
+        if (updated == 0 && findRecipientZone(z.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.recipient_zones (id,site_code,zone_code,name,location_reference,
+                        lifecycle,created_by,created_at,last_modified_by,last_modified_at,source_channel,correlation_id,
+                        version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, z.id(), z.siteCode().value(), z.zoneCode(), z.name(), z.locationReference(),
+                    z.lifecycle().name(), z.metadata().createdBy(), ts(z.metadata().createdAt()),
+                    z.metadata().lastModifiedBy(), ts(z.metadata().lastModifiedAt()), z.metadata().sourceChannel().name(),
+                    z.metadata().correlationId(), z.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("RecipientZone version conflict");
+        }
+        return findRecipientZone(z.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<RecipientZone> findRecipientZone(UUID id) {
+        return one("SELECT * FROM emergency_notification.recipient_zones WHERE id=?", this::zone, id);
+    }
+
+    @Override
+    public Optional<RecipientZone> findRecipientZoneByCode(String siteCode, String zoneCode) {
+        return one("SELECT * FROM emergency_notification.recipient_zones WHERE site_code=? AND zone_code=?",
+                this::zone, siteCode, zoneCode);
+    }
+
+    @Override
+    public List<RecipientZone> findRecipientZones(List<String> sites, int limit) {
+        return list("SELECT * FROM emergency_notification.recipient_zones WHERE site_code = ANY (?) "
+                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::zone);
+    }
+
+    // ---- Activations -----------------------------------------------------------------------------
+
+    @Override
+    public NotificationActivation saveActivation(NotificationActivation a) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.notification_activations SET scenario_id=?, template_id=?,
+                    audience_group_ids=?, recipient_zone_ids=?, channels=?, mode=?, status=?, priority=?,
+                    incident_reference=?, approved_by=?, approved_at=?, rejection_reason=?, after_action_approved_by=?,
+                    after_action_approved_at=?, after_action_justification=?, all_clear_at=?, closure_reason=?,
+                    delivery_summary=?, acknowledgement_summary=?, closure_evidence_id=?, escalation_level=?,
+                    degraded_mode=?, fallback_path=?, fast_lane_millis=?, last_modified_by=?, last_modified_at=?,
+                    source_channel=?, correlation_id=?, version=version+1 WHERE id=? AND version=?
+                """, a.scenarioId(), a.templateId(), uuidCsv(a.audienceGroupIds()), uuidCsv(a.recipientZoneIds()),
+                csv(a.channels()), a.mode().name(), a.status().name(), a.priority().name(), a.incidentReference(),
+                a.approvedBy(), ts(a.approvedAt()), a.rejectionReason(), a.afterActionApprovedBy(),
+                ts(a.afterActionApprovedAt()), a.afterActionJustification(), ts(a.allClearAt()), a.closureReason(),
+                a.deliverySummary(), a.acknowledgementSummary(), a.closureEvidenceId(), a.escalationLevel(),
+                a.degradedMode(), a.fallbackPath(), a.fastLaneMillis(), a.metadata().lastModifiedBy(),
+                ts(a.metadata().lastModifiedAt()), a.metadata().sourceChannel().name(), a.metadata().correlationId(),
+                a.id(), a.metadata().version());
+        if (updated == 0 && findActivation(a.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.notification_activations (id,site_code,activation_number,
+                        scenario_id,template_id,audience_group_ids,recipient_zone_ids,channels,mode,status,priority,
+                        incident_reference,approved_by,approved_at,rejection_reason,after_action_approved_by,
+                        after_action_approved_at,after_action_justification,all_clear_at,closure_reason,delivery_summary,
+                        acknowledgement_summary,closure_evidence_id,escalation_level,degraded_mode,fallback_path,
+                        fast_lane_millis,created_by,created_at,last_modified_by,last_modified_at,source_channel,
+                        correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, a.id(), a.siteCode().value(), a.activationNumber(), a.scenarioId(), a.templateId(),
+                    uuidCsv(a.audienceGroupIds()), uuidCsv(a.recipientZoneIds()), csv(a.channels()), a.mode().name(),
+                    a.status().name(), a.priority().name(), a.incidentReference(), a.approvedBy(), ts(a.approvedAt()),
+                    a.rejectionReason(), a.afterActionApprovedBy(), ts(a.afterActionApprovedAt()),
+                    a.afterActionJustification(), ts(a.allClearAt()), a.closureReason(), a.deliverySummary(),
+                    a.acknowledgementSummary(), a.closureEvidenceId(), a.escalationLevel(), a.degradedMode(),
+                    a.fallbackPath(), a.fastLaneMillis(), a.metadata().createdBy(), ts(a.metadata().createdAt()),
+                    a.metadata().lastModifiedBy(), ts(a.metadata().lastModifiedAt()), a.metadata().sourceChannel().name(),
+                    a.metadata().correlationId(), a.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("NotificationActivation version conflict");
+        }
+        return findActivation(a.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<NotificationActivation> findActivation(UUID id) {
+        return one("SELECT * FROM emergency_notification.notification_activations WHERE id=?", this::activation, id);
+    }
+
+    @Override
+    public List<NotificationActivation> findActivations(List<String> sites, NotificationActivation.Status status,
+            int limit) {
+        if (sites.isEmpty()) {
+            return List.of();
+        }
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM emergency_notification.notification_activations WHERE site_code = ANY (?)");
+        List<Object> args = new ArrayList<>();
+        if (status != null) {
+            sql.append(" AND status=?");
+            args.add(status.name());
+        }
+        sql.append(" ORDER BY created_at DESC LIMIT ?");
+        args.add(bound(limit));
+        return query(sql.toString(), sites, args, this::activation);
+    }
+
+    @Override
+    public void saveActivationHistory(UUID activationId, String fromStatus, String toStatus, String action,
+            String actor, String comment, Instant occurredAt, String correlationId) {
+        jdbc.update("""
+                INSERT INTO emergency_notification.activation_history (id,activation_id,from_status,to_status,action,
+                    actor,comment,occurred_at,correlation_id)
+                VALUES (?,?,?,?,?,?,?,?,?)
+                """, UUID.randomUUID(), activationId, fromStatus, toStatus, action, actor, comment, ts(occurredAt),
+                correlationId);
+    }
+
+    // ---- Channels --------------------------------------------------------------------------------
+
+    @Override
+    public NotificationChannel saveChannel(NotificationChannel c) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.notification_channels SET status=?, target_count=?, sent_count=?,
+                    delivered_count=?, failed_count=?, acknowledged_count=?, last_modified_by=?, last_modified_at=?,
+                    source_channel=?, correlation_id=?, version=version+1 WHERE id=? AND version=?
+                """, c.status().name(), c.targetCount(), c.sentCount(), c.deliveredCount(), c.failedCount(),
+                c.acknowledgedCount(), c.metadata().lastModifiedBy(), ts(c.metadata().lastModifiedAt()),
+                c.metadata().sourceChannel().name(), c.metadata().correlationId(), c.id(), c.metadata().version());
+        if (updated == 0 && findChannelById(c.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.notification_channels (id,activation_id,site_code,channel_type,
+                        status,target_count,sent_count,delivered_count,failed_count,acknowledged_count,created_by,
+                        created_at,last_modified_by,last_modified_at,source_channel,correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, c.id(), c.activationId(), c.siteCode().value(), c.channelType().name(), c.status().name(),
+                    c.targetCount(), c.sentCount(), c.deliveredCount(), c.failedCount(), c.acknowledgedCount(),
+                    c.metadata().createdBy(), ts(c.metadata().createdAt()), c.metadata().lastModifiedBy(),
+                    ts(c.metadata().lastModifiedAt()), c.metadata().sourceChannel().name(), c.metadata().correlationId(),
+                    c.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("NotificationChannel version conflict");
+        }
+        return findChannelById(c.id()).orElseThrow();
+    }
+
+    private Optional<NotificationChannel> findChannelById(UUID id) {
+        return one("SELECT * FROM emergency_notification.notification_channels WHERE id=?", this::channel, id);
+    }
+
+    @Override
+    public List<NotificationChannel> findChannels(UUID activationId) {
+        return jdbc.query("SELECT * FROM emergency_notification.notification_channels WHERE activation_id=? "
+                + "ORDER BY channel_type", this::channel, activationId);
+    }
+
+    @Override
+    public Optional<NotificationChannel> findChannel(UUID activationId, ChannelType type) {
+        return one("SELECT * FROM emergency_notification.notification_channels WHERE activation_id=? AND channel_type=?",
+                this::channel, activationId, type.name());
+    }
+
+    // ---- Delivery receipts -----------------------------------------------------------------------
+
+    @Override
+    public DeliveryReceipt saveReceipt(DeliveryReceipt r) {
+        jdbc.update("""
+                INSERT INTO emergency_notification.delivery_receipts (id,activation_id,site_code,channel_type,provider,
+                    provider_message_id,recipient_ref,status,reason,occurred_at,created_by,created_at,source_channel,
+                    correlation_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT (activation_id,provider,provider_message_id) DO NOTHING
+                """, r.id(), r.activationId(), r.siteCode().value(), r.channelType().name(), r.provider(),
+                r.providerMessageId(), r.recipientRef(), r.status().name(), r.reason(), ts(r.occurredAt()),
+                r.createdBy(), ts(r.createdAt()), r.sourceChannel().name(), r.correlationId());
+        return findReceipt(r.activationId(), r.provider(), r.providerMessageId()).orElse(r);
+    }
+
+    @Override
+    public Optional<DeliveryReceipt> findReceipt(UUID activationId, String provider, String providerMessageId) {
+        return one("""
+                SELECT * FROM emergency_notification.delivery_receipts
+                WHERE activation_id=? AND provider=? AND provider_message_id=?
+                """, this::receipt, activationId, provider, providerMessageId);
+    }
+
+    @Override
+    public List<DeliveryReceipt> findReceipts(UUID activationId) {
+        return jdbc.query("SELECT * FROM emergency_notification.delivery_receipts WHERE activation_id=? "
+                + "ORDER BY occurred_at DESC", this::receipt, activationId);
+    }
+
+    // ---- Acknowledgements ------------------------------------------------------------------------
+
+    @Override
+    public Acknowledgement saveAcknowledgement(Acknowledgement a) {
+        jdbc.update("""
+                INSERT INTO emergency_notification.acknowledgements (id,activation_id,site_code,channel_type,
+                    recipient_ref,acknowledged_at,created_by,created_at,source_channel,correlation_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?)
+                ON CONFLICT (activation_id,recipient_ref) DO NOTHING
+                """, a.id(), a.activationId(), a.siteCode().value(), a.channelType() == null ? null : a.channelType().name(),
+                a.recipientRef(), ts(a.acknowledgedAt()), a.createdBy(), ts(a.createdAt()), a.sourceChannel().name(),
+                a.correlationId());
+        return findAcknowledgement(a.activationId(), a.recipientRef()).orElse(a);
+    }
+
+    @Override
+    public Optional<Acknowledgement> findAcknowledgement(UUID activationId, String recipientRef) {
+        return one("SELECT * FROM emergency_notification.acknowledgements WHERE activation_id=? AND recipient_ref=?",
+                this::acknowledgement, activationId, recipientRef);
+    }
+
+    @Override
+    public long countAcknowledgements(UUID activationId) {
+        Long count = jdbc.queryForObject(
+                "SELECT COUNT(*) FROM emergency_notification.acknowledgements WHERE activation_id=?", Long.class,
+                activationId);
+        return count == null ? 0L : count;
+    }
+
+    // ---- Drills ----------------------------------------------------------------------------------
+
+    @Override
+    public DrillRun saveDrill(DrillRun d) {
+        int updated = jdbc.update("""
+                UPDATE emergency_notification.drill_runs SET status=?, target_recipients=?, reached_recipients=?,
+                    acknowledged_recipients=?, activation_millis=?, completed_at=?, notes=?, last_modified_by=?,
+                    last_modified_at=?, source_channel=?, correlation_id=?, version=version+1 WHERE id=? AND version=?
+                """, d.status().name(), d.targetRecipients(), d.reachedRecipients(), d.acknowledgedRecipients(),
+                d.activationMillis(), ts(d.completedAt()), d.notes(), d.metadata().lastModifiedBy(),
+                ts(d.metadata().lastModifiedAt()), d.metadata().sourceChannel().name(), d.metadata().correlationId(),
+                d.id(), d.metadata().version());
+        if (updated == 0 && findDrill(d.id()).isEmpty()) {
+            jdbc.update("""
+                    INSERT INTO emergency_notification.drill_runs (id,site_code,drill_number,scenario_id,status,
+                        target_recipients,reached_recipients,acknowledged_recipients,activation_millis,started_at,
+                        completed_at,notes,created_by,created_at,last_modified_by,last_modified_at,source_channel,
+                        correlation_id,version)
+                    VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                    """, d.id(), d.siteCode().value(), d.drillNumber(), d.scenarioId(), d.status().name(),
+                    d.targetRecipients(), d.reachedRecipients(), d.acknowledgedRecipients(), d.activationMillis(),
+                    ts(d.startedAt()), ts(d.completedAt()), d.notes(), d.metadata().createdBy(),
+                    ts(d.metadata().createdAt()), d.metadata().lastModifiedBy(), ts(d.metadata().lastModifiedAt()),
+                    d.metadata().sourceChannel().name(), d.metadata().correlationId(), d.metadata().version());
+        } else if (updated == 0) {
+            throw new OptimisticLockingFailureException("DrillRun version conflict");
+        }
+        return findDrill(d.id()).orElseThrow();
+    }
+
+    @Override
+    public Optional<DrillRun> findDrill(UUID id) {
+        return one("SELECT * FROM emergency_notification.drill_runs WHERE id=?", this::drill, id);
+    }
+
+    @Override
+    public List<DrillRun> findDrills(List<String> sites, int limit) {
+        return list("SELECT * FROM emergency_notification.drill_runs WHERE site_code = ANY (?) "
+                + "ORDER BY started_at DESC LIMIT ?", sites, limit, this::drill);
+    }
+
+    // ---- Dashboard -------------------------------------------------------------------------------
+
+    @Override
+    public Map<String, Object> dashboardCounts(List<String> sites, String site) {
+        if (sites.isEmpty()) {
+            return Map.of();
+        }
+        String scope = site == null ? null : SiteCode.of(site).value();
+        Map<String, Object> counts = new LinkedHashMap<>();
+        counts.put("activeActivationCount", count(sites, scope,
+                "SELECT COUNT(*) FROM emergency_notification.notification_activations WHERE %s AND status IN "
+                        + "('ACTIVE','BREAK_GLASS_ACTIVE','PARTIALLY_DELIVERED','ESCALATED','ALL_CLEAR_PENDING')"));
+        counts.put("breakGlassCount", count(sites, scope,
+                "SELECT COUNT(*) FROM emergency_notification.notification_activations WHERE %s AND mode='BREAK_GLASS'"));
+        counts.put("failedRecipientCount", count(sites, scope,
+                "SELECT COALESCE(SUM(failed_count),0) FROM emergency_notification.notification_channels WHERE %s"));
+        counts.put("ackPendingCount", count(sites, scope,
+                "SELECT COALESCE(SUM(GREATEST(target_count-acknowledged_count,0)),0) "
+                        + "FROM emergency_notification.notification_channels WHERE %s"));
+        counts.put("escalatedCount", count(sites, scope,
+                "SELECT COUNT(*) FROM emergency_notification.notification_activations WHERE %s AND status='ESCALATED'"));
+        counts.put("allClearPendingCount", count(sites, scope,
+                "SELECT COUNT(*) FROM emergency_notification.notification_activations WHERE %s AND status='ALL_CLEAR_PENDING'"));
+        counts.put("drillCount", count(sites, scope,
+                "SELECT COUNT(*) FROM emergency_notification.drill_runs WHERE %s AND status='COMPLETED'"));
+        counts.put("sourceUpdatedAt", maxSourceUpdatedAt(sites, scope));
+        return counts;
+    }
+
+    @Override
+    public void saveDashboardSnapshot(String scopeKey, String siteCode, Instant generatedAt, boolean stale,
+            Map<String, Object> counts, Instant sourceUpdatedAt, String warnings) {
+        jdbc.update("""
+                INSERT INTO emergency_notification.dashboard_snapshots (id,scope_key,site_code,generated_at,stale,
+                    active_activation_count,break_glass_count,failed_recipient_count,ack_pending_count,escalated_count,
+                    all_clear_pending_count,drill_count,source_updated_at,warnings)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, UUID.randomUUID(), scopeKey, siteCode, ts(generatedAt), stale,
+                asInt(counts.get("activeActivationCount")), asInt(counts.get("breakGlassCount")),
+                asInt(counts.get("failedRecipientCount")), asInt(counts.get("ackPendingCount")),
+                asInt(counts.get("escalatedCount")), asInt(counts.get("allClearPendingCount")),
+                asInt(counts.get("drillCount")), ts(sourceUpdatedAt), warnings);
+    }
+
+    // ---- Sweeps ----------------------------------------------------------------------------------
+
+    @Override
+    public List<UUID> findActivationsForAckEscalation(String siteCode, Instant activatedBefore, int limit) {
+        return jdbc.query("""
+                SELECT id FROM emergency_notification.notification_activations
+                WHERE site_code=? AND status IN ('ACTIVE','BREAK_GLASS_ACTIVE','PARTIALLY_DELIVERED')
+                  AND last_modified_at < ?
+                ORDER BY last_modified_at LIMIT ?
+                """, (rs, n) -> (UUID) rs.getObject("id"), siteCode, ts(activatedBefore), bound(limit));
+    }
+
+    @Override
+    public List<String> activeSites() {
+        return jdbc.query("""
+                SELECT DISTINCT site_code FROM emergency_notification.notification_activations
+                UNION SELECT DISTINCT site_code FROM emergency_notification.drill_runs
+                """, (rs, n) -> rs.getString(1));
+    }
+
+    // ---- Row mappers -----------------------------------------------------------------------------
+
+    private NotificationTemplate template(ResultSet r, int n) throws SQLException {
+        return new NotificationTemplate(uuid(r, "id"), r.getString("template_code"),
+                SiteCode.of(r.getString("site_code")), r.getString("title"), r.getString("body"),
+                channels(r.getString("channels")), r.getBoolean("break_glass_eligible"),
+                RecordLifecycle.valueOf(r.getString("lifecycle")), metadata(r));
+    }
+
+    private EmergencyScenario scenario(ResultSet r, int n) throws SQLException {
+        return new EmergencyScenario(uuid(r, "id"), r.getString("scenario_code"), SiteCode.of(r.getString("site_code")),
+                r.getString("name"), Priority.valueOf(r.getString("priority")), uuid(r, "default_template_id"),
+                r.getBoolean("break_glass_eligible"), RecordLifecycle.valueOf(r.getString("lifecycle")), metadata(r));
+    }
+
+    private AudienceGroup audience(ResultSet r, int n) throws SQLException {
+        return new AudienceGroup(uuid(r, "id"), r.getString("group_code"), SiteCode.of(r.getString("site_code")),
+                r.getString("name"), r.getString("directory_reference"), r.getInt("recipient_count"),
+                RecordLifecycle.valueOf(r.getString("lifecycle")), metadata(r));
+    }
+
+    private RecipientZone zone(ResultSet r, int n) throws SQLException {
+        return new RecipientZone(uuid(r, "id"), r.getString("zone_code"), SiteCode.of(r.getString("site_code")),
+                r.getString("name"), r.getString("location_reference"),
+                RecordLifecycle.valueOf(r.getString("lifecycle")), metadata(r));
+    }
+
+    private NotificationActivation activation(ResultSet r, int n) throws SQLException {
+        Long fastLane = (Long) r.getObject("fast_lane_millis");
+        return new NotificationActivation(uuid(r, "id"), r.getString("activation_number"),
+                SiteCode.of(r.getString("site_code")), uuid(r, "scenario_id"), uuid(r, "template_id"),
+                uuidList(r.getString("audience_group_ids")), uuidList(r.getString("recipient_zone_ids")),
+                channels(r.getString("channels")), NotificationActivation.Mode.valueOf(r.getString("mode")),
+                NotificationActivation.Status.valueOf(r.getString("status")), Priority.valueOf(r.getString("priority")),
+                r.getString("incident_reference"), r.getString("approved_by"), instant(r, "approved_at"),
+                r.getString("rejection_reason"), r.getString("after_action_approved_by"),
+                instant(r, "after_action_approved_at"), r.getString("after_action_justification"),
+                instant(r, "all_clear_at"), r.getString("closure_reason"), r.getString("delivery_summary"),
+                r.getString("acknowledgement_summary"), uuid(r, "closure_evidence_id"), r.getInt("escalation_level"),
+                r.getBoolean("degraded_mode"), r.getString("fallback_path"), fastLane, metadata(r));
+    }
+
+    private NotificationChannel channel(ResultSet r, int n) throws SQLException {
+        return new NotificationChannel(uuid(r, "id"), uuid(r, "activation_id"), SiteCode.of(r.getString("site_code")),
+                ChannelType.valueOf(r.getString("channel_type")), ChannelStatus.valueOf(r.getString("status")),
+                r.getInt("target_count"), r.getInt("sent_count"), r.getInt("delivered_count"), r.getInt("failed_count"),
+                r.getInt("acknowledged_count"), metadata(r));
+    }
+
+    private DeliveryReceipt receipt(ResultSet r, int n) throws SQLException {
+        return new DeliveryReceipt(uuid(r, "id"), uuid(r, "activation_id"), SiteCode.of(r.getString("site_code")),
+                ChannelType.valueOf(r.getString("channel_type")), r.getString("provider"),
+                r.getString("provider_message_id"), r.getString("recipient_ref"),
+                DeliveryStatus.valueOf(r.getString("status")), r.getString("reason"), instant(r, "occurred_at"),
+                r.getString("created_by"), instant(r, "created_at"),
+                SourceChannel.valueOf(r.getString("source_channel")), r.getString("correlation_id"));
+    }
+
+    private Acknowledgement acknowledgement(ResultSet r, int n) throws SQLException {
+        String ch = r.getString("channel_type");
+        return new Acknowledgement(uuid(r, "id"), uuid(r, "activation_id"), SiteCode.of(r.getString("site_code")),
+                ch == null ? null : ChannelType.valueOf(ch), r.getString("recipient_ref"),
+                instant(r, "acknowledged_at"), r.getString("created_by"), instant(r, "created_at"),
+                SourceChannel.valueOf(r.getString("source_channel")), r.getString("correlation_id"));
+    }
+
+    private DrillRun drill(ResultSet r, int n) throws SQLException {
+        Long activationMillis = (Long) r.getObject("activation_millis");
+        return new DrillRun(uuid(r, "id"), r.getString("drill_number"), SiteCode.of(r.getString("site_code")),
+                uuid(r, "scenario_id"), DrillRun.Status.valueOf(r.getString("status")), r.getInt("target_recipients"),
+                r.getInt("reached_recipients"), r.getInt("acknowledged_recipients"), activationMillis,
+                instant(r, "started_at"), instant(r, "completed_at"), r.getString("notes"), metadata(r));
+    }
+
+    private RecordMetadata metadata(ResultSet r) throws SQLException {
+        return RecordMetadata.rehydrate(r.getString("created_by"), instant(r, "created_at"),
+                r.getString("last_modified_by"), instant(r, "last_modified_at"), r.getLong("version"),
+                SourceChannel.valueOf(r.getString("source_channel")), r.getString("correlation_id"));
+    }
+
+    // ---- Helpers ---------------------------------------------------------------------------------
+
+    private long count(List<String> sites, String site, String template) {
+        String scoped = site == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
+        String sql = String.format(template, scoped);
+        Long value = jdbc.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+            if (site != null) {
+                ps.setString(2, site);
+            }
+            return ps;
+        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        return value == null ? 0L : value;
+    }
+
+    private Instant maxSourceUpdatedAt(List<String> sites, String site) {
+        String scoped = site == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
+        String sql = "SELECT MAX(last_modified_at) FROM emergency_notification.notification_activations WHERE " + scoped;
+        return jdbc.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+            if (site != null) {
+                ps.setString(2, site);
+            }
+            return ps;
+        }, rs -> rs.next() && rs.getTimestamp(1) != null ? rs.getTimestamp(1).toInstant() : null);
+    }
+
+    private <T> List<T> list(String sql, List<String> sites, int limit, RowMapper<T> mapper) {
+        if (sites.isEmpty()) {
+            return List.of();
+        }
+        return jdbc.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+            ps.setInt(2, bound(limit));
+            return ps;
+        }, mapper);
+    }
+
+    private <T> List<T> query(String sql, List<String> sites, List<Object> args, RowMapper<T> mapper) {
+        return jdbc.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+            for (int i = 0; i < args.size(); i++) {
+                ps.setObject(i + 2, args.get(i));
+            }
+            return ps;
+        }, mapper);
+    }
+
+    private <T> Optional<T> one(String sql, RowMapper<T> mapper, Object... args) {
+        try {
+            return Optional.ofNullable(jdbc.queryForObject(sql, mapper, args));
+        } catch (EmptyResultDataAccessException e) {
+            return Optional.empty();
+        }
+    }
+
+    private static int bound(int limit) {
+        return Math.min(Math.max(limit, 1), 500);
+    }
+
+    private static int asInt(Object value) {
+        return value instanceof Number number ? number.intValue() : 0;
+    }
+
+    private UUID uuid(ResultSet r, String name) throws SQLException {
+        Object v = r.getObject(name);
+        return v == null ? null : (UUID) v;
+    }
+
+    private Instant instant(ResultSet r, String name) throws SQLException {
+        var v = r.getTimestamp(name);
+        return v == null ? null : v.toInstant();
+    }
+
+    private static OffsetDateTime ts(Instant i) {
+        return i == null ? null : OffsetDateTime.ofInstant(i, ZoneOffset.UTC);
+    }
+
+    private static String csv(List<ChannelType> channels) {
+        List<String> names = new ArrayList<>();
+        for (ChannelType c : channels) {
+            names.add(c.name());
+        }
+        return String.join(",", names);
+    }
+
+    private static String uuidCsv(List<UUID> ids) {
+        List<String> s = new ArrayList<>();
+        for (UUID id : ids) {
+            s.add(id.toString());
+        }
+        return String.join(",", s);
+    }
+
+    private static List<ChannelType> channels(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        List<ChannelType> out = new ArrayList<>();
+        for (String part : value.split(",")) {
+            if (!part.isBlank()) {
+                out.add(ChannelType.valueOf(part.strip()));
+            }
+        }
+        return out;
+    }
+
+    private static List<UUID> uuidList(String value) {
+        if (value == null || value.isBlank()) {
+            return List.of();
+        }
+        return Arrays.stream(value.split(",")).map(String::strip).filter(s -> !s.isBlank())
+                .map(UUID::fromString).toList();
+    }
+}
