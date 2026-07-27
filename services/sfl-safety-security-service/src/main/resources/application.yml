@@ -42,5 +42,5 @@ management:
 sfl:
   service-boundary:
     schema: safety_security
-    owns: "Safety and security service for S160, S160a, S161, S162, S162a, S163 and S174"
+    owns: "Safety and security service for S160, S160a, S161, S162, S162a and S163"
 
