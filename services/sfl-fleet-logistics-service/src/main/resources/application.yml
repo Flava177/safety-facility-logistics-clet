@@ -50,7 +50,7 @@ management:
 sfl:
   service-boundary:
     schema: fleet_logistics
-    owns: "S166 Fleet and Vehicle Management and S168_fuel Fuel Management and Driver Logbooks; S171 follows later"
+    owns: "S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, and S171 Mailroom / Courier and Dispatch Tracking"
   security:
     # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
     enabled: ${SFL_SECURITY_ENABLED:false}
@@ -86,3 +86,11 @@ sfl:
       enabled: ${SFL_FUEL_SCHEDULER:true}
       fixed-delay: ${SFL_FUEL_SCHEDULER_DELAY:PT5M}
       initial-delay: ${SFL_FUEL_SCHEDULER_INITIAL_DELAY:PT45S}
+  dispatch:
+    scheduling:
+      # S171 undelivered-item, outstanding-return, exception-SLA, dashboard-refresh and stale-integration
+      # sweeps. Individual sweeps are also toggled by runtime configuration (dispatch.scheduling.*-enabled)
+      # so operations can disable one without a redeploy.
+      enabled: ${SFL_DISPATCH_SCHEDULER:true}
+      fixed-delay: ${SFL_DISPATCH_SCHEDULER_DELAY:PT5M}
+      initial-delay: ${SFL_DISPATCH_SCHEDULER_INITIAL_DELAY:PT50S}
