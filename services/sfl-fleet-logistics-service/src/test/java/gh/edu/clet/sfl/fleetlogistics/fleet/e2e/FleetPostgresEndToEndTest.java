@@ -31,7 +31,7 @@ class FleetPostgresEndToEndTest {
 
     @Container
     static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("sfl_fleet_e2e")
+            .withDatabaseName("sfl__fleet_vehicle_service_e2e")
             .withUsername("sfl")
             .withPassword("sfl");
 
