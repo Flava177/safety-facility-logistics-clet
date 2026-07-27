@@ -56,8 +56,8 @@ Keep existing technical artifact, schema and package names:
 - Existing base package: gh.edu.clet.sfl.fleetlogistics — add a cohesive new feature package
   `gh.edu.clet.sfl.fleetlogistics.dispatch`
 - Application port: 8093
-- PostgreSQL host port: 5444
-- Database: sfl_fleet_db
+- PostgreSQL host port: 5443
+- Database: sfl__fleet_vehicle_service
 - Canonical platform token for events: `ftlmp` (e.g. `sfl.ftlmp.dispatch-created.v1`)
 
 Delivery type for S171 is **Build (Fast-Track)**: SFL owns the courier register, manifest,
@@ -344,7 +344,7 @@ Mandatory E2E scenarios:
     unexplained variance (GPS/RFID optional/mocked in Phase 1).
 
 Run at minimum: `mvn -pl sfl-fleet-logistics-service -am test`. Also verify the app starts on 8093,
-PostgreSQL connects on localhost:5444, /actuator/health = UP, /v3/api-docs returns OpenAPI JSON,
+PostgreSQL connects on localhost:5443, /actuator/health = UP, /v3/api-docs returns OpenAPI JSON,
 Swagger UI loads, /dispatch/ loads, and existing S166 + S168 tests still pass.
 
 ======================================================================

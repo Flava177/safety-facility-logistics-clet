@@ -46,10 +46,20 @@ If the restart does not trigger, stop and rerun **SFL Java**. That is still norm
 
 ## Database
 
-Local Java development uses `sfl_java` by default:
+Local microservice development uses one owned PostgreSQL database per deployable service. Start them all with:
 
-```text
-jdbc:postgresql://localhost:5434/sfl_java
+```powershell
+docker compose -f compose.service-dbs.yml up -d
 ```
 
-The existing C# database is not used by this Spring Boot app.
+The default runtime ports are:
+
+```text
+5441 -> sfl_facilities_service
+5442 -> sfl_safety_security_service
+5443 -> sfl__fleet_vehicle_service
+5444 -> sfl_asset_visibility_service
+5445 -> sfl_emergency_notification_service
+```
+
+The existing C# database is not used by the Spring Boot microservices.

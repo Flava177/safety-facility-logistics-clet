@@ -9,11 +9,11 @@ runtime configuration and OpenAPI foundations — it does not create a parallel 
 
 - JDK 17 (the module targets `release 17`).
 - Maven (or the bundled `services/mvnw`). Run reactor commands from `services/`.
-- PostgreSQL 16. The service defaults to `jdbc:postgresql://localhost:5444/sfl_fleet_db` (user/pass `sfl`).
+- PostgreSQL 16. The service defaults to `jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service` (user/pass `sfl`).
 
 ```bash
-docker run -d --name sfl-fleet-db -p 5444:5432 \
-  -e POSTGRES_USER=sfl -e POSTGRES_PASSWORD=sfl -e POSTGRES_DB=sfl_fleet_db postgres:16-bookworm
+docker run -d --name sfl-fleet-vehicle-db -p 5443:5432 \
+  -e POSTGRES_USER=sfl -e POSTGRES_PASSWORD=sfl -e POSTGRES_DB=sfl__fleet_vehicle_service postgres:16-bookworm
 ```
 
 ## 2. Run the service
@@ -35,7 +35,7 @@ OIDC/JWT resource server unchanged.
 | OpenAPI JSON | `GET http://localhost:8093/v3/api-docs` | OpenAPI document incl. the nine Dispatch tags |
 | Swagger UI | `http://localhost:8093/swagger-ui.html` | Dispatch Items, Inbound Mail, Dispatch Manifests, Chain of Custody, Dispatch Receipts, Return Reconciliation, Dispatch Exceptions, Dispatch Integrations, Dispatch Dashboards and Reports |
 | Console | `http://localhost:8093/dispatch/` | Mailroom / Courier & Dispatch Tracking console |
-| PostgreSQL | `psql -h localhost -p 5444 -U sfl -d sfl_fleet_db -c '\dt fleet_logistics.courier_items'` | table present |
+| PostgreSQL | `psql -h localhost -p 5443 -U sfl -d sfl__fleet_vehicle_service -c '\dt fleet_logistics.courier_items'` | table present |
 
 Dev headers for Swagger "Authorize" or the console toolbar:
 
@@ -68,9 +68,9 @@ SECURITY_OFFICER, AUDITOR, COMPLIANCE_OFFICER, DTI_ADMIN, INTEGRATION_ENGINEER, 
 ```bash
 cd services
 # Point the E2E at a PostgreSQL (recommended on hosts where Testcontainers' Docker auto-detection is flaky):
-docker run -d --name sfl-e2e -p 55432:5432 -e POSTGRES_USER=sfl -e POSTGRES_PASSWORD=sfl \
-  -e POSTGRES_DB=sfl_fleet_e2e_db postgres:16-bookworm
-export SFL_TEST_DB_URL=jdbc:postgresql://localhost:55432/sfl_fleet_e2e_db
+docker run -d --name sfl-fleet-vehicle-e2e -p 55443:5432 -e POSTGRES_USER=sfl -e POSTGRES_PASSWORD=sfl \
+  -e POSTGRES_DB=sfl__fleet_vehicle_service_e2e postgres:16-bookworm
+export SFL_FLEET_LOGISTICS_TEST_DB_URL=jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e
 export SFL_TEST_DB_USERNAME=sfl SFL_TEST_DB_PASSWORD=sfl
 mvn -pl sfl-fleet-logistics-service -am test
 ```
