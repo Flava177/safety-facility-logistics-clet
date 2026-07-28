@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router';
-import { Alert, Box, Button, Divider, Stack, Typography } from '@mui/material';
+import { Link, useNavigate, useParams } from 'react-router';
 import { TripResponse } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
@@ -12,6 +11,8 @@ import {
   RecordInspectionDialog,
   StartTripDialog,
 } from 'modules/fleet/dialogs/tripDialogs';
+import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
@@ -22,7 +23,6 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
 import { formatDateTime, formatNumber, formatOdometer } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
 
 type DialogKey = 'assign' | 'start' | 'close' | 'cancel' | 'hold' | 'resume' | 'inspection' | null;
 
@@ -36,6 +36,9 @@ const permitted = (trip: TripResponse) => ({
   cancel: ['PLANNED', 'ASSIGNED', 'ON_HOLD'].includes(trip.status),
   inspect: ['PLANNED', 'ASSIGNED', 'IN_PROGRESS'].includes(trip.status),
 });
+
+/** A related record rendered as a navigable tile — the assignment's vehicle and driver. */
+const linkTile = 'block rounded-xl border border-gray-200 p-3 transition hover:border-brand-500';
 
 /**
  * Trip detail — the workflow surface.
@@ -130,7 +133,7 @@ const TripDetailPage = () => {
     : [];
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title={trip.data?.tripNumber ?? 'Trip'}
         subtitle={
@@ -144,22 +147,17 @@ const TripDetailPage = () => {
           { label: trip.data?.tripNumber ?? '…' },
         ]}
         actions={
-          <Button
-            variant="soft"
-            color="neutral"
-            onClick={() => navigate(fleetPaths.trips)}
-            startIcon={<IconifyIcon icon="material-symbols:arrow-back-rounded" />}
-          >
+          <Button variant="outline" startIcon="arrow-left" onClick={() => navigate(fleetPaths.trips)}>
             Trip queue
           </Button>
         }
         meta={
           trip.data && (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <div className="flex flex-wrap items-center gap-2">
               <StatusChip value={trip.data.status} />
               <StatusChip value={trip.data.operatingMode} tone="neutral" />
               <StatusChip value={trip.data.siteCode} label={trip.data.siteCode} tone="neutral" />
-            </Stack>
+            </div>
           )
         }
       />
@@ -171,58 +169,56 @@ const TripDetailPage = () => {
         minHeight={320}
       >
         {trip.data && (
-          <Stack spacing={2.5}>
+          <div className="space-y-5">
             <SectionCard title="Actions" subtitle="Transitions permitted from the current status">
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <div className="flex flex-wrap items-center gap-2">
                 {permitted(trip.data).assign && (
-                  <Button variant="contained" color="secondary" onClick={() => setDialog('assign')}>
+                  <Button variant="primary" onClick={() => setDialog('assign')}>
                     {trip.data.vehicleId ? 'Reassign' : 'Assign vehicle & driver'}
                   </Button>
                 )}
                 {permitted(trip.data).inspect && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('inspection')}>
+                  <Button variant="outline" startIcon="clipboard" onClick={() => setDialog('inspection')}>
                     Record inspection
                   </Button>
                 )}
                 {permitted(trip.data).start && (
-                  <Button variant="soft" color="secondary" onClick={() => setDialog('start')}>
+                  <Button variant="accent" startIcon="play" onClick={() => setDialog('start')}>
                     Start trip
                   </Button>
                 )}
                 {permitted(trip.data).hold && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('hold')}>
+                  <Button variant="outline" startIcon="stop" onClick={() => setDialog('hold')}>
                     Place on hold
                   </Button>
                 )}
                 {permitted(trip.data).resume && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('resume')}>
+                  <Button variant="outline" startIcon="play" onClick={() => setDialog('resume')}>
                     Resume
                   </Button>
                 )}
                 {permitted(trip.data).close && (
-                  <Button variant="contained" color="secondary" onClick={() => setDialog('close')}>
+                  <Button variant="primary" startIcon="flag" onClick={() => setDialog('close')}>
                     Close trip
                   </Button>
                 )}
                 {permitted(trip.data).cancel && (
-                  <Button variant="soft" color="error" onClick={() => setDialog('cancel')}>
+                  <Button variant="danger" startIcon="close" onClick={() => setDialog('cancel')}>
                     Cancel trip
                   </Button>
                 )}
                 {['COMPLETED', 'CANCELLED'].includes(trip.data.status) && (
-                  <Typography variant="body2" color="text.secondary">
+                  <p className="text-theme-sm text-gray-600">
                     This trip is {humanise(trip.data.status).toLowerCase()}. Its record is now
                     read-only history.
-                  </Typography>
+                  </p>
                 )}
-              </Stack>
+              </div>
             </SectionCard>
 
-            <Box
-              sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1.4fr 1fr' } }}
-            >
-              <SectionCard title="Trip record">
-                <Stack spacing={2.5}>
+            <div className="grid gap-5 xl:grid-cols-3">
+              <SectionCard title="Trip record" className="xl:col-span-2">
+                <div className="space-y-5">
                   <KeyValueGrid
                     items={[
                       { label: 'Trip number', value: trip.data.tripNumber },
@@ -249,7 +245,7 @@ const TripDetailPage = () => {
                     trip.data.closureReason ||
                     trip.data.cancellationReason) && (
                     <>
-                      <Divider />
+                      <div className="h-px bg-gray-200" />
                       <KeyValueGrid
                         columns={2}
                         items={[
@@ -293,70 +289,40 @@ const TripDetailPage = () => {
                       />
                     </>
                   )}
-                </Stack>
+                </div>
               </SectionCard>
 
-              <Stack spacing={2}>
+              <div className="space-y-5">
                 <SectionCard title="Assignment">
                   {trip.data.vehicleId || trip.data.driverId ? (
-                    <Stack spacing={1.5}>
+                    <div className="space-y-3">
                       {vehicle.data && (
-                        <Stack
-                          component={RouterLink}
-                          to={fleetPaths.vehicleDetail(vehicle.data.id)}
-                          spacing={0.25}
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            p: 1.5,
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 1.5,
-                            '&:hover': { borderColor: 'secondary.main' },
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            Vehicle
-                          </Typography>
-                          <Typography variant="body2" fontWeight={700}>
+                        <Link to={fleetPaths.vehicleDetail(vehicle.data.id)} className={linkTile}>
+                          <p className="text-theme-xs text-gray-500">Vehicle</p>
+                          <p className="text-theme-sm font-semibold text-gray-800">
                             {vehicle.data.registrationNumber}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          </p>
+                          <p className="text-theme-xs text-gray-500">
                             {vehicle.data.make} {vehicle.data.model} ·{' '}
                             {formatOdometer(vehicle.data.odometerValue, vehicle.data.odometerUnit)}
-                          </Typography>
-                        </Stack>
+                          </p>
+                        </Link>
                       )}
                       {driver.data && (
-                        <Stack
-                          component={RouterLink}
-                          to={fleetPaths.driverDetail(driver.data.id)}
-                          spacing={0.25}
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            p: 1.5,
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 1.5,
-                            '&:hover': { borderColor: 'secondary.main' },
-                          }}
-                        >
-                          <Typography variant="caption" color="text.secondary">
-                            Driver
-                          </Typography>
-                          <Typography variant="body2" fontWeight={700}>
+                        <Link to={fleetPaths.driverDetail(driver.data.id)} className={linkTile}>
+                          <p className="text-theme-xs text-gray-500">Driver</p>
+                          <p className="text-theme-sm font-semibold text-gray-800">
                             {driver.data.displayName}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
+                          </p>
+                          <p className="text-theme-xs text-gray-500">
                             Class {driver.data.licenceClass} ·{' '}
                             {humanise(driver.data.eligibilityStatus)}
-                          </Typography>
-                        </Stack>
+                          </p>
+                        </Link>
                       )}
-                    </Stack>
+                    </div>
                   ) : (
-                    <Alert severity="warning" variant="outlined">
+                    <Alert variant="warning">
                       No vehicle or driver assigned yet. The trip cannot start until both are set.
                     </Alert>
                   )}
@@ -365,8 +331,8 @@ const TripDetailPage = () => {
                 <SectionCard title="History">
                   <WorkflowTimeline entries={timeline} />
                 </SectionCard>
-              </Stack>
-            </Box>
+              </div>
+            </div>
 
             <SectionCard
               title="Inspections"
@@ -381,144 +347,150 @@ const TripDetailPage = () => {
                 onRetry={inspections.refetch}
                 minHeight={140}
               >
-                <Stack spacing={1.5}>
+                <div className="space-y-3">
                   {inspections.data?.map((inspection) => (
-                    <Box
-                      key={inspection.id}
-                      sx={{ p: 1.75, border: 1, borderColor: 'divider', borderRadius: 1.5 }}
-                    >
-                      <Stack
-                        direction={{ xs: 'column', sm: 'row' }}
-                        justifyContent="space-between"
-                        spacing={1}
-                      >
-                        <Box sx={{ minWidth: 0 }}>
-                          <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            flexWrap="wrap"
-                            useFlexGap
-                          >
-                            <Typography variant="body2" fontWeight={700}>
+                    <div key={inspection.id} className="rounded-xl border border-gray-200 p-3.5">
+                      <div className="flex flex-col justify-between gap-2 sm:flex-row">
+                        <div className="min-w-0">
+                          <div className="flex flex-wrap items-center gap-2">
+                            <p className="text-theme-sm font-semibold text-gray-800">
                               {humanise(inspection.inspectionType)}
-                            </Typography>
+                            </p>
                             <StatusChip value={inspection.result} />
                             <StatusChip value={inspection.status} />
-                          </Stack>
-                          <Typography variant="caption" color="text.secondary">
+                          </div>
+                          <p className="mt-0.5 text-theme-xs text-gray-500">
                             {formatDateTime(inspection.performedAt)} ·{' '}
                             {inspection.performedBy ?? 'unknown operator'} ·{' '}
                             {formatNumber(inspection.odometerReading)} km
-                          </Typography>
-                        </Box>
+                          </p>
+                        </div>
                         {!inspection.permitsUse && (
-                          <StatusChip value="BLOCKED" label="Blocks vehicle use" tone="blocked" />
+                          <div className="shrink-0">
+                            <StatusChip value="BLOCKED" label="Blocks vehicle use" tone="blocked" />
+                          </div>
                         )}
-                      </Stack>
+                      </div>
 
                       {inspection.findings.length > 0 && (
-                        <Stack spacing={0.75} sx={{ mt: 1.25 }}>
-                          {inspection.findings.map((finding) => (
-                            <Stack
-                              key={`${inspection.id}-${finding.checkCode}`}
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              flexWrap="wrap"
-                              useFlexGap
+                        <div className="mt-3 space-y-2">
+                          {/* One inspection can carry two findings against the same check code
+                              (two tyres, two lamps), so the position is part of the key. */}
+                          {inspection.findings.map((finding, findingIndex) => (
+                            <div
+                              key={`${inspection.id}-${findingIndex}-${finding.checkCode}`}
+                              className="flex flex-wrap items-center gap-2"
                             >
                               <StatusChip value={finding.severity} />
-                              <Typography variant="body2">
-                                <strong>{finding.checkCode}</strong> — {finding.description}
-                              </Typography>
+                              <p className="text-theme-sm text-gray-700">
+                                <strong className="font-semibold text-gray-800">
+                                  {finding.checkCode}
+                                </strong>{' '}
+                                — {finding.description}
+                              </p>
                               {finding.resolved && (
                                 <StatusChip value="RESOLVED" label="Resolved" tone="ready" />
                               )}
-                            </Stack>
+                            </div>
                           ))}
-                        </Stack>
+                        </div>
                       )}
 
                       {inspection.hasOpenCriticalDefect && (
-                        <Alert severity="error" sx={{ mt: 1.25 }}>
+                        <Alert variant="error" className="mt-3">
                           An unresolved critical defect is recorded — the vehicle is blocked from
                           use until it is cleared.
                         </Alert>
                       )}
 
                       {inspection.notes && (
-                        <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                          {inspection.notes}
-                        </Typography>
+                        <p className="mt-2.5 text-theme-sm text-gray-600">{inspection.notes}</p>
                       )}
-                    </Box>
+                    </div>
                   ))}
-                </Stack>
+                </div>
               </DataState>
             </SectionCard>
 
-            <AssignTripDialog
-              open={dialog === 'assign'}
-              trip={trip.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Trip assignment updated.');
-                refreshAll();
-              }}
-            />
-            <StartTripDialog
-              open={dialog === 'start'}
-              trip={trip.data}
-              vehicleOdometer={vehicle.data?.odometerValue}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Trip started.');
-                refreshAll();
-              }}
-            />
-            <CloseTripDialog
-              open={dialog === 'close'}
-              trip={trip.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Trip closed.');
-                refreshAll();
-              }}
-            />
-            <CancelTripDialog
-              open={dialog === 'cancel'}
-              trip={trip.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Trip cancelled.');
-                refreshAll();
-              }}
-            />
-            <HoldTripDialog
-              open={dialog === 'hold' || dialog === 'resume'}
-              action={dialog === 'resume' ? 'RESUME' : 'HOLD'}
-              trip={trip.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess(dialog === 'resume' ? 'Trip resumed.' : 'Trip placed on hold.');
-                refreshAll();
-              }}
-            />
-            <RecordInspectionDialog
-              open={dialog === 'inspection'}
-              trip={trip.data}
-              vehicleOdometer={vehicle.data?.odometerValue}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Inspection recorded.');
-                refreshAll();
-              }}
-            />
-          </Stack>
+            {/*
+             * Each dialog is mounted only while it is open. A dialog that stays mounted keeps the
+             * form state it was seeded with, so the odometer and reasons from one opening would
+             * reappear in the next — and a value captured before the trip or vehicle query resolved
+             * would never be replaced.
+             */}
+            {dialog === 'assign' && (
+              <AssignTripDialog
+                open
+                trip={trip.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Trip assignment updated.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'start' && (
+              <StartTripDialog
+                open
+                trip={trip.data}
+                vehicleOdometer={vehicle.data?.odometerValue}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Trip started.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'close' && (
+              <CloseTripDialog
+                open
+                trip={trip.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Trip closed.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'cancel' && (
+              <CancelTripDialog
+                open
+                trip={trip.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Trip cancelled.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {(dialog === 'hold' || dialog === 'resume') && (
+              <HoldTripDialog
+                open
+                action={dialog === 'resume' ? 'RESUME' : 'HOLD'}
+                trip={trip.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess(dialog === 'resume' ? 'Trip resumed.' : 'Trip placed on hold.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'inspection' && (
+              <RecordInspectionDialog
+                open
+                trip={trip.data}
+                vehicleOdometer={vehicle.data?.odometerValue}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Inspection recorded.');
+                  refreshAll();
+                }}
+              />
+            )}
+          </div>
         )}
       </DataState>
-    </Box>
+    </div>
   );
 };
 

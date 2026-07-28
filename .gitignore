@@ -441,3 +441,7 @@ $RECYCLE.BIN/
 .turbo/
 .eslintcache
 tmp/
+
+# Local scratch and design binaries — the .fig lives in Figma, not in git
+COMMIT_MSG_*.txt
+*.fig

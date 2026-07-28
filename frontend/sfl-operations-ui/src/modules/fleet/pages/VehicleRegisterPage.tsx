@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Box, Button, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { VehicleResponse } from 'modules/fleet/api/dto';
 import {
   VEHICLE_AVAILABILITY_STATUSES,
@@ -16,20 +14,20 @@ import {
 } from 'modules/fleet/api/enums';
 import { vehiclesApi } from 'modules/fleet/api/fleetApi';
 import { RegisterVehicleDialog } from 'modules/fleet/dialogs/vehicleDialogs';
-import { defaultPageSize, sflActor } from 'shared/api/config';
+import { defaultPageSize } from 'shared/api/config';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatOdometer } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const firstSite = sflActor.sites.split(',')[0]?.trim() ?? '';
 
 interface Filters {
   siteCode: string;
@@ -42,7 +40,7 @@ interface Filters {
 }
 
 const emptyFilters: Filters = {
-  siteCode: firstSite,
+  siteCode: defaultSite,
   registrationNumber: '',
   status: '',
   serviceStatus: '',
@@ -61,14 +59,18 @@ const VehicleRegisterPage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [pagination, setPagination] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: defaultPageSize,
-  });
+  const [pagination, setPagination] = useState({ page: 0, pageSize: defaultPageSize });
   const [registerOpen, setRegisterOpen] = useState(false);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+    setPagination((current) => ({ ...current, page: 0 }));
+  };
+
+  // Reset is a filter change like any other: leaving the page index behind asks the server for a
+  // page the narrowed result set no longer has, and the table comes back empty.
+  const resetFilters = () => {
+    setFilters(emptyFilters);
     setPagination((current) => ({ ...current, page: 0 }));
   };
 
@@ -91,73 +93,73 @@ const VehicleRegisterPage = () => {
     [filters, pagination.page, pagination.pageSize],
   );
 
-  const columns = useMemo<GridColDef<VehicleResponse>[]>(
+  const columns = useMemo<Column<VehicleResponse>[]>(
     () => [
       {
-        field: 'registrationNumber',
-        headerName: 'Registration',
-        minWidth: 140,
-        flex: 1,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" fontWeight={700}>
-              {row.registrationNumber}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.make} {row.model} · {row.manufactureYear}
-            </Typography>
-          </Stack>
+        key: 'registrationNumber',
+        header: 'Registration',
+        width: 180,
+        cell: (row) => (
+          <CellStack
+            primary={row.registrationNumber}
+            secondary={`${row.make} ${row.model} · ${row.manufactureYear}`}
+          />
         ),
       },
       {
-        field: 'category',
-        headerName: 'Category',
-        minWidth: 150,
-        valueFormatter: (value: VehicleCategory) => humanise(value),
+        key: 'category',
+        header: 'Category',
+        width: 150,
+        cell: (row) => humanise(row.category),
       },
-      { field: 'siteCode', headerName: 'Site', minWidth: 100 },
+      // The register is normally read one site at a time, so the site column is laptop-optional.
       {
-        field: 'lifecycleStatus',
-        headerName: 'Lifecycle',
-        minWidth: 130,
-        renderCell: ({ row }) => <StatusChip value={row.lifecycleStatus} />,
-      },
-      {
-        field: 'serviceStatus',
-        headerName: 'Service',
-        minWidth: 140,
-        renderCell: ({ row }) => <StatusChip value={row.serviceStatus} />,
+        key: 'siteCode',
+        header: 'Site',
+        width: 100,
+        hideBelowLg: true,
+        cell: (row) => row.siteCode,
       },
       {
-        field: 'availabilityStatus',
-        headerName: 'Availability',
-        minWidth: 130,
-        renderCell: ({ row }) => <StatusChip value={row.availabilityStatus} />,
+        key: 'lifecycleStatus',
+        header: 'Lifecycle',
+        width: 130,
+        cell: (row) => <StatusChip value={row.lifecycleStatus} />,
       },
       {
-        field: 'odometerValue',
-        headerName: 'Odometer',
-        minWidth: 130,
+        key: 'serviceStatus',
+        header: 'Service',
+        width: 140,
+        cell: (row) => <StatusChip value={row.serviceStatus} />,
+      },
+      {
+        key: 'availabilityStatus',
+        header: 'Availability',
+        width: 130,
+        cell: (row) => <StatusChip value={row.availabilityStatus} />,
+      },
+      {
+        key: 'odometerValue',
+        header: 'Odometer',
+        width: 130,
         align: 'right',
-        headerAlign: 'right',
-        renderCell: ({ row }) => (
-          <Typography variant="body2">
-            {formatOdometer(row.odometerValue, row.odometerUnit)}
-          </Typography>
-        ),
+        cell: (row) => formatOdometer(row.odometerValue, row.odometerUnit),
       },
-      { field: 'responsibleUnit', headerName: 'Responsible unit', minWidth: 180, flex: 1 },
       {
-        field: 'emergencyOnly',
-        headerName: 'Restriction',
-        minWidth: 130,
-        renderCell: ({ row }) =>
+        key: 'responsibleUnit',
+        header: 'Responsible unit',
+        width: 180,
+        cell: (row) => row.responsibleUnit,
+      },
+      {
+        key: 'emergencyOnly',
+        header: 'Restriction',
+        width: 130,
+        cell: (row) =>
           row.emergencyOnly ? (
             <StatusChip value="EMERGENCY_ONLY" label="Emergency only" tone="accent" />
           ) : (
-            <Typography variant="caption" color="text.disabled">
-              None
-            </Typography>
+            <span className="text-theme-xs text-gray-600">None</span>
           ),
       },
     ],
@@ -167,27 +169,17 @@ const VehicleRegisterPage = () => {
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Vehicle register"
         subtitle="Every vehicle in your site scope, with its lifecycle, service and availability standing."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Vehicle register' }]}
         actions={
           <>
-            <Button
-              variant="soft"
-              color="neutral"
-              onClick={query.refetch}
-              startIcon={<IconifyIcon icon="material-symbols:refresh-rounded" />}
-            >
+            <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setRegisterOpen(true)}
-              startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
-            >
+            <Button variant="accent" startIcon="plus" onClick={() => setRegisterOpen(true)}>
               Register vehicle
             </Button>
           </>
@@ -195,11 +187,11 @@ const VehicleRegisterPage = () => {
       />
 
       <SectionCard flush>
-        <FilterBar onReset={() => setFilters(emptyFilters)} resetDisabled={!filtersActive}>
-          <TextInput
-            label="Site code"
+        <FilterBar onReset={resetFilters} resetDisabled={!filtersActive}>
+          <SiteSelect
             value={filters.siteCode}
             onChange={(value) => setFilter('siteCode', value)}
+            allowEmpty
           />
           <TextInput
             label="Registration number"
@@ -241,45 +233,45 @@ const VehicleRegisterPage = () => {
           />
         </FilterBar>
 
-        <Box sx={{ p: 2 }}>
-          <DataState
-            loading={query.initialising}
-            error={query.error}
-            empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
-            emptyTitle="No vehicles match these filters"
-            emptyHint="Adjust the filters, or register the first vehicle for this site."
-            onRetry={query.refetch}
-            minHeight={280}
-          >
-            <DataGrid
-              rows={query.data?.content ?? []}
-              columns={columns}
-              getRowId={(row) => row.id}
-              rowHeight={56}
-              disableColumnMenu
-              loading={query.loading}
-              paginationMode="server"
-              rowCount={query.data?.totalElements ?? 0}
-              paginationModel={pagination}
-              onPaginationModelChange={setPagination}
-              pageSizeOptions={[10, 25, 50, 100]}
-              onRowClick={(params) => navigate(fleetPaths.vehicleDetail(String(params.id)))}
-              sx={{ border: 0, '& .MuiDataGrid-row': { cursor: 'pointer' } }}
-            />
-          </DataState>
-        </Box>
+        <DataState
+          loading={query.initialising}
+          error={query.error}
+          empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
+          emptyTitle="No vehicles match these filters"
+          emptyHint="Adjust the filters, or register the first vehicle for this site."
+          onRetry={query.refetch}
+          minHeight={280}
+        >
+          <DataTable
+            rows={query.data?.content ?? []}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={query.loading}
+            onRowClick={(row) => navigate(fleetPaths.vehicleDetail(row.id))}
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalElements={query.data?.totalElements ?? 0}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onPageSizeChange={(pageSize) => setPagination({ page: 0, pageSize })}
+            emptyMessage="No vehicles match these filters."
+          />
+        </DataState>
       </SectionCard>
 
-      <RegisterVehicleDialog
-        open={registerOpen}
-        defaultSiteCode={filters.siteCode || firstSite}
-        onClose={() => setRegisterOpen(false)}
-        onSaved={() => {
-          notifySuccess('Vehicle registered.');
-          query.refetch();
-        }}
-      />
-    </Box>
+      {/* Mounted only while open, so the dialog picks up the current site filter as its default
+          and cannot reopen holding a half-typed registration from a previous attempt. */}
+      {registerOpen && (
+        <RegisterVehicleDialog
+          open
+          defaultSiteCode={filters.siteCode || defaultSite}
+          onClose={() => setRegisterOpen(false)}
+          onSaved={() => {
+            notifySuccess('Vehicle registered.');
+            query.refetch();
+          }}
+        />
+      )}
+    </div>
   );
 };
 

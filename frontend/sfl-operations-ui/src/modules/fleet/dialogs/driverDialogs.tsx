@@ -1,4 +1,3 @@
-import { Alert, Box } from '@mui/material';
 import { DriverResponse } from 'modules/fleet/api/dto';
 import {
   DRIVER_LIFECYCLE_STATUSES,
@@ -7,22 +6,34 @@ import {
   LicenceClass,
 } from 'modules/fleet/api/enums';
 import { driversApi } from 'modules/fleet/api/fleetApi';
+import Alert from 'shared/components/Alert';
+import { DateField } from 'shared/components/DateField';
 import FormDialog from 'shared/components/FormDialog';
-import { DateInput, EnumSelect, TextInput } from 'shared/components/fields';
+import SiteSelect from 'shared/components/SiteSelect';
+import { EnumSelect, TextInput } from 'shared/components/fields';
+import { todayIsoDate } from 'shared/components/format';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
 
-const twoColumn = {
-  display: 'grid',
-  gap: 2,
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-} as const;
+const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
 interface BaseProps {
   open: boolean;
   onClose: () => void;
   onSaved: () => void;
 }
+
+/**
+ * A lapsed date is a hint, not an error.
+ *
+ * The service accepts the record and simply assesses the driver as ineligible, so refusing the
+ * submission would block a legitimate backfill; saying what will happen is enough. Both values are
+ * `YYYY-MM-DD`, which compares correctly as a string.
+ */
+const lapsedHint = (value: string, subject: string): string | undefined =>
+  value && value < todayIsoDate()
+    ? `This date has passed — the driver will be registered as ineligible until the ${subject} is renewed.`
+    : undefined;
 
 /* ---------------------------------------------------------------------------------------------
  * Register a driver — POST /api/v1/fleet/drivers
@@ -83,7 +94,7 @@ export const RegisterDriverDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <TextInput
           label="Staff reference"
           required
@@ -114,21 +125,26 @@ export const RegisterDriverDialog = ({
           renderOptionLabel={(option) => `Class ${option}`}
           {...form.fieldProps('licenceClass')}
         />
-        <DateInput
+        <DateField
           label="Licence expires on"
           required
           value={form.values.licenceExpiresOn}
           onChange={(value) => form.setValue('licenceExpiresOn', value)}
-          {...form.fieldProps('licenceExpiresOn')}
+          {...form.fieldProps(
+            'licenceExpiresOn',
+            lapsedHint(form.values.licenceExpiresOn, 'licence'),
+          )}
         />
-        <DateInput
+        <DateField
           label="Medical clearance expires on"
           value={form.values.medicalClearanceExpiresOn}
           onChange={(value) => form.setValue('medicalClearanceExpiresOn', value)}
-          {...form.fieldProps('medicalClearanceExpiresOn')}
+          {...form.fieldProps(
+            'medicalClearanceExpiresOn',
+            lapsedHint(form.values.medicalClearanceExpiresOn, 'medical clearance'),
+          )}
         />
-        <TextInput
-          label="Site code"
+        <SiteSelect
           required
           value={form.values.siteCode}
           onChange={(value) => form.setValue('siteCode', value)}
@@ -141,7 +157,7 @@ export const RegisterDriverDialog = ({
           onChange={(value) => form.setValue('responsibleUnit', value)}
           {...form.fieldProps('responsibleUnit')}
         />
-      </Box>
+      </div>
     </FormDialog>
   );
 };
@@ -209,12 +225,12 @@ export const UpdateDriverDialog = ({
       onSubmit={form.submit}
     >
       {driver.licenceNumberMasked && (
-        <Alert severity="warning">
+        <Alert variant="warning">
           The licence number is masked for your role. Submitting will overwrite the stored value —
           only fill this in if you hold the real number.
         </Alert>
       )}
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <TextInput
           label="Display name"
           required
@@ -238,14 +254,14 @@ export const UpdateDriverDialog = ({
           renderOptionLabel={(option) => `Class ${option}`}
           {...form.fieldProps('licenceClass')}
         />
-        <DateInput
+        <DateField
           label="Licence expires on"
           required
           value={form.values.licenceExpiresOn}
           onChange={(value) => form.setValue('licenceExpiresOn', value)}
           {...form.fieldProps('licenceExpiresOn')}
         />
-        <DateInput
+        <DateField
           label="Medical clearance expires on"
           value={form.values.medicalClearanceExpiresOn}
           onChange={(value) => form.setValue('medicalClearanceExpiresOn', value)}
@@ -271,10 +287,12 @@ export const UpdateDriverDialog = ({
           label="Lifecycle reason"
           value={form.values.lifecycleReason}
           onChange={(value) => form.setValue('lifecycleReason', value)}
-          helperText="Quoted back to the dispatcher in the eligibility assessment."
-          {...form.fieldProps('lifecycleReason')}
+          {...form.fieldProps(
+            'lifecycleReason',
+            'Quoted back to the dispatcher in the eligibility assessment.',
+          )}
         />
-      </Box>
+      </div>
     </FormDialog>
   );
 };

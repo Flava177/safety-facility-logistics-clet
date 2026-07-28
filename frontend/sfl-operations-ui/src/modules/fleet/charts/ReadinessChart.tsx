@@ -1,91 +1,45 @@
-import { useMemo } from 'react';
-import { PieChart } from 'echarts/charts';
-import { LegendComponent, TooltipComponent } from 'echarts/components';
-import * as echarts from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { basic, green, grey, red, sflGold, sflNavy } from 'theme/palette/colors';
-import ReactEchart from 'components/base/ReactEchart';
+import { DonutChart } from 'shared/charts/Charts';
+import { toneColors } from 'shared/charts/palette';
 
-echarts.use([PieChart, TooltipComponent, LegendComponent, CanvasRenderer]);
-
-/**
- * Chart colours are literal hex, not theme CSS variables.
- *
- * ECharts renders to canvas and cannot resolve `var(--…)`, so the brand scales are imported
- * directly. They are the same values the palette is built from, so the chart cannot drift from the
- * rest of the interface.
- */
-const toneColour = {
-  ready: green[500],
-  caution: sflGold[500],
-  blocked: red[500],
-} as const;
+/** Ready / caution / blocked read the same here as they do on a `StatusChip`. */
+export type ReadinessTone = 'ready' | 'caution' | 'blocked';
 
 export interface ReadinessSlice {
   name: string;
   value: number;
-  tone: keyof typeof toneColour;
+  tone: ReadinessTone;
 }
 
 interface ReadinessChartProps {
   slices: ReadinessSlice[];
+  /**
+   * Names what the ring adds up to.
+   *
+   * The figure in the middle is the sum of the slices — the kit's donut derives it rather than
+   * accepting one, which keeps the centre from disagreeing with the arcs around it.
+   */
   centreLabel: string;
-  centreValue: number | string;
   height?: number;
 }
 
 /**
  * Fleet availability split as a donut.
  *
- * The centre carries the number an operator acts on, so the chart answers its question without a
- * legend lookup.
+ * Composition, not trend: an operator reads how the scope divides between usable, committed and
+ * blocked vehicles in one glance, and the actionable count sits on the indicator card above.
+ *
+ * These three slices are statuses rather than plain categories, so they take the tone palette
+ * instead of the categorical sequence — green, amber and red here mean exactly what they mean on a
+ * `StatusChip`. Three is also the ceiling: a ring that needs a fourth hue wants a table.
  */
-const ReadinessChart = ({
-  slices,
-  centreLabel,
-  centreValue,
-  height = 250,
-}: ReadinessChartProps) => {
-  const option = useMemo(
-    () => ({
-      tooltip: { trigger: 'item', formatter: '{b}: {c}' },
-      legend: {
-        bottom: 0,
-        icon: 'circle',
-        itemWidth: 8,
-        itemHeight: 8,
-        textStyle: { fontSize: 12, color: grey[600] },
-      },
-      series: [
-        {
-          type: 'pie',
-          radius: ['62%', '84%'],
-          center: ['50%', '44%'],
-          avoidLabelOverlap: true,
-          itemStyle: { borderWidth: 2, borderColor: basic.white },
-          label: {
-            show: true,
-            position: 'center',
-            formatter: () => `{value|${centreValue}}\n{label|${centreLabel}}`,
-            rich: {
-              value: { fontSize: 26, fontWeight: 700, color: sflNavy[800], lineHeight: 32 },
-              label: { fontSize: 11, color: grey[600] },
-            },
-          },
-          emphasis: { label: { show: true } },
-          labelLine: { show: false },
-          data: slices.map((slice) => ({
-            name: slice.name,
-            value: slice.value,
-            itemStyle: { color: toneColour[slice.tone] },
-          })),
-        },
-      ],
-    }),
-    [slices, centreLabel, centreValue],
-  );
-
-  return <ReactEchart echarts={echarts} option={option} sx={{ height, width: 1 }} />;
-};
+const ReadinessChart = ({ slices, centreLabel, height = 280 }: ReadinessChartProps) => (
+  <DonutChart
+    height={height}
+    centreLabel={centreLabel}
+    labels={slices.map((slice) => slice.name)}
+    values={slices.map((slice) => slice.value)}
+    colors={slices.map((slice) => toneColors[slice.tone])}
+  />
+);
 
 export default ReadinessChart;

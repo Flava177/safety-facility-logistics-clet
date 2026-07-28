@@ -1,15 +1,4 @@
-import { useState } from 'react';
-import {
-  Alert,
-  Box,
-  Button,
-  Divider,
-  IconButton,
-  MenuItem,
-  Stack,
-  TextField,
-  Typography,
-} from '@mui/material';
+import { useEffect, useState } from 'react';
 import { TripResponse } from 'modules/fleet/api/dto';
 import {
   DEFECT_SEVERITIES,
@@ -21,9 +10,19 @@ import {
   humanise,
 } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
+import Alert from 'shared/components/Alert';
 import BlockerList from 'shared/components/BlockerList';
+import Button, { IconButton } from 'shared/components/Button';
+import { DateTimeField } from 'shared/components/DateField';
 import FormDialog from 'shared/components/FormDialog';
-import { DateInput, EnumSelect, NumberInput, TextInput } from 'shared/components/fields';
+import SiteSelect from 'shared/components/SiteSelect';
+import {
+  EnumSelect,
+  NumberInput,
+  SelectInput,
+  TextAreaInput,
+  TextInput,
+} from 'shared/components/fields';
 import { formatNumber, fromLocalInputValue, nowLocalInputValue } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useFleetForm } from 'shared/validation/useFleetForm';
@@ -35,13 +34,11 @@ import {
   odometerNotBelow,
   required,
 } from 'shared/validation/validators';
-import IconifyIcon from 'components/base/IconifyIcon';
 
-const twoColumn = {
-  display: 'grid',
-  gap: 2,
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-} as const;
+const twoColumn = 'grid gap-4 sm:grid-cols-2';
+
+/** Divider plus heading for a subsection of a dialog body. */
+const sectionHeading = 'border-t border-gray-200 pt-4 text-theme-sm font-semibold text-brand-900';
 
 interface BaseProps {
   open: boolean;
@@ -88,12 +85,15 @@ const AssignmentPreview = ({
   from,
   to,
   operatingMode,
+  onPermitsAssignmentChange,
 }: {
   vehicleId: string;
   driverId?: string;
   from?: string;
   to?: string;
   operatingMode?: OperatingMode;
+  /** Reports the service's own verdict so the caller can refuse a submission it will reject. */
+  onPermitsAssignmentChange?: (permits: boolean) => void;
 }) => {
   const preview = useApiQuery(
     (signal) =>
@@ -106,31 +106,32 @@ const AssignmentPreview = ({
     [vehicleId, driverId, from, to, operatingMode],
   );
 
+  const permitsAssignment = preview.data?.permitsAssignment;
+
+  useEffect(() => {
+    // Undefined while the preview is loading or unavailable — an unknown must never block the form.
+    onPermitsAssignmentChange?.(permitsAssignment !== false);
+  }, [permitsAssignment, onPermitsAssignmentChange]);
+
   if (!vehicleId) {
     return (
-      <Alert severity="info" variant="outlined">
-        Choose a vehicle to see readiness blockers before submitting.
-      </Alert>
+      <Alert variant="info">Choose a vehicle to see readiness blockers before submitting.</Alert>
     );
   }
 
   if (preview.loading) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        Checking readiness…
-      </Typography>
-    );
+    return <p className="text-theme-sm text-gray-500">Checking readiness…</p>;
   }
 
   if (preview.error) {
-    return <Alert severity="warning">{preview.error.message}</Alert>;
+    return <Alert variant="warning">{preview.error.message}</Alert>;
   }
 
   if (!preview.data) {
     return null;
   }
 
-  return <BlockerList blockers={preview.data.blockers} dense />;
+  return <BlockerList blockers={preview.data.blockers} />;
 };
 
 /* ---------------------------------------------------------------------------------------------
@@ -192,6 +193,7 @@ export const CreateTripDialog = ({
   });
 
   const { vehicles, drivers } = useAssignableOptions(form.values.siteCode || undefined, open);
+  const [assignmentPermitted, setAssignmentPermitted] = useState(true);
 
   return (
     <FormDialog
@@ -200,14 +202,15 @@ export const CreateTripDialog = ({
       description="A trip may be planned first and assigned later. Supplying both a vehicle and a driver assigns it immediately."
       submitLabel="Create trip"
       submitting={form.submitting}
+      // An immediate assignment carries the same readiness policy the assignment endpoint applies.
+      submitDisabled={Boolean(form.values.vehicleId) && !assignmentPermitted}
       formError={form.formError}
       maxWidth="md"
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
-        <TextInput
-          label="Site code"
+      <div className={twoColumn}>
+        <SiteSelect
           required
           value={form.values.siteCode}
           onChange={(value) => form.setValue('siteCode', value)}
@@ -237,82 +240,66 @@ export const CreateTripDialog = ({
           onChange={(value) => form.setValue('destination', value)}
           {...form.fieldProps('destination')}
         />
-        <DateInput
+        <DateTimeField
           label="Planned start"
           required
-          withTime
           value={form.values.plannedStart}
           onChange={(value) => form.setValue('plannedStart', value)}
           {...form.fieldProps('plannedStart')}
         />
-        <DateInput
+        <DateTimeField
           label="Planned end"
           required
-          withTime
           value={form.values.plannedEnd}
           onChange={(value) => form.setValue('plannedEnd', value)}
           {...form.fieldProps('plannedEnd')}
         />
-      </Box>
+      </div>
 
-      <TextInput
+      <TextAreaInput
         label="Purpose"
         required
-        multiline
-        minRows={2}
+        rows={2}
         value={form.values.purpose}
         onChange={(value) => form.setValue('purpose', value)}
         {...form.fieldProps('purpose')}
       />
 
-      <Divider />
-      <Typography variant="subtitle2" fontWeight={700}>
-        Assignment (optional)
-      </Typography>
+      <h3 className={sectionHeading}>Assignment (optional)</h3>
 
-      <Box sx={twoColumn}>
-        <TextField
-          select
-          fullWidth
-          size="small"
+      <div className={twoColumn}>
+        <SelectInput
           label="Vehicle"
           value={form.values.vehicleId}
-          onChange={(event) => form.setValue('vehicleId', event.target.value)}
-          helperText={vehicles.error ? vehicles.error.message : 'Active vehicles for this site'}
+          onChange={(value) => form.setValue('vehicleId', value)}
+          options={(vehicles.data?.content ?? []).map((vehicle) => ({
+            value: vehicle.id,
+            label: `${vehicle.registrationNumber} — ${vehicle.make} ${vehicle.model} (${humanise(
+              vehicle.availabilityStatus,
+            )})`,
+          }))}
+          allowEmpty
+          emptyLabel="Assign later"
           error={Boolean(vehicles.error)}
-        >
-          <MenuItem value="">
-            <em>Assign later</em>
-          </MenuItem>
-          {(vehicles.data?.content ?? []).map((vehicle) => (
-            <MenuItem key={vehicle.id} value={vehicle.id}>
-              {vehicle.registrationNumber} — {vehicle.make} {vehicle.model} (
-              {humanise(vehicle.availabilityStatus)})
-            </MenuItem>
-          ))}
-        </TextField>
+          helperText={vehicles.error ? vehicles.error.message : 'Active vehicles for this site'}
+        />
 
-        <TextField
-          select
-          fullWidth
-          size="small"
+        <SelectInput
           label="Driver"
           value={form.values.driverId}
-          onChange={(event) => form.setValue('driverId', event.target.value)}
-          helperText={drivers.error ? drivers.error.message : 'Active drivers for this site'}
+          onChange={(value) => form.setValue('driverId', value)}
+          options={(drivers.data?.content ?? []).map((driver) => ({
+            value: driver.id,
+            label: `${driver.displayName} — class ${driver.licenceClass} (${humanise(
+              driver.eligibilityStatus,
+            )})`,
+          }))}
+          allowEmpty
+          emptyLabel="Assign later"
           error={Boolean(drivers.error)}
-        >
-          <MenuItem value="">
-            <em>Assign later</em>
-          </MenuItem>
-          {(drivers.data?.content ?? []).map((driver) => (
-            <MenuItem key={driver.id} value={driver.id}>
-              {driver.displayName} — class {driver.licenceClass} (
-              {humanise(driver.eligibilityStatus)})
-            </MenuItem>
-          ))}
-        </TextField>
-      </Box>
+          helperText={drivers.error ? drivers.error.message : 'Active drivers for this site'}
+        />
+      </div>
 
       {form.values.vehicleId && (
         <AssignmentPreview
@@ -323,6 +310,7 @@ export const CreateTripDialog = ({
           }
           to={form.values.plannedEnd ? fromLocalInputValue(form.values.plannedEnd) : undefined}
           operatingMode={form.values.operatingMode}
+          onPermitsAssignmentChange={setAssignmentPermitted}
         />
       )}
     </FormDialog>
@@ -363,6 +351,7 @@ export const AssignTripDialog = ({
   });
 
   const { vehicles, drivers } = useAssignableOptions(trip.siteCode, open);
+  const [assignmentPermitted, setAssignmentPermitted] = useState(true);
 
   return (
     <FormDialog
@@ -371,57 +360,44 @@ export const AssignTripDialog = ({
       description={`${trip.tripNumber} · ${trip.origin} → ${trip.destination}. Blockers below are what the service will apply.`}
       submitLabel={trip.vehicleId ? 'Reassign' : 'Assign'}
       submitting={form.submitting}
+      // The preview runs the assignment's own policy: a blocking verdict is a certain refusal.
+      submitDisabled={Boolean(form.values.vehicleId) && !assignmentPermitted}
       formError={form.formError}
       maxWidth="md"
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
-        <TextField
-          select
-          fullWidth
-          size="small"
-          required
+      <div className={twoColumn}>
+        <SelectInput
           label="Vehicle"
-          value={form.values.vehicleId}
-          onChange={(event) => form.setValue('vehicleId', event.target.value)}
-          error={form.fieldProps('vehicleId').error}
-          helperText={form.fieldProps('vehicleId').helperText}
-          onBlur={form.fieldProps('vehicleId').onBlur}
-        >
-          {(vehicles.data?.content ?? []).map((vehicle) => (
-            <MenuItem key={vehicle.id} value={vehicle.id}>
-              {vehicle.registrationNumber} — {humanise(vehicle.availabilityStatus)}
-            </MenuItem>
-          ))}
-        </TextField>
-
-        <TextField
-          select
-          fullWidth
-          size="small"
           required
+          value={form.values.vehicleId}
+          onChange={(value) => form.setValue('vehicleId', value)}
+          options={(vehicles.data?.content ?? []).map((vehicle) => ({
+            value: vehicle.id,
+            label: `${vehicle.registrationNumber} — ${humanise(vehicle.availabilityStatus)}`,
+          }))}
+          {...form.fieldProps('vehicleId')}
+        />
+
+        <SelectInput
           label="Driver"
+          required
           value={form.values.driverId}
-          onChange={(event) => form.setValue('driverId', event.target.value)}
-          error={form.fieldProps('driverId').error}
-          helperText={form.fieldProps('driverId').helperText}
-          onBlur={form.fieldProps('driverId').onBlur}
-        >
-          {(drivers.data?.content ?? []).map((driver) => (
-            <MenuItem key={driver.id} value={driver.id}>
-              {driver.displayName} — {humanise(driver.eligibilityStatus)}
-            </MenuItem>
-          ))}
-        </TextField>
-      </Box>
+          onChange={(value) => form.setValue('driverId', value)}
+          options={(drivers.data?.content ?? []).map((driver) => ({
+            value: driver.id,
+            label: `${driver.displayName} — ${humanise(driver.eligibilityStatus)}`,
+          }))}
+          {...form.fieldProps('driverId')}
+        />
+      </div>
 
       <TextInput
         label="Reason"
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
-        helperText="Recorded on the trip's transition history."
-        {...form.fieldProps('reason')}
+        {...form.fieldProps('reason', "Recorded on the trip's transition history.")}
       />
 
       {form.values.vehicleId && (
@@ -431,6 +407,7 @@ export const AssignTripDialog = ({
           from={trip.plannedStart}
           to={trip.plannedEnd}
           operatingMode={trip.operatingMode}
+          onPermitsAssignmentChange={setAssignmentPermitted}
         />
       )}
     </FormDialog>
@@ -449,9 +426,16 @@ export const StartTripDialog = ({
   vehicleOdometer,
 }: BaseProps & { trip: TripResponse; vehicleOdometer?: number }) => {
   const form = useFleetForm({
-    initialValues: { startOdometer: vehicleOdometer ? String(vehicleOdometer) : '' },
+    // A newly registered vehicle legitimately reads 0, which is not the same as "no reading".
+    initialValues: { startOdometer: vehicleOdometer === undefined ? '' : String(vehicleOdometer) },
     schema: {
       startOdometer: compose(required('Start odometer'), nonNegativeInteger('Start odometer')),
+    },
+    // A reading below the vehicle's last recorded one is refused with FLEET_ODOMETER_REGRESSION,
+    // so it is a validation failure here rather than an advisory the operator can submit past.
+    crossFieldValidate: (values) => {
+      const message = odometerNotBelow(values.startOdometer, vehicleOdometer);
+      return message ? { startOdometer: message } : {};
     },
     onSubmit: async (values) => {
       await tripsApi.start(trip.id, {
@@ -477,9 +461,9 @@ export const StartTripDialog = ({
       onSubmit={form.submit}
     >
       {vehicleOdometer !== undefined && (
-        <Typography variant="body2" color="text.secondary">
+        <p className="text-theme-sm text-gray-500">
           Last recorded vehicle odometer: {formatNumber(vehicleOdometer)} km
-        </Typography>
+        </p>
       )}
       <NumberInput
         label="Start odometer (km)"
@@ -488,7 +472,7 @@ export const StartTripDialog = ({
         onChange={(value) => form.setValue('startOdometer', value)}
         {...form.fieldProps('startOdometer')}
       />
-      {regression && <Alert severity="warning">{regression}</Alert>}
+      {regression && <Alert variant="warning">{regression}</Alert>}
     </FormDialog>
   );
 };
@@ -507,7 +491,8 @@ export const CloseTripDialog = ({
     initialValues: {
       closureReason: '',
       closureEvidenceId: '',
-      endOdometer: trip.startOdometer ? String(trip.startOdometer) : '',
+      // A trip that started on a zeroed odometer still has a start reading to seed from.
+      endOdometer: trip.startOdometer === null ? '' : String(trip.startOdometer),
     },
     schema: {
       closureReason: compose(required('Closure reason'), maxLength('Closure reason', 1000)),
@@ -545,7 +530,7 @@ export const CloseTripDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Alert severity="info" variant="outlined">
+      <Alert variant="info">
         Register the closure evidence under Evidence &amp; audit first, then paste its reference ID
         here. Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING.
       </Alert>
@@ -554,12 +539,12 @@ export const CloseTripDialog = ({
         required
         value={form.values.endOdometer}
         onChange={(value) => form.setValue('endOdometer', value)}
-        helperText={
+        {...form.fieldProps(
+          'endOdometer',
           trip.startOdometer !== null
             ? `Start odometer was ${formatNumber(trip.startOdometer)} km`
-            : undefined
-        }
-        {...form.fieldProps('endOdometer')}
+            : undefined,
+        )}
       />
       <TextInput
         label="Closure evidence reference ID"
@@ -568,11 +553,10 @@ export const CloseTripDialog = ({
         onChange={(value) => form.setValue('closureEvidenceId', value)}
         {...form.fieldProps('closureEvidenceId')}
       />
-      <TextInput
+      <TextAreaInput
         label="Closure reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.closureReason}
         onChange={(value) => form.setValue('closureReason', value)}
         {...form.fieldProps('closureReason')}
@@ -618,10 +602,9 @@ export const HoldTripDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <TextInput
+      <TextAreaInput
         label="Reason"
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
@@ -662,11 +645,10 @@ export const CancelTripDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <TextInput
+      <TextAreaInput
         label="Reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
@@ -698,7 +680,8 @@ export const RecordInspectionDialog = ({
   const form = useFleetForm({
     initialValues: {
       inspectionType: 'PRE_TRIP' as InspectionType,
-      odometerReading: vehicleOdometer ? String(vehicleOdometer) : '',
+      // A newly registered vehicle legitimately reads 0, which is not the same as "no reading".
+      odometerReading: vehicleOdometer === undefined ? '' : String(vehicleOdometer),
       evidenceId: '',
       notes: '',
     },
@@ -769,7 +752,7 @@ export const RecordInspectionDialog = ({
       onClose={onClose}
       onSubmit={submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <EnumSelect
           label="Inspection type"
           required
@@ -791,54 +774,41 @@ export const RecordInspectionDialog = ({
           label="Evidence reference ID"
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
-          helperText="Optional for a trip inspection."
-          {...form.fieldProps('evidenceId')}
+          {...form.fieldProps('evidenceId', 'Optional for a trip inspection.')}
         />
-      </Box>
+      </div>
 
-      <Divider />
-
-      <Stack direction="row" alignItems="center" justifyContent="space-between">
-        <Typography variant="subtitle2" fontWeight={700}>
-          Findings ({findings.length})
-        </Typography>
-        <Button
-          size="small"
-          variant="soft"
-          color="neutral"
-          onClick={addFinding}
-          startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
-        >
+      <div className={`flex items-center justify-between gap-3 ${sectionHeading}`}>
+        <h3>Findings ({findings.length})</h3>
+        <Button size="sm" variant="outline" startIcon="plus" onClick={addFinding}>
           Add finding
         </Button>
-      </Stack>
+      </div>
 
       {findings.length === 0 ? (
-        <Typography variant="body2" color="text.secondary">
+        <p className="text-theme-sm text-gray-500">
           No findings recorded — this inspection will pass.
-        </Typography>
+        </p>
       ) : (
-        <Stack spacing={1.5}>
+        <div className="space-y-3">
           {findings.map((finding, index) => (
-            <Stack
+            <div
               key={index}
-              direction={{ xs: 'column', sm: 'row' }}
-              spacing={1.5}
-              alignItems={{ sm: 'flex-start' }}
-              sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}
+              className="flex flex-col gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row sm:items-start"
             >
               <TextInput
                 label="Check code"
                 required
                 value={finding.checkCode}
                 onChange={(value) => updateFinding(index, { checkCode: value })}
-                sx={{ maxWidth: { sm: 160 } }}
+                className="sm:w-40"
               />
               <TextInput
                 label="Description"
                 required
                 value={finding.description}
                 onChange={(value) => updateFinding(index, { description: value })}
+                className="flex-1"
               />
               <EnumSelect
                 label="Severity"
@@ -847,32 +817,31 @@ export const RecordInspectionDialog = ({
                 onChange={(value) =>
                   updateFinding(index, { severity: (value || 'MINOR') as DefectSeverity })
                 }
-                sx={{ maxWidth: { sm: 150 } }}
+                className="sm:w-40"
               />
+              {/* Aligned to the controls rather than the labels, which sit above them. */}
               <IconButton
+                name="close"
+                label="Remove finding"
                 onClick={() => removeFinding(index)}
-                aria-label="Remove finding"
-                sx={{ mt: { sm: 0.5 } }}
-              >
-                <IconifyIcon icon="material-symbols:delete-outline-rounded" />
-              </IconButton>
-            </Stack>
+                className="shrink-0 self-end sm:mt-6 sm:self-auto"
+              />
+            </div>
           ))}
-        </Stack>
+        </div>
       )}
 
-      {findingErrors && <Alert severity="error">{findingErrors}</Alert>}
+      {findingErrors && <Alert variant="error">{findingErrors}</Alert>}
 
-      <TextInput
+      <TextAreaInput
         label="Notes"
-        multiline
-        minRows={2}
+        rows={2}
         value={form.values.notes}
         onChange={(value) => form.setValue('notes', value)}
         {...form.fieldProps('notes')}
       />
 
-      <Alert severity={hasCritical ? 'error' : findings.length > 0 ? 'warning' : 'success'}>
+      <Alert variant={hasCritical ? 'error' : findings.length > 0 ? 'warning' : 'success'}>
         Expected result: <strong>{humanise(predictedResult)}</strong>
         {hasCritical && ' — a critical defect blocks the vehicle from use until it is resolved.'}
       </Alert>

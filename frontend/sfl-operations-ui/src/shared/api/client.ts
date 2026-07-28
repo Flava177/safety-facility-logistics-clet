@@ -1,4 +1,4 @@
-import { FleetApiError } from 'shared/errors/FleetApiError';
+import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
 import { fleetApiBaseUrl, sflActor } from './config';
 
@@ -118,18 +118,18 @@ async function request<T>(
   }
 
   const envelope = await parseEnvelope<T>(response);
+  const correlationId = response.headers.get(HEADER_CORRELATION_ID);
 
-  if (envelope.error) {
+  if (isApiErrorEnvelope(envelope.error)) {
     throw FleetApiError.fromEnvelope(response.status, envelope.error, envelope.data);
   }
 
   if (!response.ok) {
-    throw new FleetApiError({
-      status: response.status,
-      code: 'FLEET_UNEXPECTED_STATUS',
-      message: `The service responded with HTTP ${response.status}.`,
-      correlationId: response.headers.get(HEADER_CORRELATION_ID),
-    });
+    // Not every failure comes back in the SFL envelope. An exception the service does not map —
+    // or anything raised before its handlers run — produces Spring's own error body, and a
+    // reverse proxy can produce something else entirely. Those must still surface as a readable
+    // error rather than crashing the screen that is rendering it.
+    throw FleetApiError.fromUnmappedFailure(response.status, envelope, correlationId);
   }
 
   return envelope.data as T;

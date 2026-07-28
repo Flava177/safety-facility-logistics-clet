@@ -23,7 +23,11 @@ export interface FleetForm<T extends object> {
   setValue: <K extends keyof T & string>(field: K, value: T[K]) => void;
   setValues: (values: Partial<T>) => void;
   blur: (field: keyof T & string) => void;
-  fieldProps: (field: keyof T & string) => {
+  /** Spread onto a field. The validation error wins; `hint` shows when the field is valid. */
+  fieldProps: (
+    field: keyof T & string,
+    hint?: string,
+  ) => {
     error: boolean;
     helperText: string | undefined;
     onBlur: () => void;
@@ -159,9 +163,9 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
   );
 
   const fieldProps = useCallback(
-    (field: keyof T & string) => ({
+    (field: keyof T & string, hint?: string) => ({
       error: Boolean(errors[field]),
-      helperText: errors[field],
+      helperText: errors[field] ?? hint,
       onBlur: () => blur(field),
     }),
     [blur, errors],

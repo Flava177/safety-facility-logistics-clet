@@ -15,41 +15,68 @@ to the SFL palette:
 
 ---
 
-## Running the whole stack locally
+## Running it
 
-Run from the repository root unless stated otherwise.
+There is no sign-in step in local development: `sfl.security.enabled` is `false`, so the service
+accepts the `X-SFL-*` actor headers this console sends.
 
-### 1. Environment and databases
+### One command — service and console together (recommended)
+
+From the repository root:
+
+```powershell
+cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
+.\start-fleet.ps1
+```
+
+That loads the SFL environment, starts the service databases, builds this console if it has not been
+built yet, runs the Fleet service, and opens two browser tabs when it is ready:
+
+| URL                                     | What                |
+| --------------------------------------- | ------------------- |
+| <http://localhost:8093/ui/>             | Operations console  |
+| <http://localhost:8093/swagger-ui.html> | Swagger UI          |
+| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON        |
+
+`http://localhost:8093/` redirects to the console. One process serves the API and the UI, so the
+console calls the API same-origin and CORS never comes into it.
+
+Useful switches:
+
+```powershell
+.\start-fleet.ps1 -RebuildUi      # rebuild the console after front-end changes
+.\start-fleet.ps1 -SkipDb         # databases already running
+.\start-fleet.ps1 -SkipUiBuild    # API only, don't touch the console
+.\start-fleet.ps1 -NoBrowser      # don't open browser tabs
+```
+
+### Front-end work — hot reload
+
+```powershell
+.\scripts\dev\run-fleet-dev.ps1
+```
+
+The service runs in its own window on 8093 and Vite serves the console on
+<http://localhost:5005> with hot module replacement. The service already allows `localhost:5005`
+as a CORS origin.
+
+### Doing it by hand
 
 ```powershell
 cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
 .\use-sfl-env.ps1
 docker compose -f compose.service-dbs.yml up -d
-```
 
-### 2. Backend tests (recommended)
-
-```powershell
 cd services
-mvn -pl sfl-fleet-logistics-service -am test
-cd ..
+mvn -pl sfl-fleet-logistics-service -am test          # optional
+mvn -pl sfl-fleet-logistics-service -Pui spring-boot:run
 ```
 
-### 3. Start the Fleet service on port 8093
+`-Pui` builds this console with a project-local Node install before starting the service. Without
+it, Maven copies whatever is already in `frontend/sfl-operations-ui/dist`; if nothing has been
+built, the service starts normally and logs how to build the console.
 
-```powershell
-cd services
-mvn -pl sfl-fleet-logistics-service spring-boot:run
-cd ..
-```
-
-Verify it is up:
-
-- API docs — <http://localhost:8093/v3/api-docs>
-- Swagger UI — <http://localhost:8093/swagger-ui.html>
-- Health — <http://localhost:8093/actuator/health>
-
-### 4. Start the front end
+Front-end only:
 
 ```powershell
 cd frontend\sfl-operations-ui
@@ -60,13 +87,22 @@ npm run build
 npm run dev
 ```
 
-The dev server listens on <http://localhost:5005> and opens on the Fleet operations workspace.
+### How the console is mounted
+
+`npm run build` emits the bundle under the `/ui/` base (see `.env.production`) and Maven copies
+`dist/` into the service's `static/ui`. `FleetWebConfiguration` serves it with a single-page
+fallback, so refreshing on `/ui/fleet/vehicles` works. React Router takes its basename from
+`import.meta.env.BASE_URL`, so the mount point is configured in exactly one place.
 
 ---
 
 ## Configuration
 
 Copy `.env.example` to `.env` and adjust. Vite reads these at build time.
+
+`.env.production` is loaded by `npm run build` only. It clears `VITE_FLEET_API_BASE_URL` so the
+embedded bundle calls the API on its own origin, and sets `VITE_BASE_PATH=/ui/`. Leave both alone
+unless you are deploying the console somewhere other than the Fleet service.
 
 | Variable                  | Default                 | Purpose                                            |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
@@ -77,6 +113,7 @@ Copy `.env.example` to `.env` and adjust. Vite reads these at build time.
 | `VITE_SFL_SITES`          | `CLET-HQ`               | Sent as `X-SFL-Sites` (comma-separated)            |
 | `VITE_FLEET_DEV_FALLBACK` | `false`                 | Reserved switch for clearly-labelled dev fallbacks |
 | `VITE_APP_PORT`           | `5005`                  | Dev/preview server port                            |
+| `VITE_BASE_PATH`          | `/ui/` in builds        | Mount point of the bundle inside the service       |
 
 ### Request headers
 
@@ -193,9 +230,9 @@ Taken from the controllers, not from the API inventory document — see
 
 ## Manual verification checklist
 
-1. Fleet service running on 8093, front end on 5005.
-2. `/` redirects to `/fleet` and the dashboard renders indicators, charts and the snapshot
-   freshness chip.
+1. Run `.\start-fleet.ps1` from the repository root. Swagger and the console open by themselves.
+2. `http://localhost:8093/` redirects to `/ui/` and the dashboard renders indicators, charts and
+   the snapshot freshness chip.
 3. Vehicle and driver registers load, filter and page against the server.
 4. Vehicle, driver, trip and workflow detail screens open from their registers.
 5. Create and transition dialogs show inline errors before submit — try an empty registration

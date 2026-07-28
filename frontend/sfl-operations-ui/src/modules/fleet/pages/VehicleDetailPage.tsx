@@ -1,6 +1,6 @@
-import { useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router';
-import { Alert, Box, Button, Divider, Stack, Tab, Tabs, Typography } from '@mui/material';
+import { useMemo, useState } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
+import { TripResponse } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
 import {
@@ -10,13 +10,18 @@ import {
   RecordServiceDialog,
   RegisterComplianceDocumentDialog,
 } from 'modules/fleet/dialogs/vehicleDialogs';
+import Alert from 'shared/components/Alert';
 import BlockerList from 'shared/components/BlockerList';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatusChip from 'shared/components/StatusChip';
+import Tabs from 'shared/components/Tabs';
+import { cn } from 'shared/components/cn';
 import {
   formatDate,
   formatDateTime,
@@ -26,9 +31,12 @@ import {
 } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
 
 type TabKey = 'overview' | 'compliance' | 'service' | 'trips';
+
+/** A record row inside a tab panel — bordered, two columns, wraps on narrow viewports. */
+const recordRow =
+  'flex flex-col justify-between gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row';
 
 /**
  * Vehicle detail.
@@ -71,8 +79,34 @@ const VehicleDetailPage = () => {
     service.refetch();
   };
 
+  const tripColumns = useMemo<Column<TripResponse>[]>(
+    () => [
+      {
+        key: 'trip',
+        header: 'Trip',
+        width: 260,
+        cell: (row) => (
+          <CellStack primary={row.tripNumber} secondary={`${row.origin} → ${row.destination}`} />
+        ),
+      },
+      {
+        key: 'plannedStart',
+        header: 'Planned start',
+        width: 200,
+        cell: (row) => <CellStack primary={formatDateTime(row.plannedStart)} secondary={row.purpose} />,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 130,
+        cell: (row) => <StatusChip value={row.status} />,
+      },
+    ],
+    [],
+  );
+
   return (
-    <Box>
+    <div>
       <PageHeader
         title={vehicle.data?.registrationNumber ?? 'Vehicle'}
         subtitle={
@@ -88,37 +122,31 @@ const VehicleDetailPage = () => {
         actions={
           <>
             <Button
-              variant="soft"
-              color="neutral"
+              variant="outline"
+              startIcon="arrow-left"
               onClick={() => navigate(fleetPaths.vehicles)}
-              startIcon={<IconifyIcon icon="material-symbols:arrow-back-rounded" />}
             >
               Register
             </Button>
-            <Button variant="soft" color="neutral" onClick={() => setDialog('odometer')}>
+            <Button variant="outline" startIcon="gauge" onClick={() => setDialog('odometer')}>
               Correct odometer
             </Button>
-            <Button variant="soft" color="neutral" onClick={() => setDialog('lifecycle')}>
+            <Button variant="outline" startIcon="activity" onClick={() => setDialog('lifecycle')}>
               Lifecycle
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setDialog('edit')}
-              startIcon={<IconifyIcon icon="material-symbols:edit-outline-rounded" />}
-            >
+            <Button variant="primary" startIcon="edit" onClick={() => setDialog('edit')}>
               Edit
             </Button>
           </>
         }
         meta={
           vehicle.data && (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <div className="flex flex-wrap items-center gap-2">
               <StatusChip value={vehicle.data.lifecycleStatus} />
               <StatusChip value={vehicle.data.serviceStatus} />
               <StatusChip value={vehicle.data.availabilityStatus} />
               {readiness.data && <StatusChip value={readiness.data.status} />}
-            </Stack>
+            </div>
           )
         }
       />
@@ -130,12 +158,12 @@ const VehicleDetailPage = () => {
         minHeight={320}
       >
         {vehicle.data && (
-          <Stack spacing={2.5}>
+          <div className="space-y-5">
             <SectionCard
               title="Readiness"
               subtitle="Assessed with the same policy the assignment will use"
               actions={
-                <Button variant="text" size="small" onClick={readiness.refetch}>
+                <Button size="sm" variant="ghost" startIcon="refresh" onClick={readiness.refetch}>
                   Re-assess
                 </Button>
               }
@@ -147,45 +175,38 @@ const VehicleDetailPage = () => {
                 minHeight={80}
               >
                 {readiness.data && (
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      flexWrap="wrap"
-                      useFlexGap
-                    >
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <StatusChip value={readiness.data.status} />
-                      <Typography variant="caption" color="text.secondary">
+                      <span className="text-theme-xs text-gray-500">
                         Assessed {formatDateTime(readiness.data.assessedAt)}
-                      </Typography>
-                    </Stack>
+                      </span>
+                    </div>
                     <BlockerList
                       blockers={readiness.data.blockers}
                       clearMessage="No readiness blockers. This vehicle can be assigned."
                     />
-                  </Stack>
+                  </div>
                 )}
               </DataState>
             </SectionCard>
 
             <SectionCard flush>
               <Tabs
+                items={[
+                  { value: 'overview', label: 'Overview' },
+                  { value: 'compliance', label: 'Compliance', count: compliance.data?.length },
+                  { value: 'service', label: 'Service history', count: service.data?.history.length },
+                  { value: 'trips', label: 'Trips', count: trips.data?.content.length },
+                ]}
                 value={tab}
-                onChange={(_event, value: TabKey) => setTab(value)}
-                sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
-                variant="scrollable"
-                allowScrollButtonsMobile
-              >
-                <Tab label="Overview" value="overview" />
-                <Tab label="Compliance" value="compliance" />
-                <Tab label="Service history" value="service" />
-                <Tab label="Trips" value="trips" />
-              </Tabs>
+                onChange={(value) => setTab(value as TabKey)}
+                className="px-2"
+              />
 
-              <Box sx={{ p: 2.5 }}>
+              <div className="p-5">
                 {tab === 'overview' && (
-                  <Stack spacing={2.5}>
+                  <div className="space-y-5">
                     <KeyValueGrid
                       items={[
                         { label: 'Registration number', value: vehicle.data.registrationNumber },
@@ -231,9 +252,12 @@ const VehicleDetailPage = () => {
                         {
                           label: 'Current trip',
                           value: vehicle.data.currentTripId ? (
-                            <RouterLink to={fleetPaths.tripDetail(vehicle.data.currentTripId)}>
+                            <Link
+                              to={fleetPaths.tripDetail(vehicle.data.currentTripId)}
+                              className="text-brand-500 transition hover:text-brand-700 hover:underline"
+                            >
                               Open trip
-                            </RouterLink>
+                            </Link>
                           ) : (
                             '—'
                           ),
@@ -241,7 +265,7 @@ const VehicleDetailPage = () => {
                         { label: 'Record version', value: vehicle.data.version },
                       ]}
                     />
-                    <Divider />
+                    <div className="h-px bg-gray-200" />
                     <KeyValueGrid
                       columns={4}
                       items={[
@@ -254,22 +278,21 @@ const VehicleDetailPage = () => {
                         },
                       ]}
                     />
-                  </Stack>
+                  </div>
                 )}
 
                 {tab === 'compliance' && (
-                  <Stack spacing={2}>
-                    <Stack direction="row" justifyContent="flex-end">
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
                       <Button
-                        variant="soft"
-                        color="secondary"
-                        size="small"
+                        size="sm"
+                        variant="accent"
+                        startIcon="plus"
                         onClick={() => setDialog('compliance')}
-                        startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
                       >
                         Register document
                       </Button>
-                    </Stack>
+                    </div>
                     <DataState
                       loading={compliance.initialising}
                       error={compliance.error}
@@ -279,80 +302,62 @@ const VehicleDetailPage = () => {
                       onRetry={compliance.refetch}
                       minHeight={160}
                     >
-                      <Stack spacing={1.25}>
+                      <div className="space-y-2.5">
                         {compliance.data?.map((document) => (
-                          <Stack
-                            key={document.id}
-                            direction={{ xs: 'column', sm: 'row' }}
-                            spacing={1.5}
-                            justifyContent="space-between"
-                            sx={{ p: 1.5, border: 1, borderColor: 'divider', borderRadius: 1.5 }}
-                          >
-                            <Box sx={{ minWidth: 0 }}>
-                              <Stack
-                                direction="row"
-                                spacing={1}
-                                alignItems="center"
-                                flexWrap="wrap"
-                                useFlexGap
-                              >
-                                <Typography variant="body2" fontWeight={700}>
+                          <div key={document.id} className={recordRow}>
+                            <div className="min-w-0">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <p className="text-theme-sm font-semibold text-gray-800">
                                   {humanise(document.documentType)}
-                                </Typography>
+                                </p>
                                 {document.mandatory && (
                                   <StatusChip value="MANDATORY" label="Mandatory" tone="accent" />
                                 )}
-                              </Stack>
-                              <Typography variant="caption" color="text.secondary">
+                              </div>
+                              <p className="mt-0.5 text-theme-xs text-gray-500">
                                 {document.documentReference} · {document.issuingAuthority} · issued{' '}
                                 {formatDate(document.issuedOn)}
-                              </Typography>
-                            </Box>
-                            <Stack
-                              direction="row"
-                              spacing={1}
-                              alignItems="center"
-                              sx={{ flexShrink: 0 }}
-                            >
-                              <Box sx={{ textAlign: { sm: 'right' } }}>
-                                <Typography variant="body2" fontWeight={600}>
+                              </p>
+                            </div>
+                            <div className="flex shrink-0 items-center gap-3">
+                              <div className="sm:text-right">
+                                <p className="text-theme-sm font-medium text-gray-700">
                                   {formatDate(document.expiresOn)}
-                                </Typography>
-                                <Typography
-                                  variant="caption"
-                                  color={
+                                </p>
+                                <p
+                                  className={cn(
+                                    'text-theme-xs',
                                     document.daysUntilExpiry < 0
-                                      ? 'error.main'
+                                      ? 'text-error-600'
                                       : document.daysUntilExpiry < 30
-                                        ? 'warning.main'
-                                        : 'text.secondary'
-                                  }
+                                        ? 'text-warning-600'
+                                        : 'text-gray-500',
+                                  )}
                                 >
                                   {formatDaysRemaining(document.daysUntilExpiry)}
-                                </Typography>
-                              </Box>
+                                </p>
+                              </div>
                               <StatusChip value={document.status} />
-                            </Stack>
-                          </Stack>
+                            </div>
+                          </div>
                         ))}
-                      </Stack>
+                      </div>
                     </DataState>
-                  </Stack>
+                  </div>
                 )}
 
                 {tab === 'service' && (
-                  <Stack spacing={2}>
-                    <Stack direction="row" justifyContent="flex-end">
+                  <div className="space-y-4">
+                    <div className="flex justify-end">
                       <Button
-                        variant="soft"
-                        color="secondary"
-                        size="small"
+                        size="sm"
+                        variant="accent"
+                        startIcon="plus"
                         onClick={() => setDialog('service')}
-                        startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
                       >
                         Record service
                       </Button>
-                    </Stack>
+                    </div>
                     <DataState
                       loading={service.initialising}
                       error={service.error}
@@ -360,7 +365,7 @@ const VehicleDetailPage = () => {
                       minHeight={160}
                     >
                       {service.data && (
-                        <Stack spacing={2}>
+                        <div className="space-y-4">
                           <KeyValueGrid
                             columns={4}
                             items={[
@@ -379,54 +384,38 @@ const VehicleDetailPage = () => {
                               },
                             ]}
                           />
-                          <Divider />
+                          <div className="h-px bg-gray-200" />
                           {service.data.history.length === 0 ? (
-                            <Typography variant="body2" color="text.secondary">
+                            <p className="text-theme-sm text-gray-500">
                               No service events recorded yet.
-                            </Typography>
+                            </p>
                           ) : (
-                            <Stack spacing={1.25}>
+                            <div className="space-y-2.5">
                               {service.data.history.map((record) => (
-                                <Stack
-                                  key={record.id}
-                                  direction={{ xs: 'column', sm: 'row' }}
-                                  spacing={1.5}
-                                  justifyContent="space-between"
-                                  sx={{
-                                    p: 1.5,
-                                    border: 1,
-                                    borderColor: 'divider',
-                                    borderRadius: 1.5,
-                                  }}
-                                >
-                                  <Box sx={{ minWidth: 0 }}>
-                                    <Typography variant="body2" fontWeight={700}>
+                                <div key={record.id} className={recordRow}>
+                                  <div className="min-w-0">
+                                    <p className="text-theme-sm font-semibold text-gray-800">
                                       {humanise(record.serviceType)} ·{' '}
                                       {formatDate(record.performedOn)}
-                                    </Typography>
-                                    <Typography variant="caption" color="text.secondary">
+                                    </p>
+                                    <p className="mt-0.5 text-theme-xs text-gray-500">
                                       {record.workSummary}
-                                    </Typography>
-                                  </Box>
-                                  <Stack
-                                    direction="row"
-                                    spacing={1}
-                                    alignItems="center"
-                                    sx={{ flexShrink: 0 }}
-                                  >
-                                    <Typography variant="caption" color="text.secondary">
+                                    </p>
+                                  </div>
+                                  <div className="flex shrink-0 items-center gap-3">
+                                    <span className="text-theme-xs text-gray-500">
                                       {formatNumber(record.odometerAtService)} km
-                                    </Typography>
+                                    </span>
                                     <StatusChip value={record.outcome} />
-                                  </Stack>
-                                </Stack>
+                                  </div>
+                                </div>
                               ))}
-                            </Stack>
+                            </div>
                           )}
-                        </Stack>
+                        </div>
                       )}
                     </DataState>
-                  </Stack>
+                  </div>
                 )}
 
                 {tab === 'trips' && (
@@ -439,100 +428,98 @@ const VehicleDetailPage = () => {
                     onRetry={trips.refetch}
                     minHeight={160}
                   >
-                    <Stack spacing={1.25}>
-                      {trips.data?.content.map((trip) => (
-                        <Stack
-                          key={trip.id}
-                          component={RouterLink}
-                          to={fleetPaths.tripDetail(trip.id)}
-                          direction="row"
-                          justifyContent="space-between"
-                          alignItems="center"
-                          spacing={1.5}
-                          sx={{
-                            textDecoration: 'none',
-                            color: 'inherit',
-                            p: 1.5,
-                            border: 1,
-                            borderColor: 'divider',
-                            borderRadius: 1.5,
-                            '&:hover': { borderColor: 'secondary.main' },
-                          }}
-                        >
-                          <Box sx={{ minWidth: 0 }}>
-                            <Typography variant="body2" fontWeight={700} noWrap>
-                              {trip.tripNumber} · {trip.origin} → {trip.destination}
-                            </Typography>
-                            <Typography variant="caption" color="text.secondary" noWrap>
-                              {formatDateTime(trip.plannedStart)} · {trip.purpose}
-                            </Typography>
-                          </Box>
-                          <StatusChip value={trip.status} />
-                        </Stack>
-                      ))}
-                    </Stack>
+                    <div className="-mx-5">
+                      <DataTable
+                        rows={trips.data?.content ?? []}
+                        columns={tripColumns}
+                        getRowId={(row) => row.id}
+                        onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
+                        dense
+                      />
+                      {/* The query asks for ten rows, so the panel is a recent extract, not the whole history. */}
+                      <p className="px-5 pt-3 text-theme-xs text-gray-500">
+                        The ten most recent trips for this vehicle. Use the trip queue for the full
+                        history.
+                      </p>
+                    </div>
                   </DataState>
                 )}
-              </Box>
+              </div>
             </SectionCard>
 
             {vehicle.data.lifecycleStatus === 'ARCHIVED' && (
-              <Alert severity="info">
+              <Alert variant="info">
                 Archived records are immutable outside an authorised restoration workflow. Edits
                 will be refused with FLEET_ARCHIVED_RECORD_IMMUTABLE.
               </Alert>
             )}
 
-            <EditVehicleDialog
-              open={dialog === 'edit'}
-              vehicle={vehicle.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Vehicle updated.');
-                refreshAll();
-              }}
-            />
-            <ChangeVehicleLifecycleDialog
-              open={dialog === 'lifecycle'}
-              vehicle={vehicle.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Lifecycle status changed.');
-                refreshAll();
-              }}
-            />
-            <RegisterComplianceDocumentDialog
-              open={dialog === 'compliance'}
-              vehicleId={vehicle.data.id}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Compliance document registered.');
-                refreshAll();
-              }}
-            />
-            <RecordServiceDialog
-              open={dialog === 'service'}
-              vehicleId={vehicle.data.id}
-              currentOdometer={vehicle.data.odometerValue}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Service event recorded.');
-                refreshAll();
-              }}
-            />
-            <CorrectOdometerDialog
-              open={dialog === 'odometer'}
-              vehicle={vehicle.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Odometer corrected.');
-                refreshAll();
-              }}
-            />
-          </Stack>
+            {/*
+             * Mounted only while open. These forms are seeded from the vehicle record, and a
+             * dialog that stays mounted keeps the values it was first given — so after a save and
+             * refetch the edit form would still be offering the superseded make, capacity and
+             * odometer back to the service.
+             */}
+            {dialog === 'edit' && (
+              <EditVehicleDialog
+                open
+                vehicle={vehicle.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Vehicle updated.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'lifecycle' && (
+              <ChangeVehicleLifecycleDialog
+                open
+                vehicle={vehicle.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Lifecycle status changed.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'compliance' && (
+              <RegisterComplianceDocumentDialog
+                open
+                vehicleId={vehicle.data.id}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Compliance document registered.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'service' && (
+              <RecordServiceDialog
+                open
+                vehicleId={vehicle.data.id}
+                currentOdometer={vehicle.data.odometerValue}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Service event recorded.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'odometer' && (
+              <CorrectOdometerDialog
+                open
+                vehicle={vehicle.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Odometer corrected.');
+                  refreshAll();
+                }}
+              />
+            )}
+          </div>
         )}
       </DataState>
-    </Box>
+    </div>
   );
 };
 

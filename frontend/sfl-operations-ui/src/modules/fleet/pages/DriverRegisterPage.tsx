@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Box, Button, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { DriverResponse } from 'modules/fleet/api/dto';
 import {
   DRIVER_ELIGIBILITY_STATUSES,
@@ -9,22 +7,24 @@ import {
   DriverEligibilityStatus,
   DriverLifecycleStatus,
 } from 'modules/fleet/api/enums';
+import { describeDriverEligibility } from 'modules/fleet/api/driverEligibility';
 import { driversApi } from 'modules/fleet/api/fleetApi';
 import { RegisterDriverDialog } from 'modules/fleet/dialogs/driverDialogs';
-import { defaultPageSize, sflActor } from 'shared/api/config';
+import { defaultPageSize } from 'shared/api/config';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import { DateField } from 'shared/components/DateField';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { DateInput, EnumSelect, TextInput } from 'shared/components/fields';
+import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDate, formatDaysRemaining } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const firstSite = sflActor.sites.split(',')[0]?.trim() ?? '';
 
 interface Filters {
   siteCode: string;
@@ -36,7 +36,7 @@ interface Filters {
 }
 
 const emptyFilters: Filters = {
-  siteCode: firstSite,
+  siteCode: defaultSite,
   search: '',
   status: '',
   eligibility: '',
@@ -44,19 +44,27 @@ const emptyFilters: Filters = {
   licenceExpiringBefore: '',
 };
 
+/** Licence expiry earns colour: an expired licence is a refusal at assignment time, not a note. */
+const expiryTone = (days: number) =>
+  days < 0 ? 'text-error-600' : days < 30 ? 'text-warning-600' : 'text-gray-500';
+
 /** The driver register: licence standing, lifecycle and eligibility in one scan. */
 const DriverRegisterPage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [pagination, setPagination] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: defaultPageSize,
-  });
+  const [pagination, setPagination] = useState({ page: 0, pageSize: defaultPageSize });
   const [registerOpen, setRegisterOpen] = useState(false);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+    setPagination((current) => ({ ...current, page: 0 }));
+  };
+
+  // Reset is a filter change like any other: leaving the page index behind asks the server for a
+  // page the narrowed result set no longer has, and the table comes back empty.
+  const resetFilters = () => {
+    setFilters(emptyFilters);
     setPagination((current) => ({ ...current, page: 0 }));
   };
 
@@ -78,108 +86,99 @@ const DriverRegisterPage = () => {
     [filters, pagination.page, pagination.pageSize],
   );
 
-  const columns = useMemo<GridColDef<DriverResponse>[]>(
+  const columns = useMemo<Column<DriverResponse>[]>(
     () => [
       {
-        field: 'displayName',
-        headerName: 'Driver',
-        minWidth: 200,
-        flex: 1,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" fontWeight={700}>
-              {row.displayName}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.staffReference} · {row.siteCode}
-            </Typography>
-          </Stack>
+        key: 'displayName',
+        header: 'Driver',
+        width: 200,
+        cell: (row) => (
+          <CellStack
+            primary={row.displayName}
+            secondary={`${row.staffReference} · ${row.siteCode}`}
+          />
         ),
       },
       {
-        field: 'licenceClass',
-        headerName: 'Licence',
-        minWidth: 150,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" fontWeight={600}>
-              Class {row.licenceClass}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
-              {row.licenceNumberMasked ? 'Number masked' : (row.licenceNumber ?? '—')}
-            </Typography>
-          </Stack>
+        key: 'licenceClass',
+        header: 'Licence',
+        width: 150,
+        cell: (row) => (
+          <CellStack
+            primary={`Class ${row.licenceClass}`}
+            secondary={row.licenceNumberMasked ? 'Number masked' : (row.licenceNumber ?? '—')}
+          />
         ),
       },
       {
-        field: 'licenceExpiresOn',
-        headerName: 'Licence expiry',
-        minWidth: 170,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2">{formatDate(row.licenceExpiresOn)}</Typography>
-            <Typography
-              variant="caption"
-              color={
-                row.daysUntilLicenceExpiry < 0
-                  ? 'error.main'
-                  : row.daysUntilLicenceExpiry < 30
-                    ? 'warning.main'
-                    : 'text.secondary'
-              }
-            >
+        key: 'licenceExpiresOn',
+        header: 'Licence expiry',
+        width: 170,
+        cell: (row) => (
+          <div className="min-w-0">
+            <div className="truncate">{formatDate(row.licenceExpiresOn)}</div>
+            <div className={`truncate text-theme-xs ${expiryTone(row.daysUntilLicenceExpiry)}`}>
               {formatDaysRemaining(row.daysUntilLicenceExpiry)}
-            </Typography>
-          </Stack>
+            </div>
+          </div>
         ),
       },
       {
-        field: 'medicalClearanceExpiresOn',
-        headerName: 'Medical clearance',
-        minWidth: 150,
-        valueFormatter: (value: string | null) => formatDate(value),
+        key: 'medicalClearanceExpiresOn',
+        header: 'Medical clearance',
+        width: 150,
+        cell: (row) => formatDate(row.medicalClearanceExpiresOn),
       },
       {
-        field: 'lifecycleStatus',
-        headerName: 'Lifecycle',
-        minWidth: 130,
-        renderCell: ({ row }) => <StatusChip value={row.lifecycleStatus} />,
+        key: 'lifecycleStatus',
+        header: 'Lifecycle',
+        width: 130,
+        cell: (row) => <StatusChip value={row.lifecycleStatus} />,
       },
       {
-        field: 'eligibilityStatus',
-        headerName: 'Eligibility',
-        minWidth: 140,
-        renderCell: ({ row }) => <StatusChip value={row.eligibilityStatus} />,
+        key: 'eligibilityStatus',
+        header: 'Eligibility',
+        width: 230,
+        // The leading reason only: a scan of the register should explain itself without a click,
+        // and the full list is one row-click away on the driver record.
+        cell: (row) => {
+          const [reason] = describeDriverEligibility(row);
+          return (
+            <div className="min-w-0">
+              <StatusChip value={row.eligibilityStatus} />
+              {reason && <p className="mt-1 text-theme-xs text-gray-600">{reason}</p>}
+            </div>
+          );
+        },
       },
-      { field: 'responsibleUnit', headerName: 'Responsible unit', minWidth: 180, flex: 1 },
+      {
+        key: 'responsibleUnit',
+        header: 'Responsible unit',
+        width: 180,
+        hideBelowLg: true,
+        cell: (row) => row.responsibleUnit,
+      },
     ],
     [],
   );
 
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
+  const noResults = (query.data?.content.length ?? 0) === 0 && !query.loading;
+  // The table is edge-to-edge in a flush card; only the loading, error and empty panels need padding.
+  const panelOnly = query.initialising || Boolean(query.error) || noResults;
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Driver register"
         subtitle="Licence standing, lifecycle and eligibility for every driver in your site scope."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Driver register' }]}
         actions={
           <>
-            <Button
-              variant="soft"
-              color="neutral"
-              onClick={query.refetch}
-              startIcon={<IconifyIcon icon="material-symbols:refresh-rounded" />}
-            >
+            <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setRegisterOpen(true)}
-              startIcon={<IconifyIcon icon="material-symbols:person-add-outline-rounded" />}
-            >
+            <Button variant="accent" startIcon="user-plus" onClick={() => setRegisterOpen(true)}>
               Register driver
             </Button>
           </>
@@ -187,11 +186,11 @@ const DriverRegisterPage = () => {
       />
 
       <SectionCard flush>
-        <FilterBar onReset={() => setFilters(emptyFilters)} resetDisabled={!filtersActive}>
-          <TextInput
-            label="Site code"
+        <FilterBar onReset={resetFilters} resetDisabled={!filtersActive}>
+          <SiteSelect
             value={filters.siteCode}
             onChange={(value) => setFilter('siteCode', value)}
+            allowEmpty
           />
           <TextInput
             label="Search name or reference"
@@ -217,52 +216,54 @@ const DriverRegisterPage = () => {
             value={filters.responsibleUnit}
             onChange={(value) => setFilter('responsibleUnit', value)}
           />
-          <DateInput
+          <DateField
             label="Licence expiring before"
             value={filters.licenceExpiringBefore}
             onChange={(value) => setFilter('licenceExpiringBefore', value)}
           />
         </FilterBar>
 
-        <Box sx={{ p: 2 }}>
+        <div className={panelOnly ? 'p-4' : undefined}>
           <DataState
             loading={query.initialising}
             error={query.error}
-            empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
+            empty={noResults}
             emptyTitle="No drivers match these filters"
             emptyHint="Adjust the filters, or register the first driver for this site."
             onRetry={query.refetch}
             minHeight={280}
           >
-            <DataGrid
+            <DataTable
               rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
-              rowHeight={56}
-              disableColumnMenu
               loading={query.loading}
-              paginationMode="server"
-              rowCount={query.data?.totalElements ?? 0}
-              paginationModel={pagination}
-              onPaginationModelChange={setPagination}
-              pageSizeOptions={[10, 25, 50, 100]}
-              onRowClick={(params) => navigate(fleetPaths.driverDetail(String(params.id)))}
-              sx={{ border: 0, '& .MuiDataGrid-row': { cursor: 'pointer' } }}
+              onRowClick={(row) => navigate(fleetPaths.driverDetail(row.id))}
+              page={pagination.page}
+              pageSize={pagination.pageSize}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+              onPageSizeChange={(pageSize) => setPagination({ page: 0, pageSize })}
+              emptyMessage="No drivers match these filters."
             />
           </DataState>
-        </Box>
+        </div>
       </SectionCard>
 
-      <RegisterDriverDialog
-        open={registerOpen}
-        defaultSiteCode={filters.siteCode || firstSite}
-        onClose={() => setRegisterOpen(false)}
-        onSaved={() => {
-          notifySuccess('Driver registered.');
-          query.refetch();
-        }}
-      />
-    </Box>
+      {/* Mounted only while open, so the dialog picks up the current site filter as its default
+          and cannot reopen holding a half-typed profile from a previous attempt. */}
+      {registerOpen && (
+        <RegisterDriverDialog
+          open
+          defaultSiteCode={filters.siteCode || defaultSite}
+          onClose={() => setRegisterOpen(false)}
+          onSaved={() => {
+            notifySuccess('Driver registered.');
+            query.refetch();
+          }}
+        />
+      )}
+    </div>
   );
 };
 

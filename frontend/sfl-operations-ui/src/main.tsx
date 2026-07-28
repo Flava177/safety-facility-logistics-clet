@@ -1,19 +1,16 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
-import { RouterProvider } from 'react-router';
-import BreakpointsProvider from 'providers/BreakpointsProvider';
-import SettingsProvider from 'providers/SettingsProvider';
-import ThemeProvider from 'providers/ThemeProvider';
-import router from 'routes/router';
+import App from './App';
+import './index.css';
 
-createRoot(document.getElementById('root')!).render(
+const container = document.getElementById('root');
+
+if (!container) {
+  throw new Error('The #root element is missing from index.html.');
+}
+
+createRoot(container).render(
   <StrictMode>
-    <SettingsProvider>
-      <ThemeProvider>
-        <BreakpointsProvider>
-          <RouterProvider router={router} />
-        </BreakpointsProvider>
-      </ThemeProvider>
-    </SettingsProvider>
+    <App />
   </StrictMode>,
 );

@@ -1,7 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Box, Button, FormControlLabel, Stack, Switch, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { WorkflowItemResponse } from 'modules/fleet/api/dto';
 import {
   FLEET_WORKFLOW_STATUSES,
@@ -14,20 +12,20 @@ import {
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
 import { RaiseWorkflowItemDialog } from 'modules/fleet/dialogs/workflowDialogs';
-import { defaultPageSize, sflActor } from 'shared/api/config';
+import { defaultPageSize } from 'shared/api/config';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { Checkbox, EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const firstSite = sflActor.sites.split(',')[0]?.trim() ?? '';
 
 interface Filters {
   siteCode: string;
@@ -40,7 +38,7 @@ interface Filters {
 }
 
 const emptyFilters: Filters = {
-  siteCode: firstSite,
+  siteCode: defaultSite,
   status: '',
   type: '',
   priority: '',
@@ -54,14 +52,18 @@ const WorkflowQueuePage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [pagination, setPagination] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: defaultPageSize,
-  });
+  const [pagination, setPagination] = useState({ page: 0, pageSize: defaultPageSize });
   const [raiseOpen, setRaiseOpen] = useState(false);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+    setPagination((current) => ({ ...current, page: 0 }));
+  };
+
+  // Reset is a filter change like any other: leaving the page index behind asks the server for a
+  // page the narrowed result set no longer has, and the table comes back empty.
+  const resetFilters = () => {
+    setFilters(emptyFilters);
     setPagination((current) => ({ ...current, page: 0 }));
   };
 
@@ -84,105 +86,86 @@ const WorkflowQueuePage = () => {
     [filters, pagination.page, pagination.pageSize],
   );
 
-  const columns = useMemo<GridColDef<WorkflowItemResponse>[]>(
+  const columns = useMemo<Column<WorkflowItemResponse>[]>(
     () => [
       {
-        field: 'workflowNumber',
-        headerName: 'Item',
-        minWidth: 230,
-        flex: 1.2,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" fontWeight={700} noWrap>
-              {row.workflowNumber}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {row.title}
-            </Typography>
-          </Stack>
-        ),
+        key: 'workflowNumber',
+        header: 'Item',
+        width: 230,
+        cell: (row) => <CellStack primary={row.workflowNumber} secondary={row.title} />,
       },
       {
-        field: 'workflowType',
-        headerName: 'Type',
-        minWidth: 170,
-        valueFormatter: (value: FleetWorkflowType) => humanise(value),
+        key: 'workflowType',
+        header: 'Type',
+        width: 170,
+        cell: (row) => humanise(row.workflowType),
       },
       {
-        field: 'status',
-        headerName: 'Status',
-        minWidth: 130,
-        renderCell: ({ row }) => <StatusChip value={row.status} />,
+        key: 'status',
+        header: 'Status',
+        width: 130,
+        cell: (row) => <StatusChip value={row.status} />,
       },
       {
-        field: 'priority',
-        headerName: 'Priority',
-        minWidth: 110,
-        renderCell: ({ row }) => <StatusChip value={row.priority} />,
+        key: 'priority',
+        header: 'Priority',
+        width: 110,
+        cell: (row) => <StatusChip value={row.priority} />,
       },
       {
-        field: 'severity',
-        headerName: 'Severity',
-        minWidth: 110,
-        renderCell: ({ row }) => <StatusChip value={row.severity} />,
+        key: 'severity',
+        header: 'Severity',
+        width: 110,
+        cell: (row) => <StatusChip value={row.severity} />,
       },
       {
-        field: 'slaDueAt',
-        headerName: 'SLA',
-        minWidth: 200,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" color={row.slaBreached ? 'error.main' : 'text.primary'}>
+        key: 'slaDueAt',
+        header: 'SLA',
+        width: 200,
+        cell: (row) => (
+          <div className="min-w-0">
+            <div className={row.slaBreached ? 'font-semibold text-error-600' : 'text-gray-800'}>
               {formatDateTime(row.slaDueAt)}
-            </Typography>
-            <Typography variant="caption" color="text.secondary">
+            </div>
+            <div className="text-theme-xs text-gray-500">
               {row.slaBreached ? 'Breached' : 'Within target'} · level {row.escalationLevel}
-            </Typography>
-          </Stack>
+            </div>
+          </div>
         ),
       },
       {
-        field: 'assignee',
-        headerName: 'Assignee',
-        minWidth: 150,
-        renderCell: ({ row }) =>
-          row.assignee ? (
-            <Typography variant="body2">{row.assignee}</Typography>
-          ) : (
-            <Typography variant="caption" color="text.disabled">
-              Unassigned
-            </Typography>
-          ),
+        key: 'assignee',
+        header: 'Assignee',
+        width: 150,
+        cell: (row) =>
+          row.assignee ?? <span className="text-theme-xs text-gray-600">Unassigned</span>,
       },
-      { field: 'siteCode', headerName: 'Site', minWidth: 100 },
+      {
+        key: 'siteCode',
+        header: 'Site',
+        width: 100,
+        hideBelowLg: true,
+        cell: (row) => row.siteCode,
+      },
     ],
     [],
   );
 
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
+  const rows = query.data?.content ?? [];
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Workflow queue"
         subtitle="Defects, compliance renewals, trip exceptions and integration failures with their SLA standing."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Workflow queue' }]}
         actions={
           <>
-            <Button
-              variant="soft"
-              color="neutral"
-              onClick={query.refetch}
-              startIcon={<IconifyIcon icon="material-symbols:refresh-rounded" />}
-            >
+            <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setRaiseOpen(true)}
-              startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
-            >
+            <Button variant="accent" startIcon="plus" onClick={() => setRaiseOpen(true)}>
               Raise item
             </Button>
           </>
@@ -191,37 +174,27 @@ const WorkflowQueuePage = () => {
 
       <SectionCard flush>
         <FilterBar
-          onReset={() => setFilters(emptyFilters)}
+          onReset={resetFilters}
           resetDisabled={!filtersActive}
           trailing={
-            <Stack direction="row" spacing={0.5} alignItems="center">
-              <FormControlLabel
-                control={
-                  <Switch
-                    size="small"
-                    checked={filters.overdueOnly}
-                    onChange={(event) => setFilter('overdueOnly', event.target.checked)}
-                  />
-                }
-                label={<Typography variant="body2">Overdue</Typography>}
+            <div className="flex flex-col gap-1.5">
+              <Checkbox
+                checked={filters.overdueOnly}
+                onChange={(checked) => setFilter('overdueOnly', checked)}
+                label="Overdue"
               />
-              <FormControlLabel
-                control={
-                  <Switch
-                    size="small"
-                    checked={filters.escalatedOnly}
-                    onChange={(event) => setFilter('escalatedOnly', event.target.checked)}
-                  />
-                }
-                label={<Typography variant="body2">Escalated</Typography>}
+              <Checkbox
+                checked={filters.escalatedOnly}
+                onChange={(checked) => setFilter('escalatedOnly', checked)}
+                label="Escalated"
               />
-            </Stack>
+            </div>
           }
         >
-          <TextInput
-            label="Site code"
+          <SiteSelect
             value={filters.siteCode}
             onChange={(value) => setFilter('siteCode', value)}
+            allowEmpty
           />
           <EnumSelect
             label="Status"
@@ -251,45 +224,45 @@ const WorkflowQueuePage = () => {
           />
         </FilterBar>
 
-        <Box sx={{ p: 2 }}>
-          <DataState
-            loading={query.initialising}
-            error={query.error}
-            empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
-            emptyTitle="No workflow items match these filters"
-            emptyHint="A clear queue is a good sign — or widen the filters to check."
-            onRetry={query.refetch}
-            minHeight={280}
-          >
-            <DataGrid
-              rows={query.data?.content ?? []}
-              columns={columns}
-              getRowId={(row) => row.id}
-              rowHeight={56}
-              disableColumnMenu
-              loading={query.loading}
-              paginationMode="server"
-              rowCount={query.data?.totalElements ?? 0}
-              paginationModel={pagination}
-              onPaginationModelChange={setPagination}
-              pageSizeOptions={[10, 25, 50, 100]}
-              onRowClick={(params) => navigate(fleetPaths.workflowDetail(String(params.id)))}
-              sx={{ border: 0, '& .MuiDataGrid-row': { cursor: 'pointer' } }}
-            />
-          </DataState>
-        </Box>
+        <DataState
+          loading={query.initialising}
+          error={query.error}
+          empty={rows.length === 0 && !query.loading}
+          emptyTitle="No workflow items match these filters"
+          emptyHint="A clear queue is a good sign — or widen the filters to check."
+          onRetry={query.refetch}
+          minHeight={280}
+        >
+          <DataTable
+            rows={rows}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={query.loading}
+            onRowClick={(row) => navigate(fleetPaths.workflowDetail(row.id))}
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalElements={query.data?.totalElements ?? 0}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onPageSizeChange={(pageSize) => setPagination({ page: 0, pageSize })}
+            emptyMessage="No workflow items match these filters."
+          />
+        </DataState>
       </SectionCard>
 
-      <RaiseWorkflowItemDialog
-        open={raiseOpen}
-        defaultSiteCode={filters.siteCode || firstSite}
-        onClose={() => setRaiseOpen(false)}
-        onSaved={() => {
-          notifySuccess('Workflow item raised.');
-          query.refetch();
-        }}
-      />
-    </Box>
+      {/* Mounted only while open, so the dialog picks up the current site filter as its default
+          and cannot reopen holding a half-typed item from a previous attempt. */}
+      {raiseOpen && (
+        <RaiseWorkflowItemDialog
+          open
+          defaultSiteCode={filters.siteCode || defaultSite}
+          onClose={() => setRaiseOpen(false)}
+          onSaved={() => {
+            notifySuccess('Workflow item raised.');
+            query.refetch();
+          }}
+        />
+      )}
+    </div>
   );
 };
 

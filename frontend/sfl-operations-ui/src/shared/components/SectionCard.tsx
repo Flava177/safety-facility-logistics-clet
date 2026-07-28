@@ -1,58 +1,56 @@
 import { ReactNode } from 'react';
-import { Box, Divider, Paper, Stack, Typography } from '@mui/material';
+import { cn } from './cn';
 
 interface SectionCardProps {
   title?: string;
   subtitle?: string;
   actions?: ReactNode;
-  /** Removes the body padding for edge-to-edge tables. */
+  /** Removes the body padding for edge-to-edge tables and lists. */
   flush?: boolean;
+  className?: string;
+  bodyClassName?: string;
   children: ReactNode;
 }
 
-/** A titled work surface — white, low-chrome, dense. The default container for content. */
-const SectionCard = ({ title, subtitle, actions, flush, children }: SectionCardProps) => (
-  <Paper
-    sx={{
-      bgcolor: 'common.white',
-      border: 1,
-      borderColor: 'divider',
-      borderRadius: 2,
-      overflow: 'hidden',
-    }}
+/**
+ * A titled work surface.
+ *
+ * The heading block sits inside the card's own padding rather than in a bordered strip, so a card
+ * holding a table reads as one object: title, one line of explanation, then the table's own grey
+ * header row. Stacking two horizontal rules there is the thing that made the earlier screens look
+ * boxed-in.
+ */
+const SectionCard = ({
+  title,
+  subtitle,
+  actions,
+  flush,
+  className,
+  bodyClassName,
+  children,
+}: SectionCardProps) => (
+  <section
+    className={cn(
+      'flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white',
+      className,
+    )}
   >
     {(title || actions) && (
-      <>
-        <Stack
-          direction="row"
-          alignItems="center"
-          justifyContent="space-between"
-          spacing={1.5}
-          sx={{ px: 2, py: 1.5 }}
-        >
-          <Box sx={{ minWidth: 0 }}>
-            {title && (
-              <Typography variant="subtitle1" fontWeight={700} sx={{ lineHeight: 1.3 }}>
-                {title}
-              </Typography>
-            )}
-            {subtitle && (
-              <Typography variant="caption" color="text.secondary">
-                {subtitle}
-              </Typography>
-            )}
-          </Box>
-          {actions && (
-            <Stack direction="row" spacing={1} alignItems="center" sx={{ flexShrink: 0 }}>
-              {actions}
-            </Stack>
-          )}
-        </Stack>
-        <Divider />
-      </>
+      <header
+        className={cn(
+          'flex shrink-0 flex-wrap items-start justify-between gap-3 px-5 pt-5',
+          flush ? 'pb-1' : 'pb-0',
+        )}
+      >
+        <div className="min-w-0">
+          {title && <h2 className="text-theme-md font-bold text-gray-900">{title}</h2>}
+          {subtitle && <p className="mt-0.5 text-theme-xs text-gray-500">{subtitle}</p>}
+        </div>
+        {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
+      </header>
     )}
-    <Box sx={{ p: flush ? 0 : 2 }}>{children}</Box>
-  </Paper>
+    <div className={cn('min-w-0 flex-1', flush ? 'p-0' : 'p-5', bodyClassName)}>{children}</div>
+  </section>
 );
 
 export default SectionCard;

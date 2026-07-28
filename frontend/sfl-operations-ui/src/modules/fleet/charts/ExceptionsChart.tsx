@@ -1,16 +1,10 @@
-import { useMemo } from 'react';
-import { BarChart } from 'echarts/charts';
-import { GridComponent, TooltipComponent } from 'echarts/components';
-import * as echarts from 'echarts/core';
-import { CanvasRenderer } from 'echarts/renderers';
-import { grey, red, sflGold } from 'theme/palette/colors';
-import ReactEchart from 'components/base/ReactEchart';
-
-echarts.use([BarChart, GridComponent, TooltipComponent, CanvasRenderer]);
+import { BarChart } from 'shared/charts/Charts';
+import { toneColors } from 'shared/charts/palette';
 
 export interface ExceptionBar {
   label: string;
   value: number;
+  /** Stops work rather than merely warranting a look — drawn in the blocked tone. */
   critical?: boolean;
 }
 
@@ -24,41 +18,32 @@ interface ExceptionsChartProps {
  *
  * Horizontal bars because the category labels are long ("Expired compliance", "Assignment
  * conflicts") and an operator scans them by name, not by position.
+ *
+ * Severity is carried by two stacked series rather than per-bar colours, because the kit's bar chart
+ * colours a series and not a point; every category contributes to exactly one of the two, so the bar
+ * lengths still read as one value each. `integerAxis` is off because on a horizontal chart the kit
+ * applies that formatter to the axis holding the category labels, which are text.
  */
-const ExceptionsChart = ({ bars, height = 250 }: ExceptionsChartProps) => {
-  const option = useMemo(
-    () => ({
-      grid: { left: 4, right: 24, top: 8, bottom: 4, containLabel: true },
-      tooltip: { trigger: 'axis', axisPointer: { type: 'shadow' } },
-      xAxis: {
-        type: 'value',
-        minInterval: 1,
-        axisLabel: { color: grey[600], fontSize: 11 },
-        splitLine: { lineStyle: { color: grey[200] } },
+const ExceptionsChart = ({ bars, height = 270 }: ExceptionsChartProps) => (
+  <BarChart
+    height={height}
+    horizontal
+    stacked
+    integerAxis={false}
+    categories={bars.map((bar) => bar.label)}
+    series={[
+      {
+        name: 'Blocking',
+        data: bars.map((bar) => (bar.critical ? bar.value : 0)),
+        color: toneColors.blocked,
       },
-      yAxis: {
-        type: 'category',
-        data: bars.map((bar) => bar.label),
-        axisLabel: { color: grey[600], fontSize: 11 },
-        axisLine: { show: false },
-        axisTick: { show: false },
+      {
+        name: 'Needs attention',
+        data: bars.map((bar) => (bar.critical ? 0 : bar.value)),
+        color: toneColors.caution,
       },
-      series: [
-        {
-          type: 'bar',
-          barWidth: 14,
-          itemStyle: { borderRadius: [0, 4, 4, 0] },
-          data: bars.map((bar) => ({
-            value: bar.value,
-            itemStyle: { color: bar.critical ? red[500] : sflGold[500] },
-          })),
-        },
-      ],
-    }),
-    [bars],
-  );
-
-  return <ReactEchart echarts={echarts} option={option} sx={{ height, width: 1 }} />;
-};
+    ]}
+  />
+);
 
 export default ExceptionsChart;

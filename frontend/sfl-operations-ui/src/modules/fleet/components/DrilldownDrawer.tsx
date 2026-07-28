@@ -1,11 +1,12 @@
 import { Link as RouterLink } from 'react-router';
-import { Box, Divider, Drawer, IconButton, Link, Stack, Typography } from '@mui/material';
+import { DashboardDrilldownRow } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { dashboardApi } from 'modules/fleet/api/fleetApi';
 import DataState from 'shared/components/DataState';
+import Icon from 'shared/components/Icon';
+import Modal, { ModalCloseButton } from 'shared/components/Modal';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
 
 interface DrilldownDrawerProps {
   indicator: string | null;
@@ -30,42 +31,35 @@ const recordLink = (resourceType: string, resourceId: string): string | null => 
  * The service audits every drilldown and refuses rows the caller may not see
  * (`FLEET_DASHBOARD_RESTRICTED_DRILLDOWN`), so a refusal is surfaced as-is rather than shown as an
  * empty list.
+ *
+ * A centred panel rather than a side drawer: the kit has one dialog surface, and a record whose
+ * resource type has no detail page shows its identifier instead of a dead link.
  */
 const DrilldownDrawer = ({ indicator, siteCode, onClose }: DrilldownDrawerProps) => {
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
-      indicator ? dashboardApi.drilldown(indicator, { siteCode }, signal) : Promise.resolve([]),
+      indicator
+        ? dashboardApi.drilldown(indicator, { siteCode }, signal)
+        : Promise.resolve<DashboardDrilldownRow[]>([]),
     [indicator, siteCode],
   );
 
   return (
-    <Drawer
-      anchor="right"
-      open={Boolean(indicator)}
-      onClose={onClose}
-      slotProps={{ paper: { sx: { width: { xs: 1, sm: 460 } } } }}
-    >
-      <Stack
-        direction="row"
-        alignItems="center"
-        justifyContent="space-between"
-        sx={{ px: 2.5, py: 2, bgcolor: 'primary.main' }}
-      >
-        <Box>
-          <Typography variant="subtitle1" fontWeight={700} sx={{ color: 'common.white' }}>
+    <Modal open={Boolean(indicator)} onClose={onClose} size="md" labelledBy="fleet-drilldown-title">
+      <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4">
+        <div className="min-w-0">
+          <h2
+            id="fleet-drilldown-title"
+            className="text-theme-xl font-bold text-gray-900"
+          >
             {humanise(indicator)}
-          </Typography>
-          <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)' }}>
-            Source records behind this indicator
-          </Typography>
-        </Box>
-        <IconButton onClick={onClose} sx={{ color: 'common.white' }} aria-label="Close">
-          <IconifyIcon icon="material-symbols:close-rounded" />
-        </IconButton>
-      </Stack>
-      <Divider />
+          </h2>
+          <p className="mt-1 text-theme-sm text-gray-600">Source records behind this indicator</p>
+        </div>
+        <ModalCloseButton onClose={onClose} />
+      </header>
 
-      <Box sx={{ p: 2.5, overflowY: 'auto' }}>
+      <div className="custom-scrollbar max-h-[62vh] overflow-y-auto px-6 py-3">
         <DataState
           loading={loading}
           error={error}
@@ -73,36 +67,38 @@ const DrilldownDrawer = ({ indicator, siteCode, onClose }: DrilldownDrawerProps)
           emptyTitle="No records"
           emptyHint="Nothing currently contributes to this indicator in your site scope."
           onRetry={refetch}
+          minHeight={200}
         >
-          <Stack divider={<Divider />} spacing={0}>
+          <ul className="divide-y divide-gray-200">
             {(data ?? []).map((row) => {
               const link = recordLink(row.resourceType, row.resourceId);
               return (
-                <Box key={`${row.resourceType}-${row.resourceId}`} sx={{ py: 1.5 }}>
-                  <Stack direction="row" spacing={1} alignItems="center" flexWrap="wrap" useFlexGap>
-                    <Typography variant="caption" color="text.secondary">
-                      {row.resourceType} · {row.siteCode}
-                    </Typography>
-                  </Stack>
-                  <Typography variant="body2" fontWeight={600} sx={{ mt: 0.25 }}>
-                    {row.summary}
-                  </Typography>
+                <li key={`${row.resourceType}-${row.resourceId}`} className="py-3">
+                  <p className="text-theme-xs text-gray-600">
+                    {row.resourceType} · {row.siteCode}
+                  </p>
+                  <p className="mt-0.5 text-theme-sm font-semibold text-gray-900">{row.summary}</p>
                   {link ? (
-                    <Link component={RouterLink} to={link} onClick={onClose} variant="caption">
+                    // Teal is the console's interactive colour, and the row is tall enough to clear
+                    // the 24px target minimum of SC 2.5.8 without a larger type size.
+                    <RouterLink
+                      to={link}
+                      onClick={onClose}
+                      className="mt-1 inline-flex min-h-6 items-center gap-1 text-theme-xs font-medium text-teal-700 transition-colors hover:text-teal-800 hover:underline"
+                    >
                       Open record
-                    </Link>
+                      <Icon name="chevron-right" size={13} />
+                    </RouterLink>
                   ) : (
-                    <Typography variant="caption" color="text.disabled">
-                      {row.resourceId}
-                    </Typography>
+                    <p className="mt-1 text-theme-xs text-gray-600">{row.resourceId}</p>
                   )}
-                </Box>
+                </li>
               );
             })}
-          </Stack>
+          </ul>
         </DataState>
-      </Box>
-    </Drawer>
+      </div>
+    </Modal>
   );
 };
 

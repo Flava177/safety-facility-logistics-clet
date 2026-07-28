@@ -1,35 +1,39 @@
-import { useState } from 'react';
-import { Alert, Box, Button, Divider, Stack, Tab, Tabs, Typography } from '@mui/material';
-import { EvidenceResponse } from 'modules/fleet/api/dto';
+import { useMemo, useState } from 'react';
+import { AuditEventResponse, EvidenceResponse } from 'modules/fleet/api/dto';
 import {
   EVIDENCE_RETENTION_CLASSES,
   EvidenceRetentionClass,
   humanise,
 } from 'modules/fleet/api/enums';
 import { auditApi, evidenceApi } from 'modules/fleet/api/fleetApi';
+
+import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FormDialog from 'shared/components/FormDialog';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import Tabs from 'shared/components/Tabs';
+import { EnumSelect, TextAreaInput, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const twoColumn = {
-  display: 'grid',
-  gap: 2,
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-} as const;
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
+
+/** Audit records carry an optional id, so the row key falls back to position as it always did. */
+interface AuditRow {
+  key: string;
+  record: AuditEventResponse;
+}
 
 /**
  * Evidence and audit governance.
@@ -45,6 +49,7 @@ const GovernancePage = () => {
   const [evidence, setEvidence] = useState<EvidenceResponse | undefined>(undefined);
   const [lookupError, setLookupError] = useState<FleetApiError | undefined>(undefined);
   const [lookingUp, setLookingUp] = useState(false);
+  const [recordingAccess, setRecordingAccess] = useState(false);
   const [registerOpen, setRegisterOpen] = useState(false);
   const [exportOpen, setExportOpen] = useState(false);
 
@@ -79,31 +84,79 @@ const GovernancePage = () => {
   };
 
   const recordAccess = async () => {
-    if (!evidence) {
+    if (!evidence || recordingAccess) {
       return;
     }
+    // The endpoint is not idempotent: every call appends an access entry to the audit trail, so a
+    // second click while the first is in flight writes a second entry no one performed.
+    setRecordingAccess(true);
     try {
       const updated = await evidenceApi.recordAccess(evidence.id);
       setEvidence(updated);
       notifySuccess('Access recorded against the evidence record.');
     } catch (error) {
       notifyError(error);
+    } finally {
+      setRecordingAccess(false);
     }
   };
 
+  const auditRows = useMemo<AuditRow[]>(
+    () => (audit.data ?? []).map((record, index) => ({ key: String(record.id ?? index), record })),
+    [audit.data],
+  );
+
+  const auditColumns = useMemo<Column<AuditRow>[]>(
+    () => [
+      {
+        key: 'action',
+        header: 'Action',
+        width: 240,
+        cell: ({ record }) => (
+          <CellStack
+            primary={`${humanise(String(record.action ?? 'RECORD'))} · ${String(
+              record.resourceType ?? '',
+            )}`}
+            secondary={String(record.resourceId ?? '')}
+          />
+        ),
+      },
+      {
+        key: 'actor',
+        header: 'Actor',
+        width: 180,
+        cell: ({ record }) => String(record.actorId ?? 'unknown'),
+      },
+      {
+        key: 'siteCode',
+        header: 'Site',
+        width: 120,
+        hideBelowLg: true,
+        cell: ({ record }) => (record.siteCode ? String(record.siteCode) : '—'),
+      },
+      {
+        key: 'occurredAt',
+        header: 'Occurred',
+        width: 170,
+        align: 'right',
+        cell: ({ record }) => (
+          <span className="text-theme-xs text-gray-500">
+            {formatDateTime(record.occurredAt ?? null)}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
+
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Evidence & audit"
         subtitle="Register evidence references, request exports under approval, and verify the audit hash chain."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Evidence & audit' }]}
         actions={
-          <Button
-            variant="contained"
-            color="secondary"
-            onClick={() => setRegisterOpen(true)}
-            startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
-          >
+          <Button variant="accent" startIcon="plus" onClick={() => setRegisterOpen(true)}>
             Register evidence
           </Button>
         }
@@ -111,51 +164,51 @@ const GovernancePage = () => {
 
       <SectionCard flush>
         <Tabs
+          items={[
+            { value: 'evidence', label: 'Evidence' },
+            { value: 'audit', label: 'Audit records', count: audit.data?.length },
+            { value: 'integrity', label: 'Chain integrity' },
+          ]}
           value={tab}
-          onChange={(_event, value: TabKey) => setTab(value)}
-          sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
-          variant="scrollable"
-          allowScrollButtonsMobile
-        >
-          <Tab label="Evidence" value="evidence" />
-          <Tab label="Audit records" value="audit" />
-          <Tab label="Chain integrity" value="integrity" />
-        </Tabs>
+          onChange={(value) => setTab(value as TabKey)}
+        />
 
-        <Box sx={{ p: 2.5 }}>
+        <div className="p-5">
           {tab === 'evidence' && (
-            <Stack spacing={2.5}>
-              <Alert severity="info">
+            <div className="space-y-5">
+              <Alert variant="info">
                 The service exposes evidence by identifier only — there is no evidence search
                 endpoint. Paste a reference ID from a trip closure, inspection or compliance record
                 to open it.
               </Alert>
 
-              <Stack direction={{ xs: 'column', sm: 'row' }} spacing={1.5} alignItems="flex-start">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <TextInput
                   label="Evidence reference ID"
                   value={lookupId}
                   onChange={setLookupId}
-                  sx={{ maxWidth: { sm: 420 } }}
+                  className="sm:max-w-[420px] sm:flex-1"
                 />
                 <Button
-                  variant="contained"
-                  color="secondary"
+                  variant="primary"
+                  loading={lookingUp}
+                  disabled={!lookupId.trim()}
                   onClick={lookup}
-                  disabled={lookingUp || !lookupId.trim()}
                 >
                   {lookingUp ? 'Looking up…' : 'Open evidence'}
                 </Button>
-              </Stack>
+              </div>
 
               {lookupError && (
-                <Alert severity={lookupError.isForbidden ? 'warning' : 'error'}>
+                <Alert
+                  variant={lookupError.isForbidden ? 'warning' : 'error'}
+                  footnote={
+                    lookupError.correlationId
+                      ? `Correlation ID: ${lookupError.correlationId}`
+                      : undefined
+                  }
+                >
                   {lookupError.message}
-                  {lookupError.correlationId && (
-                    <Typography variant="caption" display="block" color="text.secondary">
-                      Correlation ID: {lookupError.correlationId}
-                    </Typography>
-                  )}
                 </Alert>
               )}
 
@@ -165,27 +218,27 @@ const GovernancePage = () => {
                   subtitle={`${evidence.relatedRecordType} ${evidence.relatedRecordId}`}
                   actions={
                     <>
-                      <Button variant="soft" color="neutral" size="small" onClick={recordAccess}>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        loading={recordingAccess}
+                        onClick={recordAccess}
+                      >
                         Record access
                       </Button>
-                      <Button
-                        variant="soft"
-                        color="secondary"
-                        size="small"
-                        onClick={() => setExportOpen(true)}
-                      >
+                      <Button size="sm" variant="primary" onClick={() => setExportOpen(true)}>
                         Request export
                       </Button>
                     </>
                   }
                 >
-                  <Stack spacing={2}>
-                    <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+                  <div className="space-y-4">
+                    <div className="flex flex-wrap items-center gap-2">
                       <StatusChip value={evidence.retentionClass} tone="neutral" />
                       {evidence.legalHold && (
                         <StatusChip value="LEGAL_HOLD" label="Legal hold" tone="blocked" />
                       )}
-                    </Stack>
+                    </div>
                     <KeyValueGrid
                       items={[
                         { label: 'Evidence ID', value: evidence.id, span: 2 },
@@ -212,49 +265,29 @@ const GovernancePage = () => {
                         { label: 'Record version', value: evidence.version },
                       ]}
                     />
-                  </Stack>
+                  </div>
                 </SectionCard>
               )}
-            </Stack>
+            </div>
           )}
 
           {tab === 'audit' && (
             <DataState
               loading={audit.initialising}
               error={audit.error}
-              empty={(audit.data?.length ?? 0) === 0}
+              empty={auditRows.length === 0}
               emptyTitle="No audit records"
               emptyHint="Audit search requires an auditor role and a site scope."
               onRetry={audit.refetch}
               minHeight={220}
             >
-              <Stack divider={<Divider />} spacing={0}>
-                {(audit.data ?? []).map((record, index) => (
-                  <Box key={String(record.id ?? index)} sx={{ py: 1.5 }}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      justifyContent="space-between"
-                      flexWrap="wrap"
-                      useFlexGap
-                    >
-                      <Typography variant="body2" fontWeight={700}>
-                        {humanise(String(record.action ?? 'RECORD'))} ·{' '}
-                        {String(record.resourceType ?? '')}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {formatDateTime(record.occurredAt ?? null)}
-                      </Typography>
-                    </Stack>
-                    <Typography variant="caption" color="text.secondary" display="block">
-                      {String(record.resourceId ?? '')} · actor{' '}
-                      {String(record.actorId ?? 'unknown')}
-                      {record.siteCode ? ` · ${String(record.siteCode)}` : ''}
-                    </Typography>
-                  </Box>
-                ))}
-              </Stack>
+              <DataTable
+                rows={auditRows}
+                columns={auditColumns}
+                getRowId={(row) => row.key}
+                loading={audit.loading}
+                dense
+              />
             </DataState>
           )}
 
@@ -266,8 +299,8 @@ const GovernancePage = () => {
               minHeight={220}
             >
               {integrity.data && (
-                <Stack spacing={2}>
-                  <Alert severity={integrity.data.intact ? 'success' : 'error'}>
+                <div className="space-y-4">
+                  <Alert variant={integrity.data.intact ? 'success' : 'error'}>
                     {integrity.data.intact
                       ? `Audit hash chain is intact across ${integrity.data.recordsChecked} records.`
                       : 'Audit integrity check failed. Escalate to compliance and security.'}
@@ -289,32 +322,35 @@ const GovernancePage = () => {
                       { label: 'Head hash', value: integrity.data.headHash ?? '—', span: 2 },
                     ]}
                   />
-                </Stack>
+                </div>
               )}
             </DataState>
           )}
-        </Box>
+        </div>
       </SectionCard>
 
-      <RegisterEvidenceDialog
-        open={registerOpen}
-        onClose={() => setRegisterOpen(false)}
-        onSaved={(created) => {
-          notifySuccess('Evidence registered.', `Reference ID ${created.id}`);
-          setEvidence(created);
-          setLookupId(created.id);
-        }}
-      />
+      {/* Mounted only while open, so a cancelled registration cannot reappear in the next one. */}
+      {registerOpen && (
+        <RegisterEvidenceDialog
+          open
+          onClose={() => setRegisterOpen(false)}
+          onSaved={(created) => {
+            notifySuccess('Evidence registered.', `Reference ID ${created.id}`);
+            setEvidence(created);
+            setLookupId(created.id);
+          }}
+        />
+      )}
 
-      {evidence && (
+      {evidence && exportOpen && (
         <RequestExportDialog
-          open={exportOpen}
+          open
           evidenceId={evidence.id}
           onClose={() => setExportOpen(false)}
           onSaved={() => notifySuccess('Export requested. It needs a separate approver.')}
         />
       )}
-    </Box>
+    </div>
   );
 };
 
@@ -330,7 +366,7 @@ const RegisterEvidenceDialog = ({
 }) => {
   const form = useFleetForm({
     initialValues: {
-      siteCode: '',
+      siteCode: defaultSite,
       relatedRecordType: '',
       relatedRecordId: '',
       evidenceType: '',
@@ -381,9 +417,8 @@ const RegisterEvidenceDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
-        <TextInput
-          label="Site code"
+      <div className="grid gap-4 sm:grid-cols-2">
+        <SiteSelect
           required
           value={form.values.siteCode}
           onChange={(value) => form.setValue('siteCode', value)}
@@ -407,8 +442,10 @@ const RegisterEvidenceDialog = ({
           required
           value={form.values.relatedRecordType}
           onChange={(value) => form.setValue('relatedRecordType', value)}
-          helperText="For example Trip, VehicleInspection or ComplianceDocument."
-          {...form.fieldProps('relatedRecordType')}
+          {...form.fieldProps(
+            'relatedRecordType',
+            'For example Trip, VehicleInspection or ComplianceDocument.',
+          )}
         />
         <TextInput
           label="Related record ID"
@@ -445,7 +482,7 @@ const RegisterEvidenceDialog = ({
           onChange={(value) => form.setValue('storageReference', value)}
           {...form.fieldProps('storageReference')}
         />
-      </Box>
+      </div>
       <TextInput
         label="SHA-256 hash"
         required
@@ -491,11 +528,10 @@ const RequestExportDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <TextInput
+      <TextAreaInput
         label="Reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}

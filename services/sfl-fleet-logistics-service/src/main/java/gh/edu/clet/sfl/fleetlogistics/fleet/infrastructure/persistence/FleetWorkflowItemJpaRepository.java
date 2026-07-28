@@ -35,6 +35,16 @@ interface FleetWorkflowItemJpaRepository extends JpaRepository<FleetWorkflowItem
             @Param("relatedRecordType") String relatedRecordType,
             @Param("relatedRecordId") String relatedRecordId);
 
+    /**
+     * Paged search.
+     *
+     * <p>Optional filters use {@code coalesce} rather than {@code :x is null or ...}: PostgreSQL
+     * cannot infer the type of a bind parameter that never appears in a typed position — an
+     * {@code IS NULL} test, or an argument to {@code upper()} or {@code concat()} — and rejects the
+     * prepare with SQLSTATE 42P18. Inside {@code coalesce} the parameter takes its type from the
+     * column beside it. Every column used this way is {@code NOT NULL}, so an absent filter still
+     * matches every row, exactly as the previous form did.
+     */
     @Query("""
             select i from FleetWorkflowItemEntity i
             where (:allSites = true or i.siteCode in :siteScopes)
@@ -49,8 +59,8 @@ interface FleetWorkflowItemJpaRepository extends JpaRepository<FleetWorkflowItem
                        gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.FleetWorkflowStatus.CLOSED,
                        gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.FleetWorkflowStatus.CANCELLED)))
               and (:escalatedOnly = false or i.escalationLevel > 0)
-              and (:from is null or i.createdAt >= :from)
-              and (:to is null or i.createdAt <= :to)
+              and i.createdAt >= coalesce(:from, i.createdAt)
+              and i.createdAt <= coalesce(:to, i.createdAt)
             """)
     Page<FleetWorkflowItemEntity> search(
             @Param("allSites") boolean allSites,

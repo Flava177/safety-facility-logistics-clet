@@ -83,7 +83,50 @@ export class FleetApiError extends Error {
   static transport(message: string): FleetApiError {
     return new FleetApiError({ status: 0, code: 'FLEET_TRANSPORT_FAILURE', message });
   }
+
+  /**
+   * A failure that did not arrive in the SFL envelope.
+   *
+   * <p>Spring's default error body (`{ timestamp, status, error, message, path }`) is the common
+   * case — an exception the service does not map, so its handlers never ran. Anything readable in
+   * that body is used, because "Internal Server Error at /api/v1/fleet/trips" tells an operator far
+   * more than a bare status code, and the server log will have the stack trace.
+   */
+  static fromUnmappedFailure(
+    status: number,
+    body: unknown,
+    correlationId?: string | null,
+  ): FleetApiError {
+    const shape = (body ?? {}) as Record<string, unknown>;
+    const reason = typeof shape.error === 'string' ? shape.error : undefined;
+    const detail = typeof shape.message === 'string' ? shape.message : undefined;
+    const path = typeof shape.path === 'string' ? shape.path : undefined;
+
+    const summary = [reason, detail].filter(Boolean).join(' — ') || `HTTP ${status}`;
+
+    return new FleetApiError({
+      status,
+      code: status >= 500 ? 'FLEET_SERVICE_FAILURE' : 'FLEET_UNEXPECTED_STATUS',
+      message: path
+        ? `The service could not complete ${path}: ${summary}. Check the service log for the cause.`
+        : `The service responded with ${summary}.`,
+      correlationId,
+    });
+  }
 }
+
+/** `true` only for a real `ApiError` — a `code` and a `message`, both strings. */
+export const isApiErrorEnvelope = (value: unknown): value is ApiErrorEnvelope => {
+  if (typeof value !== 'object' || value === null) {
+    return false;
+  }
+  const candidate = value as Partial<ApiErrorEnvelope>;
+  return typeof candidate.code === 'string' && typeof candidate.message === 'string';
+};
+
+/** The error code as a display label, safe for any shape that reached the UI. */
+export const errorLabel = (error: FleetApiError): string =>
+  (error.code || 'ERROR').replace(/_/g, ' ');
 
 /** `true` for anything thrown by the API client. */
 export const isFleetApiError = (value: unknown): value is FleetApiError =>

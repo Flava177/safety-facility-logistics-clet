@@ -1,18 +1,8 @@
 import { ReactNode } from 'react';
-import {
-  Alert,
-  AlertTitle,
-  Button,
-  CircularProgress,
-  Dialog,
-  DialogActions,
-  DialogContent,
-  DialogTitle,
-  Divider,
-  Stack,
-  Typography,
-} from '@mui/material';
-import { FleetApiError } from 'shared/errors/FleetApiError';
+import { FleetApiError, errorLabel } from 'shared/errors/FleetApiError';
+import Alert from './Alert';
+import Button from './Button';
+import Modal, { ModalCloseButton, ModalSize } from './Modal';
 
 interface FormDialogProps {
   open: boolean;
@@ -23,7 +13,7 @@ interface FormDialogProps {
   /** Blocks submission for reasons the form itself cannot fix (readiness, eligibility, state). */
   submitDisabled?: boolean;
   formError?: FleetApiError;
-  maxWidth?: 'xs' | 'sm' | 'md' | 'lg';
+  maxWidth?: ModalSize;
   destructive?: boolean;
   onClose: () => void;
   onSubmit: () => void;
@@ -45,62 +35,67 @@ const FormDialog = ({
   submitting,
   submitDisabled,
   formError,
-  maxWidth = 'sm',
+  maxWidth = 'md',
   destructive,
   onClose,
   onSubmit,
   children,
 }: FormDialogProps) => (
-  <Dialog
+  <Modal
     open={open}
-    onClose={submitting ? undefined : onClose}
-    fullWidth
-    maxWidth={maxWidth}
-    aria-labelledby="fleet-form-dialog-title"
+    onClose={onClose}
+    size={maxWidth}
+    locked={submitting}
+    labelledBy="fleet-form-dialog-title"
   >
-    <DialogTitle id="fleet-form-dialog-title" sx={{ pb: description ? 0.5 : 2 }}>
-      {title}
-      {description && (
-        <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5, fontWeight: 400 }}>
-          {description}
-        </Typography>
-      )}
-    </DialogTitle>
-    <Divider />
+    <form
+      onSubmit={(event) => {
+        event.preventDefault();
+        onSubmit();
+      }}
+      noValidate
+    >
+      <header className="flex items-start justify-between gap-4 border-b border-gray-200 px-6 py-4">
+        <div className="min-w-0">
+          <h2 id="fleet-form-dialog-title" className="text-theme-xl font-bold text-gray-900">
+            {title}
+          </h2>
+          {description && <p className="mt-1 text-theme-sm text-gray-600">{description}</p>}
+        </div>
+        <ModalCloseButton onClose={onClose} disabled={submitting} />
+      </header>
 
-    <DialogContent sx={{ pt: 2.5 }}>
-      <Stack spacing={2}>
+      <div className="custom-scrollbar max-h-[68vh] space-y-5 overflow-y-auto px-6 py-6">
         {children}
+
         {formError && (
-          <Alert severity={formError.isForbidden ? 'warning' : 'error'}>
-            <AlertTitle sx={{ mb: 0.25 }}>{formError.code.replace(/_/g, ' ')}</AlertTitle>
-            <Typography variant="body2">{formError.message}</Typography>
-            {formError.correlationId && (
-              <Typography variant="caption" color="text.secondary">
-                Correlation ID: {formError.correlationId}
-              </Typography>
-            )}
+          <Alert
+            variant={formError.isForbidden ? 'warning' : 'error'}
+            title={errorLabel(formError)}
+            footnote={
+              formError.correlationId ? `Correlation ID: ${formError.correlationId}` : undefined
+            }
+          >
+            {formError.message}
           </Alert>
         )}
-      </Stack>
-    </DialogContent>
+      </div>
 
-    <Divider />
-    <DialogActions sx={{ px: 3, py: 2 }}>
-      <Button variant="text" color="neutral" onClick={onClose} disabled={submitting}>
-        Cancel
-      </Button>
-      <Button
-        variant="contained"
-        color={destructive ? 'error' : 'secondary'}
-        onClick={onSubmit}
-        disabled={submitting || submitDisabled}
-        startIcon={submitting ? <CircularProgress size={16} color="inherit" /> : undefined}
-      >
-        {submitting ? 'Working…' : submitLabel}
-      </Button>
-    </DialogActions>
-  </Dialog>
+      <footer className="flex items-center justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
+        <Button variant="ghost" onClick={onClose} disabled={submitting}>
+          Cancel
+        </Button>
+        <Button
+          type="submit"
+          variant={destructive ? 'danger' : 'primary'}
+          loading={submitting}
+          disabled={submitDisabled}
+        >
+          {submitting ? 'Working…' : submitLabel}
+        </Button>
+      </footer>
+    </form>
+  </Modal>
 );
 
 export default FormDialog;
