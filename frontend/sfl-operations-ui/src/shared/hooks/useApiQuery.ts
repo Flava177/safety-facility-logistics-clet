@@ -64,7 +64,6 @@ export function useApiQuery<T>(
       active = false;
       controller.abort();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, reloadToken]);
 
   return { data, loading, error, initialising: loading && !loadedOnce.current, refetch };

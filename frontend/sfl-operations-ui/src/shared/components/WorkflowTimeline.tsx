@@ -1,4 +1,4 @@
-import { Box, Stack, Typography } from '@mui/material';
+import { cn } from './cn';
 import { formatDateTime } from './format';
 
 export interface TimelineEntry {
@@ -15,10 +15,10 @@ interface WorkflowTimelineProps {
   emptyMessage?: string;
 }
 
-const toneColor = {
-  default: 'primary.main',
-  accent: 'secondary.main',
-  danger: 'error.main',
+const dotTone = {
+  default: 'bg-teal-700',
+  accent: 'bg-gold-800',
+  danger: 'bg-error-800',
 } as const;
 
 /**
@@ -32,63 +32,43 @@ const WorkflowTimeline = ({
   emptyMessage = 'No recorded activity yet.',
 }: WorkflowTimelineProps) => {
   if (entries.length === 0) {
-    return (
-      <Typography variant="body2" color="text.secondary">
-        {emptyMessage}
-      </Typography>
-    );
+    return <p className="text-theme-sm text-gray-600">{emptyMessage}</p>;
   }
 
   return (
-    <Stack spacing={0}>
-      {entries.map((entry, index) => (
-        <Stack key={entry.id} direction="row" spacing={1.5} sx={{ position: 'relative' }}>
-          <Stack alignItems="center" sx={{ width: 18, flexShrink: 0 }}>
-            <Box
-              sx={{
-                width: 10,
-                height: 10,
-                borderRadius: '50%',
-                mt: 0.75,
-                bgcolor: toneColor[entry.tone ?? 'default'],
-                flexShrink: 0,
-              }}
-            />
-            {index < entries.length - 1 && (
-              <Box sx={{ flex: 1, width: '2px', bgcolor: 'divider', my: 0.5 }} />
-            )}
-          </Stack>
+    <ol className="relative">
+      {entries.map((entry, index) => {
+        const last = index === entries.length - 1;
+        return (
+          <li key={entry.id} className="flex gap-3">
+            <div className="flex w-3 shrink-0 flex-col items-center">
+              <span
+                className={cn(
+                  'mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full',
+                  dotTone[entry.tone ?? 'default'],
+                )}
+              />
+              {!last && <span className="my-1 w-px flex-1 bg-gray-200" />}
+            </div>
 
-          <Box sx={{ pb: index < entries.length - 1 ? 2.5 : 0, minWidth: 0, flex: 1 }}>
-            <Stack
-              direction="row"
-              spacing={1}
-              alignItems="baseline"
-              justifyContent="space-between"
-              flexWrap="wrap"
-              useFlexGap
-            >
-              <Typography variant="subtitle2" fontWeight={700}>
-                {entry.title}
-              </Typography>
-              <Typography variant="caption" color="text.secondary">
-                {formatDateTime(entry.occurredAt)}
-              </Typography>
-            </Stack>
-            {entry.detail && (
-              <Typography variant="body2" color="text.secondary" sx={{ mt: 0.25 }}>
-                {entry.detail}
-              </Typography>
-            )}
-            {entry.actor && (
-              <Typography variant="caption" color="text.disabled">
-                by {entry.actor}
-              </Typography>
-            )}
-          </Box>
-        </Stack>
-      ))}
-    </Stack>
+            <div className={cn('min-w-0 flex-1', last ? 'pb-0' : 'pb-5')}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-0.5">
+                <p className="text-theme-sm font-semibold text-gray-900">{entry.title}</p>
+                <time className="text-theme-xs text-gray-600">
+                  {formatDateTime(entry.occurredAt)}
+                </time>
+              </div>
+              {entry.detail && (
+                <p className="mt-0.5 text-theme-sm break-words text-gray-700">{entry.detail}</p>
+              )}
+              {entry.actor && (
+                <p className="mt-0.5 text-theme-xs text-gray-600">by {entry.actor}</p>
+              )}
+            </div>
+          </li>
+        );
+      })}
+    </ol>
   );
 };
 

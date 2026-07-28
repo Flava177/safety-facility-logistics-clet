@@ -1,6 +1,5 @@
 import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
 import { WorkflowItemResponse } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
@@ -10,6 +9,8 @@ import {
   CloseWorkflowItemDialog,
   ReasonTransitionDialog,
 } from 'modules/fleet/dialogs/workflowDialogs';
+import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
@@ -20,7 +21,6 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
 
 type DialogKey =
   | 'assign'
@@ -34,6 +34,15 @@ type DialogKey =
   | null;
 
 const live = (item: WorkflowItemResponse) => !['CLOSED', 'CANCELLED'].includes(item.status);
+
+/** One sentence per transition — "Transition applied" does not tell an operator what landed. */
+const transitionConfirmations = {
+  escalate: 'Item escalated.',
+  cancel: 'Item cancelled.',
+  reopen: 'Item reopened.',
+  hold: 'Item placed on hold.',
+  resume: 'Item resumed.',
+} as const;
 
 /**
  * Workflow item detail with its immutable history.
@@ -97,7 +106,7 @@ const WorkflowDetailPage = () => {
   ].sort((left, right) => left.occurredAt.localeCompare(right.occurredAt));
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title={item.data?.workflowNumber ?? 'Workflow item'}
         subtitle={item.data?.title}
@@ -108,22 +117,21 @@ const WorkflowDetailPage = () => {
         ]}
         actions={
           <Button
-            variant="soft"
-            color="neutral"
+            variant="outline"
+            startIcon="arrow-left"
             onClick={() => navigate(fleetPaths.workflow)}
-            startIcon={<IconifyIcon icon="material-symbols:arrow-back-rounded" />}
           >
             Queue
           </Button>
         }
         meta={
           item.data && (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <div className="flex flex-wrap items-center gap-2">
               <StatusChip value={item.data.status} />
               <StatusChip value={item.data.priority} />
               <StatusChip value={item.data.severity} />
               <StatusChip value={item.data.workflowType} tone="neutral" />
-            </Stack>
+            </div>
           )
         }
       />
@@ -135,116 +143,124 @@ const WorkflowDetailPage = () => {
         minHeight={300}
       >
         {item.data && (
-          <Stack spacing={2.5}>
+          <div className="space-y-5">
             {item.data.slaBreached && (
-              <Alert severity="error">
+              <Alert variant="error">
                 This item has breached its configured SLA and has been escalated.
               </Alert>
             )}
 
             <SectionCard title="Actions">
-              <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+              <div className="flex flex-wrap items-center gap-2">
                 {live(item.data) && (
-                  <Button variant="contained" color="secondary" onClick={() => setDialog('assign')}>
+                  <Button
+                    variant="primary"
+                    startIcon="user-plus"
+                    onClick={() => setDialog('assign')}
+                  >
                     {item.data.assignee ? 'Reassign' : 'Assign'}
                   </Button>
                 )}
                 {['OPEN', 'ASSIGNED', 'REOPENED'].includes(item.data.status) && (
-                  <Button variant="soft" color="neutral" onClick={startItem} disabled={starting}>
+                  <Button variant="outline" startIcon="play" loading={starting} onClick={startItem}>
                     Start work
                   </Button>
                 )}
                 {['ASSIGNED', 'IN_PROGRESS', 'OPEN'].includes(item.data.status) && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('hold')}>
+                  <Button variant="outline" startIcon="stop" onClick={() => setDialog('hold')}>
                     Hold
                   </Button>
                 )}
                 {item.data.status === 'ON_HOLD' && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('resume')}>
+                  <Button variant="outline" startIcon="play" onClick={() => setDialog('resume')}>
                     Resume
                   </Button>
                 )}
                 {live(item.data) && (
-                  <Button variant="soft" color="error" onClick={() => setDialog('escalate')}>
+                  <Button
+                    variant="outline"
+                    startIcon="alert-triangle"
+                    onClick={() => setDialog('escalate')}
+                  >
                     Escalate
                   </Button>
                 )}
                 {live(item.data) && (
-                  <Button variant="contained" color="secondary" onClick={() => setDialog('close')}>
+                  <Button
+                    variant="accent"
+                    startIcon="check-circle"
+                    onClick={() => setDialog('close')}
+                  >
                     Close
                   </Button>
                 )}
                 {live(item.data) && (
-                  <Button variant="soft" color="error" onClick={() => setDialog('cancel')}>
+                  <Button variant="danger" startIcon="close" onClick={() => setDialog('cancel')}>
                     Cancel
                   </Button>
                 )}
                 {item.data.status === 'CLOSED' && (
-                  <Button variant="soft" color="neutral" onClick={() => setDialog('reopen')}>
+                  <Button variant="outline" startIcon="refresh" onClick={() => setDialog('reopen')}>
                     Reopen
                   </Button>
                 )}
-                <Button variant="text" onClick={() => setDialog('comment')}>
+                <Button variant="ghost" startIcon="edit" onClick={() => setDialog('comment')}>
                   Add comment
                 </Button>
-              </Stack>
+              </div>
             </SectionCard>
 
-            <Box
-              sx={{ display: 'grid', gap: 2, gridTemplateColumns: { xs: '1fr', lg: '1.3fr 1fr' } }}
-            >
+            <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
               <SectionCard title="Item">
-                <Stack spacing={2}>
-                  <KeyValueGrid
-                    items={[
-                      { label: 'Workflow number', value: item.data.workflowNumber },
-                      { label: 'Type', value: humanise(item.data.workflowType) },
-                      { label: 'Site', value: item.data.siteCode },
-                      { label: 'Operating mode', value: humanise(item.data.operatingMode) },
-                      { label: 'Assignee', value: item.data.assignee ?? 'Unassigned' },
-                      { label: 'Escalation level', value: item.data.escalationLevel },
-                      { label: 'SLA due', value: formatDateTime(item.data.slaDueAt) },
-                      { label: 'Response due', value: formatDateTime(item.data.responseDueAt) },
-                      { label: 'First response', value: formatDateTime(item.data.firstResponseAt) },
-                      {
-                        label: 'Related record',
-                        value: item.data.relatedRecordType
-                          ? `${item.data.relatedRecordType} ${item.data.relatedRecordId ?? ''}`
-                          : '—',
-                        span: 2,
-                      },
-                      { label: 'Description', value: item.data.description, span: 2 },
-                      ...(item.data.holdReason
-                        ? [{ label: 'Hold reason', value: item.data.holdReason, span: 2 as const }]
-                        : []),
-                      ...(item.data.closureReason
-                        ? [
-                            {
-                              label: 'Closure reason',
-                              value: item.data.closureReason,
-                              span: 2 as const,
-                            },
-                            {
-                              label: 'Closure evidence',
-                              value: item.data.closureEvidenceId ?? '—',
-                            },
-                            { label: 'Closed by', value: item.data.closedBy ?? '—' },
-                            { label: 'Closed at', value: formatDateTime(item.data.closedAt) },
-                          ]
-                        : []),
-                      { label: 'Raised by', value: item.data.createdBy ?? '—' },
-                      { label: 'Raised at', value: formatDateTime(item.data.createdAt) },
-                      { label: 'Record version', value: item.data.version },
-                    ]}
-                  />
-                </Stack>
+                <KeyValueGrid
+                  items={[
+                    { label: 'Workflow number', value: item.data.workflowNumber },
+                    { label: 'Type', value: humanise(item.data.workflowType) },
+                    { label: 'Site', value: item.data.siteCode },
+                    { label: 'Operating mode', value: humanise(item.data.operatingMode) },
+                    { label: 'Assignee', value: item.data.assignee ?? 'Unassigned' },
+                    { label: 'Escalation level', value: item.data.escalationLevel },
+                    { label: 'SLA due', value: formatDateTime(item.data.slaDueAt) },
+                    { label: 'Response due', value: formatDateTime(item.data.responseDueAt) },
+                    { label: 'First response', value: formatDateTime(item.data.firstResponseAt) },
+                    {
+                      label: 'Related record',
+                      value: item.data.relatedRecordType
+                        ? `${item.data.relatedRecordType} ${item.data.relatedRecordId ?? ''}`
+                        : '—',
+                      span: 2,
+                    },
+                    { label: 'Description', value: item.data.description, span: 2 },
+                    ...(item.data.holdReason
+                      ? [{ label: 'Hold reason', value: item.data.holdReason, span: 2 as const }]
+                      : []),
+                    ...(item.data.closureReason
+                      ? [
+                          {
+                            label: 'Closure reason',
+                            value: item.data.closureReason,
+                            span: 2 as const,
+                          },
+                          {
+                            label: 'Closure evidence',
+                            value: item.data.closureEvidenceId ?? '—',
+                          },
+                          { label: 'Closed by', value: item.data.closedBy ?? '—' },
+                          { label: 'Closed at', value: formatDateTime(item.data.closedAt) },
+                        ]
+                      : []),
+                    { label: 'Raised by', value: item.data.createdBy ?? '—' },
+                    { label: 'Raised at', value: formatDateTime(item.data.createdAt) },
+                    { label: 'Record version', value: item.data.version },
+                  ]}
+                />
               </SectionCard>
 
               <SectionCard
                 title="History"
                 subtitle="Append-only transitions and comments"
                 actions={
-                  <Button variant="text" size="small" onClick={history.refetch}>
+                  <Button variant="ghost" size="sm" startIcon="refresh" onClick={history.refetch}>
                     Refresh
                   </Button>
                 }
@@ -258,41 +274,49 @@ const WorkflowDetailPage = () => {
                   <WorkflowTimeline entries={timeline} />
                 </DataState>
               </SectionCard>
-            </Box>
+            </div>
 
             {!live(item.data) && (
-              <Typography variant="body2" color="text.secondary">
+              <p className="text-theme-sm text-gray-600">
                 This item is {humanise(item.data.status).toLowerCase()}. Its history is immutable.
-              </Typography>
+              </p>
             )}
 
-            <AssignWorkflowItemDialog
-              open={dialog === 'assign'}
-              item={item.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Assignment updated.');
-                refreshAll();
-              }}
-            />
-            <CloseWorkflowItemDialog
-              open={dialog === 'close'}
-              item={item.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Item closed.');
-                refreshAll();
-              }}
-            />
-            <AddCommentDialog
-              open={dialog === 'comment'}
-              item={item.data}
-              onClose={() => setDialog(null)}
-              onSaved={() => {
-                notifySuccess('Comment added.');
-                refreshAll();
-              }}
-            />
+            {/* Mounted only while open, so the assignee and closure text of one opening cannot
+                leak into the next. */}
+            {dialog === 'assign' && (
+              <AssignWorkflowItemDialog
+                open
+                item={item.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess(`${item.data?.workflowNumber ?? 'Item'} assignment updated.`);
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'close' && (
+              <CloseWorkflowItemDialog
+                open
+                item={item.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Item closed against its evidence reference.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {dialog === 'comment' && (
+              <AddCommentDialog
+                open
+                item={item.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess('Comment added to the item history.');
+                  refreshAll();
+                }}
+              />
+            )}
             {(dialog === 'escalate' ||
               dialog === 'cancel' ||
               dialog === 'reopen' ||
@@ -304,15 +328,15 @@ const WorkflowDetailPage = () => {
                 item={item.data}
                 onClose={() => setDialog(null)}
                 onSaved={() => {
-                  notifySuccess('Transition applied.');
+                  notifySuccess(transitionConfirmations[dialog]);
                   refreshAll();
                 }}
               />
             )}
-          </Stack>
+          </div>
         )}
       </DataState>
-    </Box>
+    </div>
   );
 };
 

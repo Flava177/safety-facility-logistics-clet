@@ -1,21 +1,25 @@
-import { useState } from 'react';
-import { Link as RouterLink } from 'react-router';
-import { Alert, Box, Button, Stack, Tab, Tabs, Typography } from '@mui/material';
-import { ComplianceDocumentResponse, VehicleResponse } from 'modules/fleet/api/dto';
+import { useMemo, useState } from 'react';
+import { useNavigate } from 'react-router';
+import {
+  ComplianceDocumentResponse,
+  DashboardDrilldownRow,
+  VehicleResponse,
+} from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { dashboardApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
-import { sflActor } from 'shared/api/config';
+
+import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { TextInput } from 'shared/components/fields';
+import Tabs from 'shared/components/Tabs';
 import { formatDate, formatDaysRemaining, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const firstSite = sflActor.sites.split(',')[0]?.trim() ?? '';
 
 /** How many vehicles the cross-fleet view will fan out over. See the gap note on this page. */
 const AGGREGATION_LIMIT = 50;
@@ -27,6 +31,14 @@ interface DocumentRow {
 
 type TabKey = 'expiring' | 'service' | 'all';
 
+/** Expiry urgency is the one thing an operator reads first, so it carries a tone of its own. */
+const expiryClass = (daysUntilExpiry: number): string => {
+  if (daysUntilExpiry < 0) {
+    return 'text-error-600';
+  }
+  return daysUntilExpiry < 30 ? 'text-warning-600' : 'text-gray-500';
+};
+
 /**
  * Compliance and service exposure across the fleet.
  *
@@ -36,7 +48,8 @@ type TabKey = 'expiring' | 'service' | 'all';
  * server-side over the whole scope.
  */
 const CompliancePage = () => {
-  const [siteCode, setSiteCode] = useState(firstSite);
+  const navigate = useNavigate();
+  const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState<TabKey>('expiring');
 
   const snapshot = useApiQuery(
@@ -80,35 +93,109 @@ const CompliancePage = () => {
   );
 
   const rows = documents.data ?? [];
-  const visibleRows =
-    tab === 'expiring'
-      ? rows.filter((row) => row.document.daysUntilExpiry < 60 || row.document.status !== 'ACTIVE')
-      : rows;
+  // Kept separate from `visibleRows` so the tab count means the same thing on every tab.
+  const expiringRows = rows.filter(
+    (row) => row.document.daysUntilExpiry < 60 || row.document.status !== 'ACTIVE',
+  );
+  const visibleRows = tab === 'expiring' ? expiringRows : rows;
+
+  const documentColumns = useMemo<Column<DocumentRow>[]>(
+    () => [
+      {
+        key: 'vehicle',
+        header: 'Vehicle',
+        width: 180,
+        cell: (row) => (
+          <CellStack primary={row.vehicle.registrationNumber} secondary={row.vehicle.siteCode} />
+        ),
+      },
+      {
+        key: 'document',
+        header: 'Document',
+        width: 280,
+        cell: (row) => (
+          <div className="min-w-0">
+            <div className="flex min-w-0 flex-wrap items-center gap-2">
+              <span className="font-semibold text-gray-800">
+                {humanise(row.document.documentType)}
+              </span>
+              {row.document.mandatory && (
+                <StatusChip value="MANDATORY" label="Mandatory" tone="accent" />
+              )}
+            </div>
+            <div className="truncate text-theme-xs text-gray-500">
+              {row.document.documentReference} · {row.document.issuingAuthority}
+            </div>
+          </div>
+        ),
+      },
+      {
+        key: 'expiry',
+        header: 'Expires',
+        width: 160,
+        cell: (row) => (
+          <CellStack
+            primary={formatDate(row.document.expiresOn)}
+            secondary={
+              <span className={expiryClass(row.document.daysUntilExpiry)}>
+                {formatDaysRemaining(row.document.daysUntilExpiry)}
+              </span>
+            }
+          />
+        ),
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 130,
+        cell: (row) => <StatusChip value={row.document.status} />,
+      },
+    ],
+    [],
+  );
+
+  const drilldownColumns = useMemo<Column<DashboardDrilldownRow>[]>(
+    () => [
+      {
+        key: 'summary',
+        header: 'Record',
+        width: 320,
+        cell: (row) => <span className="font-medium text-gray-800">{row.summary}</span>,
+      },
+      {
+        key: 'siteCode',
+        header: 'Site',
+        width: 120,
+        align: 'right',
+        cell: (row) => <span className="text-theme-xs text-gray-500">{row.siteCode}</span>,
+      },
+    ],
+    [],
+  );
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Compliance & service"
         subtitle="Expiring documents and service exposure across the vehicles in your site scope."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Compliance & service' }]}
         actions={
           <Button
-            variant="soft"
-            color="neutral"
+            variant="outline"
+            startIcon="refresh"
             onClick={() => {
               snapshot.refetch();
               documents.refetch();
               expiredDrilldown.refetch();
               serviceDrilldown.refetch();
             }}
-            startIcon={<IconifyIcon icon="material-symbols:refresh-rounded" />}
           >
             Refresh
           </Button>
         }
         meta={
           snapshot.data && (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <div className="flex flex-wrap items-center gap-2">
               <StatusChip
                 value={snapshot.data.indicators.expiredCompliance > 0 ? 'EXPIRED' : 'ACTIVE'}
                 label={`${snapshot.data.indicators.expiredCompliance} expired (whole scope)`}
@@ -117,22 +204,22 @@ const CompliancePage = () => {
                 value={snapshot.data.indicators.serviceDue > 0 ? 'DUE' : 'IN_SERVICE'}
                 label={`${snapshot.data.indicators.serviceDue} service due (whole scope)`}
               />
-            </Stack>
+            </div>
           )
         }
       />
 
-      <Stack spacing={2.5}>
+      <div className="space-y-5">
         <SectionCard>
-          <TextInput
-            label="Site code"
+          <SiteSelect
             value={siteCode}
             onChange={setSiteCode}
-            sx={{ maxWidth: 280 }}
+            allowEmpty
+            className="max-w-[280px]"
           />
         </SectionCard>
 
-        <Alert severity="info">
+        <Alert variant="info">
           The service exposes compliance documents per vehicle only. This view aggregates the first{' '}
           {AGGREGATION_LIMIT} active vehicles in scope — the scope-wide counts above come from the
           server-computed dashboard indicators and are authoritative.
@@ -140,18 +227,24 @@ const CompliancePage = () => {
 
         <SectionCard flush>
           <Tabs
+            items={[
+              {
+                value: 'expiring',
+                label: 'Expiring & expired',
+                count: documents.data ? expiringRows.length : undefined,
+              },
+              {
+                value: 'service',
+                label: 'Service exposure',
+                count: serviceDrilldown.data?.length,
+              },
+              { value: 'all', label: 'All documents', count: documents.data?.length },
+            ]}
             value={tab}
-            onChange={(_event, value: TabKey) => setTab(value)}
-            sx={{ px: 2, borderBottom: 1, borderColor: 'divider' }}
-            variant="scrollable"
-            allowScrollButtonsMobile
-          >
-            <Tab label="Expiring & expired" value="expiring" />
-            <Tab label="Service exposure" value="service" />
-            <Tab label="All documents" value="all" />
-          </Tabs>
+            onChange={(value) => setTab(value as TabKey)}
+          />
 
-          <Box sx={{ p: 2.5 }}>
+          <div className="p-5">
             {tab === 'service' ? (
               <DataState
                 loading={serviceDrilldown.initialising}
@@ -162,35 +255,14 @@ const CompliancePage = () => {
                 onRetry={serviceDrilldown.refetch}
                 minHeight={180}
               >
-                <Stack spacing={1.25}>
-                  {serviceDrilldown.data?.map((row) => (
-                    <Stack
-                      key={row.resourceId}
-                      component={RouterLink}
-                      to={fleetPaths.vehicleDetail(row.resourceId)}
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      spacing={1.5}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        p: 1.5,
-                        border: 1,
-                        borderColor: 'divider',
-                        borderRadius: 1.5,
-                        '&:hover': { borderColor: 'secondary.main' },
-                      }}
-                    >
-                      <Typography variant="body2" fontWeight={600}>
-                        {row.summary}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {row.siteCode}
-                      </Typography>
-                    </Stack>
-                  ))}
-                </Stack>
+                <DataTable
+                  rows={serviceDrilldown.data ?? []}
+                  columns={drilldownColumns}
+                  getRowId={(row) => `${row.resourceType}-${row.resourceId}`}
+                  loading={serviceDrilldown.loading}
+                  onRowClick={(row) => navigate(fleetPaths.vehicleDetail(row.resourceId))}
+                  dense
+                />
               </DataState>
             ) : (
               <DataState
@@ -208,79 +280,16 @@ const CompliancePage = () => {
                 onRetry={documents.refetch}
                 minHeight={200}
               >
-                <Stack spacing={1.25}>
-                  {visibleRows.map((row) => (
-                    <Stack
-                      key={row.document.id}
-                      component={RouterLink}
-                      to={fleetPaths.vehicleDetail(row.vehicle.id)}
-                      direction={{ xs: 'column', sm: 'row' }}
-                      justifyContent="space-between"
-                      spacing={1.5}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        p: 1.5,
-                        border: 1,
-                        borderColor: 'divider',
-                        borderRadius: 1.5,
-                        '&:hover': { borderColor: 'secondary.main' },
-                      }}
-                    >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Stack
-                          direction="row"
-                          spacing={1}
-                          alignItems="center"
-                          flexWrap="wrap"
-                          useFlexGap
-                        >
-                          <Typography variant="body2" fontWeight={700}>
-                            {row.vehicle.registrationNumber}
-                          </Typography>
-                          <Typography variant="body2" color="text.secondary">
-                            {humanise(row.document.documentType)}
-                          </Typography>
-                          {row.document.mandatory && (
-                            <StatusChip value="MANDATORY" label="Mandatory" tone="accent" />
-                          )}
-                        </Stack>
-                        <Typography variant="caption" color="text.secondary">
-                          {row.document.documentReference} · {row.document.issuingAuthority} ·{' '}
-                          {row.vehicle.siteCode}
-                        </Typography>
-                      </Box>
-                      <Stack
-                        direction="row"
-                        spacing={1.5}
-                        alignItems="center"
-                        sx={{ flexShrink: 0 }}
-                      >
-                        <Box sx={{ textAlign: { sm: 'right' } }}>
-                          <Typography variant="body2" fontWeight={600}>
-                            {formatDate(row.document.expiresOn)}
-                          </Typography>
-                          <Typography
-                            variant="caption"
-                            color={
-                              row.document.daysUntilExpiry < 0
-                                ? 'error.main'
-                                : row.document.daysUntilExpiry < 30
-                                  ? 'warning.main'
-                                  : 'text.secondary'
-                            }
-                          >
-                            {formatDaysRemaining(row.document.daysUntilExpiry)}
-                          </Typography>
-                        </Box>
-                        <StatusChip value={row.document.status} />
-                      </Stack>
-                    </Stack>
-                  ))}
-                </Stack>
+                <DataTable
+                  rows={visibleRows}
+                  columns={documentColumns}
+                  getRowId={(row) => row.document.id}
+                  loading={documents.loading}
+                  onRowClick={(row) => navigate(fleetPaths.vehicleDetail(row.vehicle.id))}
+                />
               </DataState>
             )}
-          </Box>
+          </div>
         </SectionCard>
 
         <SectionCard
@@ -296,34 +305,25 @@ const CompliancePage = () => {
             onRetry={expiredDrilldown.refetch}
             minHeight={140}
           >
-            <Stack spacing={1}>
-              {expiredDrilldown.data?.map((row) => (
-                <Stack
-                  key={row.resourceId}
-                  direction="row"
-                  justifyContent="space-between"
-                  spacing={1.5}
-                  sx={{ p: 1.25, border: 1, borderColor: 'divider', borderRadius: 1.5 }}
-                >
-                  <Typography variant="body2">{row.summary}</Typography>
-                  <Typography variant="caption" color="text.secondary">
-                    {row.siteCode}
-                  </Typography>
-                </Stack>
-              ))}
-            </Stack>
+            <DataTable
+              rows={expiredDrilldown.data ?? []}
+              columns={drilldownColumns}
+              getRowId={(row) => `${row.resourceType}-${row.resourceId}`}
+              loading={expiredDrilldown.loading}
+              dense
+            />
           </DataState>
         </SectionCard>
 
         {snapshot.data && (
-          <Typography variant="caption" color="text.secondary">
+          <p className="text-theme-xs text-gray-500">
             Reconciliation: {formatNumber(snapshot.data.reconciliation.complianceDocuments)}{' '}
             compliance documents and {formatNumber(snapshot.data.reconciliation.vehicles)} vehicles
             in the current scope.
-          </Typography>
+          </p>
         )}
-      </Stack>
-    </Box>
+      </div>
+    </div>
   );
 };
 

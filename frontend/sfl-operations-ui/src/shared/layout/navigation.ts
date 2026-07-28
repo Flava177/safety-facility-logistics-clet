@@ -1,16 +1,20 @@
+import { IconName } from 'shared/components/Icon';
+
 /**
- * SFL module navigation.
+ * Console navigation.
  *
- * The directorate runs five systems; Fleet & Logistics (S166) is the first with a UI. The others
- * are listed so the shell shows the real shape of the platform, and are marked `available: false`
- * until their module lands. Nothing here links to a screen that does not exist.
+ * Only destinations that are built and wired to the Fleet service appear here. Modules that do not
+ * exist yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
+ * discover nothing, and it makes a working console look half-finished.
  */
 
 export interface NavItem {
   label: string;
   to: string;
-  icon: string;
-  available?: boolean;
+  icon: IconName;
+  /** Matches child routes too — `/fleet/vehicles/42` still highlights "Vehicle register". */
+  matchPrefix?: string;
+  description?: string;
 }
 
 export interface NavSection {
@@ -35,84 +39,69 @@ export const fleetPaths = {
 
 export const navSections: NavSection[] = [
   {
-    heading: 'Fleet & Logistics',
+    heading: 'Operations',
     items: [
       {
-        label: 'Operations dashboard',
+        label: 'Dashboard',
         to: fleetPaths.dashboard,
-        icon: 'material-symbols:dashboard-customize-outline-rounded',
-        available: true,
-      },
-      {
-        label: 'Vehicle register',
-        to: fleetPaths.vehicles,
-        icon: 'material-symbols:local-shipping-outline-rounded',
-        available: true,
-      },
-      {
-        label: 'Driver register',
-        to: fleetPaths.drivers,
-        icon: 'material-symbols:badge-outline',
-        available: true,
+        icon: 'dashboard',
+        description: 'Readiness, activity and exceptions',
       },
       {
         label: 'Trips & assignments',
         to: fleetPaths.trips,
-        icon: 'material-symbols:conversion-path',
-        available: true,
+        icon: 'route',
+        matchPrefix: fleetPaths.trips,
+        description: 'Plan, assign, start and close movements',
       },
       {
         label: 'Workflow queue',
         to: fleetPaths.workflow,
-        icon: 'material-symbols:pending-actions-rounded',
-        available: true,
-      },
-      {
-        label: 'Compliance & service',
-        to: fleetPaths.compliance,
-        icon: 'material-symbols:verified-user-outline-rounded',
-        available: true,
-      },
-      {
-        label: 'Evidence & audit',
-        to: fleetPaths.governance,
-        icon: 'material-symbols:lab-profile-outline-rounded',
-        available: true,
-      },
-      {
-        label: 'Integration health',
-        to: fleetPaths.integrations,
-        icon: 'material-symbols:cloud',
-        available: true,
+        icon: 'workflow',
+        matchPrefix: fleetPaths.workflow,
+        description: 'Inspections, defects and escalations',
       },
     ],
   },
   {
-    heading: 'Other SFL systems',
+    heading: 'Registers',
     items: [
       {
-        label: 'Facilities',
-        to: '/facilities',
-        icon: 'material-symbols:home-pin-outline',
-        available: false,
+        label: 'Vehicle register',
+        to: fleetPaths.vehicles,
+        icon: 'truck',
+        matchPrefix: fleetPaths.vehicles,
+        description: 'Fleet inventory and readiness',
       },
       {
-        label: 'Safety & security',
-        to: '/safety',
-        icon: 'material-symbols:shield-outline',
-        available: false,
+        label: 'Driver register',
+        to: fleetPaths.drivers,
+        icon: 'driver',
+        matchPrefix: fleetPaths.drivers,
+        description: 'Licence standing and eligibility',
+      },
+    ],
+  },
+  {
+    heading: 'Assurance',
+    items: [
+      {
+        label: 'Compliance & service',
+        to: fleetPaths.compliance,
+        icon: 'shield-check',
+        description: 'Documents, servicing and expiry',
       },
       {
-        label: 'Asset visibility',
-        to: '/assets',
-        icon: 'material-symbols:inventory-2-outline-rounded',
-        available: false,
+        label: 'Evidence & audit',
+        to: fleetPaths.governance,
+        icon: 'document',
+        description: 'Closure evidence and audit trail',
       },
       {
-        label: 'Emergency notification',
-        to: '/emergency',
-        icon: 'material-symbols:notifications-outline-rounded',
-        available: false,
+        label: 'Integration health',
+        to: fleetPaths.integrations,
+        icon: 'cloud',
+        description: 'Inbound and outbound message flow',
       },
     ],
   },
@@ -121,6 +110,6 @@ export const navSections: NavSection[] = [
 export const directorate = {
   name: 'Safety, Facilities & Logistics',
   shortName: 'SFL Operations',
+  module: 'Fleet & Logistics',
   parentOrganisation: 'CLET',
-  url: 'https://zesty-beignet-81d70f.netlify.app/',
 };

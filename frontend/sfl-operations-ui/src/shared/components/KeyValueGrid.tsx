@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Box, Stack, Typography } from '@mui/material';
+import { cn } from './cn';
 
 export interface KeyValueItem {
   label: string;
@@ -11,55 +11,42 @@ export interface KeyValueItem {
 
 interface KeyValueGridProps {
   items: KeyValueItem[];
-  columns?: number;
+  columns?: 2 | 3 | 4;
 }
 
 const isBlank = (value: ReactNode) =>
   value === null || value === undefined || value === '' || value === '—';
 
+const columnClasses: Record<2 | 3 | 4, string> = {
+  2: 'sm:grid-cols-2',
+  3: 'sm:grid-cols-2 md:grid-cols-3',
+  4: 'sm:grid-cols-2 md:grid-cols-4',
+};
+
 /** Dense label/value grid used across every detail surface. */
 const KeyValueGrid = ({ items, columns = 3 }: KeyValueGridProps) => (
-  <Box
-    sx={{
-      display: 'grid',
-      gap: 2,
-      gridTemplateColumns: {
-        xs: 'repeat(1, minmax(0, 1fr))',
-        sm: 'repeat(2, minmax(0, 1fr))',
-        md: `repeat(${columns}, minmax(0, 1fr))`,
-      },
-    }}
-  >
+  <dl className={cn('grid grid-cols-1 gap-x-6 gap-y-4', columnClasses[columns])}>
     {items.map((item) => (
-      <Box
-        key={item.label}
-        sx={{ gridColumn: item.span === 2 ? { md: 'span 2' } : undefined, minWidth: 0 }}
-      >
-        <Typography
-          variant="caption"
-          color="text.secondary"
-          sx={{ display: 'block', textTransform: 'uppercase', letterSpacing: 0.4, fontSize: 10.5 }}
-        >
+      <div key={item.label} className={cn('min-w-0', item.span === 2 && 'sm:col-span-2')}>
+        <dt className="text-theme-xs font-semibold text-gray-600">
           {item.label}
-        </Typography>
-        <Stack direction="row" spacing={0.75} alignItems="center" sx={{ mt: 0.25 }}>
-          <Typography
-            variant="body2"
-            fontWeight={500}
-            color={isBlank(item.value) ? 'text.disabled' : 'text.primary'}
-            sx={{ wordBreak: 'break-word' }}
+        </dt>
+        <dd className="mt-0.5 flex flex-wrap items-center gap-1.5">
+          <span
+            className={cn(
+              'text-theme-sm font-medium break-words',
+              isBlank(item.value) ? 'text-gray-500' : 'text-gray-900',
+            )}
           >
             {isBlank(item.value) ? '—' : item.value}
-          </Typography>
+          </span>
           {item.masked && (
-            <Typography variant="caption" color="warning.main" fontWeight={600}>
-              (masked)
-            </Typography>
+            <span className="text-theme-xs font-semibold text-gold-900">(masked)</span>
           )}
-        </Stack>
-      </Box>
+        </dd>
+      </div>
     ))}
-  </Box>
+  </dl>
 );
 
 export default KeyValueGrid;

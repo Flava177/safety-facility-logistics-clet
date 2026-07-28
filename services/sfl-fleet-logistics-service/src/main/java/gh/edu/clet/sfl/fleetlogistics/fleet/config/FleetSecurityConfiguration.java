@@ -51,7 +51,8 @@ class FleetSecurityConfiguration {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/", "/index.html", "/assets/**", "/fleet/**", "/fuel/**", "/favicon.ico").permitAll()
+                        .requestMatchers("/", "/index.html", "/assets/**", "/ui", "/ui/**", "/fleet/**", "/fuel/**",
+                                "/dispatch/**", "/sfl-logo.png", "/favicon.ico").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/api/v1/system/info").permitAll()
                         .requestMatchers("/api/v1/integrations/webhooks/**").permitAll()

@@ -1,4 +1,3 @@
-import { Alert, Box } from '@mui/material';
 import { WorkflowItemResponse } from 'modules/fleet/api/dto';
 import {
   FLEET_WORKFLOW_TYPES,
@@ -11,16 +10,14 @@ import {
   WorkflowSeverity,
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
+import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import SiteSelect from 'shared/components/SiteSelect';
+import { EnumSelect, TextAreaInput, TextInput } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
 
-const twoColumn = {
-  display: 'grid',
-  gap: 2,
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-} as const;
+const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
 interface BaseProps {
   open: boolean;
@@ -92,7 +89,7 @@ export const RaiseWorkflowItemDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <EnumSelect
           label="Workflow type"
           required
@@ -101,8 +98,7 @@ export const RaiseWorkflowItemDialog = ({
           onChange={(value) => form.setValue('workflowType', value)}
           {...form.fieldProps('workflowType')}
         />
-        <TextInput
-          label="Site code"
+        <SiteSelect
           required
           value={form.values.siteCode}
           onChange={(value) => form.setValue('siteCode', value)}
@@ -137,10 +133,9 @@ export const RaiseWorkflowItemDialog = ({
           label="Assignee"
           value={form.values.assignee}
           onChange={(value) => form.setValue('assignee', value)}
-          helperText="Optional — leave blank to raise unassigned."
-          {...form.fieldProps('assignee')}
+          {...form.fieldProps('assignee', 'Optional — leave blank to raise unassigned.')}
         />
-      </Box>
+      </div>
       <TextInput
         label="Title"
         required
@@ -148,11 +143,10 @@ export const RaiseWorkflowItemDialog = ({
         onChange={(value) => form.setValue('title', value)}
         {...form.fieldProps('title')}
       />
-      <TextInput
+      <TextAreaInput
         label="Description"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.description}
         onChange={(value) => form.setValue('description', value)}
         {...form.fieldProps('description')}
@@ -248,7 +242,7 @@ export const CloseWorkflowItemDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Alert severity="info" variant="outlined">
+      <Alert variant="info">
         Register the evidence under Evidence &amp; audit first. Closing without it is refused with
         FLEET_CLOSURE_EVIDENCE_MISSING.
       </Alert>
@@ -259,11 +253,10 @@ export const CloseWorkflowItemDialog = ({
         onChange={(value) => form.setValue('closureEvidenceId', value)}
         {...form.fieldProps('closureEvidenceId')}
       />
-      <TextInput
+      <TextAreaInput
         label="Closure reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.closureReason}
         onChange={(value) => form.setValue('closureReason', value)}
         {...form.fieldProps('closureReason')}
@@ -347,12 +340,11 @@ export const ReasonTransitionDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      {labels[transition].note && <Alert severity="info">{labels[transition].note}</Alert>}
-      <TextInput
+      {labels[transition].note && <Alert variant="info">{labels[transition].note}</Alert>}
+      <TextAreaInput
         label="Reason"
         required={!optionalReason}
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
@@ -390,11 +382,10 @@ export const AddCommentDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <TextInput
+      <TextAreaInput
         label="Comment"
         required
-        multiline
-        minRows={4}
+        rows={4}
         value={form.values.body}
         onChange={(value) => form.setValue('body', value)}
         {...form.fieldProps('body')}

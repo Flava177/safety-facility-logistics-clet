@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { Box, Button, Stack } from '@mui/material';
+import Button from './Button';
 
 interface FilterBarProps {
   children: ReactNode;
@@ -11,35 +11,19 @@ interface FilterBarProps {
 
 /** Filter row for register screens: wraps on narrow viewports, stays on one line on desktop. */
 const FilterBar = ({ children, onReset, resetDisabled, trailing }: FilterBarProps) => (
-  <Stack
-    direction={{ xs: 'column', lg: 'row' }}
-    spacing={1.5}
-    alignItems={{ xs: 'stretch', lg: 'center' }}
-    sx={{ p: 2, borderBottom: 1, borderColor: 'divider' }}
-  >
-    <Box
-      sx={{
-        display: 'grid',
-        gap: 1.5,
-        flex: 1,
-        gridTemplateColumns: {
-          xs: 'repeat(1, minmax(0, 1fr))',
-          sm: 'repeat(2, minmax(0, 1fr))',
-          lg: 'repeat(4, minmax(0, 1fr))',
-        },
-      }}
-    >
+  <div className="flex flex-col gap-4 border-b border-gray-200 px-5 pt-5 pb-6 lg:flex-row lg:items-end">
+    <div className="grid flex-1 grid-cols-1 gap-x-5 gap-y-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
       {children}
-    </Box>
-    <Stack direction="row" spacing={1} sx={{ flexShrink: 0 }}>
+    </div>
+    <div className="flex shrink-0 items-center gap-2">
       {trailing}
       {onReset && (
-        <Button variant="soft" color="neutral" onClick={onReset} disabled={resetDisabled}>
+        <Button variant="outline" onClick={onReset} disabled={resetDisabled} startIcon="filter">
           Reset
         </Button>
       )}
-    </Stack>
-  </Stack>
+    </div>
+  </div>
 );
 
 export default FilterBar;

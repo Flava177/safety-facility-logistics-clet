@@ -1,4 +1,3 @@
-import { Alert, Box, Stack, Typography } from '@mui/material';
 import { VehicleResponse } from 'modules/fleet/api/dto';
 import {
   COMPLIANCE_DOCUMENT_TYPES,
@@ -18,8 +17,11 @@ import {
   humanise,
 } from 'modules/fleet/api/enums';
 import { vehiclesApi } from 'modules/fleet/api/fleetApi';
+import Alert from 'shared/components/Alert';
+import { DateField } from 'shared/components/DateField';
 import FormDialog from 'shared/components/FormDialog';
-import { DateInput, EnumSelect, NumberInput, TextInput } from 'shared/components/fields';
+import SiteSelect from 'shared/components/SiteSelect';
+import { EnumSelect, NumberInput, TextAreaInput, TextInput } from 'shared/components/fields';
 import { todayIsoDate } from 'shared/components/format';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import {
@@ -37,11 +39,8 @@ interface BaseDialogProps {
   onSaved: () => void;
 }
 
-const twoColumn = {
-  display: 'grid',
-  gap: 2,
-  gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
-} as const;
+/** Two columns from `sm` up: these forms are field-dense and read badly as one long stack. */
+const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
 /* ---------------------------------------------------------------------------------------------
  * Register a vehicle — POST /api/v1/fleet/vehicles
@@ -130,7 +129,7 @@ export const RegisterVehicleDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <TextInput
           label="Registration number"
           required
@@ -183,14 +182,14 @@ export const RegisterVehicleDialog = ({
           {...form.fieldProps('capacity')}
         />
         <NumberInput
-          label="Initial odometer (km)"
+          label="Initial odometer"
           required
+          suffix="km"
           value={form.values.initialOdometer}
           onChange={(value) => form.setValue('initialOdometer', value)}
           {...form.fieldProps('initialOdometer')}
         />
-        <TextInput
-          label="Site code"
+        <SiteSelect
           required
           value={form.values.siteCode}
           onChange={(value) => form.setValue('siteCode', value)}
@@ -223,7 +222,7 @@ export const RegisterVehicleDialog = ({
           onChange={(value) => form.setValue('emergencyOnly', value || 'false')}
           renderOptionLabel={(option) => (option === 'true' ? 'Yes' : 'No')}
         />
-      </Box>
+      </div>
     </FormDialog>
   );
 };
@@ -280,11 +279,10 @@ export const ChangeVehicleLifecycleDialog = ({
         onChange={(value) => form.setValue('targetStatus', value)}
         {...form.fieldProps('targetStatus')}
       />
-      <TextInput
+      <TextAreaInput
         label="Reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
@@ -364,7 +362,7 @@ export const RegisterComplianceDocumentDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <EnumSelect
           label="Document type"
           required
@@ -397,14 +395,14 @@ export const RegisterComplianceDocumentDialog = ({
           }
           {...form.fieldProps('retentionClass')}
         />
-        <DateInput
+        <DateField
           label="Issued on"
           required
           value={form.values.issuedOn}
           onChange={(value) => form.setValue('issuedOn', value)}
           {...form.fieldProps('issuedOn')}
         />
-        <DateInput
+        <DateField
           label="Expires on"
           required
           value={form.values.expiresOn}
@@ -415,13 +413,15 @@ export const RegisterComplianceDocumentDialog = ({
           label="Evidence reference ID"
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
-          helperText="Optional. Register the evidence first under Evidence & audit."
-          {...form.fieldProps('evidenceId')}
+          {...form.fieldProps(
+            'evidenceId',
+            'Optional. Register the evidence first under Evidence & audit.',
+          )}
         />
-      </Box>
+      </div>
 
       {isMandatory && (
-        <Alert severity="info">
+        <Alert variant="info">
           {humanise(form.values.documentType)} is a mandatory document — while it is missing or
           expired the vehicle carries a blocking readiness blocker.
         </Alert>
@@ -470,6 +470,20 @@ export const RecordServiceDialog = ({
       workSummary: compose(required('Work summary'), maxLength('Work summary', 2000)),
       outcome: required('Outcome'),
     },
+    crossFieldValidate: (values) => {
+      const errors: { odometerAtService?: string; nextDueOn?: string } = {};
+      // The service refuses a regressed reading outright (FLEET_ODOMETER_REGRESSION), so this is a
+      // validation failure rather than an advisory the operator can submit past.
+      const regression = odometerNotBelow(values.odometerAtService, currentOdometer);
+      if (regression) {
+        errors.odometerAtService = regression;
+      }
+      // Both are date-only strings, so a lexicographic comparison orders them correctly.
+      if (values.nextDueOn && values.performedOn && values.nextDueOn <= values.performedOn) {
+        errors.nextDueOn = 'The next service must fall after the date this one was performed.';
+      }
+      return errors;
+    },
     onSubmit: async (values) => {
       await vehiclesApi.recordService(vehicleId, {
         serviceType: values.serviceType as ServiceType,
@@ -502,7 +516,7 @@ export const RecordServiceDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <EnumSelect
           label="Service type"
           required
@@ -519,7 +533,7 @@ export const RecordServiceDialog = ({
           onChange={(value) => form.setValue('outcome', value)}
           {...form.fieldProps('outcome')}
         />
-        <DateInput
+        <DateField
           label="Performed on"
           required
           value={form.values.performedOn}
@@ -527,20 +541,22 @@ export const RecordServiceDialog = ({
           {...form.fieldProps('performedOn')}
         />
         <NumberInput
-          label="Odometer at service (km)"
+          label="Odometer at service"
           required
+          suffix="km"
           value={form.values.odometerAtService}
           onChange={(value) => form.setValue('odometerAtService', value)}
           {...form.fieldProps('odometerAtService')}
         />
-        <DateInput
+        <DateField
           label="Next due on"
           value={form.values.nextDueOn}
           onChange={(value) => form.setValue('nextDueOn', value)}
           {...form.fieldProps('nextDueOn')}
         />
         <NumberInput
-          label="Next due odometer (km)"
+          label="Next due odometer"
+          suffix="km"
           value={form.values.nextDueOdometer}
           onChange={(value) => form.setValue('nextDueOdometer', value)}
           {...form.fieldProps('nextDueOdometer')}
@@ -557,18 +573,17 @@ export const RecordServiceDialog = ({
           onChange={(value) => form.setValue('evidenceId', value)}
           {...form.fieldProps('evidenceId')}
         />
-      </Box>
-      <TextInput
+      </div>
+      <TextAreaInput
         label="Work summary"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.workSummary}
         onChange={(value) => form.setValue('workSummary', value)}
         {...form.fieldProps('workSummary')}
       />
       {regression && (
-        <Alert severity="warning">
+        <Alert variant="warning">
           {regression} The service will reject this with FLEET_ODOMETER_REGRESSION. Use an
           authorised odometer correction instead.
         </Alert>
@@ -625,26 +640,25 @@ export const CorrectOdometerDialog = ({ open, onClose, onSaved, vehicle }: Odome
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Stack spacing={0.5}>
-        <Typography variant="caption" color="text.secondary">
-          Current reading
-        </Typography>
-        <Typography variant="body2" fontWeight={700}>
+      {/* The reading being replaced, with its provenance: this overwrites a recorded fact. */}
+      <div>
+        <p className="text-theme-xs text-gray-500">Current reading</p>
+        <p className="mt-0.5 text-theme-sm font-semibold text-gray-800">
           {vehicle.odometerValue.toLocaleString()} km · source {humanise(vehicle.odometerSource)}
-        </Typography>
-      </Stack>
+        </p>
+      </div>
       <NumberInput
-        label="Corrected reading (km)"
+        label="Corrected reading"
         required
+        suffix="km"
         value={form.values.correctedReading}
         onChange={(value) => form.setValue('correctedReading', value)}
         {...form.fieldProps('correctedReading')}
       />
-      <TextInput
+      <TextAreaInput
         label="Reason"
         required
-        multiline
-        minRows={3}
+        rows={3}
         value={form.values.reason}
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
@@ -654,8 +668,10 @@ export const CorrectOdometerDialog = ({ open, onClose, onSaved, vehicle }: Odome
         required
         value={form.values.evidenceId}
         onChange={(value) => form.setValue('evidenceId', value)}
-        helperText="Register the supporting evidence under Evidence & audit first."
-        {...form.fieldProps('evidenceId')}
+        {...form.fieldProps(
+          'evidenceId',
+          'Register the supporting evidence under Evidence & audit first.',
+        )}
       />
     </FormDialog>
   );
@@ -729,12 +745,12 @@ export const EditVehicleDialog = ({ open, onClose, onSaved, vehicle }: EditVehic
       onSubmit={form.submit}
     >
       {vehicle.vinMasked && (
-        <Alert severity="warning">
+        <Alert variant="warning">
           The VIN is masked for your role. Leaving this field blank clears the stored VIN — only
           fill it in if you hold the real value.
         </Alert>
       )}
-      <Box sx={twoColumn}>
+      <div className={twoColumn}>
         <TextInput
           label="VIN"
           value={form.values.vin}
@@ -806,11 +822,11 @@ export const EditVehicleDialog = ({ open, onClose, onSaved, vehicle }: EditVehic
           onChange={(value) => form.setValue('emergencyOnly', value || 'false')}
           renderOptionLabel={(option) => (option === 'true' ? 'Yes' : 'No')}
         />
-      </Box>
-      <Typography variant="caption" color="text.secondary">
+      </div>
+      <p className="text-theme-xs text-gray-500">
         Allowed operating modes are managed by the service; the current set is{' '}
         {(vehicle.allowedOperatingModes ?? OPERATING_MODES).map(humanise).join(', ')}.
-      </Typography>
+      </p>
     </FormDialog>
   );
 };

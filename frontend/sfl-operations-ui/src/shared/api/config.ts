@@ -12,6 +12,12 @@ const readEnv = (key: string, fallback: string): string => {
   return value === undefined || value === '' ? fallback : value;
 };
 
+/** Distinguishes "not set" from "deliberately empty", which is how same-origin is requested. */
+const readOptionalEnv = (key: string, fallback: string): string => {
+  const value = import.meta.env[key as keyof ImportMetaEnv] as string | undefined;
+  return value === undefined ? fallback : value;
+};
+
 export interface SflActorConfig {
   user: string;
   displayName: string;
@@ -20,7 +26,14 @@ export interface SflActorConfig {
   sourceChannel: string;
 }
 
-export const fleetApiBaseUrl = readEnv('VITE_FLEET_API_BASE_URL', 'http://localhost:8093');
+/**
+ * Base URL of the Fleet service.
+ *
+ * An empty value means same origin — which is what the embedded build uses, because the Spring Boot
+ * service serves both the API and this console. `npm run dev` points at `http://localhost:8093`
+ * instead, and the service allows `http://localhost:5005` as a CORS origin.
+ */
+export const fleetApiBaseUrl = readOptionalEnv('VITE_FLEET_API_BASE_URL', 'http://localhost:8093');
 
 export const sflActor: SflActorConfig = {
   user: readEnv('VITE_SFL_USER', 'fleet.operator'),

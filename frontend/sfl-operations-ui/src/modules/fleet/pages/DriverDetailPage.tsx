@@ -1,10 +1,13 @@
 import { useState } from 'react';
-import { Link as RouterLink, useNavigate, useParams } from 'react-router';
-import { Box, Button, Divider, Stack, Typography } from '@mui/material';
+import { Link, useNavigate, useParams } from 'react-router';
+import { DriverResponse } from 'modules/fleet/api/dto';
+import { describeDriverEligibility } from 'modules/fleet/api/driverEligibility';
 import { VEHICLE_CATEGORIES, VehicleCategory, humanise } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi } from 'modules/fleet/api/fleetApi';
 import { UpdateDriverDialog } from 'modules/fleet/dialogs/driverDialogs';
+import Alert from 'shared/components/Alert';
 import BlockerList from 'shared/components/BlockerList';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
@@ -15,7 +18,34 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatDaysRemaining } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
+
+/**
+ * Why this driver's status is what it is, read off the record itself.
+ *
+ * An eligible driver gets nothing rather than an empty panel: a heading with no findings under it
+ * reads as a question the console failed to answer.
+ */
+const EligibilitySummary = ({ driver }: { driver: DriverResponse }) => {
+  const reasons =
+    driver.eligibilityStatus === 'ELIGIBLE' ? [] : describeDriverEligibility(driver);
+  if (reasons.length === 0) {
+    return null;
+  }
+
+  const conditional = driver.eligibilityStatus === 'CONDITIONAL';
+  return (
+    <Alert
+      variant={conditional ? 'warning' : 'error'}
+      title={conditional ? 'Assignable with conditions' : 'Not eligible for assignment'}
+    >
+      <ul className="mt-1 list-disc space-y-1 pl-4">
+        {reasons.map((reason) => (
+          <li key={reason}>{reason}</li>
+        ))}
+      </ul>
+    </Alert>
+  );
+};
 
 /**
  * Driver detail.
@@ -42,7 +72,7 @@ const DriverDetailPage = () => {
   );
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title={driver.data?.displayName ?? 'Driver'}
         subtitle={
@@ -58,26 +88,20 @@ const DriverDetailPage = () => {
         actions={
           <>
             <Button
-              variant="soft"
-              color="neutral"
+              variant="outline"
+              startIcon="arrow-left"
               onClick={() => navigate(fleetPaths.drivers)}
-              startIcon={<IconifyIcon icon="material-symbols:arrow-back-rounded" />}
             >
               Register
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setEditOpen(true)}
-              startIcon={<IconifyIcon icon="material-symbols:edit-outline-rounded" />}
-            >
+            <Button variant="primary" startIcon="edit" onClick={() => setEditOpen(true)}>
               Update driver
             </Button>
           </>
         }
         meta={
           driver.data && (
-            <Stack direction="row" spacing={1} flexWrap="wrap" useFlexGap>
+            <div className="flex flex-wrap items-center gap-2">
               <StatusChip value={driver.data.lifecycleStatus} />
               <StatusChip value={driver.data.eligibilityStatus} />
               <StatusChip
@@ -85,7 +109,7 @@ const DriverDetailPage = () => {
                 label={`Class ${driver.data.licenceClass}`}
                 tone="neutral"
               />
-            </Stack>
+            </div>
           )
         }
       />
@@ -97,7 +121,9 @@ const DriverDetailPage = () => {
         minHeight={300}
       >
         {driver.data && (
-          <Stack spacing={2.5}>
+          <div className="space-y-5">
+            <EligibilitySummary driver={driver.data} />
+
             <SectionCard
               title="Eligibility"
               subtitle="Blockers the service will apply at assignment time"
@@ -106,10 +132,10 @@ const DriverDetailPage = () => {
                   label="Against category"
                   value={category}
                   options={VEHICLE_CATEGORIES}
-                  onChange={setCategory}
+                  onChange={(value) => setCategory(value)}
                   allowEmpty
                   emptyLabel="Any category"
-                  sx={{ minWidth: 200 }}
+                  className="w-52"
                 />
               }
             >
@@ -120,33 +146,27 @@ const DriverDetailPage = () => {
                 minHeight={80}
               >
                 {eligibility.data && (
-                  <Stack spacing={1.5}>
-                    <Stack
-                      direction="row"
-                      spacing={1}
-                      alignItems="center"
-                      flexWrap="wrap"
-                      useFlexGap
-                    >
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap items-center gap-2">
                       <StatusChip value={eligibility.data.status} />
-                      <Typography variant="caption" color="text.secondary">
+                      <span className="text-theme-xs text-gray-500">
                         Assessed {formatDateTime(eligibility.data.assessedAt)}
                         {eligibility.data.assessedForCategory
                           ? ` for ${humanise(eligibility.data.assessedForCategory)}`
                           : ''}
-                      </Typography>
-                    </Stack>
+                      </span>
+                    </div>
                     <BlockerList
                       blockers={eligibility.data.blockers}
                       clearMessage="No eligibility blockers. This driver can be assigned."
                     />
-                  </Stack>
+                  </div>
                 )}
               </DataState>
             </SectionCard>
 
             <SectionCard title="Profile">
-              <Stack spacing={2.5}>
+              <div className="space-y-5">
                 <KeyValueGrid
                   items={[
                     { label: 'Staff reference', value: driver.data.staffReference },
@@ -170,7 +190,7 @@ const DriverDetailPage = () => {
                     { label: 'Record version', value: driver.data.version },
                   ]}
                 />
-                <Divider />
+                <hr className="border-gray-200" />
                 <KeyValueGrid
                   columns={4}
                   items={[
@@ -183,14 +203,19 @@ const DriverDetailPage = () => {
                     },
                   ]}
                 />
-              </Stack>
+              </div>
             </SectionCard>
 
             <SectionCard
               title="Assignments"
               subtitle="Current and recent trips for this driver"
               actions={
-                <Button component={RouterLink} to={fleetPaths.trips} variant="text" size="small">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  endIcon="chevron-right"
+                  onClick={() => navigate(fleetPaths.trips)}
+                >
                   Trip queue
                 </Button>
               }
@@ -204,55 +229,46 @@ const DriverDetailPage = () => {
                 onRetry={assignments.refetch}
                 minHeight={140}
               >
-                <Stack spacing={1.25}>
+                <div className="space-y-2.5">
                   {assignments.data?.content.map((trip) => (
-                    <Stack
+                    <Link
                       key={trip.id}
-                      component={RouterLink}
                       to={fleetPaths.tripDetail(trip.id)}
-                      direction="row"
-                      justifyContent="space-between"
-                      alignItems="center"
-                      spacing={1.5}
-                      sx={{
-                        textDecoration: 'none',
-                        color: 'inherit',
-                        p: 1.5,
-                        border: 1,
-                        borderColor: 'divider',
-                        borderRadius: 1.5,
-                        '&:hover': { borderColor: 'secondary.main' },
-                      }}
+                      className="flex items-center justify-between gap-3 rounded-xl border border-gray-200 p-3 transition hover:border-brand-400 hover:bg-brand-25"
                     >
-                      <Box sx={{ minWidth: 0 }}>
-                        <Typography variant="body2" fontWeight={700} noWrap>
+                      <div className="min-w-0">
+                        <p className="truncate text-theme-sm font-semibold text-gray-800">
                           {trip.tripNumber} · {trip.origin} → {trip.destination}
-                        </Typography>
-                        <Typography variant="caption" color="text.secondary" noWrap>
+                        </p>
+                        <p className="truncate text-theme-xs text-gray-500">
                           {formatDateTime(trip.plannedStart)} → {formatDateTime(trip.plannedEnd)}
-                        </Typography>
-                      </Box>
+                        </p>
+                      </div>
                       <StatusChip value={trip.status} />
-                    </Stack>
+                    </Link>
                   ))}
-                </Stack>
+                </div>
               </DataState>
             </SectionCard>
 
-            <UpdateDriverDialog
-              open={editOpen}
-              driver={driver.data}
-              onClose={() => setEditOpen(false)}
-              onSaved={() => {
-                notifySuccess('Driver updated.');
-                driver.refetch();
-                eligibility.refetch();
-              }}
-            />
-          </Stack>
+            {/* Mounted only while open: the form is seeded from the driver record, and a mounted
+                dialog would keep offering the values it was first given after a save and refetch. */}
+            {editOpen && (
+              <UpdateDriverDialog
+                open
+                driver={driver.data}
+                onClose={() => setEditOpen(false)}
+                onSaved={() => {
+                  notifySuccess('Driver updated.');
+                  driver.refetch();
+                  eligibility.refetch();
+                }}
+              />
+            )}
+          </div>
         )}
       </DataState>
-    </Box>
+    </div>
   );
 };
 

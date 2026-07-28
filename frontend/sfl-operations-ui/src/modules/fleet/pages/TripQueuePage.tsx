@@ -1,25 +1,24 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Box, Button, Stack, Typography } from '@mui/material';
-import { DataGrid, GridColDef, GridPaginationModel } from '@mui/x-data-grid';
 import { TripResponse, TripStatusValue } from 'modules/fleet/api/dto';
 import { OPERATING_MODES, OperatingMode, TRIP_STATUSES, humanise } from 'modules/fleet/api/enums';
 import { tripsApi } from 'modules/fleet/api/fleetApi';
 import { CreateTripDialog } from 'modules/fleet/dialogs/tripDialogs';
-import { defaultPageSize, sflActor } from 'shared/api/config';
+import { defaultPageSize } from 'shared/api/config';
+import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import { DateTimeField } from 'shared/components/DateField';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { DateInput, EnumSelect, TextInput } from 'shared/components/fields';
+import { EnumSelect } from 'shared/components/fields';
 import { formatDateTime, fromLocalInputValue } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
-import IconifyIcon from 'components/base/IconifyIcon';
-
-const firstSite = sflActor.sites.split(',')[0]?.trim() ?? '';
 
 interface Filters {
   siteCode: string;
@@ -30,7 +29,7 @@ interface Filters {
 }
 
 const emptyFilters: Filters = {
-  siteCode: firstSite,
+  siteCode: defaultSite,
   status: '',
   operatingMode: '',
   from: '',
@@ -42,14 +41,18 @@ const TripQueuePage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
   const [filters, setFilters] = useState<Filters>(emptyFilters);
-  const [pagination, setPagination] = useState<GridPaginationModel>({
-    page: 0,
-    pageSize: defaultPageSize,
-  });
+  const [pagination, setPagination] = useState({ page: 0, pageSize: defaultPageSize });
   const [createOpen, setCreateOpen] = useState(false);
 
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
+    setPagination((current) => ({ ...current, page: 0 }));
+  };
+
+  // Reset is a filter change like any other: leaving the page index behind asks the server for a
+  // page the narrowed result set no longer has, and the table comes back empty.
+  const resetFilters = () => {
+    setFilters(emptyFilters);
     setPagination((current) => ({ ...current, page: 0 }));
   };
 
@@ -70,62 +73,47 @@ const TripQueuePage = () => {
     [filters, pagination.page, pagination.pageSize],
   );
 
-  const columns = useMemo<GridColDef<TripResponse>[]>(
+  const columns = useMemo<Column<TripResponse>[]>(
     () => [
       {
-        field: 'tripNumber',
-        headerName: 'Trip',
-        minWidth: 200,
-        flex: 1,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2" fontWeight={700}>
-              {row.tripNumber}
-            </Typography>
-            <Typography variant="caption" color="text.secondary" noWrap>
-              {row.origin} → {row.destination}
-            </Typography>
-          </Stack>
+        key: 'tripNumber',
+        header: 'Trip',
+        width: 200,
+        cell: (row) => (
+          <CellStack primary={row.tripNumber} secondary={`${row.origin} → ${row.destination}`} />
         ),
       },
-      { field: 'purpose', headerName: 'Purpose', minWidth: 200, flex: 1 },
+      { key: 'purpose', header: 'Purpose', width: 200, cell: (row) => row.purpose },
       {
-        field: 'plannedStart',
-        headerName: 'Planned window',
-        minWidth: 210,
-        renderCell: ({ row }) => (
-          <Stack sx={{ py: 0.75 }}>
-            <Typography variant="body2">{formatDateTime(row.plannedStart)}</Typography>
-            <Typography variant="caption" color="text.secondary">
-              to {formatDateTime(row.plannedEnd)}
-            </Typography>
-          </Stack>
+        key: 'plannedStart',
+        header: 'Planned window',
+        width: 210,
+        cell: (row) => (
+          <CellStack
+            primary={formatDateTime(row.plannedStart)}
+            secondary={`to ${formatDateTime(row.plannedEnd)}`}
+          />
         ),
       },
       {
-        field: 'operatingMode',
-        headerName: 'Mode',
-        minWidth: 130,
-        valueFormatter: (value: OperatingMode) => humanise(value),
+        key: 'operatingMode',
+        header: 'Mode',
+        width: 130,
+        cell: (row) => humanise(row.operatingMode),
       },
+      { key: 'status', header: 'Status', width: 140, cell: (row) => <StatusChip value={row.status} /> },
       {
-        field: 'status',
-        headerName: 'Status',
-        minWidth: 140,
-        renderCell: ({ row }) => <StatusChip value={row.status} />,
-      },
-      {
-        field: 'vehicleId',
-        headerName: 'Assignment',
-        minWidth: 140,
-        renderCell: ({ row }) =>
+        key: 'vehicleId',
+        header: 'Assignment',
+        width: 140,
+        cell: (row) =>
           row.vehicleId && row.driverId ? (
             <StatusChip value="ASSIGNED" label="Vehicle & driver" tone="active" />
           ) : (
             <StatusChip value="PLANNED" label="Unassigned" tone="caution" />
           ),
       },
-      { field: 'siteCode', headerName: 'Site', minWidth: 100 },
+      { key: 'siteCode', header: 'Site', width: 100, cell: (row) => row.siteCode },
     ],
     [],
   );
@@ -133,27 +121,17 @@ const TripQueuePage = () => {
   const filtersActive = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
 
   return (
-    <Box>
+    <div>
       <PageHeader
         title="Trips & assignments"
         subtitle="Plan a movement, assign a vehicle and driver, then start and close it against evidence."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Trips' }]}
         actions={
           <>
-            <Button
-              variant="soft"
-              color="neutral"
-              onClick={query.refetch}
-              startIcon={<IconifyIcon icon="material-symbols:refresh-rounded" />}
-            >
+            <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button
-              variant="contained"
-              color="secondary"
-              onClick={() => setCreateOpen(true)}
-              startIcon={<IconifyIcon icon="material-symbols:add-rounded" />}
-            >
+            <Button variant="accent" startIcon="plus" onClick={() => setCreateOpen(true)}>
               Plan a trip
             </Button>
           </>
@@ -161,11 +139,11 @@ const TripQueuePage = () => {
       />
 
       <SectionCard flush>
-        <FilterBar onReset={() => setFilters(emptyFilters)} resetDisabled={!filtersActive}>
-          <TextInput
-            label="Site code"
+        <FilterBar onReset={resetFilters} resetDisabled={!filtersActive}>
+          <SiteSelect
             value={filters.siteCode}
             onChange={(value) => setFilter('siteCode', value)}
+            allowEmpty
           />
           <EnumSelect
             label="Status"
@@ -181,59 +159,57 @@ const TripQueuePage = () => {
             onChange={(value) => setFilter('operatingMode', value)}
             allowEmpty
           />
-          <DateInput
+          <DateTimeField
             label="From"
-            withTime
             value={filters.from}
             onChange={(value) => setFilter('from', value)}
           />
-          <DateInput
+          <DateTimeField
             label="To"
-            withTime
             value={filters.to}
             onChange={(value) => setFilter('to', value)}
           />
         </FilterBar>
 
-        <Box sx={{ p: 2 }}>
-          <DataState
-            loading={query.initialising}
-            error={query.error}
-            empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
-            emptyTitle="No trips match these filters"
-            emptyHint="Plan a trip to get a movement into the queue."
-            onRetry={query.refetch}
-            minHeight={280}
-          >
-            <DataGrid
-              rows={query.data?.content ?? []}
-              columns={columns}
-              getRowId={(row) => row.id}
-              rowHeight={56}
-              disableColumnMenu
-              loading={query.loading}
-              paginationMode="server"
-              rowCount={query.data?.totalElements ?? 0}
-              paginationModel={pagination}
-              onPaginationModelChange={setPagination}
-              pageSizeOptions={[10, 25, 50, 100]}
-              onRowClick={(params) => navigate(fleetPaths.tripDetail(String(params.id)))}
-              sx={{ border: 0, '& .MuiDataGrid-row': { cursor: 'pointer' } }}
-            />
-          </DataState>
-        </Box>
+        <DataState
+          loading={query.initialising}
+          error={query.error}
+          empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
+          emptyTitle="No trips match these filters"
+          emptyHint="Plan a trip to get a movement into the queue."
+          onRetry={query.refetch}
+          minHeight={280}
+        >
+          <DataTable
+            rows={query.data?.content ?? []}
+            columns={columns}
+            getRowId={(row) => row.id}
+            loading={query.loading}
+            onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
+            page={pagination.page}
+            pageSize={pagination.pageSize}
+            totalElements={query.data?.totalElements ?? 0}
+            onPageChange={(page) => setPagination((current) => ({ ...current, page }))}
+            onPageSizeChange={(pageSize) => setPagination({ page: 0, pageSize })}
+            emptyMessage="No trips match these filters."
+          />
+        </DataState>
       </SectionCard>
 
-      <CreateTripDialog
-        open={createOpen}
-        defaultSiteCode={filters.siteCode || firstSite}
-        onClose={() => setCreateOpen(false)}
-        onSaved={() => {
-          notifySuccess('Trip created.');
-          query.refetch();
-        }}
-      />
-    </Box>
+      {/* Mounted only while open, so the dialog picks up the current site filter as its default
+          and cannot reopen holding a half-typed trip from a previous attempt. */}
+      {createOpen && (
+        <CreateTripDialog
+          open
+          defaultSiteCode={filters.siteCode || defaultSite}
+          onClose={() => setCreateOpen(false)}
+          onSaved={() => {
+            notifySuccess('Trip created.');
+            query.refetch();
+          }}
+        />
+      )}
+    </div>
   );
 };
 

@@ -42,9 +42,9 @@ interface VehicleJpaRepository extends JpaRepository<VehicleEntity, UUID> {
               and (:serviceStatus is null or v.serviceStatus = :serviceStatus)
               and (:availabilityStatus is null or v.availabilityStatus = :availabilityStatus)
               and (:category is null or v.category = :category)
-              and (:responsibleUnit is null or upper(v.responsibleUnit) = upper(:responsibleUnit))
-              and (:registrationNumberContains is null
-                   or upper(v.registrationNumber) like upper(concat('%', :registrationNumberContains, '%')))
+              and upper(v.responsibleUnit) = upper(coalesce(:responsibleUnit, v.responsibleUnit))
+              and upper(v.registrationNumber)
+                  like upper(concat('%', coalesce(:registrationNumberContains, v.registrationNumber), '%'))
             """)
     Page<VehicleEntity> search(
             @Param("allSites") boolean allSites,
