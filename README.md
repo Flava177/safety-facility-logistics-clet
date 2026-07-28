@@ -15,6 +15,27 @@ notification needs independent availability, callback, retry, degraded-mode and 
 
 The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` is retained only as Java migration/reference material while its IFIMP vertical slice is moved into the new service layout.
 
+## Running Fleet & Vehicle Management locally
+
+One command starts the databases, builds the SFL Operations console and runs the Fleet service,
+which then serves the API, Swagger and the console together on port 8093:
+
+```powershell
+.\start-fleet.ps1
+```
+
+| URL                                     | What               |
+| --------------------------------------- | ------------------ |
+| <http://localhost:8093/ui/>             | Operations console |
+| <http://localhost:8093/swagger-ui.html> | Swagger UI         |
+| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON       |
+
+`http://localhost:8093/` redirects to the console. There is no sign-in step locally
+(`sfl.security.enabled=false`); the console sends the `X-SFL-*` actor headers instead.
+
+For front-end work with hot reload, use `.\scripts\dev\run-fleet-dev.ps1`, which runs the service
+on 8093 and the console on 5005. Details are in `frontend/sfl-operations-ui/README.md`.
+
 ## Source Documents
 
 - `docs/System Mappings and SRS/SFL_SRS.docx`

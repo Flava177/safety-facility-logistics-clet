@@ -47,6 +47,16 @@ interface TripJpaRepository extends JpaRepository<TripEntity, UUID> {
     List<TripEntity> findDriverConflicts(@Param("driverId") UUID driverId, @Param("from") Instant from,
             @Param("to") Instant to, @Param("excludingTripId") UUID excludingTripId);
 
+    /**
+     * Paged search.
+     *
+     * <p>Optional filters use {@code coalesce} rather than {@code :x is null or ...}: PostgreSQL
+     * cannot infer the type of a bind parameter that never appears in a typed position — an
+     * {@code IS NULL} test, or an argument to {@code upper()} or {@code concat()} — and rejects the
+     * prepare with SQLSTATE 42P18. Inside {@code coalesce} the parameter takes its type from the
+     * column beside it. Every column used this way is {@code NOT NULL}, so an absent filter still
+     * matches every row, exactly as the previous form did.
+     */
     @Query("""
             select t from TripEntity t
             where (:allSites = true or t.siteCode in :siteScopes)
@@ -55,8 +65,8 @@ interface TripJpaRepository extends JpaRepository<TripEntity, UUID> {
               and (:vehicleId is null or t.vehicleId = :vehicleId)
               and (:driverId is null or t.driverId = :driverId)
               and (:operatingMode is null or t.operatingMode = :operatingMode)
-              and (:from is null or t.plannedEnd >= :from)
-              and (:to is null or t.plannedStart <= :to)
+              and t.plannedEnd >= coalesce(:from, t.plannedEnd)
+              and t.plannedStart <= coalesce(:to, t.plannedStart)
             """)
     Page<TripEntity> search(
             @Param("allSites") boolean allSites,
