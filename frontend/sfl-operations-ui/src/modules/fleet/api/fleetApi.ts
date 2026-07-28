@@ -1,0 +1,316 @@
+import { apiClient } from 'shared/api/client';
+import { PageResponse, QueryParams } from 'shared/api/types';
+import {
+  AssignTripRequest,
+  AssignmentPreviewParams,
+  AuditChainVerificationResponse,
+  AuditEventResponse,
+  AuditSearchParams,
+  CancelTripRequest,
+  ChangeVehicleLifecycleRequest,
+  CloseTripRequest,
+  CommentResponse,
+  ComplianceDocumentResponse,
+  CorrectOdometerRequest,
+  CreateTripRequest,
+  DashboardDrilldownRow,
+  DashboardParams,
+  DriverResponse,
+  DriverSearchParams,
+  EligibilityResponse,
+  EvidenceResponse,
+  ExportRequestResponse,
+  GoLiveReadinessReport,
+  HoldTripRequest,
+  InboxMessageResponse,
+  InspectionResponse,
+  IntegrationHealthResponse,
+  OperationsDashboardSnapshot,
+  RaiseWorkflowItemRequest,
+  ReadinessResponse,
+  RecordInspectionRequest,
+  RecordVehicleServiceRequest,
+  RegisterComplianceDocumentRequest,
+  RegisterDriverRequest,
+  RegisterEvidenceRequest,
+  RegisterVehicleRequest,
+  ServiceHistoryResponse,
+  ServiceRecordResponse,
+  StartTripRequest,
+  TripResponse,
+  TripSearchParams,
+  UpdateDriverRequest,
+  UpdateVehicleRequest,
+  VehicleResponse,
+  VehicleSearchParams,
+  WorkflowHistoryResponse,
+  WorkflowItemResponse,
+  WorkflowSearchParams,
+} from './dto';
+
+/**
+ * Typed client for the S166 Fleet & Vehicle Management API.
+ *
+ * Paths were taken from the controllers, not from the API inventory document — several inventory
+ * entries do not match the implementation. The mismatches are listed in
+ * `docs/fleet/S166_Frontend_Gap_Register.md`; nothing here calls an endpoint that does not exist.
+ */
+
+const BASE = '/api/v1/fleet';
+
+const asQuery = (params: object | undefined): QueryParams | undefined =>
+  params as QueryParams | undefined;
+
+export const vehiclesApi = {
+  search: (params: VehicleSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<PageResponse<VehicleResponse>>(`${BASE}/vehicles`, asQuery(params), signal),
+
+  findById: (vehicleId: string, signal?: AbortSignal) =>
+    apiClient.get<VehicleResponse>(`${BASE}/vehicles/${vehicleId}`, undefined, signal),
+
+  register: (body: RegisterVehicleRequest) =>
+    apiClient.post<VehicleResponse>(`${BASE}/vehicles`, body),
+
+  update: (vehicleId: string, body: UpdateVehicleRequest) =>
+    apiClient.patch<VehicleResponse>(`${BASE}/vehicles/${vehicleId}`, body),
+
+  changeLifecycle: (vehicleId: string, body: ChangeVehicleLifecycleRequest) =>
+    apiClient.patch<VehicleResponse>(`${BASE}/vehicles/${vehicleId}/lifecycle`, body),
+
+  complianceDocuments: (vehicleId: string, signal?: AbortSignal) =>
+    apiClient.get<ComplianceDocumentResponse[]>(
+      `${BASE}/vehicles/${vehicleId}/compliance-documents`,
+      undefined,
+      signal,
+    ),
+
+  registerComplianceDocument: (vehicleId: string, body: RegisterComplianceDocumentRequest) =>
+    apiClient.post<ComplianceDocumentResponse>(
+      `${BASE}/vehicles/${vehicleId}/compliance-documents`,
+      body,
+    ),
+
+  serviceHistory: (vehicleId: string, signal?: AbortSignal) =>
+    apiClient.get<ServiceHistoryResponse>(
+      `${BASE}/vehicles/${vehicleId}/service-history`,
+      undefined,
+      signal,
+    ),
+
+  recordService: (vehicleId: string, body: RecordVehicleServiceRequest) =>
+    apiClient.post<ServiceRecordResponse>(`${BASE}/vehicles/${vehicleId}/service-records`, body),
+
+  correctOdometer: (vehicleId: string, body: CorrectOdometerRequest) =>
+    apiClient.post<VehicleResponse>(`${BASE}/vehicles/${vehicleId}/odometer-corrections`, body, {
+      idempotent: false,
+    }),
+};
+
+export const driversApi = {
+  search: (params: DriverSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<PageResponse<DriverResponse>>(`${BASE}/drivers`, asQuery(params), signal),
+
+  findById: (driverId: string, signal?: AbortSignal) =>
+    apiClient.get<DriverResponse>(`${BASE}/drivers/${driverId}`, undefined, signal),
+
+  register: (body: RegisterDriverRequest) =>
+    apiClient.post<DriverResponse>(`${BASE}/drivers`, body),
+
+  update: (driverId: string, body: UpdateDriverRequest) =>
+    apiClient.patch<DriverResponse>(`${BASE}/drivers/${driverId}`, body),
+
+  /**
+   * Eligibility, optionally against a vehicle category and a period end.
+   *
+   * Passing `until` is what catches a licence that is valid today but lapses mid-trip.
+   */
+  eligibility: (
+    driverId: string,
+    params: { vehicleCategory?: string; until?: string } = {},
+    signal?: AbortSignal,
+  ) =>
+    apiClient.get<EligibilityResponse>(
+      `${BASE}/drivers/${driverId}/eligibility`,
+      asQuery(params),
+      signal,
+    ),
+};
+
+export const tripsApi = {
+  search: (params: TripSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<PageResponse<TripResponse>>(`${BASE}/trips`, asQuery(params), signal),
+
+  findById: (tripId: string, signal?: AbortSignal) =>
+    apiClient.get<TripResponse>(`${BASE}/trips/${tripId}`, undefined, signal),
+
+  create: (body: CreateTripRequest) => apiClient.post<TripResponse>(`${BASE}/trips`, body),
+
+  assign: (tripId: string, body: AssignTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/assignment`, body),
+
+  start: (tripId: string, body: StartTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/start`, body),
+
+  holdOrResume: (tripId: string, body: HoldTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/hold`, body),
+
+  cancel: (tripId: string, body: CancelTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/cancel`, body),
+
+  close: (tripId: string, body: CloseTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/closure`, body),
+
+  inspections: (tripId: string, signal?: AbortSignal) =>
+    apiClient.get<InspectionResponse[]>(`${BASE}/trips/${tripId}/inspections`, undefined, signal),
+
+  recordInspection: (tripId: string, body: RecordInspectionRequest) =>
+    apiClient.post<InspectionResponse>(`${BASE}/trips/${tripId}/inspections`, body),
+
+  /**
+   * Readiness preview before committing to an assignment.
+   *
+   * Uses the same policy and inputs the assignment itself will use, so the blockers shown here
+   * cannot disagree with the ones that would reject the submission.
+   */
+  assignmentPreview: (params: AssignmentPreviewParams, signal?: AbortSignal) =>
+    apiClient.get<ReadinessResponse>(`${BASE}/trips/assignment-preview`, asQuery(params), signal),
+};
+
+export const workflowApi = {
+  search: (params: WorkflowSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<PageResponse<WorkflowItemResponse>>(
+      `${BASE}/workflow-items`,
+      asQuery(params),
+      signal,
+    ),
+
+  findById: (itemId: string, signal?: AbortSignal) =>
+    apiClient.get<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}`, undefined, signal),
+
+  raise: (body: RaiseWorkflowItemRequest) =>
+    apiClient.post<WorkflowItemResponse>(`${BASE}/workflow-items`, body),
+
+  assign: (itemId: string, body: { assignee: string; reason?: string; expectedVersion?: number }) =>
+    apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/assignment`, body),
+
+  start: (itemId: string, body: { expectedVersion?: number } = {}) =>
+    apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/progress`, body),
+
+  holdOrResume: (
+    itemId: string,
+    body: { resume: boolean; reason?: string; expectedVersion?: number },
+  ) => apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/hold`, body),
+
+  escalate: (itemId: string, body: { reason: string; expectedVersion?: number }) =>
+    apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/escalation`, body),
+
+  cancel: (itemId: string, body: { reason: string; expectedVersion?: number }) =>
+    apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/cancel`, body),
+
+  close: (
+    itemId: string,
+    body: { closureReason: string; closureEvidenceId: string; expectedVersion?: number },
+  ) => apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/closure`, body),
+
+  reopen: (itemId: string, body: { reason: string; expectedVersion?: number }) =>
+    apiClient.patch<WorkflowItemResponse>(`${BASE}/workflow-items/${itemId}/reopen`, body),
+
+  comment: (itemId: string, body: { body: string }) =>
+    apiClient.post<CommentResponse>(`${BASE}/workflow-items/${itemId}/comments`, body),
+
+  history: (itemId: string, signal?: AbortSignal) =>
+    apiClient.get<WorkflowHistoryResponse>(
+      `${BASE}/workflow-items/${itemId}/transitions`,
+      undefined,
+      signal,
+    ),
+};
+
+export const evidenceApi = {
+  findById: (evidenceId: string, signal?: AbortSignal) =>
+    apiClient.get<EvidenceResponse>(`${BASE}/evidence/${evidenceId}`, undefined, signal),
+
+  register: (body: RegisterEvidenceRequest) =>
+    apiClient.post<EvidenceResponse>(`${BASE}/evidence`, body, { idempotent: false }),
+
+  /** Records an access entry against the evidence record (SRS-SFL-S166-03 access audit). */
+  recordAccess: (evidenceId: string) =>
+    apiClient.post<EvidenceResponse>(`${BASE}/evidence/${evidenceId}/access`, undefined, {
+      idempotent: false,
+    }),
+
+  requestExport: (evidenceId: string, body: { reason: string }) =>
+    apiClient.post<ExportRequestResponse>(`${BASE}/evidence/${evidenceId}/export-requests`, body, {
+      idempotent: false,
+    }),
+
+  decideExport: (exportRequestId: string, body: { approved: boolean; decisionReason: string }) =>
+    apiClient.patch<ExportRequestResponse>(
+      `${BASE}/evidence/export-requests/${exportRequestId}/decision`,
+      body,
+    ),
+
+  export: (exportRequestId: string) =>
+    apiClient.post<ExportRequestResponse>(
+      `${BASE}/evidence/export-requests/${exportRequestId}/export`,
+      undefined,
+      { idempotent: false },
+    ),
+};
+
+export const auditApi = {
+  search: (params: AuditSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<AuditEventResponse[]>(`${BASE}/audit/records`, asQuery(params), signal),
+
+  verifyChain: (signal?: AbortSignal) =>
+    apiClient.get<AuditChainVerificationResponse>(
+      `${BASE}/audit/chain/verification`,
+      undefined,
+      signal,
+    ),
+};
+
+export const integrationsApi = {
+  health: (signal?: AbortSignal) =>
+    apiClient.get<IntegrationHealthResponse>(`${BASE}/integrations/health`, undefined, signal),
+
+  replay: (messageId: string) =>
+    apiClient.post<InboxMessageResponse>(
+      `${BASE}/integrations/messages/${messageId}/replay`,
+      undefined,
+      { idempotent: false },
+    ),
+};
+
+export const dashboardApi = {
+  operations: (params: DashboardParams = {}, signal?: AbortSignal) =>
+    apiClient.get<OperationsDashboardSnapshot>(
+      `${BASE}/dashboards/operations`,
+      asQuery(params),
+      signal,
+    ),
+
+  drilldown: (indicator: string, params: DashboardParams = {}, signal?: AbortSignal) =>
+    apiClient.get<DashboardDrilldownRow[]>(
+      `${BASE}/dashboards/operations/drilldowns/${indicator}`,
+      asQuery(params),
+      signal,
+    ),
+
+  goLiveReadiness: (params: { siteCode?: string } = {}, signal?: AbortSignal) =>
+    apiClient.get<GoLiveReadinessReport>(
+      `${BASE}/reports/go-live-readiness`,
+      asQuery(params),
+      signal,
+    ),
+};
+
+/** Indicator keys the drilldown endpoint recognises (service-side `switch`). */
+export const DRILLDOWN_INDICATORS = {
+  EXPIRED_COMPLIANCE: 'EXPIRED_COMPLIANCE',
+  SERVICE_DUE: 'SERVICE_DUE',
+  READINESS_BLOCKERS: 'READINESS_BLOCKERS',
+  ASSIGNMENT_CONFLICTS: 'ASSIGNMENT_CONFLICTS',
+} as const;
+
+export type DrilldownIndicator = keyof typeof DRILLDOWN_INDICATORS;
