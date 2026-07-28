@@ -12,6 +12,10 @@
     <description>Service artifact for S166 Fleet and Vehicle Management, with future S168_fuel and S171 modules</description>
     <properties>
         <archunit.version>1.3.0</archunit.version>
+        <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+        <node.version>v22.14.0</node.version>
+        <sfl.ui.dir>${project.basedir}/../../frontend/sfl-operations-ui</sfl.ui.dir>
+        <sfl.ui.dist>${sfl.ui.dir}/dist</sfl.ui.dist>
         <springdoc-openapi.version>3.0.3</springdoc-openapi.version>
         <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
@@ -131,6 +135,116 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
+            <!--
+              Wipes any previously copied console before the fresh one lands. Vite emits
+              content-hashed asset names, so without this the directory accumulates every bundle
+              ever built and a stale file that still resolves is far harder to notice than a
+              missing one.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-clean-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>clear-stale-operations-ui</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>clean</goal>
+                        </goals>
+                        <configuration>
+                            <excludeDefaultDirectories>true</excludeDefaultDirectories>
+                            <filesets>
+                                <fileset>
+                                    <directory>${project.build.outputDirectory}/static/ui</directory>
+                                </fileset>
+                            </filesets>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+            <!--
+              Copies an already-built SFL Operations UI into the service's static resources so one
+              process serves the API, Swagger and the console. Harmless when the bundle is absent:
+              the directory is optional and the service simply starts without the /ui routes.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-operations-ui</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static/ui</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${sfl.ui.dist}</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!--
+          -Pui also *builds* the console first, using a project-local Node install. Use it when the
+          front-end sources have changed; without it the copy above just reuses the existing dist.
+        -->
+        <profile>
+            <id>ui</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>${frontend-maven-plugin.version}</version>
+                        <configuration>
+                            <workingDirectory>${sfl.ui.dir}</workingDirectory>
+                            <installDirectory>${sfl.ui.dir}</installDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-node-and-npm</id>
+                                <goals>
+                                    <goal>install-node-and-npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <nodeVersion>${node.version}</nodeVersion>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-install</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>install --no-audit --no-fund</arguments>
+                                </configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-build</id>
+                                <goals>
+                                    <goal>npm</goal>
+                                </goals>
+                                <phase>generate-resources</phase>
+                                <configuration>
+                                    <arguments>run build</arguments>
+                                </configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

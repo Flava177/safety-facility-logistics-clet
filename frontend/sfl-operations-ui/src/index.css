@@ -1,0 +1,482 @@
+@import 'tailwindcss';
+@import 'flatpickr/dist/flatpickr.min.css';
+
+/*
+ * CLET design tokens.
+ *
+ * Every ramp below is copied verbatim from the CLET UI/UX Design System in Figma
+ * (collection "Base" → Colour). The Tailwind names are kept from the previous theme so no component
+ * had to be rewritten to adopt them — only the values changed:
+ *
+ *   brand-*    CLET Navy Blue      (800 is the brand value)
+ *   gold-*     CLET Gold           (700 is the brand value)
+ *   teal-*     Deep Teal           (700 is the brand value) — the interactive colour
+ *   slate-*    Slate
+ *   gray-*     Cloud Grey — Neutrals
+ *   success-*  CLET Success Green  |  error-* CLET Red  |  warning-* Amber
+ *   info-*     aliased to Deep Teal, because the design system maps Text/Information to it
+ *
+ * The Figma "Aliases" collection assigns roles to these ramps, and those roles are what the
+ * components use:
+ *
+ *   Text/heading      grey-900 / 800 / 700        Surface/Background  grey-50 (page), grey-0 (card)
+ *   Text/body         grey-900 / 700 / 500        Borders             grey-200 (dividers)
+ *   Text/link         teal — see the note below   Borders/Main        grey-600, active teal
+ *   Icons/Main        grey-800, teal, grey-600    Text/Disabled       grey-300 / 400 / 500
+ *
+ * WCAG 2.2 deviation, deliberate and documented. The aliases pick the *500* step of each status
+ * ramp as the "default" text colour. Measured against white those are 2.1:1 (Amber 500), 2.2:1
+ * (Green 500), 3.8:1 (Red 500 and Deep Teal 500) — all below the 4.5:1 that SC 1.4.3 requires for
+ * body text. The system already supplies the answer in its own "dark" aliases, so this theme uses:
+ *
+ *   status text  → the 700 step   (Teal 9.4:1, Green 4.9:1, Amber 5.1:1, Red 8.8:1) ✓ 1.4.3
+ *   status marks → the 500 step   (dots, icons, chart series) ✓ 1.4.11 at 3:1 as non-text
+ *
+ * CLET Gold is the sharpest case: gold-700 on white is 2.87:1, so it can carry a shape but never a
+ * word, and a gold surface needs navy text rather than white (6.2:1). Gold is therefore an accent —
+ * the active navigation marker, a focus ring, one chart series — and the filled primary action is
+ * Deep Teal 700, which is also what the design system's own table component uses for its CTA.
+ */
+
+@theme {
+  --font-*: initial;
+  /* Figma Typography → Font-Family/Font-Style: body = Lato, title = Roboto Serif. Both fall back to
+     a system stack so a blocked font host costs a typeface, not a readable page. */
+  --font-sans: Lato, 'Segoe UI', system-ui, -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  --font-serif: 'Roboto Serif', Georgia, 'Times New Roman', 'Noto Serif', serif;
+
+  --breakpoint-*: initial;
+  --breakpoint-2xsm: 375px;
+  --breakpoint-xsm: 425px;
+  --breakpoint-sm: 640px;
+  --breakpoint-md: 768px;
+  --breakpoint-lg: 1024px;
+  --breakpoint-xl: 1280px;
+  --breakpoint-2xl: 1536px;
+  --breakpoint-3xl: 2000px;
+
+  /* Figma Typography → Font-size. Headings h1 64 / h2 48 / h3 40 / h4 20; body sm 12 / md 16 /
+     lg 20; cards 48 / 40 / 20 / 16. Line heights follow the file's text styles. */
+  --text-title-xl: 64px;
+  --text-title-xl--line-height: 72px;
+  --text-title-lg: 48px;
+  --text-title-lg--line-height: 60px;
+  --text-title-md: 40px;
+  --text-title-md--line-height: 52px;
+  --text-title-sm: 30px;
+  --text-title-sm--line-height: 38px;
+  --text-theme-xl: 20px;
+  --text-theme-xl--line-height: 28px;
+  --text-theme-lg: 18px;
+  --text-theme-lg--line-height: 28px;
+  --text-theme-md: 16px;
+  --text-theme-md--line-height: 24px;
+  --text-theme-sm: 14px;
+  --text-theme-sm--line-height: 20px;
+  --text-theme-xs: 12px;
+  --text-theme-xs--line-height: 16px;
+
+  --color-current: currentColor;
+  --color-transparent: transparent;
+  --color-white: #ffffff;
+  --color-black: #18181b;
+
+  /* CLET Navy Blue — 800 is the brand value */
+  --color-brand-25: #f6f7fa;
+  --color-brand-50: #e8ebf0;
+  --color-brand-100: #c5cedb;
+  --color-brand-200: #a0afca;
+  --color-brand-300: #6b84a8;
+  --color-brand-400: #3e5f8a;
+  --color-brand-500: #1f3d6b;
+  --color-brand-600: #162d52;
+  --color-brand-700: #0f2240;
+  --color-brand-800: #0a1931;
+  --color-brand-900: #071122;
+  --color-brand-950: #040a14;
+
+  /* CLET Gold — 700 is the brand value. Accent and graphics only; never text on white. */
+  --color-gold-25: #fffef7;
+  --color-gold-50: #fefce8;
+  --color-gold-100: #fef9c3;
+  --color-gold-200: #fef08a;
+  --color-gold-300: #fde047;
+  --color-gold-400: #facc15;
+  --color-gold-500: #eab308;
+  --color-gold-600: #ca8a04;
+  --color-gold-700: #b8960c;
+  --color-gold-800: #92740a;
+  --color-gold-900: #713b0c;
+  --color-gold-950: #431d06;
+
+  /* Deep Teal — 700 is the brand value and the console's interactive colour */
+  --color-teal-25: #f2fafe;
+  --color-teal-50: #e0f2fe;
+  --color-teal-100: #bae6fd;
+  --color-teal-200: #7dd3fc;
+  --color-teal-300: #38bdf8;
+  --color-teal-400: #0ea5e9;
+  --color-teal-500: #0284c7;
+  --color-teal-600: #0369a1;
+  --color-teal-700: #0c4a6e;
+  --color-teal-800: #083755;
+  --color-teal-900: #052840;
+  --color-teal-950: #021a2b;
+
+  /* Information is aliased to Deep Teal in the design system — one hue, not two. */
+  --color-info-25: #f2fafe;
+  --color-info-50: #e0f2fe;
+  --color-info-100: #bae6fd;
+  --color-info-200: #7dd3fc;
+  --color-info-300: #38bdf8;
+  --color-info-400: #0ea5e9;
+  --color-info-500: #0284c7;
+  --color-info-600: #0369a1;
+  --color-info-700: #0c4a6e;
+  --color-info-800: #083755;
+  --color-info-900: #052840;
+
+  --color-slate-25: #fcfdfe;
+  --color-slate-50: #f8fafc;
+  --color-slate-100: #f1f5f9;
+  --color-slate-200: #e2e8f0;
+  --color-slate-300: #cbd5e1;
+  --color-slate-400: #94a3b8;
+  --color-slate-500: #64748b;
+  --color-slate-600: #475569;
+  --color-slate-700: #334155;
+  --color-slate-800: #1e293b;
+  --color-slate-900: #0f172a;
+  --color-slate-950: #020617;
+
+  /* Cloud Grey — Neutrals */
+  --color-gray-0: #ffffff;
+  --color-gray-25: #fcfcfc;
+  --color-gray-50: #fafafa;
+  --color-gray-100: #f4f4f5;
+  --color-gray-200: #e4e4e7;
+  --color-gray-300: #d4d4d8;
+  --color-gray-400: #a1a1aa;
+  --color-gray-500: #71717a;
+  --color-gray-600: #52525b;
+  --color-gray-700: #3f3f46;
+  --color-gray-800: #27272a;
+  --color-gray-900: #18181b;
+  --color-gray-950: #0c0c0e;
+
+  /* CLET Success Green — 800 is the brand value */
+  --color-success-25: #f6fef9;
+  --color-success-50: #f0fdf4;
+  --color-success-100: #dcfce7;
+  --color-success-200: #bbf7d0;
+  --color-success-300: #86efac;
+  --color-success-400: #4ade80;
+  --color-success-500: #22c55e;
+  --color-success-600: #16a34a;
+  --color-success-700: #008236;
+  --color-success-800: #006229;
+  --color-success-900: #004d1f;
+  --color-success-950: #003314;
+
+  /* Amber */
+  --color-warning-25: #fffdf5;
+  --color-warning-50: #fffbeb;
+  --color-warning-100: #fef3c7;
+  --color-warning-200: #fde68a;
+  --color-warning-300: #fcd34d;
+  --color-warning-400: #fbbf24;
+  --color-warning-500: #f59e0b;
+  --color-warning-600: #d97706;
+  --color-warning-700: #b45309;
+  --color-warning-800: #92400e;
+  --color-warning-900: #78350f;
+
+  /* CLET Red — 800 is the brand value */
+  --color-error-25: #fffafa;
+  --color-error-50: #fef2f2;
+  --color-error-100: #ffe4e4;
+  --color-error-200: #fecaca;
+  --color-error-300: #fca5a5;
+  --color-error-400: #f87171;
+  --color-error-500: #ef4444;
+  --color-error-600: #dc2626;
+  --color-error-700: #99080f;
+  --color-error-800: #7a0608;
+  --color-error-900: #5c0406;
+  --color-error-950: #3e0203;
+
+  /* Figma Scale (0–160 px) drives spacing and radii. The design system's own table component uses
+     an 8px corner, so 8px is the console's default card radius rather than the 16px it had. */
+  --radius-card: 8px;
+  --radius-control: 8px;
+
+  --shadow-theme-xs: 0px 1px 2px 0px rgba(10, 25, 49, 0.05);
+  --shadow-theme-sm:
+    0px 1px 3px 0px rgba(10, 25, 49, 0.08), 0px 1px 2px 0px rgba(10, 25, 49, 0.04);
+  --shadow-theme-md:
+    0px 4px 8px -2px rgba(10, 25, 49, 0.08), 0px 2px 4px -2px rgba(10, 25, 49, 0.04);
+  --shadow-theme-lg:
+    0px 12px 16px -4px rgba(10, 25, 49, 0.08), 0px 4px 6px -2px rgba(10, 25, 49, 0.03);
+  --shadow-theme-xl:
+    0px 20px 24px -4px rgba(10, 25, 49, 0.1), 0px 8px 8px -4px rgba(10, 25, 49, 0.04);
+
+  --z-index-1: 1;
+  --z-index-9: 9;
+  --z-index-99: 99;
+  --z-index-999: 999;
+  --z-index-9999: 9999;
+  --z-index-99999: 99999;
+}
+
+@layer base {
+  /* Tailwind v4 defaults the border colour to currentColor; the console assumes Borders/primary. */
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentColor);
+  }
+
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    /* WCAG 2.2 SC 2.4.11 Focus Not Obscured. The application bar is sticky and 64px tall; without
+       this, tabbing to an element just above the fold scrolls it underneath the bar. */
+    scroll-padding-top: 5rem;
+  }
+
+  body {
+    @apply relative z-1 bg-gray-50 font-normal text-gray-900 antialiased;
+    font-family: var(--font-sans);
+  }
+
+  /*
+   * One focus style for the whole console (SC 2.4.7, and SC 2.4.13's 2px-minimum appearance).
+   * An outline with an offset sits outside the component, so it stays visible on a filled navy
+   * button and on a white input alike, and it never shifts layout the way a border swap would.
+   */
+  :focus-visible {
+    outline: 2px solid var(--color-teal-700);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+
+  /* On dark surfaces the teal ring loses contrast, so the marker becomes gold there instead. */
+  .on-dark :focus-visible {
+    outline-color: var(--color-gold-400);
+  }
+
+  /* The console supplies its own pickers; a stray native one should not render a browser-specific
+     spinner in the middle of an otherwise consistent form. */
+  input[type='date']::-webkit-inner-spin-button,
+  input[type='time']::-webkit-inner-spin-button,
+  input[type='date']::-webkit-calendar-picker-indicator,
+  input[type='time']::-webkit-calendar-picker-indicator {
+    display: none;
+    -webkit-appearance: none;
+  }
+
+  /* SC 2.3.3 — respect a reduced-motion preference rather than animating regardless. */
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    ::before,
+    ::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+/* The dropdown eases open rather than snapping; suppressed under prefers-reduced-motion by the
+   `motion-safe` variant on the element itself. */
+@keyframes select-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px) scale(0.99);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@utility no-scrollbar {
+  &::-webkit-scrollbar {
+    display: none;
+  }
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+@utility custom-scrollbar {
+  &::-webkit-scrollbar {
+    @apply size-1.5;
+  }
+  &::-webkit-scrollbar-track {
+    @apply rounded-full bg-transparent;
+  }
+  &::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-gray-300;
+  }
+  &::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400;
+  }
+}
+
+/* A hit area padded out to the 24x24 minimum of SC 2.5.8 without growing the visible control. */
+@utility tap-target {
+  position: relative;
+  &::after {
+    content: '';
+    position: absolute;
+    inset: 50% auto auto 50%;
+    width: 24px;
+    height: 24px;
+    transform: translate(-50%, -50%);
+  }
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * flatpickr, restyled onto the CLET tokens.
+ * ------------------------------------------------------------------------------------------ */
+
+.flatpickr-calendar {
+  @apply mt-2 rounded-lg border border-gray-200 bg-white p-2 text-gray-700 shadow-theme-lg;
+  font-family: var(--font-sans);
+  width: 20rem;
+}
+
+.flatpickr-calendar.arrowTop::before,
+.flatpickr-calendar.arrowTop::after,
+.flatpickr-calendar.arrowBottom::before,
+.flatpickr-calendar.arrowBottom::after {
+  display: none;
+}
+
+.flatpickr-months {
+  @apply items-center pt-1 pb-2;
+}
+
+.flatpickr-months .flatpickr-month {
+  @apply h-auto bg-transparent text-gray-900;
+}
+
+.flatpickr-current-month {
+  @apply flex h-auto items-center justify-center gap-2 p-0 text-theme-sm font-semibold;
+  padding: 0;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month input.cur-year {
+  @apply rounded-md border-0 bg-transparent p-1 text-theme-sm font-semibold text-gray-900;
+}
+
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+  @apply bg-gray-100;
+}
+
+.flatpickr-months .flatpickr-prev-month,
+.flatpickr-months .flatpickr-next-month {
+  @apply top-1 flex h-8 w-8 items-center justify-center rounded-lg p-0 text-gray-600 hover:bg-gray-100;
+}
+
+.flatpickr-months .flatpickr-prev-month svg,
+.flatpickr-months .flatpickr-next-month svg {
+  @apply h-3 w-3 fill-current;
+}
+
+.flatpickr-weekdays {
+  @apply bg-transparent pb-1;
+}
+
+span.flatpickr-weekday {
+  @apply bg-transparent text-theme-xs font-semibold text-gray-600;
+}
+
+.flatpickr-day {
+  @apply rounded-lg border-0 text-theme-sm text-gray-800;
+  max-width: 2.5rem;
+  height: 2.25rem;
+  line-height: 2.25rem;
+}
+
+.flatpickr-day:hover,
+.flatpickr-day:focus {
+  @apply bg-teal-50 text-teal-800;
+}
+
+.flatpickr-day.today {
+  @apply border border-gold-600 font-semibold text-gold-900;
+}
+
+.flatpickr-day.selected,
+.flatpickr-day.selected:hover,
+.flatpickr-day.startRange,
+.flatpickr-day.endRange {
+  @apply border-0 bg-teal-700 font-semibold text-white;
+}
+
+.flatpickr-day.inRange {
+  @apply bg-teal-50 text-teal-800;
+  box-shadow: none;
+}
+
+.flatpickr-day.flatpickr-disabled,
+.flatpickr-day.prevMonthDay,
+.flatpickr-day.nextMonthDay {
+  @apply text-gray-400;
+}
+
+.flatpickr-time {
+  @apply mt-1 border-t border-gray-200 pt-1;
+}
+
+.flatpickr-time input,
+.flatpickr-time .flatpickr-time-separator,
+.flatpickr-time .flatpickr-am-pm {
+  @apply text-theme-sm font-medium text-gray-800;
+}
+
+.flatpickr-time input:hover,
+.flatpickr-time input:focus {
+  @apply bg-gray-100;
+}
+
+.numInputWrapper span.arrowUp,
+.numInputWrapper span.arrowDown {
+  @apply border-gray-200;
+}
+
+/* ---------------------------------------------------------------------------------------------
+ * ApexCharts
+ * ------------------------------------------------------------------------------------------ */
+
+.apexcharts-text,
+.apexcharts-legend-text {
+  @apply fill-gray-600 !text-theme-xs !text-gray-600;
+  font-family: var(--font-sans) !important;
+}
+
+.apexcharts-gridline {
+  @apply stroke-gray-100;
+}
+
+.apexcharts-tooltip.apexcharts-theme-light {
+  @apply rounded-lg border-gray-200 shadow-theme-md;
+}
+
+.apexcharts-tooltip.apexcharts-theme-light .apexcharts-tooltip-title {
+  @apply border-gray-200 bg-gray-50 text-theme-xs font-semibold text-gray-800;
+}
+
+.apexcharts-xaxistooltip,
+.apexcharts-yaxistooltip {
+  @apply rounded-md border-gray-200 bg-white text-theme-xs text-gray-700;
+}

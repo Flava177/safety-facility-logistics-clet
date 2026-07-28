@@ -1,0 +1,40 @@
+{
+  "name": "sfl-operations-ui",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "typecheck": "tsc -b --force",
+    "build": "tsc -b --force && vite build",
+    "lint": "eslint . --max-warnings 0",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "apexcharts": "^4.5.0",
+    "clsx": "^2.1.1",
+    "dayjs": "^1.11.18",
+    "flatpickr": "^4.6.13",
+    "react": "^19.2.0",
+    "react-apexcharts": "^1.7.0",
+    "react-dom": "^19.2.0",
+    "react-router": "^7.9.4",
+    "tailwind-merge": "^3.0.1"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.38.0",
+    "@tailwindcss/vite": "^4.1.0",
+    "@types/react": "19.2.2",
+    "@types/react-dom": "19.2.2",
+    "@vitejs/plugin-react": "^5.0.4",
+    "eslint": "^9.38.0",
+    "eslint-plugin-react-hooks": "^7.0.0",
+    "eslint-plugin-react-refresh": "^0.4.24",
+    "globals": "^16.4.0",
+    "tailwindcss": "^4.1.0",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.46.1",
+    "vite": "^7.1.11",
+    "vite-tsconfig-paths": "^5.1.4"
+  }
+}

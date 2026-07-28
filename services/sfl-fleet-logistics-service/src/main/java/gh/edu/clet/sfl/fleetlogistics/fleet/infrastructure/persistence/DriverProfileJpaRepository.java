@@ -38,17 +38,27 @@ interface DriverProfileJpaRepository extends JpaRepository<DriverProfileEntity, 
     Optional<DriverProfileEntity> findActiveByLicenceNumber(@Param("siteCode") String siteCode,
             @Param("licenceNumber") String licenceNumber);
 
+    /**
+     * Paged search.
+     *
+     * <p>Optional filters use {@code coalesce} rather than {@code :x is null or ...}: PostgreSQL
+     * cannot infer the type of a bind parameter that never appears in a typed position — an
+     * {@code IS NULL} test, or an argument to {@code upper()} or {@code concat()} — and rejects the
+     * prepare with SQLSTATE 42P18. Inside {@code coalesce} the parameter takes its type from the
+     * column beside it. Every column used this way is {@code NOT NULL}, so an absent filter still
+     * matches every row, exactly as the previous form did.
+     */
     @Query("""
             select d from DriverProfileEntity d
             where (:allSites = true or d.siteCode in :siteScopes)
               and (:siteCode is null or d.siteCode = :siteCode)
               and (:lifecycleStatus is null or d.lifecycleStatus = :lifecycleStatus)
               and (:eligibilityStatus is null or d.eligibilityStatus = :eligibilityStatus)
-              and (:responsibleUnit is null or upper(d.responsibleUnit) = upper(:responsibleUnit))
-              and (:licenceExpiringBefore is null or d.licenceExpiresOn <= :licenceExpiringBefore)
-              and (:search is null
-                   or upper(d.displayName) like upper(concat('%', :search, '%'))
-                   or upper(d.staffReference) like upper(concat('%', :search, '%')))
+              and upper(d.responsibleUnit) = upper(coalesce(:responsibleUnit, d.responsibleUnit))
+              and d.licenceExpiresOn <= coalesce(:licenceExpiringBefore, d.licenceExpiresOn)
+              and (upper(d.displayName) like upper(concat('%', coalesce(:search, d.displayName), '%'))
+                   or upper(d.staffReference)
+                      like upper(concat('%', coalesce(:search, d.staffReference), '%')))
             """)
     Page<DriverProfileEntity> search(
             @Param("allSites") boolean allSites,
