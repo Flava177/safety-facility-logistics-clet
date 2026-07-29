@@ -40,6 +40,64 @@ with:
 
 > SFL Phase 1 is implemented as five deployable Spring Boot service artifacts, integrated through the enterprise API gateway, IAM, event broker, audit/evidence, notification, reporting and document/object-storage services.
 
+## Programme, System and Service Map
+
+Three counts that do not line up one-to-one, and each is real: **13 systems**, **4 programme modules**,
+**5 deployable services**.
+
+| Programme | Systems | Deployable service | Local port |
+| --- | --- | --- | --- |
+| **SFL.IFIMP** | S152 CAFM/IWMS, S153 CMMS, S159 Room & resource booking | `sfl-facilities-service` | 8091 |
+| **SFL.SSEMP** | S160 Visitor, S160a Access control, S161 CCTV/VMS, S162 Intrusion & alarms, S162a Fire & life safety, S163 HSE incident | `sfl-safety-security-service` | 8092 |
+| **SFL.SSEMP** | S174 Emergency mass notification | `sfl-emergency-notification-service` | 8095 |
+| **SFL.FTLMP** | S166 Fleet & vehicle, S168 Fuel & driver logbooks, S171 Courier & dispatch | `sfl-fleet-logistics-service` | 8093 |
+| **SFL.AVAMP** | cross-cutting asset and device reference for all 13 | `sfl-asset-visibility-service` | 8094 |
+
+Read it in three directions, because each answers a different question:
+
+- **A programme is not a service.** FTLMP is one deployable carrying three systems. SSEMP is **two**
+  deployables carrying seven. Launching a programme means starting *its services*, plural where it is
+  plural.
+- **A service is not a system.** `sfl-fleet-logistics-service` holds three modules under
+  `gh.edu.clet.sfl.fleetlogistics` — `fleet`, `fuel`, `dispatch`. Searching one package is not searching
+  the service; searching one service is not searching the programme.
+- **S174's split is a deployment decision, not a regrouping.** It remains SFL.SSEMP / Emergency
+  Communications in every user-facing surface. ADR 0004 separated the *deployable* for availability,
+  fast-lane latency, callback volume, retry isolation, degraded mode and blast radius — not the
+  programme.
+
+AVAMP is the odd one out on purpose: it is the asset and device reference layer supporting all 13
+systems, not a fourteenth system. It should not become a duplicate asset register in Phase 1.
+
+### What this means for launching
+
+| Launch | Start |
+| --- | --- |
+| **IFIMP** | `sfl-facilities-service` |
+| **SSEMP** | `sfl-safety-security-service` **and** `sfl-emergency-notification-service` |
+| **FTLMP** | `sfl-fleet-logistics-service` |
+| **AVAMP** | `sfl-asset-visibility-service` |
+
+Plus the per-service Postgres instances (`compose.service-dbs.yml`) and, in a real environment, the
+gateway, IAM, broker, audit/evidence and object storage.
+
+### What this means for the operator
+
+A driver or a head of fleet signs in and sees fleet, fuel and dispatch. They do **not** see CCTV access
+management, intrusion detection or visitor badges — those are SSEMP. A manager or superadmin sees
+everything; that exception is what makes the rule worth having.
+
+Navigation is therefore scoped by **programme entitlement**, never by deployment topology: that S174 is
+its own service and S166/S168/S171 share one must not be inferable from a sidebar. See
+[ADR 0005](../adr/0005-programme-scoped-portals-and-navigation-entitlement.md), which also records the
+one place the current build does not yet conform, and why the mechanism waits on IAM.
+
+**IAM is not integrated yet.** Centralised auth and Zitadel are planned, not done. Roles reach the
+services through `X-SFL-*` development headers today, so any navigation filtering is a usability control
+and not a security control — every service authorises every call independently, and that must stay true.
+
+---
+
 ## Target Structure
 
 ```text

@@ -287,6 +287,27 @@ silently; verified live at `403`.
 
 ---
 
+## Where these screens currently live — a placement note, not a gap
+
+S174 is **SFL.SSEMP**. Its screens are currently built into `frontend/sfl-operations-ui`, which is the
+**SFL.FTLMP** portal: the fleet service serves it from `/ui/`, and its other three modules are fleet,
+fuel and dispatch.
+
+The module itself does not cross the boundary. It addresses `sfl-emergency-notification-service` on its
+own port through the client's `service: 'emergency'` routing, reads no fleet data and shares no schema.
+What crosses is the **navigation entry**: every user of that bundle currently sees "Emergency
+notifications" in the sidebar, including a driver or a head of fleet who has no business in it.
+
+It was built here because the shared component kit, design system and API client live here, and a second
+application for one module would have forked the design system — which the module playbook forbids, and
+which would have been a worse outcome than a misplaced nav group.
+
+Recorded in [ADR 0005](../adr/0005-programme-scoped-portals-and-navigation-entitlement.md) together with
+the two candidate fixes. Both wait on IAM, because there is no authenticated identity to scope a portal
+against yet.
+
+---
+
 ## Follow-up decision, not a gap
 
 The emergency service still serves its own standalone front end at

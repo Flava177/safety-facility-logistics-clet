@@ -1,9 +1,11 @@
+import { useMemo } from 'react';
 import { NavLink } from 'react-router';
 import { sflActor } from 'shared/api/config';
 import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
 import { SidebarToggle } from './TopBar';
-import { directorate, navSections } from './navigation';
+import { entitledSections } from './navigation';
+import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
 
 const initials = (name: string): string =>
@@ -17,13 +19,20 @@ const initials = (name: string): string =>
 /**
  * The navigation rail: white, sitting under the product bar.
  *
- * Destinations are grouped under quiet section labels rather than separated by rules, so the eight
- * items read as three short lists instead of one long one. The active item takes a tinted pill and
- * gold text — enough to find at a glance, not so much that it competes with the work surface.
- * Only built destinations appear; there are no placeholder entries.
+ * Destinations are grouped under quiet section labels rather than separated by rules, so the items
+ * read as several short lists instead of one long one. The active item takes a tinted pill and gold
+ * text — enough to find at a glance, not so much that it competes with the work surface. Only built
+ * destinations appear; there are no placeholder entries.
+ *
+ * **Sections are filtered by programme entitlement.** A fleet operator sees fleet, fuel and
+ * dispatch; they do not see emergency mass notification, which is SSEMP. A manager or superadmin
+ * sees everything. See `programmes.ts` and ADR 0005 — and note that this is a usability control,
+ * never the enforcement point: every service authorises every call on its own.
  */
 const Sidebar = () => {
   const { expanded, mobileOpen, closeMobile } = useSidebar();
+
+  const sections = useMemo(() => entitledSections(), []);
 
   return (
     <>
@@ -43,7 +52,7 @@ const Sidebar = () => {
         )}
       >
         <nav className="custom-scrollbar flex-1 overflow-y-auto px-3 py-4" aria-label="Sections">
-          {navSections.map((section) => (
+          {sections.map((section) => (
             <div key={section.heading} className="mb-6 last:mb-0">
               <p
                 className={cn(
@@ -95,6 +104,16 @@ const Sidebar = () => {
               </ul>
             </div>
           ))}
+
+          {sections.length === 0 && (
+            <div className={cn('px-3 py-4', !expanded && 'lg:hidden')}>
+              <p className="text-theme-sm font-medium text-gray-800">No programme assigned</p>
+              <p className="mt-1 text-theme-xs text-gray-600">
+                Your roles do not grant access to any SFL programme, so there is nothing to show
+                here. Ask for the role that covers the work you need to do.
+              </p>
+            </div>
+          )}
         </nav>
 
         <div className="shrink-0 border-t border-gray-200 p-3">
@@ -106,7 +125,9 @@ const Sidebar = () => {
               <p className="truncate text-theme-sm font-semibold text-gray-900">
                 {sflActor.displayName}
               </p>
-              <p className="truncate text-theme-xs text-gray-500">{directorate.parentOrganisation} · Fleet</p>
+              <p className="truncate text-theme-xs text-gray-500" title={portalLabel()}>
+                {portalLabel()}
+              </p>
             </div>
             <SidebarToggle className={cn(!expanded && 'lg:hidden')} />
           </div>
