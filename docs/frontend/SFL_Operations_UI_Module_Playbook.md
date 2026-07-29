@@ -71,6 +71,12 @@ evidence and audit, integration health.
 **Fuel ships twelve**, **dispatch ten** and **emergency nine**, each under one navigation group. Four
 modules, thirty-nine screens, one component kit and one design system.
 
+**Three of those four modules belong to one programme; the fourth does not.** Fleet, fuel and dispatch
+are SFL.FTLMP. Emergency notification is SFL.SSEMP — a different programme, a different service and a
+different set of users. This bundle is, today, the FTLMP portal: the fleet service serves it, and
+`directorate.module` says so. Read §12 before adding a module, because *which portal a module belongs
+in* is now a question with an answer, and it is not "whichever one has the component kit".
+
 ---
 
 ## 2. The design system
@@ -395,3 +401,46 @@ Additions to §4 and §9. Everything there still holds.
     them. Four statuses are therefore unreachable and one is set by nothing at all — which the
     filter still has to be able to find, because a stored record may hold it. Read the domain record
     and the controller side by side; the gap between them is a gap register entry every time.
+
+---
+
+## 12. Which portal a module belongs in
+
+Phase 1 is **13 systems under 4 programme modules, delivered as 5 services.** Those three counts do not
+line up, and the mapping is in
+[`docs/architecture/microservices-realignment.md`](../architecture/microservices-realignment.md) and
+[ADR 0005](../adr/0005-programme-scoped-portals-and-navigation-entitlement.md). Read one of them before
+starting a module.
+
+**The rule.** A user sees the programmes they are entitled to, and within a programme, the systems their
+roles grant. A driver or a head of fleet sees fleet, fuel and dispatch; they do **not** see CCTV access
+management, intrusion detection or visitor badges. A manager or superadmin sees everything — that
+exception is what makes the rule worth having.
+
+**Two corollaries that are easy to get wrong.**
+
+- **Programme membership is a property of the system, not of the service it ships in.** S174 is its own
+  deployable (ADR 0004, for availability and blast radius) and it is still SSEMP everywhere a user can
+  see. Do not let a deployment decision become a navigation decision.
+- **Deployment topology must not be inferable from a sidebar.** Three systems in one service appear as
+  three systems; two services in one programme appear as one programme.
+
+**How it works.** `shared/layout/programmeModel.ts` maps role → programme and imports nothing, so the
+decision can be checked directly. `programmes.ts` reads the actor's roles and exposes `entitledTo`.
+Every `NavSection` declares a `programme`; the sidebar renders only entitled sections,
+`RequireProgramme` refuses the routes of an unentitled one, and the landing route is the actor's
+**first entitled destination** rather than the fleet dashboard.
+
+Entitlement is **derived from roles**, not from a second list, because that is what IAM will do — a
+role already implies a programme. Drop `EMERGENCY_COORDINATOR` and `COMMAND_ROLE` from
+`VITE_SFL_ROLES` and the emergency section disappears; that is the fleet-operator view.
+
+**IAM is not integrated.** No centralised auth, no Zitadel. Roles arrive in `X-SFL-*` headers the
+client sets for itself, so this is a **usability** control and not a security control — and it would
+stay one even with IAM, because a hidden link protects nothing. Every service authorises every call
+independently. **Build as though the nav filter does not exist and the service is the enforcement
+point, because that is the truth.**
+
+**What to do when you add the next module.** Declare its programme on the section, and wrap its route
+subtree in `RequireProgramme`. Two lines, and they are the same two lines whether the portal is later
+split per programme or left as one bundle.
