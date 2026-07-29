@@ -52,12 +52,20 @@ export interface RequestOptions {
   /** Sends an `Idempotency-Key`; required by the service for state-creating POSTs. */
   idempotent?: boolean;
   signal?: AbortSignal;
+  /**
+   * Overrides `Accept` for an endpoint that does not produce JSON.
+   *
+   * Spring matches the handler's `produces` against `Accept` and answers 406 when they do not
+   * intersect — so a `text/csv` report asked for with `Accept: application/json` is refused before
+   * it is ever generated.
+   */
+  accept?: string;
 }
 
-const buildHeaders = (options: RequestOptions, hasBody: boolean): Headers => {
+const buildHeaders = (options: RequestOptions, hasJsonBody: boolean): Headers => {
   const headers = new Headers();
-  headers.set('Accept', 'application/json');
-  if (hasBody) {
+  headers.set('Accept', options.accept ?? 'application/json');
+  if (hasJsonBody) {
     headers.set('Content-Type', 'application/json');
   }
   headers.set(HEADER_USER, sflActor.user);
@@ -98,14 +106,17 @@ async function request<T>(
   options: RequestOptions = {},
 ): Promise<T> {
   const hasBody = options.body !== undefined;
+  // A `FormData` body is sent as-is: the browser has to write the multipart boundary into the
+  // Content-Type itself, so setting that header by hand produces a request the server cannot parse.
+  const multipart = hasBody && options.body instanceof FormData;
   const url = `${fleetApiBaseUrl}${path}${buildQueryString(options.query)}`;
 
   let response: Response;
   try {
     response = await fetch(url, {
       method,
-      headers: buildHeaders(options, hasBody),
-      body: hasBody ? JSON.stringify(options.body) : undefined,
+      headers: buildHeaders(options, hasBody && !multipart),
+      body: multipart ? (options.body as FormData) : hasBody ? JSON.stringify(options.body) : undefined,
       signal: options.signal,
     });
   } catch (cause) {
@@ -135,6 +146,78 @@ async function request<T>(
   return envelope.data as T;
 }
 
+/**
+ * Fetches a file endpoint and hands it to the browser as a download.
+ *
+ * A report is `text/csv`, not the SFL envelope, so it cannot go through `request`. It also cannot be
+ * a plain link or `window.open`: the services authorise from the `X-SFL-*` headers, and a browser
+ * navigation carries none of them — the request would arrive as an anonymous actor and be refused.
+ * So it is fetched with the same headers as everything else and saved from a blob.
+ *
+ * A failure still arrives in the envelope (the exception handler runs before the CSV is written), so
+ * it is parsed and thrown as a `FleetApiError` exactly like any other call.
+ */
+export async function downloadFile(
+  path: string,
+  query?: QueryParams,
+  fallbackFileName = 'download',
+  /**
+   * The media type the endpoint produces, plus JSON for the error path.
+   *
+   * Both matter. Without the first, Spring answers 406 and the report is never generated; without
+   * the second, an authorisation refusal — which comes back as a JSON envelope — would itself be
+   * rejected for the wrong content type, and the operator would see a content negotiation failure
+   * instead of "you are not authorised".
+   */
+  accept = 'text/csv, application/json',
+): Promise<string> {
+  const url = `${fleetApiBaseUrl}${path}${buildQueryString(query)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET', headers: buildHeaders({ accept }, false) });
+  } catch {
+    throw FleetApiError.transport(
+      `Could not reach the Fleet service at ${fleetApiBaseUrl}. Check that it is running on port 8093.`,
+    );
+  }
+
+  if (!response.ok) {
+    const text = await response.text();
+    const correlationId = response.headers.get(HEADER_CORRELATION_ID);
+    try {
+      const envelope = JSON.parse(text) as ApiResponseEnvelope<unknown>;
+      if (isApiErrorEnvelope(envelope.error)) {
+        throw FleetApiError.fromEnvelope(response.status, envelope.error, envelope.data);
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, envelope, correlationId);
+    } catch (cause) {
+      if (cause instanceof FleetApiError) {
+        throw cause;
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, null, correlationId);
+    }
+  }
+
+  // The service names the file in Content-Disposition; that name is preferred over a guess.
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename=("?)([^";]+)\1/i.exec(disposition);
+  const fileName = match?.[2]?.trim() || fallbackFileName;
+
+  const blob = await response.blob();
+  const objectUrl = URL.createObjectURL(blob);
+  const anchor = document.createElement('a');
+  anchor.href = objectUrl;
+  anchor.download = fileName;
+  document.body.appendChild(anchor);
+  anchor.click();
+  anchor.remove();
+  // Revoked on the next frame: revoking synchronously can cancel the download in some browsers.
+  window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
+
+  return fileName;
+}
+
 export const apiClient = {
   get: <T>(path: string, query?: QueryParams, signal?: AbortSignal) =>
     request<T>('GET', path, { query, signal }),
@@ -142,6 +225,15 @@ export const apiClient = {
   /** POSTs that create state — carries an `Idempotency-Key` by default. */
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
     request<T>('POST', path, { ...options, body, idempotent: options?.idempotent ?? true }),
+
+  /**
+   * Multipart POST for file upload — the fuel CSV import is the only caller today.
+   *
+   * Same actor headers, same correlation id and the same envelope parsing as every other call; the
+   * only difference is that the body is a `FormData` and the browser owns the Content-Type.
+   */
+  postForm: <T>(path: string, form: FormData, options?: Omit<RequestOptions, 'body'>) =>
+    request<T>('POST', path, { ...options, body: form, idempotent: options?.idempotent ?? false }),
 
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
     request<T>('PATCH', path, { ...options, body }),

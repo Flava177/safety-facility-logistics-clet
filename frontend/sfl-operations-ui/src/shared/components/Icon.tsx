@@ -53,7 +53,12 @@ export type IconName =
   | 'lock'
   | 'inbox'
   | 'clipboard'
-  | 'user';
+  | 'user'
+  | 'fuel'
+  | 'book'
+  | 'scale'
+  | 'upload'
+  | 'coins';
 
 const glyphs: Record<IconName, ReactElement> = {
   dashboard: (
@@ -263,6 +268,44 @@ const glyphs: Record<IconName, ReactElement> = {
     <>
       <circle cx="12" cy="8" r="3.4" />
       <path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6" />
+    </>
+  ),
+  // A pump with its hose — the fuel module's mark. Drawn at the same 1.7 stroke as the rest.
+  fuel: (
+    <>
+      <path d="M4 20.5V5.5A2 2 0 0 1 6 3.5h5a2 2 0 0 1 2 2v15" />
+      <path d="M3 20.5h11" />
+      <path d="M6.5 8.5h6" />
+      <path d="M13 10h3.5a1.5 1.5 0 0 1 1.5 1.5v5a1.6 1.6 0 0 0 3.2 0V8.2L19 5.8" />
+    </>
+  ),
+  book: (
+    <>
+      <path d="M5 4.5A1.5 1.5 0 0 1 6.5 3H19v15H6.5A1.5 1.5 0 0 0 5 19.5z" />
+      <path d="M5 19.5A1.5 1.5 0 0 1 6.5 18H19v3H6.5A1.5 1.5 0 0 1 5 19.5z" />
+      <path d="M9 7.5h6M9 11h4" />
+    </>
+  ),
+  scale: (
+    <>
+      <path d="M12 4v16M7.5 20h9" />
+      <path d="M4 8.5h16" />
+      <path d="M4 8.5L1.8 14a2.6 2.6 0 0 0 4.4 0z" />
+      <path d="M20 8.5L17.8 14a2.6 2.6 0 0 0 4.4 0z" />
+    </>
+  ),
+  upload: (
+    <>
+      <path d="M12 15.5V4.5" />
+      <path d="M8 8.5l4-4 4 4" />
+      <path d="M4.5 19.5h15" />
+    </>
+  ),
+  coins: (
+    <>
+      <ellipse cx="9" cy="6.8" rx="5.5" ry="2.6" />
+      <path d="M3.5 6.8v4.4c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6V6.8" />
+      <path d="M14.5 11.4c2.7.2 6 1.3 6 2.6v3.2c0 1.4-2.5 2.6-5.5 2.6s-5.5-1.2-5.5-2.6v-3.4" />
     </>
   ),
 };
