@@ -2,7 +2,9 @@ package gh.edu.clet.sfl.fleetlogistics.dispatch.api;
 
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchManifestService;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.api.DispatchPageResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.Dispatch;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchManifestItem;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -41,13 +43,15 @@ public class DispatchManifestController {
     }
 
     @GetMapping
-    public ApiResponse<List<Dispatch>> list(@RequestParam String siteCode,
+    public ApiResponse<DispatchPageResponse<Dispatch>> list(@RequestParam String siteCode,
             @RequestParam(required = false) Dispatch.Status status,
             @RequestParam(required = false) String destinationCentre, @RequestParam(required = false) UUID tripId,
+            @RequestParam(required = false) String handler,
             @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
-            @RequestParam(defaultValue = "100") int size, HttpServletRequest h) {
-        return ApiResponse.ok(service.dispatches(siteCode, status, destinationCentre, tripId, from, to, size,
-                actors.resolve(h)));
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest h) {
+        return ApiResponse.ok(DispatchPageResponse.of(service.dispatches(siteCode, status, destinationCentre, tripId,
+                handler, from, to, DispatchPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
     @GetMapping("/{id}")
@@ -55,9 +59,28 @@ public class DispatchManifestController {
         return ApiResponse.ok(service.dispatch(id, actors.resolve(h)));
     }
 
+    /**
+      * The manifest's lines.
+      *
+      * <p>{@code expand=item} resolves the courier item behind each line in one query, so a readable
+      * manifest does not cost a fetch per line or show an operator a bare identifier. Without it the
+      * response is the raw lines, which is what a caller wanting only sequence and return status
+      * needs.
+      */
     @GetMapping("/{id}/items")
-    public ApiResponse<List<DispatchManifestItem>> items(@PathVariable UUID id, HttpServletRequest h) {
-        return ApiResponse.ok(service.manifestItems(id, actors.resolve(h)));
+    public ApiResponse<?> items(@PathVariable UUID id,
+            @RequestParam(required = false) String expand, HttpServletRequest h) {
+        var actor = actors.resolve(h);
+        if ("item".equalsIgnoreCase(expand)) {
+            return ApiResponse.ok(service.manifestLines(id, actor));
+        }
+        return ApiResponse.ok(service.manifestItems(id, actor));
+    }
+
+    /** The manifest's transition history: draft, seal, trip assignment, dispatch, transit, closure. */
+    @GetMapping("/{id}/history")
+    public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
     @PostMapping("/{id}/items")

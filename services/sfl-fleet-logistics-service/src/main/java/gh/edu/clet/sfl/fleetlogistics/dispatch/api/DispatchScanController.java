@@ -34,6 +34,18 @@ public class DispatchScanController {
                 batchReference, dispatchId, file.getBytes(), actors.resolve(h), actors.resolveSourceChannel(h))));
     }
 
+    /** The site's scan batches, newest first. Closes gap 3. */
+    @GetMapping("/imports")
+    public ApiResponse<DispatchPageResponse<ScanImportBatch>> batches(@RequestParam String siteCode,
+            @RequestParam(required = false) String sourceSystem,
+            @RequestParam(required = false) UUID dispatchId,
+            @RequestParam(required = false) ScanImportBatch.Status status,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest h) {
+        return ApiResponse.ok(DispatchPageResponse.of(service.batches(siteCode, sourceSystem, dispatchId, status,
+                DispatchPageResponse.paging(page, size, sort), actors.resolve(h))));
+    }
+
     @GetMapping("/imports/{id}")
     public ApiResponse<ScanImportBatch> batch(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.batch(id, actors.resolve(h)));

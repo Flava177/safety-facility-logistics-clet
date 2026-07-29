@@ -10,6 +10,7 @@ import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchManifestItem
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.policy.CustodyChainPolicy;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.policy.DispatchClosurePolicy;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DuplicateActiveIdentifierException;
@@ -198,10 +199,35 @@ public class DispatchManifestService {
         return repository.findManifestItems(dispatchId);
     }
 
-    public List<Dispatch> dispatches(String site, Dispatch.Status status, String destinationCentre, UUID tripId,
-            Instant from, Instant to, int limit, ActorContext actor) {
+    public DispatchRepository.DispatchPage<Dispatch> dispatches(String site, Dispatch.Status status,
+            String destinationCentre, UUID tripId, String handler, Instant from, Instant to,
+            DispatchRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, site, "Dispatch", null);
-        return repository.findDispatches(List.of(SiteCode.of(site).value()), status, destinationCentre, tripId, from,
-                to, limit);
+        return repository.findDispatches(new DispatchRepository.DispatchQuery(List.of(SiteCode.of(site).value()),
+                status, destinationCentre, tripId, handler, from, to, paging));
+    }
+
+    /**
+     * A manifest's lines with the item behind each one resolved.
+     *
+     * <p>Closes gap 8. {@code DispatchManifestItem} carries only a {@code courierItemId}, so a
+     * readable manifest line previously meant either a fetch per line or showing an operator a bare
+     * UUID. The items are resolved in **one** query rather than N.
+     */
+    public List<ManifestLine> manifestLines(UUID dispatchId, ActorContext actor) {
+        var lines = manifestItems(dispatchId, actor);
+        var items = repository.findItemsByIds(lines.stream().map(DispatchManifestItem::courierItemId).toList())
+                .stream().collect(java.util.stream.Collectors.toMap(CourierItem::id, i -> i));
+        return lines.stream().map(line -> new ManifestLine(line, items.get(line.courierItemId()))).toList();
+    }
+
+    /** A manifest line and the courier item it points at. {@code item} is null if it was purged. */
+    public record ManifestLine(DispatchManifestItem line, CourierItem item) {}
+
+    /** The manifest's transition history — draft through seal, dispatch, transit and closure. */
+    public List<AuditEvent> history(UUID id, ActorContext actor) {
+        var manifest = dispatch(id, actor);
+        return audit.search(new AuditPort.AuditQuery(List.of(manifest.siteCode().value()), "Dispatch", id.toString(),
+                null, null, null, null, 0, 200));
     }
 }

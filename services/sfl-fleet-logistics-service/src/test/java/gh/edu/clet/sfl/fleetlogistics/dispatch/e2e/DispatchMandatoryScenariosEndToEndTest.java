@@ -111,7 +111,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     private DispatchExceptionCase exceptionOf(Fixture f, DispatchExceptionCase.Type type) {
-        return exceptions.exceptions(f.site(), type, null, 100, f.manager()).stream().findFirst().orElseThrow();
+        return exceptions.exceptions(f.site(), type, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content().stream().findFirst().orElseThrow();
     }
 
     // 1
@@ -165,7 +166,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var d = dispatched(f, List.of(a));
         custody.recordHandover(new DispatchCustodyService.RecordHandover(d.id(), CustodyHop.DISPATCH, "from", "to",
                 Instant.now(), SealState.BROKEN, 1, "tamper", null, f.manager(), SourceChannel.WEB));
-        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.CUSTODY_GAP, null, 100, f.manager()))
+        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.CUSTODY_GAP, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content())
                 .isNotEmpty();
         assertThatThrownBy(() -> manifests.close(d.id(), "done", f.manager(), SourceChannel.WEB))
                 .isInstanceOf(IllegalStateException.class);
@@ -252,8 +254,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var reconciled = returns.reconcile(new DispatchReturnService.ReconcileReturn(d.id(), 1, 0, 0, "nothing back",
                 null, f.manager(), SourceChannel.WEB));
         assertThat(reconciled.outcome()).isEqualTo(ReturnReconciliation.ReturnOutcome.DISCREPANCY);
-        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.RETURN_DISCREPANCY, null, 100,
-                f.manager())).isNotEmpty();
+        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.RETURN_DISCREPANCY, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content()).isNotEmpty();
         assertThatThrownBy(() -> manifests.close(d.id(), "done", f.manager(), SourceChannel.WEB))
                 .isInstanceOf(IllegalStateException.class);
     }
@@ -278,7 +280,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         assertThat(repository.findUndeliveredInboundItemIds(f.site(), Instant.now().plusSeconds(60), 100))
                 .contains(inbound.id());
         items.flagUndelivered(inbound.id(), "unclaimed past window", f.manager(), SourceChannel.SCHEDULER);
-        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.UNDELIVERED_ITEM, null, 100, f.manager()))
+        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.UNDELIVERED_ITEM, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content())
                 .isNotEmpty();
     }
 
@@ -294,8 +297,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var row = outstanding.get(0);
         returns.escalateOutstanding(row.dispatchId(), row.manifestItemId(), row.courierItemId(), f.manager(),
                 SourceChannel.SCHEDULER);
-        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.RETURN_DISCREPANCY, null, 100,
-                f.manager())).anyMatch(e -> e.detectedRules().contains("OUTSTANDING_RETURN_WINDOW_ELAPSED"));
+        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.RETURN_DISCREPANCY, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content()).anyMatch(e -> e.detectedRules().contains("OUTSTANDING_RETURN_WINDOW_ELAPSED"));
     }
 
     // 13
@@ -311,7 +314,8 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var batch = scans.importCsv(new DispatchScanService.ImportScanBatch(f.site(), "SCANNER-1", "BATCH-1", d.id(),
                 csv.getBytes(StandardCharsets.UTF_8), f.manager(), SourceChannel.IMPORT));
         assertThat(batch.mismatchRows()).isEqualTo(1);
-        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.SCAN_MISMATCH, null, 100, f.manager()))
+        assertThat(exceptions.exceptions(f.site(), DispatchExceptionCase.Type.SCAN_MISMATCH, null, null, null, null, null, null, null, null, null,
+                new DispatchRepository.Paging(0, 100, null), f.manager()).content())
                 .isNotEmpty();
         assertThat(offManifest.itemNumber()).isEqualTo("OUT-B");
     }

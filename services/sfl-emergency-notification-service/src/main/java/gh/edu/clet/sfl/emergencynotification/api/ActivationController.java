@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.emergencynotification.application.service.ActivationService;
 import gh.edu.clet.sfl.emergencynotification.domain.model.ChannelType;
 import gh.edu.clet.sfl.emergencynotification.domain.model.NotificationActivation;
+import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository;
 import gh.edu.clet.sfl.emergencynotification.domain.model.Priority;
 import gh.edu.clet.sfl.emergencynotification.domain.model.RetentionClass;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -39,9 +40,43 @@ public class ActivationController {
     }
 
     @GetMapping
-    public ApiResponse<List<NotificationActivation>> list(@RequestParam String siteCode,
-            @RequestParam(required = false) NotificationActivation.Status status, HttpServletRequest h) {
-        return ApiResponse.ok(service.list(siteCode, status, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<NotificationActivation>> list(@RequestParam String siteCode,
+            @RequestParam(required = false) NotificationActivation.Status status,
+            @RequestParam(required = false) NotificationActivation.Mode mode,
+            @RequestParam(required = false) Priority priority,
+            @RequestParam(required = false) String incidentReference,
+            @RequestParam(required = false) Boolean openOnly,
+            @RequestParam(required = false) Boolean liveOnly,
+            @RequestParam(required = false) Boolean afterActionOutstanding,
+            @RequestParam(required = false) UUID scenarioId,
+            @RequestParam(required = false) UUID templateId,
+            @RequestParam(required = false) java.time.Instant from,
+            @RequestParam(required = false) java.time.Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.list(siteCode, status, mode, priority,
+                incidentReference, openOnly, liveOnly, afterActionOutstanding, scenarioId, templateId, from, to,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
+    }
+
+    /**
+     * The activation's recorded transitions, oldest first.
+     *
+     * <p>Written on every state change since the service was built and readable by nothing until
+     * now, which is why the detail screen used to reconstruct a timeline from the record's own
+     * fields and silently omit any transition that left none behind.
+     */
+    @GetMapping("/{id}/history")
+    public ApiResponse<List<EmergencyRepository.ActivationHistoryEntry>> history(@PathVariable UUID id,
+            HttpServletRequest h) {
+        return ApiResponse.ok(service.history(id, actors.resolve(h)));
+    }
+
+    /** Per-recipient delivery receipts and acknowledgements for this activation. */
+    @GetMapping("/{id}/delivery")
+    public ApiResponse<ActivationService.DeliveryDetail> delivery(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.deliveryDetail(id, actors.resolve(h)));
     }
 
     @GetMapping("/{id}")

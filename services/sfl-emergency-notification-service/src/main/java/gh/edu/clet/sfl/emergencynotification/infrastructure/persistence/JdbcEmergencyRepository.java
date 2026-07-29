@@ -1,6 +1,9 @@
 package gh.edu.clet.sfl.emergencynotification.infrastructure.persistence;
 
 import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository;
+import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository.ActivationHistoryEntry;
+import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository.EmergencyPage;
+import gh.edu.clet.sfl.emergencynotification.application.port.EmergencyRepository.Paging;
 import gh.edu.clet.sfl.emergencynotification.domain.model.Acknowledgement;
 import gh.edu.clet.sfl.emergencynotification.domain.model.AudienceGroup;
 import gh.edu.clet.sfl.emergencynotification.domain.model.ChannelStatus;
@@ -18,6 +21,8 @@ import gh.edu.clet.sfl.emergencynotification.domain.model.RecordLifecycle;
 import gh.edu.clet.sfl.emergencynotification.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.emergencynotification.domain.model.SiteCode;
 import gh.edu.clet.sfl.emergencynotification.domain.model.SourceChannel;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -48,6 +53,101 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
 
     public JdbcEmergencyRepository(JdbcTemplate jdbc) {
         this.jdbc = jdbc;
+    }
+
+
+    /* ------------------------------------------------------------------ paging and filtering */
+
+    /**
+     * A WHERE clause and its bind values, minus the leading site-scope array.
+     *
+     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * disagree about which records they are describing.
+     */
+    private record Where(StringBuilder sql, List<Object> args) {
+        static Where scoped() { return new Where(new StringBuilder("site_code = ANY (?)"), new ArrayList<>()); }
+        Where and(String fragment, Object value) {
+            if (value != null) { sql.append(" AND ").append(fragment); args.add(value); }
+            return this;
+        }
+        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
+    }
+
+    /**
+     * A validated ORDER BY.
+     *
+     * <p>The requested key is looked up in a per-resource allow-list rather than interpolated, so a
+     * sort parameter can never reach SQL as text. Every ordering ends in {@code id}: rows sharing a
+     * sort value would otherwise be free to swap places between two requests, and a page boundary
+     * falling inside such a group silently skips or repeats records.
+     */
+    private record Order(String sql, String describedAs) {}
+
+    private static Order order(String requested, Map<String, String> allowed, String defaultKey,
+            boolean defaultDescending) {
+        String key = defaultKey;
+        boolean descending = defaultDescending;
+        if (requested != null && !requested.isBlank()) {
+            String[] parts = requested.split(",");
+            String candidate = parts[0].trim();
+            if (allowed.containsKey(candidate)) {
+                key = candidate;
+                descending = parts.length > 1 && parts[1].trim().equalsIgnoreCase("desc");
+            }
+        }
+        String direction = descending ? "DESC" : "ASC";
+        return new Order(allowed.get(key) + " " + direction + ", id " + direction, key + ": " + direction);
+    }
+
+    private static final Map<String, String> ACTIVATION_SORTS = Map.of(
+            "createdAt", "created_at", "lastModifiedAt", "last_modified_at", "activationNumber", "activation_number",
+            "status", "status", "priority", "priority", "mode", "mode", "approvedAt", "approved_at",
+            "fastLaneMillis", "fast_lane_millis");
+    private static final Map<String, String> RECORD_SORTS = Map.of(
+            "createdAt", "created_at", "name", "name", "lifecycle", "lifecycle");
+    private static final Map<String, String> TEMPLATE_SORTS = Map.of(
+            "createdAt", "created_at", "title", "title", "templateCode", "template_code", "lifecycle", "lifecycle");
+    private static final Map<String, String> DRILL_SORTS = Map.of(
+            "startedAt", "started_at", "completedAt", "completed_at", "drillNumber", "drill_number",
+            "status", "status", "targetRecipients", "target_recipients");
+
+    /** Binds the site array at index 1, then the clause's own values. Returns the next free index. */
+    private static int bindScoped(PreparedStatement ps, Connection con, List<String> sites, List<Object> args)
+            throws SQLException {
+        int i = 1;
+        ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
+        for (Object arg : args) {
+            ps.setObject(i++, arg);
+        }
+        return i;
+    }
+
+    private <T> EmergencyPage<T> page(String table, List<String> sites, Where where, Order order, Paging paging,
+            RowMapper<T> mapper) {
+        Long total = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + where.sql());
+            bindScoped(ps, con, sites, where.args());
+            return ps;
+        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        long totalElements = total == null ? 0L : total;
+        if (totalElements == 0L) {
+            return EmergencyPage.empty(paging.page(), paging.size(), order.describedAs());
+        }
+        List<T> content = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT * FROM " + table + " WHERE " + where.sql()
+                    + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?");
+            int i = bindScoped(ps, con, sites, where.args());
+            ps.setInt(i++, paging.size());
+            ps.setInt(i, paging.offset());
+            return ps;
+        }, mapper);
+        return EmergencyPage.of(content, paging.page(), paging.size(), totalElements, order.describedAs());
+    }
+
+    /** A contains-match needle, or null when the term is blank so the filter is skipped entirely. */
+    private static String like(String term) {
+        return term == null || term.isBlank() ? null : "%" + term.strip() + "%";
     }
 
     // ---- Templates -------------------------------------------------------------------------------
@@ -89,9 +189,21 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<NotificationTemplate> findTemplates(List<String> sites, int limit) {
-        return list("SELECT * FROM emergency_notification.notification_templates WHERE site_code = ANY (?) "
-                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::template);
+    public EmergencyPage<NotificationTemplate> findTemplates(RecordQuery q) {
+        Order order = order(q.paging().sort(), TEMPLATE_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("lifecycle=?", q.lifecycle() == null ? null : q.lifecycle().name());
+        if (like(q.search()) != null) {
+            where.sql().append(" AND (title ILIKE ? OR template_code ILIKE ? OR body ILIKE ?)");
+            where.args().add(like(q.search()));
+            where.args().add(like(q.search()));
+            where.args().add(like(q.search()));
+        }
+        where.when(Boolean.TRUE.equals(q.breakGlassEligible()), "break_glass_eligible=true");
+        where.when(Boolean.FALSE.equals(q.breakGlassEligible()), "break_glass_eligible=false");
+        return page("emergency_notification.notification_templates", q.sites(), where, order, q.paging(),
+                this::template);
     }
 
     // ---- Scenarios -------------------------------------------------------------------------------
@@ -133,9 +245,19 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<EmergencyScenario> findScenarios(List<String> sites, int limit) {
-        return list("SELECT * FROM emergency_notification.emergency_scenarios WHERE site_code = ANY (?) "
-                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::scenario);
+    public EmergencyPage<EmergencyScenario> findScenarios(RecordQuery q) {
+        Order order = order(q.paging().sort(), RECORD_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("lifecycle=?", q.lifecycle() == null ? null : q.lifecycle().name());
+        if (like(q.search()) != null) {
+            where.sql().append(" AND (name ILIKE ? OR scenario_code ILIKE ?)");
+            where.args().add(like(q.search()));
+            where.args().add(like(q.search()));
+        }
+        where.when(Boolean.TRUE.equals(q.breakGlassEligible()), "break_glass_eligible=true");
+        where.when(Boolean.FALSE.equals(q.breakGlassEligible()), "break_glass_eligible=false");
+        return page("emergency_notification.emergency_scenarios", q.sites(), where, order, q.paging(), this::scenario);
     }
 
     // ---- Audience groups -------------------------------------------------------------------------
@@ -177,9 +299,17 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<AudienceGroup> findAudienceGroups(List<String> sites, int limit) {
-        return list("SELECT * FROM emergency_notification.audience_groups WHERE site_code = ANY (?) "
-                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::audience);
+    public EmergencyPage<AudienceGroup> findAudienceGroups(RecordQuery q) {
+        Order order = order(q.paging().sort(), RECORD_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("lifecycle=?", q.lifecycle() == null ? null : q.lifecycle().name());
+        if (like(q.search()) != null) {
+            where.sql().append(" AND (name ILIKE ? OR group_code ILIKE ?)");
+            where.args().add(like(q.search()));
+            where.args().add(like(q.search()));
+        }
+        return page("emergency_notification.audience_groups", q.sites(), where, order, q.paging(), this::audience);
     }
 
     // ---- Recipient zones -------------------------------------------------------------------------
@@ -221,9 +351,22 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<RecipientZone> findRecipientZones(List<String> sites, int limit) {
-        return list("SELECT * FROM emergency_notification.recipient_zones WHERE site_code = ANY (?) "
-                + "ORDER BY created_at DESC LIMIT ?", sites, limit, this::zone);
+    public EmergencyPage<RecipientZone> findRecipientZones(RecordQuery q) {
+        Order order = order(q.paging().sort(), RECORD_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("lifecycle=?", q.lifecycle() == null ? null : q.lifecycle().name());
+        if (like(q.search()) != null) {
+            where.sql().append(" AND (name ILIKE ? OR zone_code ILIKE ?)");
+            where.args().add(like(q.search()));
+            where.args().add(like(q.search()));
+        }
+        return page("emergency_notification.recipient_zones", q.sites(), where, order, q.paging(), this::zone);
+    }
+
+    @Override
+    public Optional<RecipientZone> findZone(UUID id) {
+        return one("SELECT * FROM emergency_notification.recipient_zones WHERE id=?", this::zone, id);
     }
 
     // ---- Activations -----------------------------------------------------------------------------
@@ -277,21 +420,34 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<NotificationActivation> findActivations(List<String> sites, NotificationActivation.Status status,
-            int limit) {
-        if (sites.isEmpty()) {
-            return List.of();
+    public EmergencyPage<NotificationActivation> findActivations(ActivationQuery q) {
+        Order order = order(q.paging().sort(), ACTIVATION_SORTS, "lastModifiedAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("mode=?", q.mode() == null ? null : q.mode().name())
+                .and("priority=?", q.priority() == null ? null : q.priority().name())
+                .and("scenario_id=?", q.scenarioId())
+                .and("template_id=?", q.templateId())
+                .and("created_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("created_at<?", q.to() == null ? null : ts(q.to()));
+        if (like(q.incidentReference()) != null) {
+            // One control over the two references an operator actually has to hand.
+            where.sql().append(" AND (incident_reference ILIKE ? OR activation_number ILIKE ?)");
+            where.args().add(like(q.incidentReference()));
+            where.args().add(like(q.incidentReference()));
         }
-        StringBuilder sql = new StringBuilder(
-                "SELECT * FROM emergency_notification.notification_activations WHERE site_code = ANY (?)");
-        List<Object> args = new ArrayList<>();
-        if (status != null) {
-            sql.append(" AND status=?");
-            args.add(status.name());
-        }
-        sql.append(" ORDER BY created_at DESC LIMIT ?");
-        args.add(bound(limit));
-        return query(sql.toString(), sites, args, this::activation);
+        // NotificationActivation.open() - not closed, cancelled or rejected.
+        where.when(Boolean.TRUE.equals(q.openOnly()), "status NOT IN ('CLOSED','CANCELLED','REJECTED')");
+        // NotificationActivation.active() - a broadcast is out and has not been stood down.
+        where.when(Boolean.TRUE.equals(q.liveOnly()),
+                "status IN ('ACTIVE','BREAK_GLASS_ACTIVE','PARTIALLY_DELIVERED','ESCALATED')");
+        // The S174 debt: sent without approval, and nobody has accounted for it yet.
+        where.when(Boolean.TRUE.equals(q.afterActionOutstanding()),
+                "mode='BREAK_GLASS' AND (after_action_approved_by IS NULL OR after_action_approved_by='')"
+                        + " AND status<>'CANCELLED'");
+        return page("emergency_notification.notification_activations", q.sites(), where, order, q.paging(),
+                this::activation);
     }
 
     @Override
@@ -303,6 +459,16 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
                 VALUES (?,?,?,?,?,?,?,?,?)
                 """, UUID.randomUUID(), activationId, fromStatus, toStatus, action, actor, comment, ts(occurredAt),
                 correlationId);
+    }
+
+    @Override
+    public List<ActivationHistoryEntry> findActivationHistory(UUID activationId) {
+        return jdbc.query("SELECT * FROM emergency_notification.activation_history WHERE activation_id=? "
+                + "ORDER BY occurred_at, id", (rs, n) -> new ActivationHistoryEntry(
+                (UUID) rs.getObject("id"), (UUID) rs.getObject("activation_id"), rs.getString("from_status"),
+                rs.getString("to_status"), rs.getString("action"), rs.getString("actor"),
+                rs.getString("comment"), instant(rs, "occurred_at"), rs.getString("correlation_id")),
+                activationId);
     }
 
     // ---- Channels --------------------------------------------------------------------------------
@@ -401,6 +567,12 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
+    public List<Acknowledgement> findAcknowledgements(UUID activationId) {
+        return jdbc.query("SELECT * FROM emergency_notification.acknowledgements WHERE activation_id=? "
+                + "ORDER BY acknowledged_at DESC, id", this::acknowledgement, activationId);
+    }
+
+    @Override
     public long countAcknowledgements(UUID activationId) {
         Long count = jdbc.queryForObject(
                 "SELECT COUNT(*) FROM emergency_notification.acknowledgements WHERE activation_id=?", Long.class,
@@ -444,12 +616,53 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     }
 
     @Override
-    public List<DrillRun> findDrills(List<String> sites, int limit) {
-        return list("SELECT * FROM emergency_notification.drill_runs WHERE site_code = ANY (?) "
-                + "ORDER BY started_at DESC LIMIT ?", sites, limit, this::drill);
+    public EmergencyPage<DrillRun> findDrills(DrillQuery q) {
+        Order order = order(q.paging().sort(), DRILL_SORTS, "startedAt", true);
+        if (q.sites().isEmpty()) return EmergencyPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("scenario_id=?", q.scenarioId())
+                .and("started_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("started_at<?", q.to() == null ? null : ts(q.to()));
+        return page("emergency_notification.drill_runs", q.sites(), where, order, q.paging(), this::drill);
     }
 
     // ---- Dashboard -------------------------------------------------------------------------------
+
+    @Override
+    public Map<String, Map<String, Long>> dashboardBreakdown(List<String> sites, String site) {
+        if (sites.isEmpty()) {
+            return Map.of();
+        }
+        String scope = site == null ? null : SiteCode.of(site).value();
+        Map<String, Map<String, Long>> result = new LinkedHashMap<>();
+        result.put("byStatus", groupCount(sites, scope,
+                "SELECT status, COUNT(*) FROM emergency_notification.notification_activations WHERE %s GROUP BY status"));
+        result.put("byPriority", groupCount(sites, scope,
+                "SELECT priority, COUNT(*) FROM emergency_notification.notification_activations WHERE %s GROUP BY priority"));
+        result.put("byMode", groupCount(sites, scope,
+                "SELECT mode, COUNT(*) FROM emergency_notification.notification_activations WHERE %s GROUP BY mode"));
+        // Channel is a per-fan-out record, so this counts channels sent over rather than activations.
+        result.put("byChannel", groupCount(sites, scope,
+                "SELECT channel_type, COUNT(*) FROM emergency_notification.notification_channels WHERE %s GROUP BY channel_type"));
+        return result;
+    }
+
+    /** A one-dimension GROUP BY, site-scoped exactly the way {@code count} is. */
+    private Map<String, Long> groupCount(List<String> sites, String scope, String template) {
+        String predicate = scope == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
+        String sql = String.format(template, predicate);
+        Map<String, Long> counts = new LinkedHashMap<>();
+        jdbc.query(con -> {
+            var ps = con.prepareStatement(sql);
+            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+            if (scope != null) {
+                ps.setString(2, scope);
+            }
+            return ps;
+        }, (org.springframework.jdbc.core.RowCallbackHandler) rs -> counts.put(rs.getString(1), rs.getLong(2)));
+        return counts;
+    }
 
     @Override
     public Map<String, Object> dashboardCounts(List<String> sites, String site) {

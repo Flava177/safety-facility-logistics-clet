@@ -92,7 +92,10 @@ public class DispatchSweepScheduler {
     }
 
     private void sweepSla(String site, ActorContext actor) {
-        for (DispatchExceptionCase kase : repository.findExceptions(List.of(site), null, null, clock.instant(), BATCH)) {
+        var sla = repository.findExceptions(new DispatchRepository.ExceptionQuery(List.of(site), null, null, null,
+                null, null, null, Boolean.TRUE, clock.instant(), null, null,
+                new DispatchRepository.Paging(0, BATCH, "slaDueAt")));
+        for (DispatchExceptionCase kase : sla.content()) {
             if (kase.status() == DispatchExceptionCase.Status.ESCALATED) continue;
             try {
                 exceptions.escalateForSla(kase.id(), actor, SourceChannel.SCHEDULER);
