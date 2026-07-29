@@ -50,6 +50,26 @@ const DispatchIntegrationPage = lazy(
   () => import('modules/dispatch/pages/DispatchIntegrationPage'),
 );
 
+const EmergencyDashboardPage = lazy(
+  () => import('modules/emergency/pages/EmergencyDashboardPage'),
+);
+const ActivationsPage = lazy(() => import('modules/emergency/pages/ActivationsPage'));
+const ActivationDetailPage = lazy(() => import('modules/emergency/pages/ActivationDetailPage'));
+const BreakGlassPage = lazy(() => import('modules/emergency/pages/BreakGlassPage'));
+const EmergencyTemplatesPage = lazy(
+  () => import('modules/emergency/pages/EmergencyTemplatesPage'),
+);
+const EmergencyTemplateDetailPage = lazy(
+  () => import('modules/emergency/pages/EmergencyTemplateDetailPage'),
+);
+const EmergencyAudiencesPage = lazy(
+  () => import('modules/emergency/pages/EmergencyAudiencesPage'),
+);
+const EmergencyDrillsPage = lazy(() => import('modules/emergency/pages/EmergencyDrillsPage'));
+const EmergencyIntegrationPage = lazy(
+  () => import('modules/emergency/pages/EmergencyIntegrationPage'),
+);
+
 /**
  * The router basename comes from Vite's `BASE_URL`, which is set by `base` in `vite.config.ts`.
  * Keeping it derived means the mount point is stated once: move the bundle and the routes follow.
@@ -131,6 +151,21 @@ const App = () => (
               </Route>
               <Route path="scans" element={<ScanImportsPage />} />
               <Route path="integrations" element={<DispatchIntegrationPage />} />
+            </Route>
+            <Route path="emergency">
+              <Route index element={<EmergencyDashboardPage />} />
+              <Route path="activations">
+                <Route index element={<ActivationsPage />} />
+                <Route path=":activationId" element={<ActivationDetailPage />} />
+              </Route>
+              <Route path="break-glass" element={<BreakGlassPage />} />
+              <Route path="templates">
+                <Route index element={<EmergencyTemplatesPage />} />
+                <Route path=":templateId" element={<EmergencyTemplateDetailPage />} />
+              </Route>
+              <Route path="audiences" element={<EmergencyAudiencesPage />} />
+              <Route path="drills" element={<EmergencyDrillsPage />} />
+              <Route path="integrations" element={<EmergencyIntegrationPage />} />
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>

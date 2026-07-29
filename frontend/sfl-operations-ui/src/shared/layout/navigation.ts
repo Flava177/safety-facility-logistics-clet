@@ -79,6 +79,29 @@ export const dispatchPaths = {
   integrations: '/dispatch/integrations',
 };
 
+/**
+ * S174 emergency notification routes.
+ *
+ * Break-glass is a destination rather than a mode on the compose dialog. It is a different
+ * authorisation, it creates a different obligation, and in a declared emergency it has to be one
+ * click from anywhere — a screen that is both a warning and the shortest path is what that needs.
+ *
+ * Templates and scenarios share a screen, and so do audience groups and recipient zones: each pair
+ * answers one question between them and is chosen together on every activation. Only the template
+ * has a detail route, because `GET /templates/{id}` is the only detail endpoint this service has.
+ */
+export const emergencyPaths = {
+  dashboard: '/emergency',
+  activations: '/emergency/activations',
+  activationDetail: (activationId: string) => `/emergency/activations/${activationId}`,
+  breakGlass: '/emergency/break-glass',
+  templates: '/emergency/templates',
+  templateDetail: (templateId: string) => `/emergency/templates/${templateId}`,
+  audiences: '/emergency/audiences',
+  drills: '/emergency/drills',
+  integrations: '/emergency/integrations',
+};
+
 export const navSections: NavSection[] = [
   {
     heading: 'Operations',
@@ -251,6 +274,55 @@ export const navSections: NavSection[] = [
         to: dispatchPaths.integrations,
         icon: 'cloud',
         description: 'Scanner and carrier feeds, outbound publication',
+      },
+    ],
+  },
+  {
+    heading: 'Emergency notifications',
+    items: [
+      {
+        label: 'Emergency dashboard',
+        to: emergencyPaths.dashboard,
+        icon: 'siren',
+        description: 'Live broadcasts and outstanding obligations',
+      },
+      {
+        label: 'Activations',
+        to: emergencyPaths.activations,
+        icon: 'megaphone',
+        matchPrefix: emergencyPaths.activations,
+        description: 'Compose, approve, send, stand down and close',
+      },
+      {
+        label: 'Break glass',
+        to: emergencyPaths.breakGlass,
+        icon: 'zap',
+        description: 'Declared-emergency send with no approval',
+      },
+      {
+        label: 'Templates & scenarios',
+        to: emergencyPaths.templates,
+        icon: 'document',
+        matchPrefix: emergencyPaths.templates,
+        description: 'What a broadcast says, and what cites it',
+      },
+      {
+        label: 'Audiences & zones',
+        to: emergencyPaths.audiences,
+        icon: 'users',
+        description: 'Who a broadcast reaches, and where',
+      },
+      {
+        label: 'Drills',
+        to: emergencyPaths.drills,
+        icon: 'target',
+        description: 'Rehearsals and notification performance',
+      },
+      {
+        label: 'Provider integration',
+        to: emergencyPaths.integrations,
+        icon: 'cloud',
+        description: 'Outbound publication and the callback path',
       },
     ],
   },

@@ -42,8 +42,20 @@ src/
     fuel/            the second module — same shape
       api/           dto.ts, enums.ts, fuelApi.ts, workflow.ts
       charts/        spend, reconciliation and anomaly-mix compositions
-      components/    fleet reference pickers, file field, window notice, provenance
+      components/    fleet reference pickers, file field, provenance
       dialogs/       one file per aggregate: policy, transaction, logbook, anomaly, import
+      pages/         one file per screen
+    dispatch/        the third module — same shape
+      api/           dto.ts, enums.ts, dispatchApi.ts, workflow.ts
+      charts/        exception-mix composition
+      components/    window helpers bound to the module's own limit
+      dialogs/       item, manifest, custody, exception
+      pages/         one file per screen
+    emergency/       the fourth module — same shape, and the first to address a second service
+      api/           dto.ts, enums.ts, emergencyApi.ts, workflow.ts
+      charts/        drill-performance composition
+      components/    site records hook, checkbox group, consequence panels, format helpers
+      dialogs/       record, activation, break-glass, drill
       pages/         one file per screen
   App.tsx            routes
   index.css          design tokens — read the header comment before changing anything
@@ -55,6 +67,9 @@ Never `@/`, never long relative chains.
 **The Fleet module ships eight screens:** operations dashboard, vehicle register and detail, driver
 register and detail, trip queue and detail, workflow queue and detail, compliance and service,
 evidence and audit, integration health.
+
+**Fuel ships twelve**, **dispatch ten** and **emergency nine**, each under one navigation group. Four
+modules, thirty-nine screens, one component kit and one design system.
 
 ---
 
@@ -173,14 +188,20 @@ build timestamp — check it before reporting that a change did not take.
   imports, fuel dashboard, provider integration.
 - **`dispatch`** — courier items, manifests, custody and receipts, returns and exceptions, scans.
 
-`fuel` now has a React module too (S168). `dispatch` still runs on the old vanilla-JS front end in
-`src/main/resources/static/` and is the remaining candidate for the same treatment.
+All three now have React modules. So does **S174**, which is *not* in this service at all:
 
-**The three modules are not built alike, and the difference matters.** `fleet` returns
-`PageResponse<T>` from every collection, takes `expectedVersion` on its writes and exposes a
-transition history per aggregate. `fuel` returns bare arrays with a `size` cap, has no optimistic
-locking on the wire and no history endpoint. Do not assume the fleet contract holds; read the
-controllers.
+- **`sfl-emergency-notification-service`** — port 8095, schema `emergency_notification`, its own
+  permission matrix. Templates, scenarios, audiences and zones; the activation workflow with
+  approval, break-glass and after-action approval; drills; provider callbacks; outbox health.
+
+**The modules are not built alike, and the difference matters.** `fleet` returns `PageResponse<T>`
+from every collection, takes `expectedVersion` on its writes and exposes a transition history per
+aggregate. `fuel` did none of that until its backend round closed the gaps; `dispatch` and
+`emergency` still do not. Do not assume the fleet contract holds; read the controllers.
+
+**Two services, one dashboard.** Since S174 the API client takes a `service: 'fleet' | 'emergency'`
+per call, resolved from `shared/api/config.ts`. Adding a third service is adding an entry to
+`serviceOrigins`, `serviceNames` and `servicePorts` — not a second client.
 
 Note for whoever reads the source: the file bridge used during the Fleet build rejects `.java` and
 `.sql`, so the live `/v3/api-docs` is the practical way to establish a contract. Start the service
@@ -252,6 +273,10 @@ kit gains a component when a second module needs it, not in anticipation: `FileF
 import is the only upload in the application) and `useClientWindow` (only fuel lacks pagination).
 Promote either the moment dispatch needs it.
 
+*Since resolved:* fuel's collections moved to a real paged envelope and it no longer needs
+`useClientWindow` at all — but dispatch and emergency both do, so the hook and its warning banner
+are now in `shared` (see §10). `FileField` is still fuel's alone.
+
 ---
 
 ## 9. What the second module learned
@@ -292,3 +317,81 @@ These are additions to §4, not replacements. Everything in §4 still holds.
     were found this way and by no other means: the CSV report answering 406 to
     `Accept: application/json`, and the audit search returning 500 on every call. Neither is visible
     from the source, and a build that passed `tsc` would have shipped both.
+
+---
+
+## 10. Additions the third and fourth modules made to the shared layer
+
+Still additive. Nothing in `shared` has been forked or had its behaviour changed for an earlier
+module.
+
+**`SflService` and per-call service routing in `client.ts`.** `apiClient.get/post/patch` and
+`downloadFile` take `service: 'fleet' | 'emergency'`, resolved through `serviceOrigins`. A **name**
+rather than a raw base URL, so a module cannot quietly point at something that is not an SFL
+service, and so the transport error can say *"Could not reach the Emergency Notification service at
+… port 8095"* instead of always naming the fleet service. Default is `fleet`, so the three modules
+that predate this changed nothing.
+
+**`emergencyApiBaseUrl` in `config.ts`**, from `VITE_EMERGENCY_API_BASE_URL`. Note that
+`.env.production` cannot leave it empty the way the fleet one is: an empty base means same origin,
+and the bundle is served by the *fleet* service.
+
+**`shared/hooks/useClientWindow.ts` and `shared/components/WindowNotice.tsx`.** Promoted out of
+dispatch when emergency turned out to need the same thing for the same reason. `modules/dispatch`
+keeps two thin files that bind the module's own default window size and name its own service, so
+eleven call sites were untouched — that is the shape to copy when promoting anything else.
+
+**Five icons** — `megaphone`, `siren`, `zap`, `users`, `target` — and the S174 status tones in
+`StatusChip`, all appended.
+
+One thing was deliberately **not** put in the shared table: `ACTIVE`. It is already mapped to
+`ready`, which is right for a vehicle, a driver and a master-data record, and wrong for an
+activation where it means a live emergency broadcast is out. `modules/emergency/api/workflow.ts`
+declares `activationTone` for the whole activation enum instead, and `ActivationStatusChip` is the
+only chip that module uses for a status. **Where a shared reading is wrong for one module, state
+that module's reading locally — do not change the shared one out from under three others.**
+
+---
+
+## 11. What the third and fourth modules learned
+
+Additions to §4 and §9. Everything there still holds.
+
+18. **Searching one package is not searching the service.** The S166 review concluded no driver
+    logbook system of record existed. `DriverLogbook` is in `gh.edu.clet.sfl.fleetlogistics.fuel` —
+    same service, different package. One package read as the whole service produced a gap register
+    entry that was simply wrong. Enumerate the service's packages before concluding something is
+    absent, and when a module lives in a *different service* entirely (S174 does), say so where
+    somebody will trip over it.
+19. **Two services means two `RecordMetadata`s.** Fleet-logistics names the correlation field
+    `auditCorrelationId`; emergency names it `correlationId`, and its fields are non-null where
+    fleet's are optional. Re-using the fuel type type-checked and would have rendered an empty
+    correlation id on every screen. Re-use a wire type across services only after diffing the two
+    records — `SiteCode` really is identical, the provenance block really is not.
+20. **Preview what the service will decide, never send it.** Dispatch derives the receipt outcome,
+    the return outcome and `chainOfCustodyRequired`; emergency derives the delivery and
+    acknowledgement summaries at closure and the break-glass eligibility verdict. Each dialog runs
+    the same comparison the service will and names the result *before* submission, as a consequence
+    of what was entered — with no field to override it. The operator learns what is about to happen
+    rather than what happened.
+21. **An irreversible action with no second approver earns deliberate friction.** Break-glass is the
+    only send in the dashboard with no approver, no draft and no recall. Its confirmation states the
+    reach, the channel count, the message text and the obligation it leaves behind, and requires the
+    word BROADCAST to be typed. That is not ceremony — it is the difference between meaning it and
+    clicking a red button on a page reached in a hurry. Nothing else in four modules needs this.
+22. **Group registers by the question they answer, not by the aggregate count.** Dispatch put
+    custody, receipts and returns on the manifest detail because each belongs to one consignment and
+    that placement is what lets the closure blockers be stated in one place. Emergency paired
+    templates with scenarios, and audiences with zones, because each pair is chosen together on
+    every activation. Eleven aggregates, nine screens — a sidebar entry per aggregate would have
+    made an operator cross-reference by hand what belongs side by side.
+23. **Name what the absence of a read costs.** S174 publishes no inbound integration health at all,
+    and its inbound feed is the only thing that ever writes `delivered`, `failed` and
+    `acknowledged`. So a screen showing 480 sent and 0 delivered cannot distinguish "no provider
+    configured" from "every callback is being rejected". The integration screen says exactly that,
+    on the screen, rather than leaving an empty panel and a gap-register entry nobody reads.
+24. **Check what the domain can do against what the API exposes.** `NotificationActivation`
+    implements `cancel`, `escalate`, `reopen` and `withDegradedFallback`. No controller calls any of
+    them. Four statuses are therefore unreachable and one is set by nothing at all — which the
+    filter still has to be able to find, because a stored record may hold it. Read the domain record
+    and the controller side by side; the gap between them is a gap register entry every time.
