@@ -1,218 +1,185 @@
 # S168 fuel — frontend gap register
 
-What the **Fuel & Driver Logbooks** module needed from `gh.edu.clet.sfl.fleetlogistics.fuel` and did not
-find. Every entry was confirmed against the running service on port 8093 — the controllers, the
-domain records, `/v3/api-docs` and a live probe — not against the API inventory document.
+What the **Fuel & Driver Logbooks** module needed from `gh.edu.clet.sfl.fleetlogistics.fuel` and did
+not find, and what has since been done about it.
 
-Nothing in this register is mocked. Where an endpoint is missing the screen says so in place, and the
-panel that would have used it is either absent or clearly labelled as derived from records the
-service really returned.
+Every entry was confirmed against the running service on port 8093 — the controllers, the domain
+records, `/v3/api-docs` and a live probe — not against the API inventory document.
+
+**Status.** Eleven of the thirteen gaps are **closed** by the backend work on
+`feat/fuel-backend-gaps`; two need nothing. Each entry keeps its original finding so the reasoning
+survives, and states what changed.
 
 Companion to `docs/fleet/S166_Frontend_Gap_Register.md`, same conventions.
 
 ---
 
-## 1. No reconciliation read endpoint
+## Summary
 
-**Wanted.** The reconciliation screen was specified to show "policy-versioned rule results" and
-"matched, exception and rejected outcomes".
+| # | Gap | Status |
+| --- | --- | --- |
+| 1 | No reconciliation read endpoint | **Closed** — `GET /transactions/{id}/reconciliations` |
+| 2 | No import batch read endpoint | **Closed** — `GET /imports`, `GET /imports/{id}` |
+| 3 | No `GET /policies/{id}` | **Closed** — plus `inForceOnly` on the register |
+| 4 | No pagination on any fuel collection | **Closed** — every collection returns `FuelPageResponse<T>` |
+| 5 | Anomalies filter on status only | **Closed** — eight more filters, including `dueBefore` |
+| 6 | Dashboard published five figures | **Closed** — ten more indicators |
+| 7 | `RESUBMITTED` undocumented | Open — document defect, code is correct |
+| 8 | Three unreachable transaction statuses | Open — noted for clarity, no change needed |
+| 9 | No fuel-side evidence upload | Resolved by design — evidence is fleet-wide |
+| 10 | No history; audit search 500s | **Closed** — audit query fixed, four history endpoints |
+| 11 | Policy overlap unenforced | **Closed** — refused with `FUEL_POLICY_PERIOD_OVERLAP` |
+| 12 | Duplicate CSV upload 500s unmapped | **Closed** — `FUEL_IMPORT_ALREADY_PROCESSED` |
+| 13 | CSV report needs a csv `Accept` | Resolved in the client — correct content negotiation |
 
-**Found.** `FuelApplicationService.reconcile` evaluates twelve named rules and persists them —
-`fleet_logistics.fuel_reconciliations(id, transaction_id, policy_id, policy_version, outcome,
-calculated_consumption, evaluated_at, evaluated_by, rule_results JSONB, correlation_id)` — through
-`FuelRepository.saveReconciliation`. **There is no read path.** `FuelRepository` has no
-`findReconciliation`, and no controller exposes one. `S168_Fuel_API_Inventory.md` lists
-`POST /reconciliations/run` and `GET /reconciliations/{transactionId}`; neither exists. The only
-reconciliation entry point is `POST /api/v1/fuel/transactions/{id}/reconcile`.
-
-**Rules evaluated but not readable:** `MAX_PER_TRANSACTION`, `TANK_CAPACITY`, `FUEL_PRODUCT`,
-`APPROVED_VENDOR`, `DRIVER_ELIGIBLE`, `VEHICLE_OPERATIONAL`, `TRIP_MATCH`,
-`ODOMETER_NON_REGRESSION`, `ODOMETER_JUMP`, `RECEIPT`, `CONSUMPTION_RANGE`, `COST_VARIANCE`,
-`LOGBOOK_MATCH`, `REPEATED_PATTERN`.
-
-**What the UI does instead.** The reconciliation screen runs reconciliation and reports the outcome
-the service returns on the transaction (`RECONCILED` / `EXCEPTION`), then reconstructs which rules
-failed from the anomaly cases the same run raised — `FuelAnomalyCase.detectedRules` carries the rule
-name, and the anomaly is readable. Rules that **passed** cannot be shown, and the page says so.
-`calculated_consumption` and `policy_version` are not shown at all, because they are only in the
-unreadable row.
-
-**To close.** `GET /api/v1/fuel/reconciliations/{transactionId}` returning the stored rows newest
-first, with `ruleResults` deserialised.
+Backend proof lives in `FuelGapClosureEndToEndTest` — 13 scenarios, one or more per closed gap.
 
 ---
 
-## 2. No import batch read endpoint
+## 1. No reconciliation read endpoint — **closed**
 
-**Wanted.** "Batch detail, accepted/rejected row outcomes, validation errors per row" as a screen an
-operator can return to.
+**Found.** `FuelApplicationService.reconcile` evaluated up to fourteen named rules and persisted
+every outcome to `fleet_logistics.fuel_reconciliations.rule_results`, and **there was no read path**.
+`FuelRepository` had no `findReconciliation` and no controller exposed one. A screen could report
+that a transaction failed but never which rules it passed.
 
-**Found.** `POST /api/v1/fuel/imports/csv` returns `ImportResult { batchId, totalRows, acceptedRows,
-rejectedRows, rows[] }` and `FuelImportService` writes both `fuel_import_batches` and
-`fuel_import_rows` (with `error_code`, `error_message`, `raw_record`). **Neither table is readable.**
-There is no `GET /imports/{id}` and no `GET /imports`, despite the inventory document listing the
-former.
+**Closed by** `GET /api/v1/fuel/transactions/{id}/reconciliations`, returning every run against the
+transaction newest first as a `FuelReconciliation` — the policy and policy version it applied, the
+outcome, the derived consumption, and the full rule result map. A rerun appends rather than amending,
+so the history of decisions survives.
 
-**What the UI does instead.** The CSV import screen shows the full batch result — headers, totals and
-every row outcome with its per-row error — from the upload response, held in page state for the
-session. The screen states plainly that the batch cannot be reopened once the page is left, and links
-each accepted row to the transaction it created (those *are* readable).
-
-**To close.** `GET /api/v1/fuel/imports?siteCode=` and `GET /api/v1/fuel/imports/{batchId}`.
-
----
-
-## 3. No policy detail endpoint
-
-**Wanted.** `GET /policies/{id}`, per the inventory document.
-
-**Found.** `FuelPolicyController` exposes `POST /policies` and `GET /policies?siteCode=` only.
-
-**What the UI does instead.** The policy detail screen selects the policy out of the site's policy
-list, which returns the complete `FuelPolicy` record — every field the detail screen needs is already
-there, so this costs one extra list fetch rather than a missing capability. A deep link to a policy
-whose site is not in the actor's scope shows a not-found state rather than a broken screen.
-
-**To close.** `GET /api/v1/fuel/policies/{id}`.
+**In the UI.** The transaction detail screen lists every rule the run evaluated, passes and failures
+alike, each with what it checks. The reconciliation screen names the failing rules per transaction
+and the count that passed, with the policy version. Both used to infer failures from the anomaly
+cases raised and say that the passes were unavailable.
 
 ---
 
-## 4. No pagination on any fuel collection
+## 2. No import batch read endpoint — **closed**
 
-**Wanted.** Server-paginated registers, as the Fleet module has throughout.
+**Found.** `FuelImportService` wrote `fuel_import_batches` and `fuel_import_rows` on every upload,
+with `error_code`, `error_message` and the raw record retained. **Neither table was readable.** The
+upload response was the only view of the batch there would ever be, so an operator who navigated
+away lost the record of which rows were rejected and why.
 
-**Found.** Every fuel collection returns a bare `List<T>` with a `size` limit only:
+**Closed by** `GET /api/v1/fuel/imports` (paged batch headers) and `GET /api/v1/fuel/imports/{id}`
+(the batch with every row). The service now builds a `FuelImportBatch` aggregate and persists it
+through the repository rather than writing rows with a loose `JdbcTemplate`.
 
-| Endpoint | Paging parameters |
-| --- | --- |
-| `GET /transactions` | `size` (default 100) — no `page`, no `sort` |
-| `GET /logbooks` | `size` (default 100) |
-| `GET /anomalies` | `size` (default 100) |
-| `GET /policies` | none at all |
-
-There is no `PageResponse` envelope, no `totalElements` and no stable sort key on the fuel side —
-`JdbcFuelRepository` orders by `occurred_at DESC` / `created_at DESC` and applies `LIMIT`.
-
-**What the UI does instead.** The three registers page **client-side** over the window the service
-returned, and the footer says exactly that: "Showing N records returned for this filter (service
-limit S)". When the returned count equals the limit the table shows a warning that the window is
-truncated and the filters should be narrowed. No screen presents a page count as if it were the whole
-register.
-
-**To close.** Adopt the fleet `PageResponse<T>` envelope with `page`/`size`/`sort` on all four.
+**In the UI.** The imports screen opens on the site's batch history, most recent first, and selects
+the newest batch. Choosing a batch shows every row outcome with its retained error and a link to the
+transaction an accepted row created.
 
 ---
 
-## 5. Anomaly queue cannot be filtered by assignee, type or severity
+## 3. No policy detail endpoint — **closed**
 
-**Wanted.** A workable anomaly queue — "assign … show SLA status and blockers".
+**Found.** `FuelPolicyController` exposed `POST /policies` and `GET /policies?siteCode=` only, so the
+detail screen had to walk the actor's sites listing policies until it found the one it wanted. A deep
+link into a policy at a site the picker had not selected was a dead end.
 
-**Found.** `GET /anomalies` accepts `siteCode`, `status` and `size` only.
-`FuelRepository.findAnomalies(sites, status, dueBefore, limit)` supports a `dueBefore` cutoff and
-`FuelApplicationService.anomalies(...)` hard-codes it to `null`; neither `dueBefore` nor an assignee,
-type, severity or materiality filter is reachable over HTTP. The sweep scheduler is the only caller
-that uses `dueBefore`.
-
-**What the UI does instead.** Assignee, type, severity, materiality and "SLA breached" are filtered
-client-side over the returned window, and each such control is marked as filtering the loaded
-records rather than the query. Site and status go to the service.
-
-**To close.** Add `assignee`, `type`, `severity`, `material` and `dueBefore` query parameters.
+**Closed by** `GET /api/v1/fuel/policies/{id}`, plus `inForceOnly` on the register — an interval test
+rather than a status filter, because an ACTIVE policy whose period has not started is not in force
+and one with no end date runs until superseded. That distinction was not expressible before and it is
+the whole point of an effective-dated policy.
 
 ---
 
-## 6. Dashboard exposes five figures, not the eight the module needs
+## 4. No pagination on any fuel collection — **closed**
 
-**Wanted.** Site totals, fuel spend, fuel quantity, transaction freshness, reconciliation status,
-open anomaly cases, pending logbook reviews and CSV import status.
+**Found.** Every fuel collection returned a bare `List<T>` with a `size` limit only — no `page`, no
+`totalElements`, no stable sort. A register could only ever show a window, and a console could tell a
+full register from the first hundred rows of it only by guessing from whether the list came back
+full.
 
-**Found.** `GET /dashboard?siteCode=` returns exactly:
+**Closed by** `FuelPageResponse<T>` on transactions, logbooks, anomalies, policies and imports,
+carrying `content`, `page`, `size`, `totalElements`, `totalPages`, `first`, `last` and `sort` —
+identical in shape to the fleet envelope. `sort` is validated against a per-resource allow-list
+rather than interpolated, and **every ordering ends in `id`**: rows sharing a sort value would
+otherwise be free to swap places between requests, and a page boundary falling inside such a group
+silently skips or repeats records. Page size is capped at 200.
 
-```
-transactionCount, fuelVolume, fuelSpend, reconciledCount, exceptionCount, sourceUpdatedAt, stale
-```
-
-`stale` is computed in the service (`sourceUpdatedAt` older than 15 minutes); the rest come from the
-`fuel_dashboard_summary` view over `fuel_transactions` alone. There are **no** anomaly, logbook or
-import figures in it, and no per-site breakdown when the actor holds several sites — `siteCode` is
-required, so the dashboard is single-site by construction.
-
-**What the UI does instead.** The five service figures plus `stale` are presented as the snapshot,
-with the snapshot time in the page header. Open anomaly cases and pending logbook reviews are counted
-from the anomaly and logbook list endpoints and are captioned "derived from the records this filter
-returned" — they are not presented as service indicators. CSV import status has no source at all
-(gap 2) and is therefore absent from the dashboard; the import screen is linked instead.
-
-**To close.** Extend the dashboard payload with `openAnomalies`, `anomaliesBreachingSla`,
-`pendingLogbookReviews` and `lastImportAt`, and add a drilldown endpoint in the shape of
-`GET /api/v1/fleet/dashboards/operations/drilldowns/{indicator}`.
+**In the UI.** The registers are server-paged with a real total. `useClientWindow` and the
+"showing the first N" warning that went with it are deleted.
 
 ---
 
-## 7. Logbook `RETURNED` resubmits to `RESUBMITTED`, not `DRAFT`
+## 5. Anomaly queue could not be filtered — **closed**
 
-**Wanted (per S168_Fuel_Domain_And_State_Model.md and the build brief).** "review may move to
-`RETURNED`, then back to `DRAFT`".
+**Found.** `GET /anomalies` accepted `siteCode`, `status` and `size`. `dueBefore` existed on the
+repository and was reachable only from the sweep scheduler. Assignee, type, severity and materiality
+had no parameter at all, so the console filtered them in the browser — which made "breaching SLA"
+mean "breaches among the first two hundred cases", precisely the queue an operator must not be given.
 
-**Found.** `DriverLogbook.submit` sends a `RETURNED` record to **`RESUBMITTED`**, a ninth status that
-the state-model document does not mention:
+**Closed by** `type`, `severity`, `assignee` (contains-match), `unassigned`, `material`, `openOnly`,
+`dueBefore` and `transactionId`. `openOnly` with `dueBefore` is the breaching-SLA queue as a real
+query.
 
-```java
-Status next = status == Status.RETURNED ? Status.RESUBMITTED : Status.SUBMITTED;
-```
-
-`startReview` accepts `SUBMITTED` and `RESUBMITTED`, so the loop closes correctly — the documented
-`DRAFT` step simply never happens. `FuelMandatoryScenariosEndToEndTest#return_resubmit_and_approve_a_logbook`
-asserts the implemented behaviour.
-
-**What the UI does.** Follows the implementation: a returned logbook offers "Resubmit", the timeline
-and status chip show `RESUBMITTED`, and the reviewer's queue treats `SUBMITTED` and `RESUBMITTED`
-alike. **The document is wrong, not the code.**
-
-**To close.** Correct `S168_Fuel_Domain_And_State_Model.md`.
+**In the UI.** Every filter and all four queue views reach the service. The counters above the table
+come from the dashboard endpoint, which counts them across the site rather than across a page.
 
 ---
 
-## 8. Transaction statuses `VALIDATING`, `MATCHED` and `REJECTED` are unreachable
+## 6. Dashboard published five figures — **closed**
 
-**Found.** `FuelTransaction.Status` declares seven values. `capture` writes `RECEIVED`; `reconcile`
-writes `RECONCILED` or `EXCEPTION`; `voidTransaction` writes `VOIDED`. Nothing in the service ever
-writes `VALIDATING`, `MATCHED` or `REJECTED`.
+**Found.** `GET /dashboard` returned `transactionCount`, `fuelVolume`, `fuelSpend`,
+`reconciledCount`, `exceptionCount`, `sourceUpdatedAt` and a computed `stale`, all from a view over
+`fuel_transactions` alone. No anomaly, logbook or import figures, so the console counted them from
+whatever list it could fetch and captioned them as derived.
 
-**What the UI does.** Offers all seven in the status filter, because the enum is the contract and a
-record could carry any of them, but the workflow diagram on the transaction detail screen marks the
-three as not currently produced rather than implying an operator can reach them.
+**Closed by** ten more indicators, counted by the service across the whole site:
+`awaitingReconciliation`, `openAnomalies`, `anomaliesBreachingSla`, `materialOpenAnomalies`,
+`unassignedAnomalies`, `pendingLogbookReviews`, `draftLogbooks`, `importBatches`,
+`importBatchesWithErrors` and `lastImportAt`.
 
-**To close.** Either implement the intermediate transitions or remove the values from the enum.
-
----
-
-## 9. No evidence upload from the fuel module
-
-**Found.** Fuel records reference evidence by UUID only — `receiptEvidenceId` on a transaction,
-`evidenceId` on a logbook and on an anomaly closure. Registration lives in the fleet module
-(`POST /api/v1/fleet/evidence`) and is not re-exposed under `/api/v1/fuel`.
-
-**What the UI does.** Every evidence field is a reference input with a note pointing at Evidence &
-audit, exactly as the Fleet workflow closure dialog does. It never fabricates an identifier.
-
-**To close.** Nothing, if evidence stays a fleet-wide concern — this is recorded so the next reader
-does not go looking for a fuel-side upload.
+**In the UI.** The "counted from the records this console fetched" section is gone. The only
+remaining derived panel is the spend trend, which is still bucketed by day in the browser because
+there is no time-series endpoint — and still says so.
 
 ---
 
-## 10. No per-record history, and `GET /fleet/audit/records` returns 500
+## 7. Logbook `RETURNED` resubmits to `RESUBMITTED`, not `DRAFT` — open
 
-**Wanted.** A transition timeline on the transaction, logbook and anomaly detail screens — the
-equivalent of the Fleet module's `GET /workflow-items/{id}/transitions`.
+**Documented.** `S168_Fuel_Domain_And_State_Model.md`: "review may move to `RETURNED`, then back to
+`DRAFT`".
 
-**Found.** No fuel aggregate has a history endpoint. Every fuel state change **is** recorded, through
-`AuditPort.record(...)` with a `beforeValue`/`afterValue` pair, and the fleet module already exposes
-a search over those records at `GET /api/v1/fleet/audit/records?resourceType=&resourceId=`. The fuel
-resource types are `FuelTransaction`, `DriverLogbook`, `FuelAnomalyCase` and `FuelPolicy`.
+**Found.** `DriverLogbook.submit` sends a `RETURNED` record to **`RESUBMITTED`**, a ninth status the
+document does not mention. `startReview` accepts both `SUBMITTED` and `RESUBMITTED`, so the loop
+closes correctly — the documented `DRAFT` step simply never happens, and
+`FuelMandatoryScenariosEndToEndTest#return_resubmit_and_approve_a_logbook` asserts the implemented
+behaviour.
 
-**That endpoint is currently broken.** Every call returns HTTP 500 against the development Postgres,
-with or without parameters:
+**Still open.** The code is right and the document is wrong. The UI follows the code. Correcting
+`S168_Fuel_Domain_And_State_Model.md` is a documentation change nobody has made yet.
+
+---
+
+## 8. Transaction statuses `VALIDATING`, `MATCHED` and `REJECTED` are unreachable — open
+
+**Found.** `capture` writes `RECEIVED`; `reconcile` writes `RECONCILED` or `EXCEPTION`;
+`voidTransaction` writes `VOIDED`. Nothing writes the other three.
+
+**Still open, deliberately.** Removing enum values is a breaking change to stored data, and
+implementing the intermediate transitions is a design decision rather than a defect fix. The UI
+offers all seven in the status filter — the enum is the contract — and the lifecycle panel marks the
+three as not currently produced.
+
+---
+
+## 9. No fuel-side evidence upload — resolved by design
+
+Fuel records reference evidence by UUID only. Registration lives in the fleet module
+(`POST /api/v1/fleet/evidence`) and is not re-exposed under `/api/v1/fuel`. Every evidence field in
+the fuel UI is a reference input pointing at Evidence & audit, exactly as the fleet workflow closure
+dialog does. Recorded so the next reader does not go looking for a fuel-side upload.
+
+---
+
+## 10. No per-record history, and `GET /fleet/audit/records` returned 500 — **closed**
+
+**Found.** No fuel aggregate had a history endpoint. Every fuel state change *was* recorded through
+`AuditPort` with a before and after image, and the fleet module already exposed a search over those
+records — but **that endpoint returned HTTP 500 on every call**, with or without parameters:
 
 ```
 InvalidDataAccessResourceUsageException: JDBC exception executing SQL
@@ -220,114 +187,81 @@ InvalidDataAccessResourceUsageException: JDBC exception executing SQL
   ... where (? is null or are1_0.action=?) ...
 ```
 
-The generated query compares a nullable enum parameter without a cast, and pgjdbc cannot infer the
-type. Probed four ways — no parameters, `resourceType` only, `resourceId` only, and with
-`action=CREATE` — all five hundred. **This is pre-existing and not confined to fuel: the Fleet
-module's Evidence & audit screen calls the same endpoint.**
+The derived JPQL expressed each optional filter as `(:param is null or column = :param)`, which
+Hibernate renders as `(? is null or column = ?)` — and PostgreSQL cannot infer a type for a parameter
+whose only appearance is a bare `IS NULL` test. Probed four ways, all five hundred. **Not confined to
+fuel: the Fleet module's Evidence & audit screen calls the same endpoint.**
 
-**What the UI does instead.** Each detail screen builds its timeline from the record itself, which
-carries real provenance and nothing invented: `metadata.createdBy`/`createdAt`,
-`metadata.lastModifiedBy`/`lastModifiedAt`/`version`/`sourceChannel`, plus the aggregate's own
-milestones — `submittedAt` and `approvedAt` on a logbook, `ingestionTimestamp` on a transaction, and
-the current `reviewComment` / `transitionReason` / `closureReason`. Every such panel is captioned
-"reconstructed from the record's own provenance — the service exposes no transition history for fuel
-records", so nobody mistakes it for the audit trail. Intermediate transitions are not recoverable
-this way and the screens do not pretend otherwise.
+**Closed by** two changes. `AuditRecordSearch` / `AuditRecordSearchImpl` replace the derived query
+with a Criteria implementation that adds a predicate only for a filter actually supplied — an absent
+filter contributes no SQL, so there is no untyped null to infer, and the query can use its indexes
+instead of being wrapped in `OR` tests that defeat them. And four history endpoints:
+`GET /api/v1/fuel/{transactions|logbooks|anomalies|policies}/{id}/history`, each authorised against
+the record itself so a caller cannot enumerate another site's history through them.
 
-**To close.** Two things, independently: fix the audit query's enum parameter binding (a cast, or a
-pair of derived queries), and add `GET /api/v1/fuel/{aggregate}/{id}/history` so a fuel record's
-transitions do not depend on a cross-module audit search.
+Verified: all four filter combinations return 200, and **this also repairs the Fleet Evidence & audit
+screen**, which was broken for the same reason.
 
----
-
-## 11. The "no overlapping active policy" invariant is documented but not enforced
-
-**Documented.** `S168_Fuel_Domain_And_State_Model.md` states the `FuelPolicy` invariant as
-"Site/effective period/version; positive limits; **no overlapping active policy for the same
-scope**".
-
-**Found.** `FuelPolicy`'s compact constructor checks the limits and that `effectiveTo` follows
-`effectiveFrom`. It does not — and cannot — check overlap, because a record knows nothing about its
-siblings. `FuelApplicationService.createPolicy` does not check either: it constructs the policy with
-`Status.ACTIVE` and saves. There is no unique constraint on the table. **Two ACTIVE policies with
-overlapping effective periods can be created for one site, and the second is silently accepted.**
-
-This matters because `findApplicablePolicy` is what reconciliation reads, and with an overlap the
-rule set a transaction is judged against depends on which row the query happens to return.
-
-**What the UI does instead.** The create-policy dialog fetches the site's existing policies and warns
-— before submission — when the period being created overlaps an ACTIVE one, naming it. The warning
-is explicitly labelled a console check, and it does **not** block submission, because the service
-will accept the record and the console must not pretend to a veto it does not have. The policy
-register also flags every overlapping ACTIVE pair it can see.
-
-**To close.** Enforce it in `createPolicy` (reject with a domain error) or add a database exclusion
-constraint on `(site_code, effective period)` where `status = 'ACTIVE'`.
+**In the UI.** The three detail screens show the real recorded transitions in chain order with the
+actor who made each, and the status the record moved to, read from the audit entry's post-image. The
+reconstructed-from-timestamps timeline and its caveat are gone.
 
 ---
 
-## 12. A duplicate CSV upload returns an unmapped 500
+## 11. "No overlapping active policy" documented but unenforced — **closed**
 
-**Found.** `fuel_import_batches` carries `CONSTRAINT uq_fuel_import_file UNIQUE (site_code,
-source_system, file_hash)`, which is right — the same file should not import twice. But
-`FuelImportService.importCsv` inserts the batch with a plain `JdbcTemplate.update` and nothing
-catches the violation, so it surfaces as a `DataIntegrityViolationException`.
-`FleetApiExceptionHandler` has no handler for it, so the response is Spring's default body rather
-than the SFL envelope:
+**Found.** The domain document stated the invariant. `FuelPolicy`'s constructor could not check it —
+a record knows nothing about its siblings — `createPolicy` did not check either, and there was no
+database constraint. Two ACTIVE policies with overlapping periods could be created for one site and
+the second was silently accepted. With an overlap, `findApplicablePolicy` returns whichever row the
+ordering surfaces, so the rules a transaction is judged against and the policy version stamped on its
+reconciliation stop being reproducible.
 
-```
-POST /api/v1/fuel/imports/csv        (same file, same site, same source system)
-{"timestamp":"…","status":500,"error":"Internal Server Error","path":"/api/v1/fuel/imports/csv"}
-```
+**Closed by** `findOverlappingActivePolicies` and a check inside the same transaction that writes the
+record, raising `FUEL_POLICY_PERIOD_OVERLAP` (409) with the conflicting policies in `details`.
+Periods are half-open, so a successor beginning exactly where its predecessor ends is legal.
 
-Verified against the running service. **No data is corrupted** — the rows are re-captured first, and
-capture is idempotent on `(siteCode, sourceSystem, providerTransactionId)`, so the original
-transactions are returned and nothing is duplicated. The batch record is simply not written and the
-operator gets a bare 500.
-
-**What the UI does instead.** `FleetApiError.fromUnmappedFailure` already turns a non-envelope
-failure into readable wording, so this reaches the operator as a message naming the path rather than
-a blank screen. On top of that, the import dialog and the imports screen both warn, before the
-upload, that re-uploading a file fails with an error that will not explain itself, and that nothing
-is duplicated when it does.
-
-**To close.** Catch `DuplicateKeyException` in `FuelImportService` and raise a domain error —
-`FUEL_IMPORT_ALREADY_PROCESSED` or similar — so the envelope carries the reason.
+**In the UI.** The client-side overlap warning is gone — the service refuses it, and a dialog that
+warns about something the service enforces is telling the operator half a story. The dialog states
+the rule; a violation surfaces as the service's own error.
 
 ---
 
-## 13. The CSV report refuses `Accept: application/json`
+## 12. A duplicate CSV upload returned an unmapped 500 — **closed**
 
-**Found.** `GET /api/v1/fuel/reports/transactions.csv` is declared `produces="text/csv"`. Spring
-intersects that with the request's `Accept`, so a client sending the console's standard
-`Accept: application/json` gets **406 Not Acceptable** and the report is never generated. This was
-found by probing the endpoint with the exact headers the shared API client sends.
+**Found.** `uq_fuel_import_file` on `(site_code, source_system, file_hash)` refused the re-import
+correctly, but the violation was raised by a plain `JdbcTemplate.update` at the *end* of the import,
+after every row had been captured, and `FleetApiExceptionHandler` had no handler for
+`DataIntegrityViolationException`. The response was Spring's default body, not the SFL envelope. No
+data was corrupted — capture is idempotent on `(siteCode, sourceSystem, providerTransactionId)` — but
+the operator got a bare 500.
 
-**What the UI does.** `downloadFile` in `shared/api/client.ts` sends
-`Accept: text/csv, application/json` — the first so the report is produced, the second so an
+**Closed by** a hash check *before* any row is processed, raising `FUEL_IMPORT_ALREADY_PROCESSED`
+(409) naming the batch that already holds the file, with a `DuplicateKeyException` catch in the
+repository as a second line of defence against a race.
+
+---
+
+## 13. The CSV report refuses `Accept: application/json` — resolved in the client
+
+`GET /api/v1/fuel/reports/transactions.csv` is declared `produces="text/csv"`. Spring intersects that
+with the request's `Accept`, so a client sending the console's standard `Accept: application/json`
+got **406 Not Acceptable** and the report was never generated. Found by probing with the exact
+headers the shared API client sends.
+
+Not a service defect — it is correct content negotiation. `downloadFile` in `shared/api/client.ts`
+sends `Accept: text/csv, application/json`: the first so the report is produced, the second so an
 authorisation refusal, which comes back as a JSON envelope, is not itself rejected for the wrong
-content type. Confirmed 200 with `Content-Disposition: attachment; filename=fuel-transactions-<site>.csv`.
-
-**Not a service defect**, strictly — it is correct content negotiation. Recorded because it is a
-trap for any other client, and because the report is also capped at 500 rows service-side and takes
-no filters beyond the site, which the export button says out loud.
+content type. Recorded because it is a trap for any other client.
 
 ---
 
-## Summary
+## What is still worth doing
 
-| Gap | Blocks | Severity |
-| --- | --- | --- |
-| 1. No reconciliation read | Per-rule reconciliation results | High |
-| 2. No import batch read | Returning to a past import | High |
-| 3. No `GET /policies/{id}` | Nothing — worked around | Low |
-| 4. No pagination | Registers beyond the size window | High |
-| 5. No anomaly filters | Server-side queue filtering | Medium |
-| 6. Thin dashboard payload | Anomaly/logbook/import indicators | Medium |
-| 7. `RESUBMITTED` undocumented | Nothing — document defect | Low |
-| 8. Three unreachable statuses | Nothing — noted for clarity | Low |
-| 9. No fuel-side evidence upload | Nothing — by design | Low |
-| 10. No history; audit search 500s | Real transition timelines | High |
-| 11. Policy overlap unenforced | Reproducible rule selection | Medium |
-| 12. Duplicate import 500s unmapped | A readable "already imported" | Medium |
-| 13. CSV report needs a csv `Accept` | Nothing — worked around | Low |
+- **Gap 7** — correct `S168_Fuel_Domain_And_State_Model.md` to describe `RESUBMITTED`.
+- **Gap 8** — decide whether `VALIDATING`, `MATCHED` and `REJECTED` should be implemented or removed.
+- **A time-series endpoint** for fuel spend and volume by day, so the dashboard's one remaining
+  derived panel can stop bucketing in the browser.
+- **An anomaly aggregation endpoint** (counts by type) so the by-type chart stops reading a page.
+- **`GET /api/v1/fuel/imports/{id}/rows`**, paged, for a batch with thousands of rows; the detail
+  read currently returns them all.

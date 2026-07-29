@@ -20,6 +20,42 @@ import {
  * not a string. Requests, by contrast, take a plain `String` for both.
  */
 
+/**
+ * The fuel collection envelope.
+ *
+ * Identical in shape to the fleet `PageResponse`, and new: every fuel collection used to return a
+ * bare array capped by a `size` limit, with no total and no way to tell a full register from the
+ * first hundred rows of it. `sort` is echoed back because a request need not name one.
+ */
+export interface FuelPageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  sort: string | null;
+}
+
+export const emptyFuelPage = <T,>(size = 25): FuelPageResponse<T> => ({
+  content: [],
+  page: 0,
+  size,
+  totalElements: 0,
+  totalPages: 0,
+  first: true,
+  last: true,
+  sort: null,
+});
+
+/** Paging parameters every fuel collection accepts. `sort` is `field` or `field,asc|desc`. */
+export interface FuelPageParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
 /** `gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode` on the wire. */
 export interface SiteCodeValue {
   value: string;
@@ -248,26 +284,100 @@ export interface VoidTransactionRequest {
 
 /* ---------------------------------------------------------------- queries */
 
-export interface TransactionSearchParams {
+export interface TransactionSearchParams extends FuelPageParams {
   siteCode: string;
   status?: FuelTransactionStatus | '';
   vehicleId?: string;
   driverId?: string;
+  /** Exact match. `MANUAL` is what this console writes; imports and providers write their own. */
+  sourceSystem?: string;
+  /** Contains-match, case insensitive. */
+  vendorReference?: string;
   from?: string;
   to?: string;
-  size?: number;
 }
 
-export interface LogbookSearchParams {
+export interface LogbookSearchParams extends FuelPageParams {
   siteCode: string;
   status?: LogbookStatus | '';
-  size?: number;
+  driverId?: string;
+  vehicleId?: string;
+  useClassification?: LogbookUseClassification | '';
+  journeyFrom?: string;
+  journeyTo?: string;
 }
 
-export interface AnomalySearchParams {
+export interface AnomalySearchParams extends FuelPageParams {
   siteCode: string;
   status?: AnomalyStatus | '';
-  size?: number;
+  type?: AnomalyType | '';
+  severity?: AnomalySeverity | '';
+  /** Contains-match on the assignee. */
+  assignee?: string;
+  /** `true` for cases nobody owns, `false` for cases that have an owner. */
+  unassigned?: boolean;
+  material?: boolean;
+  /** Neither closed nor cancelled. */
+  openOnly?: boolean;
+  /** SLA cutoff — with `openOnly`, this is the breaching-SLA queue. */
+  dueBefore?: string;
+  transactionId?: string;
+}
+
+export interface PolicySearchParams extends FuelPageParams {
+  siteCode: string;
+  status?: FuelPolicyStatus | '';
+  /** An interval test, not a status: an active policy whose period has not started is not in force. */
+  inForceOnly?: boolean;
+}
+
+export interface ImportSearchParams extends FuelPageParams {
+  siteCode: string;
+  sourceSystem?: string;
+}
+
+/* --------------------------------------------------------------- reconciliation */
+
+/**
+ * One reconciliation run, with the policy version it applied and every rule outcome.
+ *
+ * `ruleResults` is the map the service stores — `{ RULE_NAME: { passed: boolean } }` — so a screen
+ * can finally show the rules that **passed** as well as the ones that failed.
+ */
+export interface FuelReconciliation {
+  id: string;
+  transactionId: string;
+  policyId: string | null;
+  policyVersion: number | null;
+  outcome: string;
+  calculatedConsumption: number | null;
+  evaluatedAt: string;
+  evaluatedBy: string;
+  ruleResults: Record<string, { passed?: boolean } | unknown>;
+  correlationId: string | null;
+}
+
+/** `{ passed: true }` and nothing else counts as a pass, matching the service's own reading. */
+export const rulePassed = (value: unknown): boolean =>
+  typeof value === 'object' && value !== null && (value as { passed?: boolean }).passed === true;
+
+/* ------------------------------------------------------------------------ audit */
+
+/** One entry of the hash-chained audit log, as the fuel history endpoints return it. */
+export interface FuelAuditEvent {
+  id: string;
+  sequenceNo: number;
+  siteScope: SiteCodeValue | null;
+  actorId: string;
+  actorDisplayName: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  beforeValue: unknown;
+  afterValue: unknown;
+  correlationId: string | null;
+  sourceChannel: SourceChannel;
+  occurredAt: string;
 }
 
 /* ---------------------------------------------------------------- imports */
@@ -281,13 +391,40 @@ export interface ImportRowResult {
   errorMessage: string | null;
 }
 
-/** `FuelImportService.ImportResult` — returned by the upload and never readable again (gap 2). */
+/** `FuelImportService.ImportResult` — the upload response. The batch is now readable afterwards. */
 export interface ImportResult {
   batchId: string;
   totalRows: number;
   acceptedRows: number;
   rejectedRows: number;
   rows: ImportRowResult[];
+}
+
+/** One row of a stored import batch. `id` distinguishes it from the upload-response shape. */
+export interface FuelImportRow {
+  id: string;
+  rowNumber: number;
+  status: 'ACCEPTED' | 'REJECTED';
+  transactionId: string | null;
+  errorCode: string | null;
+  errorMessage: string | null;
+}
+
+/** A stored import batch. `rows` is empty on a list read and populated on a detail read. */
+export interface FuelImportBatch {
+  id: string;
+  siteCode: SiteCodeValue;
+  sourceSystem: string;
+  fileName: string;
+  fileHash: string;
+  status: 'COMPLETED' | 'COMPLETED_WITH_ERRORS';
+  totalRows: number;
+  acceptedRows: number;
+  rejectedRows: number;
+  submittedBy: string;
+  submittedAt: string;
+  correlationId: string | null;
+  rows: FuelImportRow[];
 }
 
 /* ------------------------------------------------------------ integration */
@@ -340,9 +477,9 @@ export interface ReplayResult {
 /**
  * `GET /api/v1/fuel/dashboard` — the whole payload.
  *
- * Five figures from the `fuel_dashboard_summary` view over `fuel_transactions`, the view's own
- * high-water mark, and a staleness flag the service computes against a 15-minute threshold. There
- * are no anomaly, logbook or import indicators in it; see gap 6.
+ * The five transaction figures come from the `fuel_dashboard_summary` view; the anomaly, logbook
+ * and import indicators are counted by the service. Every figure here is published, so nothing on
+ * the dashboard has to be derived by the console any more.
  */
 export interface FuelDashboardSnapshot {
   transactionCount: number;
@@ -352,4 +489,18 @@ export interface FuelDashboardSnapshot {
   exceptionCount: number;
   sourceUpdatedAt: string | null;
   stale: boolean;
+
+  awaitingReconciliation: number;
+
+  openAnomalies: number;
+  anomaliesBreachingSla: number;
+  materialOpenAnomalies: number;
+  unassignedAnomalies: number;
+
+  pendingLogbookReviews: number;
+  draftLogbooks: number;
+
+  importBatches: number;
+  importBatchesWithErrors: number;
+  lastImportAt: string | null;
 }

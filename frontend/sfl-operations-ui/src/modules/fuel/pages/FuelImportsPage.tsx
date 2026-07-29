@@ -1,13 +1,15 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { ImportResult, ImportRowResult } from 'modules/fuel/api/dto';
+import { FuelImportBatch, FuelImportRow } from 'modules/fuel/api/dto';
 import { CSV_OPTIONAL_HEADERS, CSV_REQUIRED_HEADERS } from 'modules/fuel/api/enums';
+import { fuelImportsApi } from 'modules/fuel/api/fuelApi';
 import { CsvImportDialog } from 'modules/fuel/dialogs/importDialogs';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { shortId } from 'modules/fuel/components/fuelFormat';
-import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -15,16 +17,9 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { formatNumber } from 'shared/components/format';
+import { formatDateTime, formatNumber } from 'shared/components/format';
+import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
-
-/** A batch plus the two things the response does not carry: what was uploaded, and when. */
-interface CompletedImport {
-  result: ImportResult;
-  fileName: string;
-  siteCode: string;
-  at: string;
-}
 
 const ROW_FILTERS = [
   { value: 'ALL', label: 'Every row' },
@@ -33,15 +28,15 @@ const ROW_FILTERS = [
 ];
 
 /**
- * CSV import.
+ * CSV import, with the batch history the service now keeps.
  *
- * Two things about this screen are unusual, and both come from the service rather than a choice
- * made here. There is **no import history** — `fuel_import_batches` and `fuel_import_rows` are
- * written on every upload but no endpoint reads them (gap 2) — so this page shows the batches
- * uploaded in *this browsing session* and says so, rather than presenting an empty history as
- * though nothing had ever been imported. And a batch is **never rejected as a whole for a bad
- * row**: each row goes through the same capture command as a manual entry and is accepted or
- * rejected on its own, so the row table is the real result, not the totals above it.
+ * Every batch and every row outcome is readable. This screen used to hold the batches uploaded in
+ * one browsing session and warn that leaving the page lost them — the rows were written and nothing
+ * read them back — so a rejected row an operator did not deal with immediately was simply gone.
+ *
+ * The one thing that has not changed is the most important: a batch is **never rejected as a whole
+ * for a bad row**. Each row goes through the same capture command as a manual entry and is accepted
+ * or rejected on its own, so the row table is the real result, not the totals above it.
  */
 const FuelImportsPage = () => {
   const navigate = useNavigate();
@@ -49,17 +44,30 @@ const FuelImportsPage = () => {
 
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [importing, setImporting] = useState(false);
-  const [batches, setBatches] = useState<CompletedImport[]>([]);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
   const [rowFilter, setRowFilter] = useState('ALL');
 
-  const selected = useMemo(
-    () => batches.find((batch) => batch.result.batchId === selectedBatchId) ?? batches[0],
-    [batches, selectedBatchId],
+  const paging = useServerPage(siteCode, 10);
+
+  const batches = useApiQuery(
+    (signal) =>
+      fuelImportsApi.search({ siteCode, page: paging.page, size: paging.size }, signal),
+    [siteCode, paging.page, paging.size],
+  );
+
+  useClampPage(paging.page, batches.data?.totalPages, paging.setPage);
+
+  /** The most recent batch is the one an operator almost always wants, so it opens selected. */
+  const activeBatchId = selectedBatchId ?? batches.data?.content[0]?.id ?? null;
+
+  const batch = useApiQuery(
+    (signal) =>
+      activeBatchId ? fuelImportsApi.findById(activeBatchId, signal) : Promise.resolve(undefined),
+    [activeBatchId],
   );
 
   const rows = useMemo(() => {
-    const all = selected?.result.rows ?? [];
+    const all = batch.data?.rows ?? [];
     if (rowFilter === 'REJECTED') {
       return all.filter((row) => row.status !== 'ACCEPTED');
     }
@@ -67,9 +75,66 @@ const FuelImportsPage = () => {
       return all.filter((row) => row.status === 'ACCEPTED');
     }
     return all;
-  }, [selected, rowFilter]);
+  }, [batch.data, rowFilter]);
 
-  const rowColumns = useMemo<Column<ImportRowResult>[]>(
+  const batchColumns = useMemo<Column<FuelImportBatch>[]>(
+    () => [
+      {
+        key: 'file',
+        header: 'File',
+        width: 260,
+        cell: (row) => (
+          <CellStack
+            primary={row.fileName}
+            secondary={`${row.sourceSystem} · ${formatDateTime(row.submittedAt)}`}
+          />
+        ),
+      },
+      {
+        key: 'rows',
+        header: 'Rows',
+        width: 100,
+        align: 'right',
+        cell: (row) => formatNumber(row.totalRows),
+      },
+      {
+        key: 'accepted',
+        header: 'Accepted',
+        width: 110,
+        align: 'right',
+        cell: (row) => formatNumber(row.acceptedRows),
+      },
+      {
+        key: 'rejected',
+        header: 'Rejected',
+        width: 110,
+        align: 'right',
+        cell: (row) =>
+          row.rejectedRows > 0 ? (
+            <span className="font-semibold text-error-800">{formatNumber(row.rejectedRows)}</span>
+          ) : (
+            <span className="text-gray-500">0</span>
+          ),
+      },
+      {
+        key: 'submittedBy',
+        header: 'Imported by',
+        width: 160,
+        hideBelowLg: true,
+        cell: (row) => row.submittedBy,
+      },
+      {
+        key: 'status',
+        header: 'Status',
+        width: 190,
+        align: 'right',
+        cell: (row) => <StatusChip value={row.status} />,
+      },
+    ],
+    [],
+  );
+
+  const rowColumns = useMemo<Column<FuelImportRow>[]>(
     () => [
       {
         key: 'row',
@@ -121,6 +186,8 @@ const FuelImportsPage = () => {
     [navigate],
   );
 
+  const selected = batch.data;
+
   return (
     <div>
       <PageHeader
@@ -135,22 +202,114 @@ const FuelImportsPage = () => {
       />
 
       <div className="space-y-5">
-        <Alert variant="info" title="Imports are not retained for viewing">
-          The service records each batch and its rows, but exposes no endpoint to read them back. The
-          batches below are the ones uploaded from this screen since it was opened; leaving the page
-          loses them. Deal with any rejected rows before you navigate away.
-        </Alert>
-
-        <SectionCard title="Where to import" flush>
-          <div className="grid gap-4 border-b border-gray-200 px-5 pt-5 pb-6 sm:grid-cols-2 lg:grid-cols-3">
-            <SiteSelect
-              value={siteCode}
-              onChange={setSiteCode}
-              required
-              helperText="Every row in the batch is captured against this site."
+        <SectionCard title="Import history" subtitle="Every batch imported at this site" flush>
+          <FilterBar>
+            <SiteSelect value={siteCode} onChange={setSiteCode} required />
+          </FilterBar>
+          <DataState
+            loading={batches.initialising}
+            error={batches.error}
+            empty={(batches.data?.totalElements ?? 0) === 0}
+            emptyTitle="Nothing imported yet"
+            emptyHint="Upload a CSV to see its row-by-row outcome here."
+            onRetry={batches.refetch}
+            minHeight={200}
+          >
+            <DataTable
+              rows={batches.data?.content ?? []}
+              columns={batchColumns}
+              getRowId={(row) => row.id}
+              loading={batches.loading}
+              onRowClick={(row) => {
+                setSelectedBatchId(row.id);
+                setRowFilter(row.rejectedRows > 0 ? 'REJECTED' : 'ALL');
+              }}
+              caption="Fuel CSV import batches at this site, with row counts, who imported each and whether any rows were rejected."
+              page={batches.data?.page ?? paging.page}
+              pageSize={batches.data?.size ?? paging.size}
+              totalElements={batches.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
+              dense
             />
-          </div>
+          </DataState>
         </SectionCard>
+
+        {selected && (
+          <>
+            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+              <StatCard
+                label="Rows in the file"
+                value={formatNumber(selected.totalRows)}
+                icon="document"
+                caption={selected.fileName}
+              />
+              <StatCard
+                label="Accepted"
+                value={formatNumber(selected.acceptedRows)}
+                icon="check-circle"
+                tone={selected.acceptedRows > 0 ? 'good' : 'neutral'}
+                caption="Transactions created"
+              />
+              <StatCard
+                label="Rejected"
+                value={formatNumber(selected.rejectedRows)}
+                icon="alert-circle"
+                tone={selected.rejectedRows > 0 ? 'critical' : 'neutral'}
+                caption="Nothing was created for these"
+              />
+              <StatCard
+                label="Imported"
+                value={shortId(selected.id)}
+                icon="inbox"
+                caption={`${formatDateTime(selected.submittedAt)} by ${selected.submittedBy}`}
+              />
+            </div>
+
+            <SectionCard
+              title="Row outcomes"
+              subtitle={`${selected.totalRows} rows · ${selected.fileName}`}
+              actions={
+                <div className="flex items-center gap-1.5">
+                  {ROW_FILTERS.map((filter) => (
+                    <Button
+                      key={filter.value}
+                      size="sm"
+                      variant={rowFilter === filter.value ? 'primary' : 'outline'}
+                      onClick={() => setRowFilter(filter.value)}
+                    >
+                      {filter.label}
+                    </Button>
+                  ))}
+                </div>
+              }
+              flush
+            >
+              <DataState
+                loading={batch.initialising}
+                error={batch.error}
+                empty={rows.length === 0}
+                emptyTitle="No rows match this filter"
+                emptyHint={
+                  rowFilter === 'REJECTED'
+                    ? 'Every row in this batch was accepted.'
+                    : 'Nothing to show.'
+                }
+                onRetry={batch.refetch}
+                minHeight={200}
+              >
+                <DataTable
+                  rows={rows}
+                  columns={rowColumns}
+                  getRowId={(row) => row.id}
+                  loading={batch.loading}
+                  caption="The outcome of every row in this import batch, with the validation error the service recorded for each rejected row."
+                  dense
+                />
+              </DataState>
+            </SectionCard>
+          </>
+        )}
 
         <div className="grid gap-5 xl:grid-cols-2">
           <SectionCard
@@ -209,10 +368,8 @@ const FuelImportsPage = () => {
                 <Icon name="lock" size={15} className="mt-0.5 shrink-0 text-gray-600" />
                 <span>
                   The same file content cannot be imported twice for one site and source system. The
-                  batch is keyed on its own hash, and the second attempt fails on a database
-                  constraint the service does not map — so it returns an unhandled server error
-                  rather than a message naming the cause. No transaction is duplicated when this
-                  happens.
+                  batch is keyed on its own hash and the second attempt is refused before any row is
+                  captured, naming the batch that already holds it.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
@@ -225,132 +382,6 @@ const FuelImportsPage = () => {
             </ul>
           </SectionCard>
         </div>
-
-        {batches.length > 1 && (
-          <SectionCard title="Batches imported in this session" flush>
-            <ul className="divide-y divide-gray-100">
-              {batches.map((batch) => (
-                <li key={batch.result.batchId}>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedBatchId(batch.result.batchId)}
-                    className={`flex w-full flex-wrap items-center justify-between gap-3 px-5 py-3 text-left transition-colors hover:bg-gray-50 ${
-                      selected?.result.batchId === batch.result.batchId ? 'bg-gold-25' : ''
-                    }`}
-                  >
-                    <span className="min-w-0">
-                      <span className="block truncate text-theme-sm font-semibold text-gray-900">
-                        {batch.fileName}
-                      </span>
-                      <span className="block text-theme-xs text-gray-600">
-                        {batch.siteCode} · {batch.at} · batch {shortId(batch.result.batchId)}
-                      </span>
-                    </span>
-                    <span className="flex shrink-0 items-center gap-2">
-                      <StatusChip
-                        value="ACCEPTED"
-                        label={`${batch.result.acceptedRows} accepted`}
-                        tone="ready"
-                      />
-                      {batch.result.rejectedRows > 0 && (
-                        <StatusChip
-                          value="REJECTED"
-                          label={`${batch.result.rejectedRows} rejected`}
-                          tone="blocked"
-                        />
-                      )}
-                    </span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </SectionCard>
-        )}
-
-        {selected ? (
-          <>
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              <StatCard
-                label="Rows in the file"
-                value={formatNumber(selected.result.totalRows)}
-                icon="document"
-                caption={selected.fileName}
-              />
-              <StatCard
-                label="Accepted"
-                value={formatNumber(selected.result.acceptedRows)}
-                icon="check-circle"
-                tone={selected.result.acceptedRows > 0 ? 'good' : 'neutral'}
-                caption="Transactions created"
-              />
-              <StatCard
-                label="Rejected"
-                value={formatNumber(selected.result.rejectedRows)}
-                icon="alert-circle"
-                tone={selected.result.rejectedRows > 0 ? 'critical' : 'neutral'}
-                caption="Nothing was created for these"
-              />
-              <StatCard
-                label="Batch"
-                value={shortId(selected.result.batchId)}
-                icon="inbox"
-                caption={`Imported into ${selected.siteCode}`}
-              />
-            </div>
-
-            <SectionCard
-              title="Row outcomes"
-              subtitle={`${selected.result.totalRows} rows · ${selected.fileName}`}
-              actions={
-                <div className="flex items-center gap-1.5">
-                  {ROW_FILTERS.map((filter) => (
-                    <Button
-                      key={filter.value}
-                      size="sm"
-                      variant={rowFilter === filter.value ? 'primary' : 'outline'}
-                      onClick={() => setRowFilter(filter.value)}
-                    >
-                      {filter.label}
-                    </Button>
-                  ))}
-                </div>
-              }
-              flush
-            >
-              <DataState
-                loading={false}
-                empty={rows.length === 0}
-                emptyTitle="No rows match this filter"
-                emptyHint={
-                  rowFilter === 'REJECTED'
-                    ? 'Every row in this batch was accepted.'
-                    : 'Nothing to show.'
-                }
-                minHeight={200}
-              >
-                <DataTable
-                  rows={rows}
-                  columns={rowColumns}
-                  getRowId={(row) => String(row.rowNumber)}
-                  caption="The outcome of every row in this import batch, with the validation error the service recorded for each rejected row."
-                  dense
-                />
-              </DataState>
-            </SectionCard>
-          </>
-        ) : (
-          <SectionCard title="No import yet">
-            <DataState
-              loading={false}
-              empty
-              emptyTitle="Nothing imported in this session"
-              emptyHint="Upload a CSV to see its row-by-row outcome here."
-              minHeight={200}
-            >
-              <span />
-            </DataState>
-          </SectionCard>
-        )}
       </div>
 
       {importing && (
@@ -358,14 +389,7 @@ const FuelImportsPage = () => {
           open
           defaultSiteCode={siteCode}
           onClose={() => setImporting(false)}
-          onImported={(result, fileName) => {
-            const batch: CompletedImport = {
-              result,
-              fileName,
-              siteCode,
-              at: new Date().toLocaleString(),
-            };
-            setBatches((current) => [batch, ...current]);
+          onImported={(result) => {
             setSelectedBatchId(result.batchId);
             setRowFilter(result.rejectedRows > 0 ? 'REJECTED' : 'ALL');
             notifySuccess(
@@ -374,6 +398,7 @@ const FuelImportsPage = () => {
                 ? `${result.rejectedRows} rows were rejected — their errors are listed below.`
                 : 'Every row was accepted.',
             );
+            batches.refetch();
           }}
         />
       )}

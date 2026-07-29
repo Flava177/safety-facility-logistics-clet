@@ -13,7 +13,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -77,11 +76,8 @@ public class JpaAuditAdapter implements AuditPort {
     @Transactional(readOnly = true)
     public List<AuditEvent> search(AuditQuery query) {
         boolean allSites = query.siteScopes() == null || query.siteScopes().isEmpty();
-        List<String> scopes = allSites ? List.of("*") : query.siteScopes();
-        return auditRecords.search(allSites, scopes, query.resourceType(), query.resourceId(), query.actorId(),
-                        query.action(), query.from(), query.to(),
-                        PageRequest.of(Math.max(query.page(), 0), query.size() <= 0 ? 50 : query.size()))
-                .stream()
+        List<String> scopes = allSites ? List.of() : query.siteScopes();
+        return auditRecords.searchRecords(allSites, scopes, query).stream()
                 .map(entity -> entity.toDomain(objectMapper))
                 .toList();
     }
