@@ -50,6 +50,57 @@ export const nonNegativeInteger =
     return undefined;
   };
 
+/**
+ * `@PositiveOrZero BigDecimal` on the service side: a decimal, not negative.
+ *
+ * Distinct from `nonNegativeInteger` because money and quantities are `BigDecimal` on the fuel
+ * aggregates — a litre count of 20.5 and a unit price of 10.4750 are both legal, and rejecting them
+ * as "not a whole number" would be the client inventing a rule the service does not have.
+ */
+export const nonNegativeNumber =
+  (label: string): FieldValidator =>
+  (value) => {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return `${label} must be a number.`;
+    }
+    return parsed < 0 ? `${label} cannot be negative.` : undefined;
+  };
+
+/** `@Positive BigDecimal`: a decimal strictly greater than zero. */
+export const positiveNumber =
+  (label: string): FieldValidator =>
+  (value) => {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return `${label} must be a number.`;
+    }
+    return parsed <= 0 ? `${label} must be greater than zero.` : undefined;
+  };
+
+/** `@Positive int`: a whole number of at least `floor` (1 for `@Positive`, 0 for `@PositiveOrZero`). */
+export const integerAtLeast =
+  (label: string, floor: number): FieldValidator =>
+  (value) => {
+    if (value === undefined || value === null || value === '') {
+      return undefined;
+    }
+    const parsed = Number(value);
+    if (!Number.isFinite(parsed)) {
+      return `${label} must be a number.`;
+    }
+    if (!Number.isInteger(parsed)) {
+      return `${label} must be a whole number.`;
+    }
+    return parsed < floor ? `${label} must be at least ${floor}.` : undefined;
+  };
+
 export const numberBetween =
   (label: string, min: number, max: number): FieldValidator =>
   (value) => {
