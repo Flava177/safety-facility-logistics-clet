@@ -1,11 +1,22 @@
 import { IconName } from 'shared/components/Icon';
+import { ProgrammeCode, entitledTo } from './programmes';
 
 /**
  * Dashboard navigation.
  *
- * Only destinations that are built and wired to the Fleet service appear here. Modules that do not
- * exist yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
+ * Only destinations that are built and wired to a service appear here. Modules that do not exist
+ * yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
  * discover nothing, and it makes a working dashboard look half-finished.
+ *
+ * **Every section declares the programme it belongs to**, and the shell renders only the sections
+ * the actor is entitled to. Phase 1 is 13 systems under 4 programme modules delivered as 5
+ * services, and those counts do not line up — a programme is a user-facing grouping, a service is
+ * a deployment unit. See `programmes.ts` and ADR 0005.
+ *
+ * The programme is a property of the **system**, not of the service it happens to ship in. S174 is
+ * its own deployable (ADR 0004, for availability and blast radius) and is still SSEMP here, sitting
+ * beside three FTLMP sections in one bundle. That a user cannot tell which service serves what is
+ * the point: deployment topology must not be inferable from a sidebar.
  */
 
 export interface NavItem {
@@ -19,6 +30,8 @@ export interface NavItem {
 
 export interface NavSection {
   heading: string;
+  /** Which of the four SFL programmes this section belongs to. Drives what a user sees. */
+  programme: ProgrammeCode;
   items: NavItem[];
 }
 
@@ -105,6 +118,7 @@ export const emergencyPaths = {
 export const navSections: NavSection[] = [
   {
     heading: 'Operations',
+    programme: 'FTLMP',
     items: [
       {
         label: 'Dashboard',
@@ -130,6 +144,7 @@ export const navSections: NavSection[] = [
   },
   {
     heading: 'Registers',
+    programme: 'FTLMP',
     items: [
       {
         label: 'Vehicle register',
@@ -149,6 +164,7 @@ export const navSections: NavSection[] = [
   },
   {
     heading: 'Assurance',
+    programme: 'FTLMP',
     items: [
       {
         label: 'Compliance & service',
@@ -172,6 +188,7 @@ export const navSections: NavSection[] = [
   },
   {
     heading: 'Fuel & driver logbooks',
+    programme: 'FTLMP',
     items: [
       {
         label: 'Fuel dashboard',
@@ -229,6 +246,7 @@ export const navSections: NavSection[] = [
   },
   {
     heading: 'Courier & dispatch',
+    programme: 'FTLMP',
     items: [
       {
         label: 'Dispatch dashboard',
@@ -278,7 +296,11 @@ export const navSections: NavSection[] = [
     ],
   },
   {
+    // SSEMP, not FTLMP. S174 is its own deployable service but it belongs to the safety,
+    // security and emergency programme — so a fleet operator does not see it, and a SOC
+    // operator or emergency coordinator does. ADR 0005.
     heading: 'Emergency notifications',
+    programme: 'SSEMP',
     items: [
       {
         label: 'Emergency dashboard',
@@ -328,9 +350,29 @@ export const navSections: NavSection[] = [
   },
 ];
 
+/**
+ * How the application names itself.
+ *
+ * `module` is no longer fixed: which programme an operator is looking at depends on what they are
+ * entitled to, so the shell reads it from `portalLabel()` rather than from a constant that was only
+ * ever true for a fleet user.
+ */
 export const directorate = {
   name: 'Safety, Facilities & Logistics',
   shortName: 'SFL Operations',
-  module: 'Fleet & Logistics',
   parentOrganisation: 'CLET',
 };
+
+/** The navigation sections this actor is entitled to, in declared order. */
+export const entitledSections = (): NavSection[] =>
+  navSections.filter((section) => entitledTo(section.programme));
+
+/**
+ * Where an actor lands when they open the application.
+ *
+ * The first destination of the first programme they are entitled to — **not** the fleet dashboard,
+ * which is only the right answer for a fleet user. `null` when they are entitled to nothing, which
+ * the router turns into an explanation rather than a redirect loop.
+ */
+export const landingPath = (): string | null =>
+  entitledSections()[0]?.items[0]?.to ?? null;

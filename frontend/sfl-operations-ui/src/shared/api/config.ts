@@ -61,18 +61,28 @@ export const emergencyApiBaseUrl = readOptionalEnv(
  * composes and sends, the command role approves and records after-action approval, the auditor
  * exports, and the integration engineer replays a dead letter.
  *
- * **In production these are four different people**, and the S174 screens are built on that: the
- * approve button does not appear for an actor who cannot use it. A single actor holding all of them
- * is a local-development convenience, not the design. This default is kept in step with
- * `.env.production`; `.env` is git-ignored, so a developer with an older one must add the four
- * emergency roles by hand or every emergency screen will answer 403.
+ * **In production these are different people**, and the S174 screens are built on that: the approve
+ * button does not appear for an actor who cannot use it. A single actor holding all of them is a
+ * local-development convenience, not the design.
+ *
+ * This list is also what `shared/layout/programmes.ts` derives programme entitlement from, so
+ * dropping the two SSEMP roles here is all it takes to see the dashboard as a fleet operator does —
+ * the emergency section disappears from the sidebar and its routes are refused.
+ *
+ * Two earlier entries were **not real roles**: `FLEET_DISPATCHER` and `FLEET_AUDITOR` are not in
+ * `SflRole`, so every service silently dropped them and they granted nothing. Replaced with the
+ * real `DISPATCH_CONTROLLER` and `FLEET_REPORTING_VIEWER`. Kept in step with `.env.production`;
+ * `.env` is git-ignored, so an older local one must be corrected by hand.
  */
 const defaultRoles = [
+  // SFL.FTLMP
   'FLEET_MANAGER',
-  'FLEET_DISPATCHER',
-  'FLEET_AUDITOR',
+  'DISPATCH_CONTROLLER',
+  'FLEET_REPORTING_VIEWER',
+  // SFL.SSEMP
   'EMERGENCY_COORDINATOR',
   'COMMAND_ROLE',
+  // Cross-programme oversight and integration
   'AUDITOR',
   'INTEGRATION_ENGINEER',
 ].join(',');
