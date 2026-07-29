@@ -23,11 +23,11 @@ interface SelectProps {
 }
 
 /**
- * The console's dropdown.
+ * The dashboard's dropdown.
  *
  * A native `<select>` was correct but felt abrupt: the operating system paints the list instantly,
  * in its own font, ignoring everything around it. This is a listbox that opens in the page — it
- * eases in, matches the console's type and spacing, and marks the current choice.
+ * eases in, matches the dashboard's type and spacing, and marks the current choice.
  *
  * It keeps everything the native control gave away for free, because a dropdown that cannot be
  * driven from the keyboard is a dropdown half the operators cannot use: Up/Down move through

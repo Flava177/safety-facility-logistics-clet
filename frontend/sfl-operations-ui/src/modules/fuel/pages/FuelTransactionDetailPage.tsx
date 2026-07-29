@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
-import { FuelAnomalyCase } from 'modules/fuel/api/dto';
+import { FuelAnomalyCase, rulePassed } from 'modules/fuel/api/dto';
 import {
   NON_RECONCILIATION_RULES,
   RULE_DESCRIPTIONS,
@@ -14,7 +14,7 @@ import {
   transactionVoidable,
 } from 'modules/fuel/api/workflow';
 import { VoidTransactionDialog } from 'modules/fuel/dialogs/transactionDialogs';
-import RecordProvenance, { DerivedNote } from 'modules/fuel/components/Provenance';
+import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
 import {
   formatMoney,
   formatQuantity,
@@ -26,6 +26,7 @@ import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import Icon from 'shared/components/Icon';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -38,12 +39,11 @@ import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
 /**
  * A fuel transaction, its reconciliation outcome and the cases that outcome raised.
  *
- * The reconciliation panel is the honest half of a screen that should show more. The service
- * evaluates fourteen named rules and stores every outcome in `fuel_reconciliations.rule_results`,
- * but exposes no way to read them (gap 1). What *is* readable is the transaction's own status and
- * the anomaly cases the run created, each carrying the rule that raised it in `detectedRules` — so
- * the panel lists the rules that **failed**, by name, and says plainly that the ones that passed
- * are not available.
+ * The reconciliation panel reads the stored run: every rule the policy applied, passed and failed
+ * alike, with the policy version it was judged against. That is the whole decision, reproducible.
+ * It used to be half a decision — the rule outcomes were written on every run and readable from
+ * none of it, so the panel could only infer the *failures* from the cases they raised and had to
+ * say that the rules which passed were unavailable.
  */
 const FuelTransactionDetailPage = () => {
   const { transactionId = '' } = useParams();
@@ -59,33 +59,58 @@ const FuelTransactionDetailPage = () => {
 
   const siteCode = transaction.data ? siteOf(transaction.data.siteCode) : '';
 
-  /**
-   * The anomaly cases raised against this transaction.
-   *
-   * `GET /anomalies` has no `transactionId` filter (gap 5), so the site's cases are fetched and
-   * matched here. The list is bounded by the same unpaged window as everywhere else.
-   */
+  /** The cases raised against this transaction, filtered by the service. */
   const anomalies = useApiQuery(
     (signal) =>
-      siteCode ? fuelAnomaliesApi.search({ siteCode }, signal) : Promise.resolve(undefined),
-    [siteCode],
+      siteCode
+        ? fuelAnomaliesApi.search({ siteCode, transactionId }, signal)
+        : Promise.resolve(undefined),
+    [siteCode, transactionId],
   );
 
-  const relatedCases = useMemo(
-    () => (anomalies.data ?? []).filter((anomaly) => anomaly.transactionId === transactionId),
-    [anomalies.data, transactionId],
+  /**
+   * Every reconciliation run against this transaction, newest first.
+   *
+   * This is what the screen was built around and could not have: the stored per-rule outcomes. The
+   * panel below shows the rules that **passed** as well as the ones that failed, and the policy
+   * version each run applied.
+   */
+  const runs = useApiQuery(
+    (signal) => fuelTransactionsApi.reconciliations(transactionId, signal),
+    [transactionId],
   );
 
-  /** Every rule name the related cases recorded, de-duplicated. These are the rules that failed. */
-  const failedRules = useMemo(() => {
-    const rules = new Set<string>();
-    relatedCases.forEach((anomaly) => anomaly.detectedRules.forEach((rule) => rules.add(rule)));
-    return [...rules];
-  }, [relatedCases]);
+  const history = useApiQuery(
+    (signal) => fuelTransactionsApi.history(transactionId, signal),
+    [transactionId],
+  );
+
+  const relatedCases = useMemo(() => anomalies.data?.content ?? [], [anomalies.data]);
+
+  /** The most recent run is the one that decided the record's current status. */
+  const latestRun = runs.data?.[0];
+
+  const failedRules = useMemo(
+    () =>
+      Object.entries(latestRun?.ruleResults ?? {})
+        .filter(([, outcome]) => !rulePassed(outcome))
+        .map(([rule]) => rule),
+    [latestRun],
+  );
+
+  const passedRules = useMemo(
+    () =>
+      Object.entries(latestRun?.ruleResults ?? {})
+        .filter(([, outcome]) => rulePassed(outcome))
+        .map(([rule]) => rule),
+    [latestRun],
+  );
 
   const refreshAll = () => {
     transaction.refetch();
     anomalies.refetch();
+    runs.refetch();
+    history.refetch();
   };
 
   const reconcile = async () => {
@@ -292,53 +317,91 @@ const FuelTransactionDetailPage = () => {
 
                 <SectionCard
                   title="Reconciliation"
-                  subtitle="What the policy rules made of this transaction"
+                  subtitle={
+                    latestRun
+                      ? `Policy version ${latestRun.policyVersion ?? '—'} · evaluated ${formatDateTime(latestRun.evaluatedAt)}`
+                      : 'What the policy rules made of this transaction'
+                  }
+                  actions={
+                    runs.data && runs.data.length > 1 ? (
+                      <span className="text-theme-xs text-gray-600">
+                        {runs.data.length} runs recorded
+                      </span>
+                    ) : undefined
+                  }
                 >
-                  {!transactionReconciled(record) ? (
-                    <Alert variant="info" title="Reconciliation has not run">
-                      This transaction is {humanise(record.status).toLowerCase()}. It contributes to
-                      the site’s totals but has not been judged against a policy, so no rule outcome
-                      exists yet.
-                    </Alert>
-                  ) : record.status === 'RECONCILED' ? (
-                    <Alert variant="success" title="Every rule passed">
-                      The transaction was reconciled against the policy in force when it occurred and
-                      raised no exception.
-                    </Alert>
-                  ) : (
-                    <div className="space-y-3">
-                      <Alert
-                        variant="error"
-                        title={`${failedRules.length || relatedCases.length} rule${
-                          failedRules.length === 1 ? '' : 's'
-                        } failed`}
-                      >
-                        Each failure raised the case listed below. A case stays open until it is
-                        explained, decided and closed.
+                  <DataState
+                    loading={runs.initialising}
+                    error={runs.error}
+                    onRetry={runs.refetch}
+                    minHeight={140}
+                  >
+                    {!latestRun ? (
+                      <Alert variant="info" title="Reconciliation has not run">
+                        This transaction is {humanise(record.status).toLowerCase()}. It contributes
+                        to the site’s totals but has not been judged against a policy, so no rule
+                        outcome exists yet.
                       </Alert>
-                      <ul className="space-y-2.5">
-                        {failedRules.map((rule) => (
-                          <li key={rule} className="rounded-md border border-gray-200 px-3.5 py-2.5">
-                            <p className="text-theme-sm font-semibold text-gray-900">
-                              {humanise(rule)}
-                            </p>
-                            <p className="mt-0.5 text-theme-sm text-gray-700">
-                              {RULE_DESCRIPTIONS[rule as ReconciliationRule] ??
-                                NON_RECONCILIATION_RULES[rule] ??
-                                'This rule is recorded by the service but is not described here.'}
-                            </p>
-                          </li>
-                        ))}
-                      </ul>
-                    </div>
-                  )}
-                  {transactionReconciled(record) && (
-                    <DerivedNote>
-                      The failed rules are read from the anomaly cases this run raised. The service
-                      stores every rule’s outcome, including the ones that passed, but exposes no
-                      endpoint to read them — so the rules that passed cannot be listed here.
-                    </DerivedNote>
-                  )}
+                    ) : (
+                      <div className="space-y-3">
+                        {failedRules.length === 0 ? (
+                          <Alert variant="success" title="Every rule passed">
+                            All {passedRules.length} rules the policy applied were satisfied.
+                          </Alert>
+                        ) : (
+                          <Alert
+                            variant="error"
+                            title={`${failedRules.length} of ${failedRules.length + passedRules.length} rules failed`}
+                          >
+                            Each failure raised the case listed below. A case stays open until it is
+                            explained, decided and closed.
+                          </Alert>
+                        )}
+
+                        {latestRun.calculatedConsumption !== null && (
+                          <p className="text-theme-sm text-gray-700">
+                            Calculated consumption: {latestRun.calculatedConsumption}{' '}
+                            {record.quantityUnit.toLowerCase()} per kilometre since the previous
+                            transaction for this vehicle.
+                          </p>
+                        )}
+
+                        {/* Every rule the run evaluated, failures first — the outcome map the
+                            service stores, read in full rather than inferred from the cases. */}
+                        <ul className="space-y-2">
+                          {[...failedRules, ...passedRules].map((rule) => {
+                            const failed = failedRules.includes(rule);
+                            return (
+                              <li
+                                key={rule}
+                                className="flex items-start gap-2.5 rounded-md border border-gray-200 px-3.5 py-2.5"
+                              >
+                                <Icon
+                                  name={failed ? 'alert-circle' : 'check-circle'}
+                                  size={15}
+                                  className={
+                                    failed
+                                      ? 'mt-0.5 shrink-0 text-error-800'
+                                      : 'mt-0.5 shrink-0 text-success-700'
+                                  }
+                                />
+                                <div className="min-w-0">
+                                  <p className="text-theme-sm font-semibold text-gray-900">
+                                    {humanise(rule)}
+                                  </p>
+                                  <p className="mt-0.5 text-theme-sm text-gray-700">
+                                    {RULE_DESCRIPTIONS[rule as ReconciliationRule] ??
+                                      NON_RECONCILIATION_RULES[rule] ??
+                                      'This rule is recorded by the service but is not described here.'}
+                                  </p>
+                                </div>
+                              </li>
+                            );
+                          })}
+                        </ul>
+                      </div>
+                    )}
+                  </DataState>
                 </SectionCard>
 
                 <SectionCard
@@ -392,18 +455,23 @@ const FuelTransactionDetailPage = () => {
                   />
                 </SectionCard>
 
-                <SectionCard title="History">
-                  <RecordProvenance
-                    metadata={record.metadata}
-                    recordNoun="transaction"
-                    milestones={[
-                      {
-                        label: 'Received from source',
-                        at: record.ingestionTimestamp,
-                        detail: `Source system ${record.sourceSystem}`,
-                      },
-                    ]}
-                  />
+                <SectionCard
+                  title="History"
+                  subtitle="Recorded transitions, from the audit log"
+                  actions={
+                    <Button variant="ghost" size="sm" startIcon="refresh" onClick={history.refetch}>
+                      Refresh
+                    </Button>
+                  }
+                >
+                  <DataState
+                    loading={history.initialising}
+                    error={history.error}
+                    onRetry={history.refetch}
+                    minHeight={140}
+                  >
+                    <HistoryTimeline events={history.data} recordNoun="transaction" />
+                  </DataState>
                 </SectionCard>
 
                 <SectionCard title="Lifecycle" subtitle="Where this record can go next">
@@ -419,13 +487,13 @@ const FuelTransactionDetailPage = () => {
                       </li>
                     ))}
                   </ol>
-                  <DerivedNote>
+                  <p className="mt-3 text-theme-xs text-gray-600">
                     The status enum also declares{' '}
                     {UNREACHABLE_TRANSACTION_STATUSES.map((state) =>
                       humanise(state).toLowerCase(),
                     ).join(', ')}
                     . No service code path writes them, so a record will not reach them.
-                  </DerivedNote>
+                  </p>
                 </SectionCard>
               </div>
             </div>

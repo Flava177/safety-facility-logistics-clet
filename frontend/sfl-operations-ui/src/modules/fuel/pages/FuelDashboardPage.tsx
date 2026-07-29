@@ -4,12 +4,13 @@ import dayjs from 'dayjs';
 import { DriverLogbook, FuelAnomalyCase, FuelTransaction } from 'modules/fuel/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import {
+  MAX_PAGE_SIZE,
   driverLogbooksApi,
   fuelAnomaliesApi,
   fuelDashboardApi,
   fuelTransactionsApi,
 } from 'modules/fuel/api/fuelApi';
-import { anomalyOpen, anomalySlaBreached } from 'modules/fuel/api/workflow';
+import { anomalySlaBreached } from 'modules/fuel/api/workflow';
 import AnomalyMixChart, { AnomalyBar } from 'modules/fuel/charts/AnomalyMixChart';
 import ReconciliationChart from 'modules/fuel/charts/ReconciliationChart';
 import SpendChart, { SpendPoint } from 'modules/fuel/charts/SpendChart';
@@ -36,9 +37,6 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
 
 const SPEND_DAYS = 14;
-
-/** Logbook statuses that are sitting in somebody's review queue rather than with the driver. */
-const AWAITING_REVIEW = ['SUBMITTED', 'RESUBMITTED', 'UNDER_REVIEW'];
 
 /**
  * Buckets transactions into one point per day so the chart window is fixed even where a day has no
@@ -82,11 +80,12 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
 /**
  * The Fuel & Driver Logbooks workspace.
  *
- * The five figures the service publishes sit in the top row. Everything else on this page is
- * **derived from records the console fetched** — the anomaly counts, the logbook review queue and
- * the spend trend — because `GET /api/v1/fuel/dashboard` returns transaction totals and nothing
- * else (gap 6). Every derived panel says so in its own caption, and none of them are dressed up as
- * service indicators.
+ * Every indicator here is published by the service and counted across the whole site. That was not
+ * true when this screen was first built: the dashboard endpoint returned five transaction figures,
+ * so the anomaly, logbook and reconciliation counts had to be derived from whatever list this
+ * application could fetch, and were captioned to say so. The endpoint counts them itself now, so the derived
+ * section is gone and the only remaining caption is on the spend trend, which really is bucketed
+ * here — there is still no time-series endpoint.
  *
  * `siteCode` is required by every fuel endpoint, so this page is single-site by construction. There
  * is no "all sites" option, because there is no query that would answer it.
@@ -110,48 +109,51 @@ const FuelDashboardPage = () => {
     [siteCode],
   );
 
+  /** The spend trend still needs the records themselves — there is no time-series endpoint. */
   const recentTransactions = useApiQuery(
     (signal) =>
-      fuelTransactionsApi.search({ siteCode, from: windowStart, to: windowEnd }, signal),
+      fuelTransactionsApi.search(
+        { siteCode, from: windowStart, to: windowEnd, size: MAX_PAGE_SIZE },
+        signal,
+      ),
     [siteCode, windowStart, windowEnd],
   );
 
+  /**
+   * Open cases, a page at a time.
+   *
+   * A page is enough for the exception list, which shows six, but the by-type chart wants the whole
+   * set and there is no aggregation endpoint — so it asks for the largest page the service allows
+   * and the chart says how many cases it covers. The *counts* above it come from the dashboard
+   * snapshot, which counts across the site.
+   */
   const anomalies = useApiQuery(
-    (signal) => fuelAnomaliesApi.search({ siteCode }, signal),
+    (signal) =>
+      fuelAnomaliesApi.search({ siteCode, openOnly: true, size: MAX_PAGE_SIZE }, signal),
     [siteCode],
   );
 
   const logbooks = useApiQuery(
-    (signal) => driverLogbooksApi.search({ siteCode }, signal),
+    (signal) => driverLogbooksApi.search({ siteCode, status: 'SUBMITTED', size: 6 }, signal),
     [siteCode],
   );
 
   const unreconciled = useApiQuery(
-    (signal) => fuelTransactionsApi.search({ siteCode, status: 'RECEIVED' }, signal),
+    (signal) => fuelTransactionsApi.search({ siteCode, status: 'RECEIVED', size: 6 }, signal),
     [siteCode],
   );
 
   const data = snapshot.data;
 
-  const openAnomalies = useMemo(
-    () => (anomalies.data ?? []).filter(anomalyOpen),
-    [anomalies.data],
-  );
-  const breachingAnomalies = useMemo(
-    () => openAnomalies.filter((anomaly) => anomalySlaBreached(anomaly)),
-    [openAnomalies],
-  );
-  const pendingReviews = useMemo(
-    () => (logbooks.data ?? []).filter((logbook) => AWAITING_REVIEW.includes(logbook.status)),
-    [logbooks.data],
-  );
+  const openAnomalies = useMemo(() => anomalies.data?.content ?? [], [anomalies.data]);
+  const pendingReviews = useMemo(() => logbooks.data?.content ?? [], [logbooks.data]);
 
   /** The currency and unit the site actually transacts in, taken from its own records. */
-  const currencyCode = currencyCodeOf(recentTransactions.data?.[0]?.currency);
-  const quantityUnit = recentTransactions.data?.[0]?.quantityUnit ?? '';
+  const currencyCode = currencyCodeOf(recentTransactions.data?.content?.[0]?.currency);
+  const quantityUnit = recentTransactions.data?.content?.[0]?.quantityUnit ?? '';
 
   const spendPoints = useMemo(
-    () => bucketByDay(recentTransactions.data ?? [], SPEND_DAYS),
+    () => bucketByDay(recentTransactions.data?.content ?? [], SPEND_DAYS),
     [recentTransactions.data],
   );
 
@@ -329,15 +331,12 @@ const FuelDashboardPage = () => {
               )}
 
               {/*
-               * Two rows, and the split between them is the point. The first five figures are what
-               * the service publishes. The last three are counted by this console from records it
-               * fetched, and are marked as such — a derived figure sitting silently in a KPI row is
-               * exactly how a dashboard starts lying.
+               * Nine indicators, all published by the service. The split into "from the snapshot"
+               * and "counted by this application" that this row used to carry is gone: the dashboard
+               * endpoint now counts the anomaly, logbook and import figures itself, across the whole
+               * site rather than across whatever page the dashboard happened to fetch.
                */}
               <div>
-                <h2 className="mb-3 text-theme-sm font-semibold text-gray-700">
-                  From the service snapshot
-                </h2>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
                   <StatCard
                     label="Transactions"
@@ -379,51 +378,40 @@ const FuelDashboardPage = () => {
                     onClick={() => navigate(`${fuelPaths.transactions}?status=EXCEPTION`)}
                   />
                 </div>
-              </div>
-
-              <div>
-                <h2 className="mb-3 text-theme-sm font-semibold text-gray-700">
-                  Counted from the records this console fetched
-                </h2>
-                <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+                <div className="mt-4 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                   <StatCard
                     label="Open anomaly cases"
-                    value={formatNumber(openAnomalies.length)}
+                    value={formatNumber(data.openAnomalies)}
                     icon="alert-triangle"
-                    tone={openAnomalies.length > 0 ? 'caution' : 'neutral'}
-                    caption="Neither closed nor cancelled"
+                    tone={data.openAnomalies > 0 ? 'caution' : 'neutral'}
+                    caption={`${formatNumber(data.unassignedAnomalies)} unassigned`}
                     onClick={() => navigate(fuelPaths.anomalies)}
                   />
                   <StatCard
                     label="Breaching SLA"
-                    value={formatNumber(breachingAnomalies.length)}
+                    value={formatNumber(data.anomaliesBreachingSla)}
                     icon="clock"
-                    tone={breachingAnomalies.length > 0 ? 'critical' : 'neutral'}
-                    caption="Past the policy’s resolution target"
+                    tone={data.anomaliesBreachingSla > 0 ? 'critical' : 'neutral'}
+                    caption={`${formatNumber(data.materialOpenAnomalies)} material`}
                     onClick={() => navigate(fuelPaths.anomalies)}
                   />
                   <StatCard
                     label="Logbooks awaiting review"
-                    value={formatNumber(pendingReviews.length)}
+                    value={formatNumber(data.pendingLogbookReviews)}
                     icon="book"
-                    tone={pendingReviews.length > 0 ? 'caution' : 'neutral'}
-                    caption="Submitted, resubmitted or under review"
+                    tone={data.pendingLogbookReviews > 0 ? 'caution' : 'neutral'}
+                    caption={`${formatNumber(data.draftLogbooks)} still in draft`}
                     onClick={() => navigate(`${fuelPaths.logbooks}?status=SUBMITTED`)}
                   />
                   <StatCard
                     label="Awaiting reconciliation"
-                    value={formatNumber(unreconciled.data?.length ?? 0)}
+                    value={formatNumber(data.awaitingReconciliation)}
                     icon="scale"
-                    tone={(unreconciled.data?.length ?? 0) > 0 ? 'caution' : 'neutral'}
+                    tone={data.awaitingReconciliation > 0 ? 'caution' : 'neutral'}
                     caption="Received but not yet run"
                     onClick={() => navigate(fuelPaths.reconciliation)}
                   />
                 </div>
-                <DerivedNote>
-                  These four are counted by this console from the anomaly, logbook and transaction
-                  lists it fetched for {siteCode} — the fuel dashboard endpoint publishes transaction
-                  totals only. Each is capped by the service’s unpaged window.
-                </DerivedNote>
               </div>
 
               <div className="grid gap-5 xl:grid-cols-3">
@@ -444,7 +432,7 @@ const FuelDashboardPage = () => {
                       unit={quantityUnit}
                     />
                     <DerivedNote>
-                      Bucketed by day from the {recentTransactions.data?.length ?? 0} transactions
+                      Bucketed by day from the {recentTransactions.data?.totalElements ?? 0} transactions
                       returned for this window. The fuel service exposes no time-series endpoint.
                     </DerivedNote>
                   </DataState>
@@ -489,9 +477,7 @@ const FuelDashboardPage = () => {
                     minHeight={160}
                   >
                     <DataTable
-                      rows={[...openAnomalies]
-                        .sort((left, right) => left.slaDueAt.localeCompare(right.slaDueAt))
-                        .slice(0, 6)}
+                      rows={openAnomalies.slice(0, 6)}
                       columns={anomalyColumns}
                       getRowId={(row) => row.id}
                       loading={anomalies.loading}
@@ -552,7 +538,7 @@ const FuelDashboardPage = () => {
                   >
                     <AnomalyMixChart bars={anomalyBars} />
                     <DerivedNote>
-                      Counted from the {openAnomalies.length} open cases this console fetched. A case
+                      Counted from the {openAnomalies.length} open cases on this page of the queue. A case
                       counts as urgent when it is material or past its SLA.
                     </DerivedNote>
                   </DataState>
@@ -576,14 +562,14 @@ const FuelDashboardPage = () => {
                   <DataState
                     loading={unreconciled.initialising}
                     error={unreconciled.error}
-                    empty={(unreconciled.data?.length ?? 0) === 0}
+                    empty={(unreconciled.data?.totalElements ?? 0) === 0}
                     emptyTitle="Everything has been reconciled"
                     emptyHint="No transaction at this site is still in the received state."
                     onRetry={unreconciled.refetch}
                     minHeight={160}
                   >
                     <DataTable
-                      rows={(unreconciled.data ?? []).slice(0, 6)}
+                      rows={unreconciled.data?.content ?? []}
                       columns={unreconciledColumns}
                       getRowId={(row) => row.id}
                       loading={unreconciled.loading}

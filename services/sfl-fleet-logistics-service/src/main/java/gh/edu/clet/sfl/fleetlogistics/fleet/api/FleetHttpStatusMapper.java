@@ -36,7 +36,9 @@ final class FleetHttpStatusMapper {
                  FLEET_ASSIGNMENT_CONFLICT,
                  FLEET_SLA_BREACH,
                  FLEET_AUDIT_CHAIN_FAILURE,
-                 FLEET_IDEMPOTENCY_KEY_CONFLICT -> HttpStatus.CONFLICT;
+                 FLEET_IDEMPOTENCY_KEY_CONFLICT,
+                 FUEL_POLICY_PERIOD_OVERLAP,
+                 FUEL_IMPORT_ALREADY_PROCESSED -> HttpStatus.CONFLICT;
 
             case FLEET_MISSING_SITE_SCOPE,
                  FLEET_CLOSURE_EVIDENCE_MISSING,

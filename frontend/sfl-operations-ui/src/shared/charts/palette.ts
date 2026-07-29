@@ -2,7 +2,7 @@
  * Chart colours, taken from the CLET design system's Base collection.
  *
  * ApexCharts renders to SVG with inline attributes and cannot resolve the CSS custom properties the
- * rest of the console is themed with, so the values are restated here as literals. They are copied
+ * rest of the dashboard is themed with, so the values are restated here as literals. They are copied
  * from `src/index.css` — change one, change the other, or a chart and its legend will drift apart.
  *
  * The categorical order is deliberate and short. Deep Teal, CLET Gold and a mid navy are far apart

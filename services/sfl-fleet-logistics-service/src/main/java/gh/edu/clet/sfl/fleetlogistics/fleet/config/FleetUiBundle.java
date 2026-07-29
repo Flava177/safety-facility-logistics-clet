@@ -3,10 +3,10 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.config;
 import org.springframework.core.io.ClassPathResource;
 
 /**
- * Where the built SFL Operations UI lives on the classpath, and whether it is actually there.
+ * Where the built SFL Operations dashboards lives on the classpath, and whether it is actually there.
  *
  * <p>Kept in one place so the web wiring and the startup banner cannot disagree about whether the
- * console is being served.
+ * dashboard is being served.
  */
 final class FleetUiBundle {
 

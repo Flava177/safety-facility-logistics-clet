@@ -23,7 +23,7 @@ import { fleetPaths } from 'shared/layout/navigation';
  * Why this driver's status is what it is, read off the record itself.
  *
  * An eligible driver gets nothing rather than an empty panel: a heading with no findings under it
- * reads as a question the console failed to answer.
+ * reads as a question the dashboard failed to answer.
  */
 const EligibilitySummary = ({ driver }: { driver: DriverResponse }) => {
   const reasons =

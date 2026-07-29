@@ -10,7 +10,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
  * `FuelFleetReferencePort.resolve` refuses anything it cannot find. Asking an operator to paste a
  * UUID is how that refusal happens: the identifiers are not on any paperwork, and a mistyped one is
  * a round trip for a message that names a field the operator never saw. These select out of the
- * fleet registers for the same site instead, so the console can only offer references that exist.
+ * fleet registers for the same site instead, so the dashboard can only offer references that exist.
  *
  * The lists are scoped to the site the form is submitting for, and reload when it changes. A vehicle
  * or driver at a site the actor cannot read simply is not offered — the fleet search already applies

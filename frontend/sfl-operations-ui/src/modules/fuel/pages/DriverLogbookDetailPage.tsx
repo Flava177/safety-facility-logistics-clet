@@ -8,7 +8,7 @@ import {
   logbookTransitionAllowed,
 } from 'modules/fuel/api/workflow';
 import { LogbookTransitionDialog } from 'modules/fuel/dialogs/logbookDialogs';
-import RecordProvenance from 'modules/fuel/components/Provenance';
+import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -48,9 +48,9 @@ const TRANSITION_ORDER: LogbookTransition[] = [
  * A driver logbook, its journey detail and every transition legal from where it stands.
  *
  * Which buttons appear is decided by the record's own `requireState` guards, transcribed in
- * `workflow.ts` — so the console offers approve only from under review, cancel only from draft,
+ * `workflow.ts` — so the dashboard offers approve only from under review, cancel only from draft,
  * submitted or returned, and reopen only from approved. The service still decides; this just stops
- * the console offering an action that can only be refused.
+ * the dashboard offering an action that can only be refused.
  */
 const DriverLogbookDetailPage = () => {
   const { logbookId = '' } = useParams();
@@ -64,6 +64,17 @@ const DriverLogbookDetailPage = () => {
     [logbookId],
   );
 
+  /** The record's real transitions, from the audit log. */
+  const history = useApiQuery(
+    (signal) => driverLogbooksApi.history(logbookId, signal),
+    [logbookId],
+  );
+
+  const refreshAll = () => {
+    logbook.refetch();
+    history.refetch();
+  };
+
   const record = logbook.data;
 
   /**
@@ -76,7 +87,7 @@ const DriverLogbookDetailPage = () => {
     try {
       await driverLogbooksApi.transition(logbookId, 'review', { comment: null });
       notifySuccess(CONFIRMATIONS.review);
-      logbook.refetch();
+      refreshAll();
     } catch (error) {
       // Shown with the service's own wording — a refused transition is never silent.
       notifyError(error);
@@ -288,24 +299,23 @@ const DriverLogbookDetailPage = () => {
               </div>
 
               <div className="space-y-5">
-                <SectionCard title="History">
-                  <RecordProvenance
-                    metadata={record.metadata}
-                    recordNoun="logbook"
-                    milestones={[
-                      {
-                        label: 'Submitted for review',
-                        at: record.submittedAt,
-                        detail: record.transitionReason,
-                      },
-                      {
-                        label: 'Approved',
-                        at: record.approvedAt,
-                        detail: record.reviewComment,
-                        tone: 'accent',
-                      },
-                    ]}
-                  />
+                <SectionCard
+                  title="History"
+                  subtitle="Recorded transitions, from the audit log"
+                  actions={
+                    <Button variant="ghost" size="sm" startIcon="refresh" onClick={history.refetch}>
+                      Refresh
+                    </Button>
+                  }
+                >
+                  <DataState
+                    loading={history.initialising}
+                    error={history.error}
+                    onRetry={history.refetch}
+                    minHeight={160}
+                  >
+                    <HistoryTimeline events={history.data} recordNoun="logbook" />
+                  </DataState>
                 </SectionCard>
 
                 <SectionCard title="Where this can go next">
@@ -359,7 +369,7 @@ const DriverLogbookDetailPage = () => {
                 onClose={() => setDialog(null)}
                 onSaved={() => {
                   notifySuccess(CONFIRMATIONS[dialog]);
-                  logbook.refetch();
+                  refreshAll();
                 }}
               />
             )}

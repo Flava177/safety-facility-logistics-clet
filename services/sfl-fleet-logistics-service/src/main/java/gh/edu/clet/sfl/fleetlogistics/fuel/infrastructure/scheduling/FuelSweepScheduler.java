@@ -23,7 +23,18 @@ import org.springframework.stereotype.Component;
 public class FuelSweepScheduler {
     private static final Logger log=LoggerFactory.getLogger(FuelSweepScheduler.class);private final FuelRepository repo;private final FuelApplicationService service;private final JdbcTemplate jdbc;private final Clock clock;
     public FuelSweepScheduler(FuelRepository r,FuelApplicationService s,JdbcTemplate j,Clock c){repo=r;service=s;jdbc=j;clock=c;}
-    @Scheduled(fixedDelayString="${sfl.fuel.scheduling.fixed-delay:PT5M}",initialDelayString="${sfl.fuel.scheduling.initial-delay:PT45S}") public void sweep(){for(String site:sites()){ActorContext actor=system(site);for(FuelTransaction t:repo.findTransactions(List.of(site),site,FuelTransaction.Status.RECEIVED,null,null,null,null,100))try{service.reconcile(t.id(),actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel reconciliation sweep could not process {}",t.id(),e);}for(UUID id:lateReceiptTransactions(site))try{service.reconcile(id,actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel receipt sweep could not process {}",id,e);}for(MissingLogbook row:missingLogbooks(site))try{service.raiseMissingLogbook(site,row.tripId(),row.vehicleId(),row.driverId(),actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel logbook sweep could not process trip {}",row.tripId(),e);}for(FuelAnomalyCase a:repo.findAnomalies(List.of(site),null,clock.instant(),100))if(a.status()!=FuelAnomalyCase.Status.CLOSED&&a.status()!=FuelAnomalyCase.Status.ESCALATED)try{service.transitionAnomaly(a.id(),"escalate","SLA threshold breached",null,actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel SLA sweep could not escalate {}",a.id(),e);}}}
+    /** One sweep pass reads a bounded window per site; the next pass picks up whatever it did not reach. */
+    private static final int SWEEP_WINDOW=100;
+
+    @Scheduled(fixedDelayString="${sfl.fuel.scheduling.fixed-delay:PT5M}",initialDelayString="${sfl.fuel.scheduling.initial-delay:PT45S}") public void sweep(){for(String site:sites()){ActorContext actor=system(site);
+        var received=new FuelRepository.TransactionQuery(List.of(site),site,FuelTransaction.Status.RECEIVED,null,null,null,null,null,null,new FuelRepository.Paging(0,SWEEP_WINDOW,"occurredAt,asc"));
+        for(FuelTransaction t:repo.findTransactions(received).content())try{service.reconcile(t.id(),actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel reconciliation sweep could not process {}",t.id(),e);}
+        for(UUID id:lateReceiptTransactions(site))try{service.reconcile(id,actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel receipt sweep could not process {}",id,e);}
+        for(MissingLogbook row:missingLogbooks(site))try{service.raiseMissingLogbook(site,row.tripId(),row.vehicleId(),row.driverId(),actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel logbook sweep could not process trip {}",row.tripId(),e);}
+        // Overdue and still open. `openOnly` replaces the status check this loop used to make in
+        // Java, so a case that is already closed or cancelled is never fetched to be skipped.
+        var overdue=new FuelRepository.AnomalyQuery(List.of(site),null,null,null,null,null,null,Boolean.TRUE,clock.instant(),null,null,null,new FuelRepository.Paging(0,SWEEP_WINDOW,"slaDueAt,asc"));
+        for(FuelAnomalyCase a:repo.findAnomalies(overdue).content())if(a.status()!=FuelAnomalyCase.Status.ESCALATED)try{service.transitionAnomaly(a.id(),"escalate","SLA threshold breached",null,actor,SourceChannel.SYSTEM);}catch(RuntimeException e){log.warn("Fuel SLA sweep could not escalate {}",a.id(),e);}}}
     private List<String> sites(){return jdbc.query("""
         SELECT DISTINCT site_code FROM fleet_logistics.fuel_transactions
         UNION SELECT DISTINCT site_code FROM fleet_logistics.fuel_anomaly_cases

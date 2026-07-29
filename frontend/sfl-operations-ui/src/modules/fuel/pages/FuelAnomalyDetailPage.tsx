@@ -14,7 +14,7 @@ import {
   anomalySlaBreached,
 } from 'modules/fuel/api/workflow';
 import { AnomalyActionDialog } from 'modules/fuel/dialogs/anomalyDialogs';
-import RecordProvenance from 'modules/fuel/components/Provenance';
+import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
 import { formatDueIn, siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -87,6 +87,17 @@ const FuelAnomalyDetailPage = () => {
     [anomalyId],
   );
 
+  /** Assignment, explanation, decision, escalation and closure, as recorded. */
+  const history = useApiQuery(
+    (signal) => fuelAnomaliesApi.history(anomalyId, signal),
+    [anomalyId],
+  );
+
+  const refreshAll = () => {
+    anomaly.refetch();
+    history.refetch();
+  };
+
   const record = anomaly.data;
 
   const runDirect = async (action: AnomalyAction) => {
@@ -94,7 +105,7 @@ const FuelAnomalyDetailPage = () => {
     try {
       await fuelAnomaliesApi.transition(anomalyId, action, { value: null, evidenceId: null });
       notifySuccess(CONFIRMATIONS[action]);
-      anomaly.refetch();
+      refreshAll();
     } catch (error) {
       notifyError(error);
     } finally {
@@ -335,8 +346,23 @@ const FuelAnomalyDetailPage = () => {
                   )}
                 </SectionCard>
 
-                <SectionCard title="History">
-                  <RecordProvenance metadata={record.metadata} recordNoun="case" />
+                <SectionCard
+                  title="History"
+                  subtitle="Recorded transitions, from the audit log"
+                  actions={
+                    <Button variant="ghost" size="sm" startIcon="refresh" onClick={history.refetch}>
+                      Refresh
+                    </Button>
+                  }
+                >
+                  <DataState
+                    loading={history.initialising}
+                    error={history.error}
+                    onRetry={history.refetch}
+                    minHeight={160}
+                  >
+                    <HistoryTimeline events={history.data} recordNoun="case" />
+                  </DataState>
                 </SectionCard>
 
                 <SectionCard title="Where this can go next">
@@ -396,7 +422,7 @@ const FuelAnomalyDetailPage = () => {
                 onClose={() => setDialog(null)}
                 onSaved={() => {
                   notifySuccess(CONFIRMATIONS[dialog]);
-                  anomaly.refetch();
+                  refreshAll();
                 }}
               />
             )}

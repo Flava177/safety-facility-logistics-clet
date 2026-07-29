@@ -9,10 +9,9 @@ import {
   AnomalyStatus,
   AnomalyType,
 } from 'modules/fuel/api/enums';
-import { DEFAULT_WINDOW, fuelAnomaliesApi } from 'modules/fuel/api/fuelApi';
-import { anomalyOpen, anomalySlaBreached } from 'modules/fuel/api/workflow';
-import WindowNotice from 'modules/fuel/components/WindowNotice';
-import { useClientWindow } from 'modules/fuel/components/useClientWindow';
+import { fuelAnomaliesApi, fuelDashboardApi } from 'modules/fuel/api/fuelApi';
+import { anomalySlaBreached } from 'modules/fuel/api/workflow';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { formatDueIn } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
@@ -40,11 +39,14 @@ const QUEUE_VIEWS = [
 /**
  * The fuel anomaly queue.
  *
- * `GET /anomalies` accepts a site and a status and nothing else (gap 5), so severity, type,
- * assignee, materiality and SLA standing are all filtered here over the window the service returned
- * — each control says so. That is a real limitation on a queue: with more open cases than the window
- * holds, the "breaching SLA" view is the breaches *in the window*, not at the site. `WindowNotice`
- * makes that visible rather than leaving it to be discovered.
+ * Every filter here reaches the service, including the four queue views. That matters more here
+ * than anywhere else in the module: these filters were once applied in the browser over a capped
+ * window, so "breaching SLA" meant "breaches among the first two hundred cases" — precisely the
+ * queue an operator must not be handed. The service's default ordering is oldest SLA first, which
+ * is what a queue wants.
+ *
+ * The four counters above the table come from the dashboard endpoint, which counts them across the
+ * whole site rather than across a page.
  */
 const FuelAnomaliesPage = () => {
   const navigate = useNavigate();
@@ -59,51 +61,50 @@ const FuelAnomaliesPage = () => {
   const [severity, setSeverity] = useState<AnomalySeverity | ''>('');
   const [assignee, setAssignee] = useState('');
 
+  /** The four views, expressed as the query parameters the service accepts. */
+  const viewParams = useMemo(() => {
+    switch (view) {
+      case 'OPEN':
+        return { openOnly: true };
+      case 'BREACHED':
+        return { openOnly: true, dueBefore: new Date().toISOString() };
+      case 'MATERIAL':
+        return { openOnly: true, material: true };
+      case 'UNASSIGNED':
+        return { openOnly: true, unassigned: true };
+      default:
+        return {};
+    }
+  }, [view]);
+
+  const filterKey = `${siteCode}|${status}|${view}|${type}|${severity}|${assignee}`;
+  const paging = useServerPage(filterKey);
+
   const query = useApiQuery(
-    (signal) => fuelAnomaliesApi.search({ siteCode, status: status || undefined }, signal),
-    [siteCode, status],
+    (signal) =>
+      fuelAnomaliesApi.search(
+        {
+          siteCode,
+          status: status || undefined,
+          type: type || undefined,
+          severity: severity || undefined,
+          assignee: assignee.trim() || undefined,
+          ...viewParams,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
+      ),
+    [filterKey, paging.page, paging.size],
   );
 
-  const all = useMemo(() => query.data ?? [], [query.data]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
-  const filtered = useMemo(() => {
-    let rows = all;
-    if (view === 'OPEN') {
-      rows = rows.filter(anomalyOpen);
-    } else if (view === 'BREACHED') {
-      rows = rows.filter((row) => anomalySlaBreached(row));
-    } else if (view === 'MATERIAL') {
-      rows = rows.filter((row) => row.material && anomalyOpen(row));
-    } else if (view === 'UNASSIGNED') {
-      rows = rows.filter((row) => !row.assignee && anomalyOpen(row));
-    }
-    if (type) {
-      rows = rows.filter((row) => row.type === type);
-    }
-    if (severity) {
-      rows = rows.filter((row) => row.severity === severity);
-    }
-    if (assignee.trim()) {
-      const needle = assignee.trim().toLowerCase();
-      rows = rows.filter((row) => (row.assignee ?? '').toLowerCase().includes(needle));
-    }
-    // Oldest SLA first: a queue is ordered by what is most overdue, not by when it was raised.
-    return [...rows].sort((left, right) => left.slaDueAt.localeCompare(right.slaDueAt));
-  }, [all, view, type, severity, assignee]);
-
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${status}|${view}|${type}|${severity}|${assignee}`,
-    all.length,
+  /** Site-wide counters, published by the service rather than counted from a page. */
+  const indicators = useApiQuery(
+    (signal) => fuelDashboardApi.snapshot(siteCode, signal),
+    [siteCode],
   );
-
-  const openCases = useMemo(() => all.filter(anomalyOpen), [all]);
-  const breached = useMemo(
-    () => openCases.filter((row) => anomalySlaBreached(row)),
-    [openCases],
-  );
-  const material = useMemo(() => openCases.filter((row) => row.material), [openCases]);
-  const unassigned = useMemo(() => openCases.filter((row) => !row.assignee), [openCases]);
 
   const columns = useMemo<Column<FuelAnomalyCase>[]>(
     () => [
@@ -189,7 +190,14 @@ const FuelAnomaliesPage = () => {
         subtitle="The exception queue: assign, explain, decide and close."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Anomaly cases' }]}
         actions={
-          <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
+          <Button
+            variant="outline"
+            startIcon="refresh"
+            onClick={() => {
+              query.refetch();
+              indicators.refetch();
+            }}
+          >
             Refresh
           </Button>
         }
@@ -198,33 +206,33 @@ const FuelAnomaliesPage = () => {
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open cases"
-          value={formatNumber(openCases.length)}
+          value={formatNumber(indicators.data?.openAnomalies ?? 0)}
           icon="alert-triangle"
-          tone={openCases.length > 0 ? 'caution' : 'neutral'}
+          tone={(indicators.data?.openAnomalies ?? 0) > 0 ? 'caution' : 'neutral'}
           caption="Neither closed nor cancelled"
           onClick={() => setView('OPEN')}
         />
         <StatCard
           label="Breaching SLA"
-          value={formatNumber(breached.length)}
+          value={formatNumber(indicators.data?.anomaliesBreachingSla ?? 0)}
           icon="clock"
-          tone={breached.length > 0 ? 'critical' : 'neutral'}
+          tone={(indicators.data?.anomaliesBreachingSla ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Past the policy’s target"
           onClick={() => setView('BREACHED')}
         />
         <StatCard
           label="Material"
-          value={formatNumber(material.length)}
+          value={formatNumber(indicators.data?.materialOpenAnomalies ?? 0)}
           icon="coins"
-          tone={material.length > 0 ? 'critical' : 'neutral'}
+          tone={(indicators.data?.materialOpenAnomalies ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Surfaced to finance and audit"
           onClick={() => setView('MATERIAL')}
         />
         <StatCard
           label="Unassigned"
-          value={formatNumber(unassigned.length)}
+          value={formatNumber(indicators.data?.unassignedAnomalies ?? 0)}
           icon="user-plus"
-          tone={unassigned.length > 0 ? 'caution' : 'neutral'}
+          tone={(indicators.data?.unassignedAnomalies ?? 0) > 0 ? 'caution' : 'neutral'}
           caption="Nobody is accountable yet"
           onClick={() => setView('UNASSIGNED')}
         />
@@ -255,8 +263,7 @@ const FuelAnomaliesPage = () => {
             onChange={setView}
             options={QUEUE_VIEWS}
             allowEmpty
-            emptyLabel="Everything returned"
-            helperText="Filters the loaded records."
+            emptyLabel="Every case"
           />
           <EnumSelect
             label="Type"
@@ -264,7 +271,6 @@ const FuelAnomaliesPage = () => {
             options={ANOMALY_TYPES}
             onChange={(value) => setType(value)}
             allowEmpty
-            helperText="Filters the loaded records."
           />
           <EnumSelect
             label="Severity"
@@ -272,14 +278,12 @@ const FuelAnomaliesPage = () => {
             options={ANOMALY_SEVERITIES}
             onChange={(value) => setSeverity(value)}
             allowEmpty
-            helperText="Filters the loaded records."
           />
           <TextInput
             label="Assignee"
             value={assignee}
             onChange={setAssignee}
             placeholder="Part of a name"
-            helperText="Filters the loaded records."
           />
         </FilterBar>
       </SectionCard>
@@ -293,28 +297,21 @@ const FuelAnomaliesPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(fuelPaths.anomalyDetail(row.id))}
               caption="Fuel anomaly cases matching the current filters, ordered by SLA due time, with assignee, severity, materiality, escalation level and status."
               emptyMessage="No case matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={all.length}
-          requestedSize={DEFAULT_WINDOW}
-          noun="anomaly cases"
-        />
       </div>
     </div>
   );

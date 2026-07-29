@@ -42,7 +42,7 @@ const alignment = {
 } as const;
 
 /**
- * The console's table, styled after the design system's own table component: a grey header band in
+ * The dashboard's table, styled after the design system's own table component: a grey header band in
  * sentence case, hairline row rules, a strong first column and quieter supporting columns.
  *
  * Server-paginated by default because every fleet collection endpoint is paged, and a table that

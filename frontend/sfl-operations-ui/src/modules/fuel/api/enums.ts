@@ -189,7 +189,7 @@ export const CSV_OPTIONAL_HEADERS = [
   'comments',
 ] as const;
 
-/** Fuel products and units the console offers. Free text on the wire — the policy is the authority. */
+/** Fuel products and units the dashboard offers. Free text on the wire — the policy is the authority. */
 export const FUEL_PRODUCTS = ['DIESEL', 'PETROL', 'LPG', 'KEROSENE'] as const;
 export const QUANTITY_UNITS = ['LITRE', 'GALLON', 'KILOGRAM'] as const;
 export const CURRENCIES = ['GHS', 'USD', 'EUR', 'GBP'] as const;

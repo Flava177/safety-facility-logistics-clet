@@ -5,7 +5,6 @@ import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { DateTimeField } from 'shared/components/DateField';
 import { Checkbox, NumberInput, TextInput } from 'shared/components/fields';
-import { formatDate } from 'shared/components/format';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import {
   compose,
@@ -32,49 +31,11 @@ const toSet = (value: string): string[] =>
     .map((entry) => entry.trim().toUpperCase())
     .filter(Boolean);
 
-/**
- * ACTIVE policies whose effective period overlaps the one being created.
- *
- * The domain document states "no overlapping active policy for the same scope" as an invariant, but
- * neither the record nor the application service enforces it and there is no database constraint —
- * see gap 11. So this is a **console check on fetched records**, shown as a warning and deliberately
- * not a block: the service will accept the policy, and a dialog that refuses what the service allows
- * is lying about who is in charge.
- *
- * An open-ended policy (`effectiveTo` null) runs to infinity, which is why the comparison treats a
- * missing end as the largest possible instant on both sides.
- */
-export const overlappingActivePolicies = (
-  policies: FuelPolicy[],
-  siteCode: string,
-  effectiveFrom: string,
-  effectiveTo: string | null,
-): FuelPolicy[] => {
-  const start = new Date(effectiveFrom).getTime();
-  if (Number.isNaN(start)) {
-    return [];
-  }
-  const end = effectiveTo ? new Date(effectiveTo).getTime() : Number.POSITIVE_INFINITY;
-
-  return policies.filter((policy) => {
-    if (policy.status !== 'ACTIVE' || policy.siteCode.value !== siteCode) {
-      return false;
-    }
-    const otherStart = new Date(policy.effectiveFrom).getTime();
-    const otherEnd = policy.effectiveTo
-      ? new Date(policy.effectiveTo).getTime()
-      : Number.POSITIVE_INFINITY;
-    return start < otherEnd && otherStart < end;
-  });
-};
-
 interface CreatePolicyDialogProps {
   open: boolean;
   onClose: () => void;
   onSaved: (policy: FuelPolicy) => void;
   defaultSiteCode: string;
-  /** The site's current policies, used only for the overlap warning. */
-  existingPolicies: FuelPolicy[];
 }
 
 /**
@@ -91,7 +52,6 @@ export const CreatePolicyDialog = ({
   onClose,
   onSaved,
   defaultSiteCode,
-  existingPolicies,
 }: CreatePolicyDialogProps) => {
   const form = useFleetForm({
     initialValues: {
@@ -190,15 +150,6 @@ export const CreatePolicyDialog = ({
     },
   });
 
-  const overlaps = form.values.effectiveFrom
-    ? overlappingActivePolicies(
-        existingPolicies,
-        form.values.siteCode,
-        toInstant(form.values.effectiveFrom) ?? '',
-        toInstant(form.values.effectiveTo),
-      )
-    : [];
-
   return (
     <FormDialog
       open={open}
@@ -211,27 +162,11 @@ export const CreatePolicyDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      {overlaps.length > 0 && (
-        <Alert
-          variant="warning"
-          title={`Overlaps ${overlaps.length} active ${overlaps.length === 1 ? 'policy' : 'policies'}`}
-        >
-          <ul className="mt-1 list-disc space-y-1 pl-4">
-            {overlaps.map((policy) => (
-              <li key={policy.id}>
-                {policy.name} (version {policy.policyVersion}) · from{' '}
-                {formatDate(policy.effectiveFrom)}
-                {policy.effectiveTo ? ` to ${formatDate(policy.effectiveTo)}` : ' with no end date'}
-              </li>
-            ))}
-          </ul>
-          <p className="mt-2">
-            This is a check the console makes against the policies it has loaded — the service does
-            not enforce it and will accept this policy. With two active policies covering one
-            instant, which rules a transaction is judged against is not reproducible.
-          </p>
-        </Alert>
-      )}
+      <Alert variant="info" title="Periods may not overlap">
+        The service refuses a policy whose period overlaps an active one for this site, and names the
+        policies it clashes with. Two active policies covering one instant would make the rules a
+        transaction is judged against depend on which row the query returned.
+      </Alert>
 
       <div className={twoColumn}>
         <SiteSelect

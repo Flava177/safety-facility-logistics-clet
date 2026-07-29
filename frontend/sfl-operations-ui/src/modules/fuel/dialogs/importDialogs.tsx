@@ -12,7 +12,7 @@ import { compose, maxLength, required } from 'shared/validation/validators';
 interface CsvImportDialogProps {
   open: boolean;
   onClose: () => void;
-  onImported: (result: ImportResult, fileName: string) => void;
+  onImported: (result: ImportResult) => void;
   defaultSiteCode: string;
 }
 
@@ -28,8 +28,8 @@ interface CsvImportDialogProps {
  * are the service's to judge, and duplicating that check would mean maintaining a second parser
  * that can disagree with the first.
  *
- * The batch is written to `fuel_import_batches` but no endpoint reads it back (gap 2), so the
- * result this returns is the only view of the import there will be.
+ * The batch is recorded and readable afterwards, so an operator who leaves this screen can come
+ * back to the rejected rows rather than losing them.
  */
 export const CsvImportDialog = ({
   open,
@@ -55,7 +55,7 @@ export const CsvImportDialog = ({
         values.sourceSystem.trim(),
         file,
       );
-      onImported(result, file.name);
+      onImported(result);
       onClose();
     },
   });
@@ -116,18 +116,12 @@ export const CsvImportDialog = ({
         </p>
       </Alert>
 
-      <Alert variant="warning" title="Do not re-upload a file you have already imported">
-        The batch is keyed on the file’s own content hash, so uploading the same file twice for this
-        site and source system violates a database constraint the service does not map — the upload
-        fails with an unhandled server error rather than a clear message. Nothing is duplicated when
-        it happens, but the failure will not explain itself. Change the file, or the source system.
+      <Alert variant="info" title="A file can only be imported once">
+        The batch is keyed on the file’s own content hash. Re-uploading the same file for this site
+        and source system is refused before any row is captured, and the error names the batch that
+        already holds it.
       </Alert>
 
-      <Alert variant="warning" title="The batch cannot be reopened">
-        The service records the batch and its rows but exposes no endpoint to read them back. The
-        result appears on this screen after the upload and is lost when you leave it — export it or
-        deal with the rejected rows before navigating away.
-      </Alert>
     </FormDialog>
   );
 };

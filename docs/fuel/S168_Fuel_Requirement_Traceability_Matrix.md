@@ -6,7 +6,7 @@
 | SRS-SFL-S168fuel-02 Workflow | Core logbook transitions, reconciliation, anomaly decisions, SLA escalation and sweeps implemented | Partial: hold/reassignment/cancellation/notifications, complete rule set and mandatory workflow scenarios remain open |
 | SRS-SFL-S168fuel-03 Evidence/audit | State changes call the existing audit port and records carry evidence references | Partial: governed evidence/export flows and fuel-specific audit integrity/tamper tests remain open |
 | SRS-SFL-S168fuel-04 Integrations | Signed inbox reuse, provider endpoint, CSV import, Fleet reference/odometer port and outbox events implemented | Partial: strict fuel schema/version tests, replay, Finance/Audit delivery, retry/dead-letter E2E remain open |
-| SRS-SFL-S168fuel-05 Dashboards/reports | Basic site totals, freshness flag, transaction CSV and initial responsive console implemented | Partial: required snapshot dimensions, filters, drilldowns and operational screens remain open |
+| SRS-SFL-S168fuel-05 Dashboards/reports | Basic site totals, freshness flag, transaction CSV and initial responsive dashboard implemented | Partial: required snapshot dimensions, filters, drilldowns and operational screens remain open |
 
 ## Cross-cutting acceptance
 
