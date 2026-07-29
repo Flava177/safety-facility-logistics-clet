@@ -2,10 +2,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { DispatchManifest } from 'modules/dispatch/api/dto';
 import { DISPATCH_STATUSES, DispatchStatus } from 'modules/dispatch/api/enums';
-import { DEFAULT_WINDOW, manifestsApi } from 'modules/dispatch/api/dispatchApi';
+import { manifestsApi } from 'modules/dispatch/api/dispatchApi';
 import { CreateManifestDialog } from 'modules/dispatch/dialogs/manifestDialogs';
-import WindowNotice from 'modules/dispatch/components/WindowNotice';
-import { useClientWindow } from 'modules/dispatch/components/useClientWindow';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -19,6 +17,7 @@ import { DateTimeField } from 'shared/components/DateField';
 import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
 
 /**
@@ -42,6 +41,9 @@ const ManifestsPage = () => {
   const [to, setTo] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const filterKey = `${siteCode}|${status}|${destinationCentre}|${from}|${to}`;
+  const paging = useServerPage(filterKey);
+
   const query = useApiQuery(
     (signal) =>
       manifestsApi.search(
@@ -51,17 +53,15 @@ const ManifestsPage = () => {
           destinationCentre: destinationCentre.trim() || undefined,
           from: from ? new Date(from).toISOString() : undefined,
           to: to ? new Date(to).toISOString() : undefined,
+          page: paging.page,
+          size: paging.size,
         },
         signal,
       ),
-    [siteCode, status, destinationCentre, from, to],
+    [siteCode, status, destinationCentre, from, to, paging.page, paging.size],
   );
 
-  const windowed = useClientWindow(
-    query.data,
-    `${siteCode}|${status}|${destinationCentre}|${from}|${to}`,
-    query.data?.length,
-  );
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
   const columns = useMemo<Column<DispatchManifest>[]>(
     () => [
@@ -170,7 +170,7 @@ const ManifestsPage = () => {
             label="Destination centre"
             value={destinationCentre}
             onChange={setDestinationCentre}
-            placeholder="Exact centre name"
+            placeholder="Part of a centre name"
           />
           <DateTimeField label="From" value={from} onChange={setFrom} />
           <DateTimeField label="To" value={to} onChange={setTo} />
@@ -186,28 +186,21 @@ const ManifestsPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(dispatchPaths.manifestDetail(row.id))}
               caption="Dispatch manifests matching the current filters, with item and seal counts, handler, dispatch time, whether a movement is assigned, and status."
               emptyMessage="No manifest matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={query.data?.length ?? 0}
-          requestedSize={DEFAULT_WINDOW}
-          noun="manifests"
-        />
       </div>
 
       {creating && (

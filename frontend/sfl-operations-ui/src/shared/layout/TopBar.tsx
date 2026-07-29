@@ -3,6 +3,8 @@ import logo from 'assets/sfl-logo.png';
 import { fleetApiBaseUrl, sflActor } from 'shared/api/config';
 import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
+import { directorate } from './navigation';
+import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
 
 const initials = (name: string): string =>
@@ -69,8 +71,10 @@ const TopBar = () => {
           </span>
 
           <p className="min-w-0 truncate text-theme-md font-bold tracking-tight text-white">
-            SFL Operations
-            <span className="ml-2 font-normal text-white/60">— Fleet &amp; Logistics</span>
+            {directorate.shortName}
+            {/* Whichever programme the actor is entitled to, not a fixed "Fleet & Logistics" — that
+                label was only ever true for a fleet user, and this bundle now carries SSEMP too. */}
+            <span className="ml-2 font-normal text-white/60">— {portalLabel()}</span>
           </p>
         </div>
 

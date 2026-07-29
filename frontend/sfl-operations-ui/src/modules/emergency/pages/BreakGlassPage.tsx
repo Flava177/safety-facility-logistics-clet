@@ -64,8 +64,9 @@ const BreakGlassPage = () => {
 
   const records = useSiteRecords(siteCode);
 
+  /** Every break-glass send at this site — a server-side filter now, not a sieve over a window. */
   const history = useApiQuery(
-    (signal) => activationsApi.search({ siteCode }, signal),
+    (signal) => activationsApi.search({ siteCode, mode: 'BREAK_GLASS', size: 100 }, signal),
     [siteCode],
   );
 
@@ -116,10 +117,7 @@ const BreakGlassPage = () => {
     incidentReference: incidentReference.trim() || null,
   };
 
-  const breakGlassHistory = useMemo(
-    () => (history.data ?? []).filter((activation) => activation.mode === 'BREAK_GLASS'),
-    [history.data],
-  );
+  const breakGlassHistory = useMemo(() => history.data?.content ?? [], [history.data]);
 
   const historyColumns = useMemo<Column<NotificationActivation>[]>(
     () => [

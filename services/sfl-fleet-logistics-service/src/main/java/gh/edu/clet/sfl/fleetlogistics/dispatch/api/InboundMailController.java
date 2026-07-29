@@ -50,7 +50,7 @@ public class InboundMailController {
             @RequestParam(required = false) String sort,
             HttpServletRequest h) {
         return ApiResponse.ok(DispatchPageResponse.of(service.items(siteCode, CourierItem.Direction.INBOUND, status,
-                null, handler, reference, null, null, from, to, DispatchPageResponse.paging(page, size, sort),
+                null, null, handler, reference, null, null, from, to, DispatchPageResponse.paging(page, size, sort),
                 actors.resolve(h))));
     }
 

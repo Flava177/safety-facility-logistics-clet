@@ -151,12 +151,12 @@ public class CourierItemService {
     }
 
     public DispatchRepository.DispatchPage<CourierItem> items(String site, CourierItem.Direction direction,
-            CourierItem.Status status, CourierItem.Sensitivity sensitivity, String handler, String reference,
-            UUID dispatchId, Boolean undelivered, Instant from, Instant to, DispatchRepository.Paging paging,
-            ActorContext actor) {
+            CourierItem.Status status, CourierItem.Sensitivity sensitivity, CourierItem.Type itemType,
+            String handler, String reference, UUID dispatchId, Boolean undelivered, Instant from, Instant to,
+            DispatchRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.DISPATCH_ITEM_READ, site, "CourierItem", null);
         return repository.findItems(new DispatchRepository.ItemQuery(List.of(SiteCode.of(site).value()), direction,
-                status, sensitivity, handler, reference, dispatchId, undelivered, from, to, paging));
+                status, sensitivity, itemType, handler, reference, dispatchId, undelivered, from, to, paging));
     }
 
     /**

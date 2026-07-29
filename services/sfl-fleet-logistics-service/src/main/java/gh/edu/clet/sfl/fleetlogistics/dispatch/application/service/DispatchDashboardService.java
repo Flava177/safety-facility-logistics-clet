@@ -59,7 +59,7 @@ public class DispatchDashboardService {
         StringBuilder csv = new StringBuilder(
                 "itemNumber,direction,itemType,sensitivity,chainOfCustody,status,origin,destination,handler,undelivered\r\n");
         for (CourierItem i : drain(paging -> repository.findItems(new DispatchRepository.ItemQuery(
-                List.of(SiteCode.of(site).value()), null, null, null, null, null, null, null, null, null, paging)))) {
+                List.of(SiteCode.of(site).value()), null, null, null, null, null, null, null, null, null, null, paging)))) {
             csv.append(cell(i.itemNumber())).append(',').append(i.direction()).append(',').append(i.itemType())
                     .append(',').append(i.sensitivity()).append(',').append(i.chainOfCustodyRequired()).append(',')
                     .append(i.status()).append(',').append(cell(i.origin())).append(',').append(cell(i.destination()))

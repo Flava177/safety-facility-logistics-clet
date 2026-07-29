@@ -60,8 +60,8 @@ public interface DispatchRepository {
 
     /** Filters {@code GET /api/v1/dispatch/items} accepts. Any field may be null. */
     record ItemQuery(List<String> sites, CourierItem.Direction direction, CourierItem.Status status,
-            CourierItem.Sensitivity sensitivity, String handler, String reference, UUID dispatchId,
-            Boolean undelivered, Instant from, Instant to, Paging paging) {
+            CourierItem.Sensitivity sensitivity, CourierItem.Type itemType, String handler, String reference,
+            UUID dispatchId, Boolean undelivered, Instant from, Instant to, Paging paging) {
     }
 
     /** Filters {@code GET /api/v1/dispatch/manifests} accepts. */

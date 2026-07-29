@@ -4,6 +4,7 @@ import type {
   ActivationStatus,
   ChannelStatus,
   ChannelType,
+  DeliveryStatus,
   DrillStatus,
   Priority,
   RecordLifecycle,
@@ -278,4 +279,142 @@ export interface CompleteDrillRequest {
   acknowledgedRecipients: number;
   activationMillis: number;
   notes?: string | null;
+}
+
+/**
+ * `EmergencyPageResponse<T>` — the envelope every S174 collection now returns.
+ *
+ * Identical in shape to the fleet, fuel and dispatch ones. Before the gap-closure round these
+ * endpoints returned a bare array capped at 200 by the application service, with no `size`
+ * parameter to raise it — which is why the register paged a window client-side and warned when it
+ * came back full. Both are gone.
+ */
+export interface EmergencyPageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  sort: string | null;
+}
+
+export interface PagingParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface RecordSearchParams extends PagingParams {
+  siteCode: string;
+  /** Contains-match. Over title, code and body for templates; over name and code for the rest. */
+  search?: string;
+  lifecycle?: RecordLifecycle | '';
+  breakGlassEligible?: boolean;
+}
+
+/** Everything the activation register can now ask the service for. That was gap 2. */
+export interface ActivationSearchParams extends PagingParams {
+  siteCode: string;
+  status?: ActivationStatus | '';
+  mode?: ActivationMode | '';
+  priority?: Priority | '';
+  /** Contains-match over the incident reference and the activation number. */
+  incidentReference?: string;
+  /** `NotificationActivation.open()` — not closed, cancelled or rejected. */
+  openOnly?: boolean;
+  /** `NotificationActivation.active()` — a broadcast is out and has not been stood down. */
+  liveOnly?: boolean;
+  /** Break-glass sends nobody has accounted for yet. The one figure an auditor asks about. */
+  afterActionOutstanding?: boolean;
+  scenarioId?: string;
+  templateId?: string;
+  from?: string;
+  to?: string;
+}
+
+export interface DrillSearchParams extends PagingParams {
+  siteCode: string;
+  status?: DrillStatus | '';
+  scenarioId?: string;
+  from?: string;
+  to?: string;
+}
+
+/** One recorded transition, from `activation_history`. */
+export interface ActivationHistoryEntry {
+  id: string;
+  activationId: string;
+  fromStatus: string | null;
+  toStatus: string;
+  action: string;
+  actor: string | null;
+  comment: string | null;
+  occurredAt: string;
+  correlationId: string | null;
+}
+
+/** Every provider fact recorded against one activation. Closed gap 8. */
+export interface ActivationDeliveryDetail {
+  receipts: DeliveryReceiptRecord[];
+  acknowledgements: AcknowledgementRecord[];
+}
+
+export interface DeliveryReceiptRecord {
+  id: string;
+  activationId: string;
+  siteCode: SiteCodeValue;
+  channelType: ChannelType;
+  provider: string;
+  providerMessageId: string;
+  recipientRef: string | null;
+  status: DeliveryStatus;
+  /** The provider's own words for why it failed — what makes a failed recipient chaseable. */
+  reason: string | null;
+  occurredAt: string;
+  createdBy: string;
+  createdAt: string;
+  sourceChannel: string;
+  correlationId: string | null;
+}
+
+export interface AcknowledgementRecord {
+  id: string;
+  activationId: string;
+  siteCode: SiteCodeValue;
+  channelType: ChannelType | null;
+  recipientRef: string;
+  acknowledgedAt: string;
+  createdBy: string;
+  createdAt: string;
+  sourceChannel: string;
+  correlationId: string | null;
+}
+
+/**
+ * `InboxAdminPort.InboxHealth` — the inbound provider feed. Closed gap 3.
+ *
+ * Read-only by design: a rejected inbound message failed signature or schema validation, so the
+ * sending system has to correct and re-send it. Only dead-lettered outbound messages are replayable.
+ */
+export interface EmergencyInboxHealth {
+  processed: number;
+  rejected: number;
+  deadLettered: number;
+  recentMessages: EmergencyInboxMessage[];
+  checkedAt: string;
+}
+
+export interface EmergencyInboxMessage {
+  id: string;
+  sourceSystem: string;
+  eventType: string;
+  siteScope: string | null;
+  status: string;
+  attempts: number;
+  failureReason: string | null;
+  idempotencyKey: string | null;
+  receivedAt: string;
+  processedAt: string | null;
 }

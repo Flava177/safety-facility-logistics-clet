@@ -1,5 +1,9 @@
 import { apiClient, downloadFile } from 'shared/api/client';
+import type { QueryParams } from 'shared/api/types';
 import type {
+  ActivationDeliveryDetail,
+  ActivationHistoryEntry,
+  ActivationSearchParams,
   ActivationStatusView,
   AudienceGroup,
   BreakGlassRequest,
@@ -11,15 +15,19 @@ import type {
   CreateScenarioRequest,
   CreateTemplateRequest,
   DrillRun,
+  DrillSearchParams,
   EmergencyDashboard,
+  EmergencyInboxHealth,
+  EmergencyPageResponse,
   EmergencyOutboxHealth,
   EmergencyScenario,
   NotificationActivation,
   NotificationTemplate,
   RecipientZone,
+  RecordSearchParams,
   StartDrillRequest,
 } from './dto';
-import type { ActivationStatus } from './enums';
+import type { RecordLifecycle } from './enums';
 
 /**
  * The typed client for the S174 emergency notification service.
@@ -38,20 +46,21 @@ import type { ActivationStatus } from './enums';
 
 const BASE = '/api/v1/emergency';
 
-/**
- * What the service returns before it truncates.
- *
- * There is no `size` parameter on any S174 collection: the limit is fixed in the application
- * service (200 activations, 500 rows in the CSV export) and cannot be raised from here. So this is
- * not a request — it is the number the screens compare a full-looking response against. Recorded as
- * gap 1.
- */
-export const ACTIVATION_WINDOW = 200;
+const asQuery = (params: object | undefined): QueryParams | undefined =>
+  params as QueryParams | undefined;
+
+/** Default page size. The service clamps anything above 200. */
+export const DEFAULT_PAGE_SIZE = 25;
 
 /** Records — templates, scenarios, audience groups and recipient zones (SRS-SFL-S174-01). */
 export const emergencyRecordsApi = {
-  templates: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<NotificationTemplate[]>(`${BASE}/templates`, { siteCode }, signal, 'emergency'),
+  templates: (query: RecordSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<NotificationTemplate>>(
+      `${BASE}/templates`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
+      signal,
+      'emergency',
+    ),
 
   template: (id: string, signal?: AbortSignal) =>
     apiClient.get<NotificationTemplate>(`${BASE}/templates/${id}`, undefined, signal, 'emergency'),
@@ -59,34 +68,74 @@ export const emergencyRecordsApi = {
   createTemplate: (body: CreateTemplateRequest) =>
     apiClient.post<NotificationTemplate>(`${BASE}/templates`, body, { service: 'emergency' }),
 
-  scenarios: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<EmergencyScenario[]>(`${BASE}/scenarios`, { siteCode }, signal, 'emergency'),
+  scenarios: (query: RecordSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<EmergencyScenario>>(
+      `${BASE}/scenarios`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
+      signal,
+      'emergency',
+    ),
 
   createScenario: (body: CreateScenarioRequest) =>
     apiClient.post<EmergencyScenario>(`${BASE}/scenarios`, body, { service: 'emergency' }),
 
-  audienceGroups: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<AudienceGroup[]>(`${BASE}/audience-groups`, { siteCode }, signal, 'emergency'),
+  audienceGroups: (query: RecordSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<AudienceGroup>>(
+      `${BASE}/audience-groups`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
+      signal,
+      'emergency',
+    ),
 
   createAudienceGroup: (body: CreateAudienceGroupRequest) =>
     apiClient.post<AudienceGroup>(`${BASE}/audience-groups`, body, { service: 'emergency' }),
 
-  recipientZones: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<RecipientZone[]>(`${BASE}/recipient-zones`, { siteCode }, signal, 'emergency'),
+  recipientZones: (query: RecordSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<RecipientZone>>(
+      `${BASE}/recipient-zones`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
+      signal,
+      'emergency',
+    ),
 
   createRecipientZone: (body: CreateRecipientZoneRequest) =>
     apiClient.post<RecipientZone>(`${BASE}/recipient-zones`, body, { service: 'emergency' }),
+
+  scenario: (id: string, signal?: AbortSignal) =>
+    apiClient.get<EmergencyScenario>(`${BASE}/scenarios/${id}`, undefined, signal, 'emergency'),
+
+  audienceGroup: (id: string, signal?: AbortSignal) =>
+    apiClient.get<AudienceGroup>(`${BASE}/audience-groups/${id}`, undefined, signal, 'emergency'),
+
+  recipientZone: (id: string, signal?: AbortSignal) =>
+    apiClient.get<RecipientZone>(`${BASE}/recipient-zones/${id}`, undefined, signal, 'emergency'),
+
+  /**
+   * Corrects an audience group's size and directory pointer.
+   *
+   * The sharp edge in gap 6: `recipientCount` is what the service fans out to and the denominator
+   * every delivery percentage is read against, and it could not be corrected — a group sized at
+   * zero sent to nobody and reported a completely successful broadcast. The name is deliberately
+   * not editable: closed activations cite this group.
+   */
+  updateAudienceGroup: (id: string, body: { directoryReference?: string | null; recipientCount?: number }) =>
+    apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'emergency' }),
+
+  /** Retires or reinstates a record. Archiving is not deletion — activations citing it still resolve. */
+  setLifecycle: (
+    resource: 'templates' | 'scenarios' | 'audience-groups' | 'recipient-zones',
+    id: string,
+    lifecycle: RecordLifecycle,
+  ) =>
+    apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'emergency' }),
 };
 
 /** Activations — the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
 export const activationsApi = {
-  search: (
-    query: { siteCode: string; status?: ActivationStatus },
-    signal?: AbortSignal,
-  ) =>
-    apiClient.get<NotificationActivation[]>(
+  search: (query: ActivationSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<NotificationActivation>>(
       `${BASE}/activations`,
-      { siteCode: query.siteCode, status: query.status },
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
       'emergency',
     ),
@@ -103,6 +152,30 @@ export const activationsApi = {
   status: (id: string, signal?: AbortSignal) =>
     apiClient.get<ActivationStatusView>(
       `${BASE}/activations/${id}/status`,
+      undefined,
+      signal,
+      'emergency',
+    ),
+
+  /**
+   * The activation's recorded transitions, oldest first.
+   *
+   * Closed gap 4. The service has written this on every state change since it was built and
+   * published no way to read it, which is why the detail screen used to reconstruct a timeline from
+   * whatever fields the record still carried — and silently omit any transition that left none.
+   */
+  history: (id: string, signal?: AbortSignal) =>
+    apiClient.get<ActivationHistoryEntry[]>(
+      `${BASE}/activations/${id}/history`,
+      undefined,
+      signal,
+      'emergency',
+    ),
+
+  /** Per-recipient delivery receipts and acknowledgements. Closed gap 8. */
+  delivery: (id: string, signal?: AbortSignal) =>
+    apiClient.get<ActivationDeliveryDetail>(
+      `${BASE}/activations/${id}/delivery`,
       undefined,
       signal,
       'emergency',
@@ -173,8 +246,13 @@ export const breakGlassApi = {
 
 /** Drills — rehearsals with recorded performance (SRS-SFL-S174-05). */
 export const drillsApi = {
-  search: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<DrillRun[]>(`${BASE}/drills`, { siteCode }, signal, 'emergency'),
+  search: (query: DrillSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EmergencyPageResponse<DrillRun>>(
+      `${BASE}/drills`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
+      signal,
+      'emergency',
+    ),
 
   start: (body: StartDrillRequest) =>
     apiClient.post<DrillRun>(`${BASE}/drills`, body, { service: 'emergency' }),
@@ -188,6 +266,15 @@ export const drillsApi = {
 
 /** Dashboard and the authorised CSV export (SRS-SFL-S174-05). */
 export const emergencyDashboardApi = {
+  /** The same population split by status, priority, mode and channel. Closed gap 12. */
+  breakdown: (siteCode: string, signal?: AbortSignal) =>
+    apiClient.get<Record<string, Record<string, number>>>(
+      `${BASE}/dashboard/breakdown`,
+      { siteCode },
+      signal,
+      'emergency',
+    ),
+
   dashboard: (siteCode: string, signal?: AbortSignal) =>
     apiClient.get<EmergencyDashboard>(`${BASE}/dashboard`, { siteCode }, signal, 'emergency'),
 };
@@ -212,6 +299,22 @@ export const emergencyReportsApi = {
 
 /** Integration health and privileged dead-letter replay (SRS-SFL-S174-04). */
 export const emergencyIntegrationsApi = {
+  /**
+   * The inbound provider feed.
+   *
+   * Closed gap 3, the most consequential gap on this service: this feed is the only thing that ever
+   * writes `delivered`, `failed` and `acknowledged`, and none of it was readable. A screen showing
+   * 480 sent and 0 delivered could not tell "no provider configured" from "every callback rejected
+   * for a bad signature".
+   */
+  inbox: (recentLimit = 20, signal?: AbortSignal) =>
+    apiClient.get<EmergencyInboxHealth>(
+      `${BASE}/integrations/inbox`,
+      { recentLimit },
+      signal,
+      'emergency',
+    ),
+
   health: (signal?: AbortSignal) =>
     apiClient.get<EmergencyOutboxHealth>(
       `${BASE}/integrations/health`,

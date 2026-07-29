@@ -11,10 +11,8 @@ import {
   SENSITIVITIES,
   Sensitivity,
 } from 'modules/dispatch/api/enums';
-import { DEFAULT_WINDOW, courierItemsApi, dispatchReportsApi } from 'modules/dispatch/api/dispatchApi';
+import { courierItemsApi, dispatchReportsApi } from 'modules/dispatch/api/dispatchApi';
 import { RegisterItemDialog } from 'modules/dispatch/dialogs/itemDialogs';
-import WindowNotice from 'modules/dispatch/components/WindowNotice';
-import { useClientWindow } from 'modules/dispatch/components/useClientWindow';
 import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
@@ -30,6 +28,7 @@ import { DateTimeField } from 'shared/components/DateField';
 import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
 
 /**
@@ -40,7 +39,7 @@ import { dispatchPaths } from 'shared/layout/navigation';
  * labelled as such, because the endpoint has no parameter for it.
  *
  * There is no pagination on the dispatch side, so the footer counts the window the service returned
- * and `WindowNotice` says plainly when that window came back full.
+ * Every filter reaches the service, and the footer counts the register rather than a window.
  */
 const CourierItemsPage = () => {
   const navigate = useNavigate();
@@ -57,10 +56,15 @@ const CourierItemsPage = () => {
   const [sensitivity, setSensitivity] = useState<Sensitivity | ''>('');
   const [handler, setHandler] = useState('');
   const [itemType, setItemType] = useState<ItemType | ''>('');
+  const [reference, setReference] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [registering, setRegistering] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  const filterKey =
+    `${siteCode}|${direction}|${status}|${sensitivity}|${itemType}|${handler}|${reference}|${from}|${to}`;
+  const paging = useServerPage(filterKey);
 
   const query = useApiQuery(
     (signal) =>
@@ -70,25 +74,32 @@ const CourierItemsPage = () => {
           direction: direction || undefined,
           status: status || undefined,
           sensitivity: sensitivity || undefined,
+          itemType: itemType || undefined,
           handler: handler.trim() || undefined,
+          reference: reference.trim() || undefined,
           from: from ? new Date(from).toISOString() : undefined,
           to: to ? new Date(to).toISOString() : undefined,
+          page: paging.page,
+          size: paging.size,
         },
         signal,
       ),
-    [siteCode, direction, status, sensitivity, handler, from, to],
+    [
+      siteCode,
+      direction,
+      status,
+      sensitivity,
+      itemType,
+      handler,
+      reference,
+      from,
+      to,
+      paging.page,
+      paging.size,
+    ],
   );
 
-  const filtered = useMemo(() => {
-    const rows = query.data ?? [];
-    return itemType ? rows.filter((row) => row.itemType === itemType) : rows;
-  }, [query.data, itemType]);
-
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${direction}|${status}|${sensitivity}|${handler}|${itemType}|${from}|${to}`,
-    query.data?.length,
-  );
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
   const exportReport = async () => {
     setExporting(true);
@@ -173,7 +184,7 @@ const CourierItemsPage = () => {
   );
 
   const filtersApplied = Boolean(
-    direction || status || sensitivity || handler || itemType || from || to,
+    direction || status || sensitivity || handler || itemType || reference || from || to,
   );
 
   return (
@@ -207,6 +218,7 @@ const CourierItemsPage = () => {
             setSensitivity('');
             setHandler('');
             setItemType('');
+            setReference('');
             setFrom('');
             setTo('');
           }}
@@ -238,7 +250,13 @@ const CourierItemsPage = () => {
             label="Handler"
             value={handler}
             onChange={setHandler}
-            placeholder="Exact handler name"
+            placeholder="Part of a name"
+          />
+          <TextInput
+            label="Reference"
+            value={reference}
+            onChange={setReference}
+            placeholder="Item number, sender or recipient"
           />
           <EnumSelect
             label="Item type"
@@ -246,7 +264,6 @@ const CourierItemsPage = () => {
             options={ITEM_TYPES}
             onChange={(value) => setItemType(value)}
             allowEmpty
-            helperText="Filters the loaded records."
           />
           <DateTimeField label="From" value={from} onChange={setFrom} />
           <DateTimeField label="To" value={to} onChange={setTo} />
@@ -262,28 +279,21 @@ const CourierItemsPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(dispatchPaths.itemDetail(row.id))}
               caption="Courier items matching the current filters, with direction, sensitivity, whether a chain of custody is required, handler and status."
               emptyMessage="No item matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={query.data?.length ?? 0}
-          requestedSize={DEFAULT_WINDOW}
-          noun="items"
-        />
       </div>
 
       {registering && (

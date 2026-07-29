@@ -9,6 +9,15 @@ import type {
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 
 /**
+ * How many master-data records a composer needs at once.
+ *
+ * These four registers back select controls, not tables: an activation is composed by picking from
+ * them. 200 is the service's own page cap, and a site with more templates than that has a records
+ * problem a dropdown was never going to solve.
+ */
+const RECORD_PAGE = 200;
+
+/**
  * The four master-data registers a site's activations are composed from.
  *
  * An activation names a scenario, a template, audience groups and recipient zones — all by id.
@@ -41,27 +50,27 @@ export interface SiteRecords {
 
 export const useSiteRecords = (siteCode: string): SiteRecords => {
   const templates = useApiQuery(
-    (signal) => emergencyRecordsApi.templates(siteCode, signal),
+    (signal) => emergencyRecordsApi.templates({ siteCode, size: RECORD_PAGE }, signal),
     [siteCode],
   );
   const scenarios = useApiQuery(
-    (signal) => emergencyRecordsApi.scenarios(siteCode, signal),
+    (signal) => emergencyRecordsApi.scenarios({ siteCode, size: RECORD_PAGE }, signal),
     [siteCode],
   );
   const audiences = useApiQuery(
-    (signal) => emergencyRecordsApi.audienceGroups(siteCode, signal),
+    (signal) => emergencyRecordsApi.audienceGroups({ siteCode, size: RECORD_PAGE }, signal),
     [siteCode],
   );
   const zones = useApiQuery(
-    (signal) => emergencyRecordsApi.recipientZones(siteCode, signal),
+    (signal) => emergencyRecordsApi.recipientZones({ siteCode, size: RECORD_PAGE }, signal),
     [siteCode],
   );
 
   return useMemo(() => {
-    const templateList = templates.data ?? [];
-    const scenarioList = scenarios.data ?? [];
-    const audienceList = audiences.data ?? [];
-    const zoneList = zones.data ?? [];
+    const templateList = templates.data?.content ?? [];
+    const scenarioList = scenarios.data?.content ?? [];
+    const audienceList = audiences.data?.content ?? [];
+    const zoneList = zones.data?.content ?? [];
 
     const templateById = new Map(templateList.map((record) => [record.id, record]));
     const scenarioById = new Map(scenarioList.map((record) => [record.id, record]));

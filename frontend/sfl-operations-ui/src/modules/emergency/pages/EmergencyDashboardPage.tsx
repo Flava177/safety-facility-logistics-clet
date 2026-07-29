@@ -6,11 +6,7 @@ import {
   emergencyDashboardApi,
   drillsApi,
 } from 'modules/emergency/api/emergencyApi';
-import {
-  activationLive,
-  afterActionOutstanding,
-  awaitingApproval,
-} from 'modules/emergency/api/workflow';
+import { activationLive, awaitingApproval } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed, percentOf } from 'modules/emergency/components/emergencyFormat';
 import { DerivedNote } from 'modules/fuel/components/Provenance';
@@ -49,25 +45,35 @@ const EmergencyDashboardPage = () => {
     (signal) => emergencyDashboardApi.dashboard(siteCode, signal),
     [siteCode],
   );
+  /**
+   * Four questions, four server-side queries.
+   *
+   * Each list is the service's own answer rather than one window sieved four ways, so a count in a
+   * panel header is the site's count and not the page's.
+   */
   const activations = useApiQuery(
-    (signal) => activationsApi.search({ siteCode }, signal),
+    (signal) => activationsApi.search({ siteCode, openOnly: true, size: 50 }, signal),
     [siteCode],
   );
-  const drills = useApiQuery((signal) => drillsApi.search(siteCode, signal), [siteCode]);
+  const afterAction = useApiQuery(
+    (signal) => activationsApi.search({ siteCode, afterActionOutstanding: true, size: 25 }, signal),
+    [siteCode],
+  );
+  const drills = useApiQuery(
+    (signal) => drillsApi.search({ siteCode, status: 'COMPLETED', size: 10 }, signal),
+    [siteCode],
+  );
 
-  const all = useMemo(() => activations.data ?? [], [activations.data]);
+  const all = useMemo(() => activations.data?.content ?? [], [activations.data]);
   const live = useMemo(() => all.filter(activationLive), [all]);
   const pending = useMemo(() => all.filter(awaitingApproval), [all]);
-  const outstandingAfterAction = useMemo(() => all.filter(afterActionOutstanding), [all]);
+  const outstandingAfterAction = useMemo(() => afterAction.data?.content ?? [], [afterAction.data]);
   const allClearPending = useMemo(
     () => all.filter((activation) => activation.status === 'ALL_CLEAR_PENDING'),
     [all],
   );
 
-  const completedDrills = useMemo(
-    () => (drills.data ?? []).filter((drill) => drill.status === 'COMPLETED'),
-    [drills.data],
-  );
+  const completedDrills = useMemo(() => drills.data?.content ?? [], [drills.data]);
   const lastDrill = completedDrills[0];
 
   const counts = dashboard.data;

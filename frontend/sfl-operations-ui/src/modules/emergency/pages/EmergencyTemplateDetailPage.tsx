@@ -43,15 +43,22 @@ const EmergencyTemplateDetailPage = () => {
   const template = query.data;
   const siteCode = template ? siteOf(template.siteCode) : '';
 
+  /**
+   * The activations that cite this template.
+   *
+   * `templateId` reaches the service now, so this is a real answer to "what has this message been
+   * used for" rather than the site's window sieved down — which quietly missed older activations
+   * and made a never-used template indistinguishable from a busy one at a busy site.
+   */
   const activations = useApiQuery(
-    (signal) => (siteCode ? activationsApi.search({ siteCode }, signal) : Promise.resolve([])),
-    [siteCode],
+    (signal) =>
+      siteCode
+        ? activationsApi.search({ siteCode, templateId, size: 50 }, signal)
+        : Promise.resolve(undefined),
+    [siteCode, templateId],
   );
 
-  const usedBy = useMemo(
-    () => (activations.data ?? []).filter((activation) => activation.templateId === templateId),
-    [activations.data, templateId],
-  );
+  const usedBy = useMemo(() => activations.data?.content ?? [], [activations.data]);
 
   const columns = useMemo<Column<NotificationActivation>[]>(
     () => [

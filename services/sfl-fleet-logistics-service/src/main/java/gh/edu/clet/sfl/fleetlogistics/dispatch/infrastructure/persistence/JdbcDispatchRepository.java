@@ -205,6 +205,7 @@ public class JdbcDispatchRepository implements DispatchRepository {
                 .and("direction=?", q.direction() == null ? null : q.direction().name())
                 .and("status=?", q.status() == null ? null : q.status().name())
                 .and("sensitivity=?", q.sensitivity() == null ? null : q.sensitivity().name())
+                .and("item_type=?", q.itemType() == null ? null : q.itemType().name())
                 // Handler is a contains-match: an operator searches for a surname, not the full name
                 // exactly as it was typed on registration.
                 .and("assigned_handler ILIKE ?", q.handler() == null || q.handler().isBlank()
