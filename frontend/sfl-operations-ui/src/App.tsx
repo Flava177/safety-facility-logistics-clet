@@ -35,6 +35,21 @@ const FuelPoliciesPage = lazy(() => import('modules/fuel/pages/FuelPoliciesPage'
 const FuelPolicyDetailPage = lazy(() => import('modules/fuel/pages/FuelPolicyDetailPage'));
 const FuelIntegrationPage = lazy(() => import('modules/fuel/pages/FuelIntegrationPage'));
 
+const DispatchDashboardPage = lazy(() => import('modules/dispatch/pages/DispatchDashboardPage'));
+const CourierItemsPage = lazy(() => import('modules/dispatch/pages/CourierItemsPage'));
+const CourierItemDetailPage = lazy(() => import('modules/dispatch/pages/CourierItemDetailPage'));
+const ManifestsPage = lazy(() => import('modules/dispatch/pages/ManifestsPage'));
+const ManifestDetailPage = lazy(() => import('modules/dispatch/pages/ManifestDetailPage'));
+const InboundMailPage = lazy(() => import('modules/dispatch/pages/InboundMailPage'));
+const DispatchExceptionsPage = lazy(() => import('modules/dispatch/pages/DispatchExceptionsPage'));
+const DispatchExceptionDetailPage = lazy(
+  () => import('modules/dispatch/pages/DispatchExceptionDetailPage'),
+);
+const ScanImportsPage = lazy(() => import('modules/dispatch/pages/ScanImportsPage'));
+const DispatchIntegrationPage = lazy(
+  () => import('modules/dispatch/pages/DispatchIntegrationPage'),
+);
+
 /**
  * The router basename comes from Vite's `BASE_URL`, which is set by `base` in `vite.config.ts`.
  * Keeping it derived means the mount point is stated once: move the bundle and the routes follow.
@@ -98,6 +113,24 @@ const App = () => (
                 <Route path=":policyId" element={<FuelPolicyDetailPage />} />
               </Route>
               <Route path="integrations" element={<FuelIntegrationPage />} />
+            </Route>
+            <Route path="dispatch">
+              <Route index element={<DispatchDashboardPage />} />
+              <Route path="items">
+                <Route index element={<CourierItemsPage />} />
+                <Route path=":itemId" element={<CourierItemDetailPage />} />
+              </Route>
+              <Route path="manifests">
+                <Route index element={<ManifestsPage />} />
+                <Route path=":manifestId" element={<ManifestDetailPage />} />
+              </Route>
+              <Route path="inbound" element={<InboundMailPage />} />
+              <Route path="exceptions">
+                <Route index element={<DispatchExceptionsPage />} />
+                <Route path=":caseId" element={<DispatchExceptionDetailPage />} />
+              </Route>
+              <Route path="scans" element={<ScanImportsPage />} />
+              <Route path="integrations" element={<DispatchIntegrationPage />} />
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>
