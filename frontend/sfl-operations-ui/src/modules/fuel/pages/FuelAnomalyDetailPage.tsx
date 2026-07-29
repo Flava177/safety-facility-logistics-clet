@@ -1,0 +1,472 @@
+import { useState } from 'react';
+import { useNavigate, useParams } from 'react-router';
+import {
+  NON_RECONCILIATION_RULES,
+  RULE_DESCRIPTIONS,
+  ReconciliationRule,
+} from 'modules/fuel/api/enums';
+import { AnomalyAction, fuelAnomaliesApi } from 'modules/fuel/api/fuelApi';
+import {
+  ANOMALY_RULES,
+  anomalyActionAllowed,
+  anomalyClosureBlockers,
+  anomalyOpen,
+  anomalySlaBreached,
+} from 'modules/fuel/api/workflow';
+import { AnomalyActionDialog } from 'modules/fuel/dialogs/anomalyDialogs';
+import RecordProvenance from 'modules/fuel/components/Provenance';
+import { formatDueIn, siteOf } from 'modules/fuel/components/fuelFormat';
+import { humanise } from 'modules/fleet/api/enums';
+import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
+import DataState from 'shared/components/DataState';
+import Icon from 'shared/components/Icon';
+import KeyValueGrid from 'shared/components/KeyValueGrid';
+import { useNotifier } from 'shared/components/Notifier';
+import PageHeader from 'shared/components/PageHeader';
+import SectionCard from 'shared/components/SectionCard';
+import StatusChip from 'shared/components/StatusChip';
+import { formatDateTime } from 'shared/components/format';
+import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
+
+/** One sentence per action, naming what landed. */
+const CONFIRMATIONS: Record<AnomalyAction, string> = {
+  assign: 'Case assigned. The assignee has been notified.',
+  reassign: 'Case reassigned. The new assignee has been notified.',
+  review: 'Review started.',
+  'request-explanation': 'Explanation requested. The case is now awaiting a response.',
+  explain: 'Explanation recorded.',
+  approve: 'Approved. The case still has to be closed.',
+  reject: 'Rejected. The case still has to be closed.',
+  escalate: 'Case escalated and the fleet manager notified.',
+  hold: 'Case placed on hold.',
+  resume: 'Case resumed.',
+  cancel: 'Case cancelled.',
+  close: 'Case closed against its evidence.',
+  reopen: 'Case reopened.',
+};
+
+/** The order actions are offered in: progress the case, then decide, then the privileged exits. */
+const ACTION_ORDER: AnomalyAction[] = [
+  'assign',
+  'reassign',
+  'review',
+  'request-explanation',
+  'explain',
+  'approve',
+  'reject',
+  'close',
+  'hold',
+  'resume',
+  'escalate',
+  'reopen',
+  'cancel',
+];
+
+/** Actions the service takes no input for, so they run from the button rather than a dialog. */
+const NO_INPUT_ACTIONS: AnomalyAction[] = ['review', 'request-explanation', 'resume'];
+
+/**
+ * A fuel anomaly case: why it exists, who owns it, and every action legal from where it stands.
+ *
+ * The closure gate is the heart of this screen. `FuelAnomalyCase.close` demands an explanation, a
+ * decision and evidence, and refuses with a single message naming all three — so the panel tracks
+ * each of them separately and shows which are actually satisfied. An operator can see the whole
+ * path to closure at a glance instead of discovering it one refusal at a time.
+ */
+const FuelAnomalyDetailPage = () => {
+  const { anomalyId = '' } = useParams();
+  const navigate = useNavigate();
+  const { notifySuccess, notifyError } = useNotifier();
+  const [dialog, setDialog] = useState<AnomalyAction | null>(null);
+  const [working, setWorking] = useState<AnomalyAction | null>(null);
+
+  const anomaly = useApiQuery(
+    (signal) => fuelAnomaliesApi.findById(anomalyId, signal),
+    [anomalyId],
+  );
+
+  const record = anomaly.data;
+
+  const runDirect = async (action: AnomalyAction) => {
+    setWorking(action);
+    try {
+      await fuelAnomaliesApi.transition(anomalyId, action, { value: null, evidenceId: null });
+      notifySuccess(CONFIRMATIONS[action]);
+      anomaly.refetch();
+    } catch (error) {
+      notifyError(error);
+    } finally {
+      setWorking(null);
+    }
+  };
+
+  const closureBlockers = record ? anomalyClosureBlockers(record) : [];
+  const breached = record ? anomalySlaBreached(record) : false;
+
+  return (
+    <div>
+      <PageHeader
+        title={record?.anomalyNumber ?? 'Anomaly case'}
+        subtitle={record ? humanise(record.type) : undefined}
+        crumbs={[
+          { label: 'Fuel', to: fuelPaths.dashboard },
+          { label: 'Anomaly cases', to: fuelPaths.anomalies },
+          { label: record?.anomalyNumber ?? '…' },
+        ]}
+        actions={
+          <Button
+            variant="outline"
+            startIcon="arrow-left"
+            onClick={() => navigate(fuelPaths.anomalies)}
+          >
+            Queue
+          </Button>
+        }
+        meta={
+          record && (
+            <div className="flex flex-wrap items-center gap-2">
+              <StatusChip value={record.status} />
+              <StatusChip value={record.severity} />
+              {record.material && <StatusChip value="HIGH" label="Material" tone="caution" />}
+              {record.escalationLevel > 0 && (
+                <StatusChip
+                  value="ESCALATED"
+                  label={`Escalation level ${record.escalationLevel}`}
+                  tone="blocked"
+                />
+              )}
+            </div>
+          )
+        }
+      />
+
+      <DataState
+        loading={anomaly.initialising}
+        error={anomaly.error}
+        onRetry={anomaly.refetch}
+        minHeight={300}
+      >
+        {record && (
+          <div className="space-y-5">
+            {breached && (
+              <Alert variant="error" title="This case has breached its SLA">
+                It was due {formatDateTime(record.slaDueAt)} — {formatDueIn(record.slaDueAt)}. The
+                scheduled sweep escalates cases past their target automatically.
+              </Alert>
+            )}
+            {record.material && anomalyOpen(record) && (
+              <Alert variant="warning" title="This case is material">
+                The transaction met or exceeded the policy’s materiality amount, so escalating it
+                surfaces it to finance and audit as well as to the fleet manager.
+              </Alert>
+            )}
+            {record.status === 'CLOSED' && (
+              <Alert variant="success" title="This case is closed">
+                {record.closureReason ?? 'No closure reason was recorded.'}
+              </Alert>
+            )}
+            {record.status === 'CANCELLED' && (
+              <Alert variant="info" title="This case is cancelled">
+                {record.closureReason ?? 'No reason was recorded.'}
+              </Alert>
+            )}
+
+            <SectionCard title="Actions">
+              <div className="flex flex-wrap items-center gap-2">
+                {ACTION_ORDER.filter((action) => anomalyActionAllowed(record, action)).map(
+                  (action) =>
+                    NO_INPUT_ACTIONS.includes(action) ? (
+                      <Button
+                        key={action}
+                        variant="outline"
+                        startIcon="play"
+                        loading={working === action}
+                        onClick={() => runDirect(action)}
+                      >
+                        {ANOMALY_RULES[action].label}
+                      </Button>
+                    ) : (
+                      <Button
+                        key={action}
+                        variant={buttonVariant(action)}
+                        startIcon={buttonIcon(action)}
+                        onClick={() => setDialog(action)}
+                      >
+                        {ANOMALY_RULES[action].label}
+                      </Button>
+                    ),
+                )}
+              </div>
+
+              <div className="mt-4 flex flex-wrap items-center gap-2">
+                {record.transactionId && (
+                  <Button
+                    variant="ghost"
+                    startIcon="coins"
+                    endIcon="chevron-right"
+                    onClick={() =>
+                      navigate(fuelPaths.transactionDetail(record.transactionId as string))
+                    }
+                  >
+                    Transaction
+                  </Button>
+                )}
+                {record.logbookId && (
+                  <Button
+                    variant="ghost"
+                    startIcon="book"
+                    endIcon="chevron-right"
+                    onClick={() => navigate(fuelPaths.logbookDetail(record.logbookId as string))}
+                  >
+                    Logbook
+                  </Button>
+                )}
+                {record.vehicleId && (
+                  <Button
+                    variant="ghost"
+                    startIcon="truck"
+                    endIcon="chevron-right"
+                    onClick={() => navigate(fleetPaths.vehicleDetail(record.vehicleId as string))}
+                  >
+                    Vehicle
+                  </Button>
+                )}
+                {record.driverId && (
+                  <Button
+                    variant="ghost"
+                    startIcon="driver"
+                    endIcon="chevron-right"
+                    onClick={() => navigate(fleetPaths.driverDetail(record.driverId as string))}
+                  >
+                    Driver
+                  </Button>
+                )}
+                {record.tripId && (
+                  <Button
+                    variant="ghost"
+                    startIcon="route"
+                    endIcon="chevron-right"
+                    onClick={() => navigate(fleetPaths.tripDetail(record.tripId as string))}
+                  >
+                    Trip
+                  </Button>
+                )}
+              </div>
+            </SectionCard>
+
+            <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
+              <div className="space-y-5">
+                <SectionCard title="Case">
+                  <KeyValueGrid
+                    items={[
+                      { label: 'Case number', value: record.anomalyNumber },
+                      { label: 'Site', value: siteOf(record.siteCode) },
+                      { label: 'Type', value: humanise(record.type) },
+                      { label: 'Severity', value: humanise(record.severity) },
+                      { label: 'Material', value: record.material ? 'Yes' : 'No' },
+                      { label: 'Assignee', value: record.assignee ?? 'Unassigned' },
+                      { label: 'SLA due', value: formatDateTime(record.slaDueAt) },
+                      { label: 'SLA standing', value: formatDueIn(record.slaDueAt) },
+                      { label: 'Escalation level', value: record.escalationLevel },
+                      { label: 'Explanation', value: record.explanation ?? '—', span: 2 },
+                      {
+                        label: 'Decision',
+                        value: record.decision ? humanise(record.decision) : '—',
+                      },
+                      { label: 'Evidence reference', value: record.evidenceId ?? '—' },
+                      { label: 'Closure reason', value: record.closureReason ?? '—', span: 2 },
+                    ]}
+                  />
+                </SectionCard>
+
+                <SectionCard
+                  title="Why this case exists"
+                  subtitle="The rules the service recorded when it raised the case"
+                >
+                  {record.detectedRules.length === 0 ? (
+                    <p className="text-theme-sm text-gray-600">No rule was recorded.</p>
+                  ) : (
+                    <ul className="space-y-2.5">
+                      {record.detectedRules.map((rule) => (
+                        <li key={rule} className="rounded-md border border-gray-200 px-3.5 py-2.5">
+                          <p className="text-theme-sm font-semibold text-gray-900">
+                            {humanise(rule)}
+                          </p>
+                          <p className="mt-0.5 text-theme-sm text-gray-700">
+                            {RULE_DESCRIPTIONS[rule as ReconciliationRule] ??
+                              NON_RECONCILIATION_RULES[rule] ??
+                              'This rule is recorded by the service but is not described here.'}
+                          </p>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
+                </SectionCard>
+              </div>
+
+              <div className="space-y-5">
+                <SectionCard
+                  title="Path to closure"
+                  subtitle="All three are required before the case can be closed"
+                >
+                  <ul className="space-y-3">
+                    <ClosureStep
+                      label="Explanation recorded"
+                      satisfied={Boolean(record.explanation)}
+                      hint="Request one, then record the response."
+                    />
+                    <ClosureStep
+                      label="Decision recorded"
+                      satisfied={Boolean(record.decision)}
+                      hint="Approve or reject the case from under review."
+                    />
+                    <ClosureStep
+                      label="Closure evidence"
+                      satisfied={record.status === 'CLOSED'}
+                      hint="Supplied with the closure itself."
+                    />
+                  </ul>
+                  {anomalyOpen(record) && closureBlockers.length === 0 && (
+                    <Alert variant="success" className="mt-4">
+                      Everything the service needs is recorded. Closure needs an evidence reference.
+                    </Alert>
+                  )}
+                </SectionCard>
+
+                <SectionCard title="History">
+                  <RecordProvenance metadata={record.metadata} recordNoun="case" />
+                </SectionCard>
+
+                <SectionCard title="Where this can go next">
+                  <ul className="space-y-2.5">
+                    {ACTION_ORDER.map((action) => {
+                      const allowed = anomalyActionAllowed(record, action);
+                      const rule = ANOMALY_RULES[action];
+                      return (
+                        <li key={action} className="flex items-start gap-2.5">
+                          <Icon
+                            name={allowed ? 'check-circle' : 'close'}
+                            size={15}
+                            className={
+                              allowed
+                                ? 'mt-0.5 shrink-0 text-success-700'
+                                : 'mt-0.5 shrink-0 text-gray-400'
+                            }
+                          />
+                          <div className="min-w-0">
+                            <p
+                              className={
+                                allowed
+                                  ? 'text-theme-sm font-medium text-gray-900'
+                                  : 'text-theme-sm text-gray-500'
+                              }
+                            >
+                              {rule.label}
+                              {rule.privileged && (
+                                <span className="ml-1.5 text-theme-xs font-semibold text-gold-900">
+                                  privileged
+                                </span>
+                              )}
+                            </p>
+                            <p className="text-theme-xs text-gray-600">
+                              {allowed
+                                ? `Needs ${rule.permission}.`
+                                : rule.from.length === 0
+                                  ? 'Available from any state.'
+                                  : `From ${rule.from
+                                      .map((state) => humanise(state).toLowerCase())
+                                      .join(', ')}.`}
+                            </p>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                </SectionCard>
+              </div>
+            </div>
+
+            {dialog && (
+              <AnomalyActionDialog
+                open
+                anomaly={record}
+                action={dialog}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess(CONFIRMATIONS[dialog]);
+                  anomaly.refetch();
+                }}
+              />
+            )}
+          </div>
+        )}
+      </DataState>
+    </div>
+  );
+};
+
+const ClosureStep = ({
+  label,
+  satisfied,
+  hint,
+}: {
+  label: string;
+  satisfied: boolean;
+  hint: string;
+}) => (
+  <li className="flex items-start gap-2.5">
+    <Icon
+      name={satisfied ? 'check-circle' : 'alert-circle'}
+      size={16}
+      className={satisfied ? 'mt-0.5 shrink-0 text-success-700' : 'mt-0.5 shrink-0 text-warning-700'}
+    />
+    <div className="min-w-0">
+      <p className="text-theme-sm font-medium text-gray-900">{label}</p>
+      {!satisfied && <p className="text-theme-xs text-gray-600">{hint}</p>}
+    </div>
+  </li>
+);
+
+const buttonVariant = (action: AnomalyAction) => {
+  switch (action) {
+    case 'assign':
+      return 'primary' as const;
+    case 'close':
+      return 'accent' as const;
+    case 'cancel':
+    case 'reject':
+      return 'danger' as const;
+    default:
+      return 'outline' as const;
+  }
+};
+
+const buttonIcon = (action: AnomalyAction) => {
+  switch (action) {
+    case 'assign':
+    case 'reassign':
+      return 'user-plus' as const;
+    case 'explain':
+      return 'edit' as const;
+    case 'approve':
+      return 'check-circle' as const;
+    case 'reject':
+      return 'close' as const;
+    case 'escalate':
+      return 'alert-triangle' as const;
+    case 'hold':
+      return 'stop' as const;
+    case 'close':
+      return 'lock' as const;
+    case 'reopen':
+      return 'refresh' as const;
+    case 'cancel':
+      return 'close' as const;
+    default:
+      return 'play' as const;
+  }
+};
+
+export default FuelAnomalyDetailPage;
