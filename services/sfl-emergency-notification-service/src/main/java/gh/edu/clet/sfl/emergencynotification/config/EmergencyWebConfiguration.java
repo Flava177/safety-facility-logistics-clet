@@ -14,8 +14,11 @@ class EmergencyWebConfiguration {
 
     @Bean
     WebMvcConfigurer emergencyCorsConfigurer(
+            // 5005 is the SFL Operations dashboards in development (npm run dev). The bundled build is
+            // served by the fleet service on 8093, which is already allowed, so only the dev origin is
+            // additional here.
             @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8093,http://localhost:8095,"
-                    + "http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
+                    + "http://localhost:5005,http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::strip)
                 .filter(origin -> !origin.isBlank())

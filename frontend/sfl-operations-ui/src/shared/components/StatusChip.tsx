@@ -149,6 +149,27 @@ const statusTones: Record<string, Tone> = {
   AWAITING_EXPLANATION: 'caution',
   EXPLANATION_RECEIVED: 'active',
   HELD: 'caution',
+
+  // Emergency notification (S174).
+  //
+  // ACTIVE is deliberately absent from this block. It is already mapped to `ready` above, which is
+  // right for a vehicle, a driver and a master-data record — and wrong for an activation, where it
+  // means a live emergency broadcast is out. `activationTone` in the emergency module states that
+  // reading instead, so the two never quietly overwrite each other.
+  PENDING_APPROVAL: 'caution',
+  ACTIVATING: 'active',
+  BREAK_GLASS_ACTIVE: 'blocked',
+  ALL_CLEAR_PENDING: 'caution',
+  // Per-channel fan-out and per-recipient delivery.
+  SENDING: 'active',
+  QUEUED: 'neutral',
+  SENT: 'active',
+  // Activation mode.
+  ROUTINE: 'neutral',
+  BREAK_GLASS: 'blocked',
+  DEGRADED: 'caution',
+  // Drill run.
+  RUNNING: 'active',
 };
 
 export const toneFor = (value: string | null | undefined): Tone =>

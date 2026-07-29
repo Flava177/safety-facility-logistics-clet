@@ -1,4 +1,4 @@
-import Alert from 'shared/components/Alert';
+import SharedWindowNotice from 'shared/components/WindowNotice';
 
 interface WindowNoticeProps {
   truncated: boolean;
@@ -9,32 +9,17 @@ interface WindowNoticeProps {
 }
 
 /**
- * What a dispatch register is actually showing.
+ * What a dispatch register is actually showing — the shared notice, naming the dispatch service.
  *
- * The dispatch collections take a `size` limit and return an unpaged array, so a register can only
- * ever show a window. When the service returns fewer records than the limit, that window *is*
- * everything matching the filter and the footer is the whole truth. When it returns exactly the
- * limit, records were almost certainly left behind — and the operator has to be told, because
- * narrowing the filter is the only way to see them.
+ * The banner itself moved to `shared/components/WindowNotice` when S174 turned out to need the
+ * same warning for the same reason. This wrapper keeps the dispatch screens' call sites unchanged
+ * and names the service once, rather than at eleven of them.
  *
- * Recorded as gap 1. This banner disappears the day the dispatch endpoints return a paged envelope,
- * exactly as the fuel one did.
+ * Recorded as gap 1 in `docs/dispatch/S171_Dispatch_Frontend_Gap_Register.md`. It disappears the
+ * day the dispatch endpoints return a paged envelope, exactly as the fuel one did.
  */
-const WindowNotice = ({ truncated, total, requestedSize, noun }: WindowNoticeProps) => {
-  if (!truncated) {
-    return null;
-  }
-  return (
-    <Alert
-      variant="warning"
-      title={`Showing the first ${total.toLocaleString()} ${noun} only`}
-      className="mt-4"
-    >
-      The dispatch service returns an unpaged window of up to {requestedSize.toLocaleString()}{' '}
-      records and it came back full, so there are very likely more {noun} matching these filters.
-      Narrow the site, status or date range to see them.
-    </Alert>
-  );
-};
+const WindowNotice = (props: WindowNoticeProps) => (
+  <SharedWindowNotice {...props} service="dispatch service" />
+);
 
 export default WindowNotice;

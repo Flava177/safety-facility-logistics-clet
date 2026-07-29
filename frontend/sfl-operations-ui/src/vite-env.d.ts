@@ -7,6 +7,7 @@ interface ImportMetaEnv {
   readonly VITE_BASENAME?: string;
   readonly VITE_APP_PORT?: string;
   readonly VITE_FLEET_API_BASE_URL?: string;
+  readonly VITE_EMERGENCY_API_BASE_URL?: string;
   readonly VITE_SFL_USER?: string;
   readonly VITE_SFL_DISPLAY_NAME?: string;
   readonly VITE_SFL_ROLES?: string;
