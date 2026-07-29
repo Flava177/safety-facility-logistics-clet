@@ -58,7 +58,10 @@ export type IconName =
   | 'book'
   | 'scale'
   | 'upload'
-  | 'coins';
+  | 'coins'
+  | 'package'
+  | 'clipboard-list'
+  | 'shield-lock';
 
 const glyphs: Record<IconName, ReactElement> = {
   dashboard: (
@@ -299,6 +302,30 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M12 15.5V4.5" />
       <path d="M8 8.5l4-4 4 4" />
       <path d="M4.5 19.5h15" />
+    </>
+  ),
+  // A sealed parcel — the courier item mark.
+  package: (
+    <>
+      <path d="M12 3l8 4.2v9.6L12 21l-8-4.2V7.2z" />
+      <path d="M4 7.2l8 4.2 8-4.2" />
+      <path d="M12 11.4V21" />
+      <path d="M8 5.1l8 4.2" />
+    </>
+  ),
+  'clipboard-list': (
+    <>
+      <path d="M9 4.5H7a2 2 0 0 0-2 2V19a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V6.5a2 2 0 0 0-2-2h-2" />
+      <rect x="9" y="2.8" width="6" height="3.4" rx="1.2" />
+      <path d="M8.5 11h7M8.5 14.5h7M8.5 18h4" />
+    </>
+  ),
+  // A padlock over a shield — chain of custody.
+  'shield-lock': (
+    <>
+      <path d="M12 3l7 3v5.5c0 4.3-2.9 8-7 9.5-4.1-1.5-7-5.2-7-9.5V6z" />
+      <rect x="9.2" y="10.8" width="5.6" height="4.4" rx="1.2" />
+      <path d="M10.4 10.8V9.6a1.6 1.6 0 0 1 3.2 0v1.2" />
     </>
   ),
   coins: (

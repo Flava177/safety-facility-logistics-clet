@@ -59,6 +59,26 @@ export const fuelPaths = {
   integrations: '/fuel/integrations',
 };
 
+/**
+ * S171 dispatch routes.
+ *
+ * Custody, receipts and the return leg have no register of their own: each belongs to one
+ * consignment and is only meaningful beside it, so they live on the manifest detail screen rather
+ * than as three more sidebar entries an operator would have to cross-reference by hand.
+ */
+export const dispatchPaths = {
+  dashboard: '/dispatch',
+  items: '/dispatch/items',
+  itemDetail: (itemId: string) => `/dispatch/items/${itemId}`,
+  manifests: '/dispatch/manifests',
+  manifestDetail: (manifestId: string) => `/dispatch/manifests/${manifestId}`,
+  inbound: '/dispatch/inbound',
+  exceptions: '/dispatch/exceptions',
+  exceptionDetail: (caseId: string) => `/dispatch/exceptions/${caseId}`,
+  scans: '/dispatch/scans',
+  integrations: '/dispatch/integrations',
+};
+
 export const navSections: NavSection[] = [
   {
     heading: 'Operations',
@@ -181,6 +201,56 @@ export const navSections: NavSection[] = [
         to: fuelPaths.integrations,
         icon: 'cloud',
         description: 'Provider ingest and outbound publication',
+      },
+    ],
+  },
+  {
+    heading: 'Courier & dispatch',
+    items: [
+      {
+        label: 'Dispatch dashboard',
+        to: dispatchPaths.dashboard,
+        icon: 'dashboard',
+        description: 'Consignments in transit and open exceptions',
+      },
+      {
+        label: 'Courier items',
+        to: dispatchPaths.items,
+        icon: 'package',
+        matchPrefix: dispatchPaths.items,
+        description: 'Every tracked item, inbound and outbound',
+      },
+      {
+        label: 'Manifests',
+        to: dispatchPaths.manifests,
+        icon: 'clipboard-list',
+        matchPrefix: dispatchPaths.manifests,
+        description: 'Seals, custody, receipt and the return leg',
+      },
+      {
+        label: 'Inbound mail',
+        to: dispatchPaths.inbound,
+        icon: 'inbox',
+        description: 'Registration and acknowledged distribution',
+      },
+      {
+        label: 'Exception cases',
+        to: dispatchPaths.exceptions,
+        icon: 'alert-triangle',
+        matchPrefix: dispatchPaths.exceptions,
+        description: 'Custody gaps, variances and discrepancies',
+      },
+      {
+        label: 'Scan imports',
+        to: dispatchPaths.scans,
+        icon: 'upload',
+        description: 'Scanner batches and per-row outcomes',
+      },
+      {
+        label: 'Scanner integration',
+        to: dispatchPaths.integrations,
+        icon: 'cloud',
+        description: 'Scanner and carrier feeds, outbound publication',
       },
     ],
   },

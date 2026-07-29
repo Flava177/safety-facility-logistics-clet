@@ -103,7 +103,9 @@ const statusTones: Record<string, Tone> = {
   // the one that puts a case on somebody's queue, so it takes the same tone as a failed inspection.
   RECEIVED: 'neutral',
   VALIDATING: 'active',
-  MATCHED: 'active',
+  // MATCHED and RECONCILED are shared with dispatch, where they mean a clean return or scan
+  // outcome and a reconciled consignment. Both readings are settled states, so one tone serves.
+  MATCHED: 'ready',
   RECONCILED: 'ready',
   EXCEPTION: 'blocked',
   VOIDED: 'neutral',
@@ -114,6 +116,33 @@ const statusTones: Record<string, Tone> = {
   RETURNED: 'caution',
   RESUBMITTED: 'active',
   APPROVED: 'ready',
+
+  // Dispatch (S171). STAGED is work in hand; DELIVERED is a settled end.
+  STAGED: 'active',
+  DELIVERED: 'ready',
+  SEALED: 'active',
+  // Seal state — a compromised seal is the thing an operator must not miss.
+  INTACT: 'ready',
+  BROKEN: 'blocked',
+  REPLACED: 'caution',
+  MISSING: 'blocked',
+  // Receipt and return outcomes.
+  CLEAN: 'ready',
+  VARIANCE: 'blocked',
+  DISCREPANCY: 'blocked',
+  MISMATCH: 'blocked',
+  UNREGISTERED: 'caution',
+  // Manifest item return standing.
+  OUTSTANDING: 'blocked',
+  // Scan batch.
+  PARTIAL: 'caution',
+  // Sensitivity — SECRET is not an alarm, but it must never read as ordinary.
+  ORDINARY: 'neutral',
+  CONFIDENTIAL: 'caution',
+  SECRET: 'blocked',
+  // Direction.
+  INBOUND: 'active',
+  OUTBOUND: 'accent',
 
   // Fuel anomaly case.
   DETECTED: 'caution',
