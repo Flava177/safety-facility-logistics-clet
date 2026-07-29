@@ -88,7 +88,7 @@ the whole point of an effective-dated policy.
 ## 4. No pagination on any fuel collection — **closed**
 
 **Found.** Every fuel collection returned a bare `List<T>` with a `size` limit only — no `page`, no
-`totalElements`, no stable sort. A register could only ever show a window, and a console could tell a
+`totalElements`, no stable sort. A register could only ever show a window, and a dashboard could tell a
 full register from the first hundred rows of it only by guessing from whether the list came back
 full.
 
@@ -108,7 +108,7 @@ silently skips or repeats records. Page size is capped at 200.
 
 **Found.** `GET /anomalies` accepted `siteCode`, `status` and `size`. `dueBefore` existed on the
 repository and was reachable only from the sweep scheduler. Assignee, type, severity and materiality
-had no parameter at all, so the console filtered them in the browser — which made "breaching SLA"
+had no parameter at all, so the dashboard filtered them in the browser — which made "breaching SLA"
 mean "breaches among the first two hundred cases", precisely the queue an operator must not be given.
 
 **Closed by** `type`, `severity`, `assignee` (contains-match), `unassigned`, `material`, `openOnly`,
@@ -124,7 +124,7 @@ come from the dashboard endpoint, which counts them across the site rather than 
 
 **Found.** `GET /dashboard` returned `transactionCount`, `fuelVolume`, `fuelSpend`,
 `reconciledCount`, `exceptionCount`, `sourceUpdatedAt` and a computed `stale`, all from a view over
-`fuel_transactions` alone. No anomaly, logbook or import figures, so the console counted them from
+`fuel_transactions` alone. No anomaly, logbook or import figures, so the dashboard counted them from
 whatever list it could fetch and captioned them as derived.
 
 **Closed by** ten more indicators, counted by the service across the whole site:
@@ -132,7 +132,7 @@ whatever list it could fetch and captioned them as derived.
 `unassignedAnomalies`, `pendingLogbookReviews`, `draftLogbooks`, `importBatches`,
 `importBatchesWithErrors` and `lastImportAt`.
 
-**In the UI.** The "counted from the records this console fetched" section is gone. The only
+**In the UI.** The "counted from the records this dashboard fetched" section is gone. The only
 remaining derived panel is the spend trend, which is still bucketed by day in the browser because
 there is no time-series endpoint — and still says so.
 
@@ -245,7 +245,7 @@ repository as a second line of defence against a race.
 ## 13. The CSV report refuses `Accept: application/json` — resolved in the client
 
 `GET /api/v1/fuel/reports/transactions.csv` is declared `produces="text/csv"`. Spring intersects that
-with the request's `Accept`, so a client sending the console's standard `Accept: application/json`
+with the request's `Accept`, so a client sending the dashboard's standard `Accept: application/json`
 got **406 Not Acceptable** and the report was never generated. Found by probing with the exact
 headers the shared API client sends.
 

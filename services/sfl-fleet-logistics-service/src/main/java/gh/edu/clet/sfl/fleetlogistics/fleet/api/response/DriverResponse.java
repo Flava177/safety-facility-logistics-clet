@@ -11,7 +11,7 @@ import java.util.UUID;
  * Driver profile reference as returned by the API.
  *
  * <p>{@code licenceNumber} is masked unless the caller holds {@code FLEET_DRIVER_SENSITIVE_READ};
- * {@code licenceNumberMasked} says which form was returned so a console never presents a masked value
+ * {@code licenceNumberMasked} says which form was returned so a dashboard never presents a masked value
  * as the real one.
  */
 public record DriverResponse(

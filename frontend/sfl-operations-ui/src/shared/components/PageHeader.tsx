@@ -19,7 +19,7 @@ interface PageHeaderProps {
  * Page furniture: where am I, what is this, what can I do from here.
  *
  * A heavy sans title with a single quiet line under it — the same shape the rest of the CLET
- * platform uses, so an operator moving between consoles is not relearning the page.
+ * platform uses, so an operator moving between dashboards is not relearning the page.
  */
 const PageHeader = ({ title, subtitle, crumbs, actions, meta }: PageHeaderProps) => (
   <div className="mb-6">

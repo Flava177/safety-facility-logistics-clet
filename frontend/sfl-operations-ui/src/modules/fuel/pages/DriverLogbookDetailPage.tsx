@@ -48,9 +48,9 @@ const TRANSITION_ORDER: LogbookTransition[] = [
  * A driver logbook, its journey detail and every transition legal from where it stands.
  *
  * Which buttons appear is decided by the record's own `requireState` guards, transcribed in
- * `workflow.ts` — so the console offers approve only from under review, cancel only from draft,
+ * `workflow.ts` — so the dashboard offers approve only from under review, cancel only from draft,
  * submitted or returned, and reopen only from approved. The service still decides; this just stops
- * the console offering an action that can only be refused.
+ * the dashboard offering an action that can only be refused.
  */
 const DriverLogbookDetailPage = () => {
   const { logbookId = '' } = useParams();

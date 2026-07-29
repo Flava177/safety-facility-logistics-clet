@@ -4,7 +4,7 @@ import { SelectInput } from './fields';
 /**
  * The actor's site scope, parsed once.
  *
- * `sflActor.sites` is the comma-separated value the console sends as `X-SFL-Sites` on every
+ * `sflActor.sites` is the comma-separated value the dashboard sends as `X-SFL-Sites` on every
  * request, so it is by definition the complete set of sites this operator may read or write. Both
  * the filters and the request fields derive from it, which is why it lives beside the control
  * rather than being re-parsed in each of the nine screens that need it.
@@ -37,7 +37,7 @@ interface SiteSelectProps {
  *
  * Every write carries a site code, and the service refuses one outside the actor's scope with
  * `FLEET_UNAUTHORIZED_SCOPE` — a rule the operator only discovered by typing a neighbouring site
- * and having the submission bounced. The options are the actor's own sites, so the console can no
+ * and having the submission bounced. The options are the actor's own sites, so the dashboard can no
  * longer offer a site it cannot write to. Its props mirror `TextInput` so it drops into the same
  * grid without any other change.
  */

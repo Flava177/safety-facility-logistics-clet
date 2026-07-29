@@ -64,10 +64,10 @@ git add services/sfl-fleet-logistics-service/src/main/java/gh/edu/clet/sfl/fleet
 git -c user.name="Flava177" -c user.email="33349874+Flava177@users.noreply.github.com" \
   commit -m "feat(fuel): implement fuel domain, workflow, reconciliation, integrations and APIs"
 
-# C5 — operational console
+# C5 — operational dashboard
 git add services/sfl-fleet-logistics-service/src/main/resources/static/fuel
 git -c user.name="Flava177" -c user.email="33349874+Flava177@users.noreply.github.com" \
-  commit -m "feat(fuel): add Fuel Management and Driver Logbooks console"
+  commit -m "feat(fuel): add Fuel Management and Driver Logbooks dashboard"
 
 # C6 — tests
 git add services/sfl-fleet-logistics-service/src/test/java/gh/edu/clet/sfl/fleetlogistics/fuel

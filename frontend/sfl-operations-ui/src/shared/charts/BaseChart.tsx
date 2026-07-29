@@ -11,7 +11,7 @@ interface BaseChartProps {
   height?: number;
 }
 
-/** Shared chart defaults so every chart in the console has the same typography and chrome. */
+/** Shared chart defaults so every chart in the dashboard has the same typography and chrome. */
 const BaseChart = ({ type, options, series, height = 260 }: BaseChartProps) => {
   const merged: ApexOptions = {
     ...options,

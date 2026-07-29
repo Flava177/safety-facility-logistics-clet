@@ -7,7 +7,7 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.util.UUID;
 
-/** A vehicle compliance document, with the days-remaining figure the dashboard and console need. */
+/** A vehicle compliance document, with the days-remaining figure the dashboard and dashboard need. */
 public record ComplianceDocumentResponse(
         UUID id,
         UUID vehicleId,

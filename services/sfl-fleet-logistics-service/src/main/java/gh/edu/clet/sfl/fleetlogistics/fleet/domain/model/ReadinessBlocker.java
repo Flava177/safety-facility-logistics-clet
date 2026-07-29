@@ -7,7 +7,7 @@ import java.util.Objects;
  * One reason a vehicle or driver is not ready: a machine-readable code, the human-readable
  * explanation, the severity and enough context to act on it.
  *
- * @param context identifiers and dates a console can link from — for example the expiring document's
+ * @param context identifiers and dates a dashboard can link from — for example the expiring document's
  *        id and expiry date, or the conflicting trip's id
  */
 public record ReadinessBlocker(

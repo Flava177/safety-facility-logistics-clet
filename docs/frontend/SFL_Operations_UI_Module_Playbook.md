@@ -1,4 +1,4 @@
-# SFL Operations UI — module playbook
+# SFL Operations dashboards — module playbook
 
 What the Fleet & Vehicle build produced, and how to add the next module to it.
 
@@ -173,7 +173,7 @@ build timestamp — check it before reporting that a change did not take.
   imports, fuel dashboard, provider integration.
 - **`dispatch`** — courier items, manifests, custody and receipts, returns and exceptions, scans.
 
-`fuel` now has a React module too (S168). `dispatch` still runs on the old vanilla-JS console in
+`fuel` now has a React module too (S168). `dispatch` still runs on the old vanilla-JS front end in
 `src/main/resources/static/` and is the remaining candidate for the same treatment.
 
 **The three modules are not built alike, and the difference matters.** `fleet` returns
@@ -274,9 +274,9 @@ These are additions to §4, not replacements. Everything in §4 still holds.
     message naming explanation, decision and evidence together. The screen tracks the three
     separately and shows which are actually missing, so the path to closure is legible instead of
     being discovered one refusal at a time. Same for logbook submission's three preconditions.
-14. **Say which figures the service published and which the console counted.** The fuel dashboard
+14. **Say which figures the service published and which this application counted.** The fuel dashboard
     endpoint returns five numbers. Everything else on that page is counted from fetched records, so
-    it sits under its own heading — "Counted from the records this console fetched" — with a note
+    it sits under its own heading — "Counted from the records this dashboard fetched" — with a note
     naming the limit. A derived figure sitting silently in a KPI row is how a dashboard starts
     lying.
 15. **An unpaged endpoint needs a truncation warning, and truncation is a fact about the response.**
@@ -286,7 +286,7 @@ These are additions to §4, not replacements. Everything in §4 still holds.
     it off the filtered list switches the warning off exactly when it is most needed.
 16. **Offer real references, not identifier fields.** Fuel requests carry bare UUIDs the operator has
     never seen. `FleetReferenceSelect` selects out of the fleet registers for the same site, so the
-    console cannot offer a reference the service will refuse. Clear the dependent selects when the
+    dashboard cannot offer a reference the service will refuse. Clear the dependent selects when the
     site changes.
 17. **Verify against the running service with the headers the client really sends.** Two defects
     were found this way and by no other means: the CSV report answering 406 to

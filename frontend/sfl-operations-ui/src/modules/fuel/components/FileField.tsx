@@ -17,7 +17,7 @@ interface FileFieldProps {
 }
 
 /**
- * File selection, in the console's field rhythm.
+ * File selection, in the dashboard's field rhythm.
  *
  * The CSV import is the only place in the application that uploads anything, so this lives in the
  * fuel module rather than in the shared kit — the kit gains a component when a second module needs

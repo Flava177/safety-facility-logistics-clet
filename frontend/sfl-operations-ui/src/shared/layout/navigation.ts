@@ -1,11 +1,11 @@
 import { IconName } from 'shared/components/Icon';
 
 /**
- * Console navigation.
+ * Dashboard navigation.
  *
  * Only destinations that are built and wired to the Fleet service appear here. Modules that do not
  * exist yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
- * discover nothing, and it makes a working console look half-finished.
+ * discover nothing, and it makes a working dashboard look half-finished.
  */
 
 export interface NavItem {

@@ -17,7 +17,7 @@ interface ReconciliationChartProps {
  *
  * The first two slices come straight from the dashboard snapshot (`reconciledCount`,
  * `exceptionCount`); the third is the remainder of `transactionCount`, which is arithmetic on the
- * service's own figures rather than a count the console made up. Tone-coded rather than
+ * service's own figures rather than a count the dashboard made up. Tone-coded rather than
  * categorical, because these are statuses and they mean here what they mean on a `StatusChip`.
  */
 const ReconciliationChart = ({ slices, height = 280 }: ReconciliationChartProps) => (

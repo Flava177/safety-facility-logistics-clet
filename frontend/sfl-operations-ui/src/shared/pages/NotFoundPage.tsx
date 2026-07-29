@@ -9,7 +9,7 @@ const NotFoundPage = () => (
     </span>
     <p className="text-title-sm font-bold text-gray-900">Page not found</p>
     <p className="mt-2 max-w-md text-theme-sm text-gray-600">
-      That address is not part of the Fleet console. It may have been a link to a record that has
+      That address is not part of the Fleet dashboard. It may have been a link to a record that has
       since been removed.
     </p>
     <Link

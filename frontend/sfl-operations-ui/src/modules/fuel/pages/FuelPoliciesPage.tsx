@@ -61,7 +61,7 @@ const FuelPoliciesPage = () => {
   /**
    * The policies in force right now, asked of the service.
    *
-   * `inForceOnly` is an interval test the console cannot do correctly over a page: a policy that
+   * `inForceOnly` is an interval test the dashboard cannot do correctly over a page: a policy that
    * covers today may sit on any page of the register.
    */
   const inForceNow = useApiQuery(

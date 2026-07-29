@@ -9,7 +9,7 @@ import java.util.List;
  *
  * <p>Before this, every fuel collection returned a bare {@code List<T>} capped by a {@code size}
  * limit — no total, no page, no way for a client to know whether it had the register or the first
- * hundred rows of it. A console can only be honest about that by guessing from whether the list came
+ * hundred rows of it. A dashboard can only be honest about that by guessing from whether the list came
  * back full, which is the kind of thing an operator discovers when a record is missing.
  *
  * <p>{@code sort} is echoed back because the request may not have named one: a client that cannot

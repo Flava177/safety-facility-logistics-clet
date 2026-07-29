@@ -82,8 +82,8 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  *
  * Every indicator here is published by the service and counted across the whole site. That was not
  * true when this screen was first built: the dashboard endpoint returned five transaction figures,
- * so the anomaly, logbook and reconciliation counts had to be derived from whatever list the console
- * could fetch, and were captioned to say so. The endpoint counts them itself now, so the derived
+ * so the anomaly, logbook and reconciliation counts had to be derived from whatever list this
+ * application could fetch, and were captioned to say so. The endpoint counts them itself now, so the derived
  * section is gone and the only remaining caption is on the spend trend, which really is bucketed
  * here — there is still no time-series endpoint.
  *
@@ -332,9 +332,9 @@ const FuelDashboardPage = () => {
 
               {/*
                * Nine indicators, all published by the service. The split into "from the snapshot"
-               * and "counted by this console" that this row used to carry is gone: the dashboard
+               * and "counted by this application" that this row used to carry is gone: the dashboard
                * endpoint now counts the anomaly, logbook and import figures itself, across the whole
-               * site rather than across whatever page the console happened to fetch.
+               * site rather than across whatever page the dashboard happened to fetch.
                */}
               <div>
                 <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">

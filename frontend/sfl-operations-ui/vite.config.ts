@@ -4,7 +4,7 @@ import { defineConfig, loadEnv } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 /**
- * Build configuration for the SFL Operations console.
+ * Build configuration for the SFL Operations dashboards.
  *
  * `base` is the single source of truth for where the bundle is mounted. The production build is
  * served by the Fleet service from `/ui/`, so every asset URL and the router basename are derived
@@ -34,7 +34,7 @@ export default defineConfig(({ mode }) => {
       chunkSizeWarningLimit: 1200,
     },
     define: {
-      // Stamped into the shell so the running console can be identified from the screen alone.
+      // Stamped into the shell so the running dashboard can be identified from the screen alone.
       __BUILD_STAMP__: JSON.stringify(new Date().toISOString()),
     },
   };

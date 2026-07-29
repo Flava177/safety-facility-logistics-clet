@@ -26,7 +26,7 @@ import { fuelPaths } from 'shared/layout/navigation';
  *
  * The fuel dashboard uses a fifteen-minute threshold, but that measures *any* transaction change,
  * including manual capture. A provider feed is a different thing: a quiet forecourt overnight is
- * normal and a six-hour silence during the day is not. Six hours is a console judgement, stated here
+ * normal and a six-hour silence during the day is not. Six hours is a dashboard judgement, stated here
  * because the service publishes no provider-level freshness of its own.
  */
 const PROVIDER_STALE_HOURS = 6;
@@ -228,7 +228,7 @@ const FuelIntegrationPage = () => {
           <CellStack
             primary={row.source}
             secondary={
-              row.source.toUpperCase() === 'MANUAL' ? 'Captured in this console' : 'External feed'
+              row.source.toUpperCase() === 'MANUAL' ? 'Captured in this dashboard' : 'External feed'
             }
           />
         ),
@@ -313,7 +313,7 @@ const FuelIntegrationPage = () => {
             {staleProviders.map((provider) => provider.source).join(', ')} — no transaction ingested
             in the last {PROVIDER_STALE_HOURS} hours at {siteCode}.
             <DerivedNote>
-              A console threshold, not a service one. The fuel service publishes no per-provider
+              A dashboard threshold, not a service one. The fuel service publishes no per-provider
               freshness, so this is measured from the ingestion timestamps on the transactions
               themselves.
             </DerivedNote>
@@ -379,7 +379,7 @@ const FuelIntegrationPage = () => {
           <div className="px-5 pt-2 pb-4">
             <DerivedNote>
               Grouped by source system from the {transactions.data?.content.length ?? 0} transactions this
-              console fetched for {siteCode}. The service exposes no per-provider ingest endpoint, so
+              dashboard fetched for {siteCode}. The service exposes no per-provider ingest endpoint, so
               a provider that has never sent anything does not appear here at all.
             </DerivedNote>
           </div>

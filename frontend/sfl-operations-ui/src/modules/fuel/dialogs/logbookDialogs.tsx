@@ -388,7 +388,7 @@ export const LogbookTransitionDialog = ({
             ))}
           </ul>
           <p className="mt-2">
-            A draft cannot be edited from this console — the fuel service exposes no logbook update
+            A draft cannot be edited from this dashboard — the fuel service exposes no logbook update
             endpoint — so this record has to be cancelled and recreated with the missing detail.
           </p>
         </Alert>
