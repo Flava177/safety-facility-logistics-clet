@@ -20,6 +20,21 @@ const CompliancePage = lazy(() => import('modules/fleet/pages/CompliancePage'));
 const GovernancePage = lazy(() => import('modules/fleet/pages/GovernancePage'));
 const IntegrationHealthPage = lazy(() => import('modules/fleet/pages/IntegrationHealthPage'));
 
+const FuelDashboardPage = lazy(() => import('modules/fuel/pages/FuelDashboardPage'));
+const FuelTransactionsPage = lazy(() => import('modules/fuel/pages/FuelTransactionsPage'));
+const FuelTransactionDetailPage = lazy(
+  () => import('modules/fuel/pages/FuelTransactionDetailPage'),
+);
+const DriverLogbooksPage = lazy(() => import('modules/fuel/pages/DriverLogbooksPage'));
+const DriverLogbookDetailPage = lazy(() => import('modules/fuel/pages/DriverLogbookDetailPage'));
+const FuelReconciliationPage = lazy(() => import('modules/fuel/pages/FuelReconciliationPage'));
+const FuelAnomaliesPage = lazy(() => import('modules/fuel/pages/FuelAnomaliesPage'));
+const FuelAnomalyDetailPage = lazy(() => import('modules/fuel/pages/FuelAnomalyDetailPage'));
+const FuelImportsPage = lazy(() => import('modules/fuel/pages/FuelImportsPage'));
+const FuelPoliciesPage = lazy(() => import('modules/fuel/pages/FuelPoliciesPage'));
+const FuelPolicyDetailPage = lazy(() => import('modules/fuel/pages/FuelPolicyDetailPage'));
+const FuelIntegrationPage = lazy(() => import('modules/fuel/pages/FuelIntegrationPage'));
+
 /**
  * The router basename comes from Vite's `BASE_URL`, which is set by `base` in `vite.config.ts`.
  * Keeping it derived means the mount point is stated once: move the bundle and the routes follow.
@@ -61,6 +76,28 @@ const App = () => (
               <Route path="compliance" element={<CompliancePage />} />
               <Route path="governance" element={<GovernancePage />} />
               <Route path="integrations" element={<IntegrationHealthPage />} />
+            </Route>
+            <Route path="fuel">
+              <Route index element={<FuelDashboardPage />} />
+              <Route path="transactions">
+                <Route index element={<FuelTransactionsPage />} />
+                <Route path=":transactionId" element={<FuelTransactionDetailPage />} />
+              </Route>
+              <Route path="logbooks">
+                <Route index element={<DriverLogbooksPage />} />
+                <Route path=":logbookId" element={<DriverLogbookDetailPage />} />
+              </Route>
+              <Route path="reconciliation" element={<FuelReconciliationPage />} />
+              <Route path="anomalies">
+                <Route index element={<FuelAnomaliesPage />} />
+                <Route path=":anomalyId" element={<FuelAnomalyDetailPage />} />
+              </Route>
+              <Route path="imports" element={<FuelImportsPage />} />
+              <Route path="policies">
+                <Route index element={<FuelPoliciesPage />} />
+                <Route path=":policyId" element={<FuelPolicyDetailPage />} />
+              </Route>
+              <Route path="integrations" element={<FuelIntegrationPage />} />
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>

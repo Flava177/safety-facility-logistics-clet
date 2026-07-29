@@ -98,6 +98,28 @@ const statusTones: Record<string, Tone> = {
   // Blocker severity
   WARNING: 'caution',
   BLOCKING: 'blocked',
+
+  // Fuel transaction status and lifecycle (S168). RECONCILED is the settled end state; EXCEPTION is
+  // the one that puts a case on somebody's queue, so it takes the same tone as a failed inspection.
+  RECEIVED: 'neutral',
+  VALIDATING: 'active',
+  MATCHED: 'active',
+  RECONCILED: 'ready',
+  EXCEPTION: 'blocked',
+  VOIDED: 'neutral',
+
+  // Driver logbook. RETURNED is amber because the record is back with the driver to correct, not
+  // because anything failed; RESUBMITTED reads the same as SUBMITTED, which is what it is.
+  UNDER_REVIEW: 'active',
+  RETURNED: 'caution',
+  RESUBMITTED: 'active',
+  APPROVED: 'ready',
+
+  // Fuel anomaly case.
+  DETECTED: 'caution',
+  AWAITING_EXPLANATION: 'caution',
+  EXPLANATION_RECEIVED: 'active',
+  HELD: 'caution',
 };
 
 export const toneFor = (value: string | null | undefined): Tone =>
