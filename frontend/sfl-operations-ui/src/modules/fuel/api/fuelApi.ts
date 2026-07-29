@@ -8,14 +8,20 @@ import {
   CreatePolicyRequest,
   DriverLogbook,
   FuelAnomalyCase,
+  FuelAuditEvent,
   FuelDashboardSnapshot,
+  FuelImportBatch,
+  FuelPageResponse,
   FuelPolicy,
+  FuelReconciliation,
   FuelTransaction,
   ImportResult,
+  ImportSearchParams,
   IntegrationHealth,
   LogbookSearchParams,
   LogbookTransitionRequest,
   OutboxHealth,
+  PolicySearchParams,
   ReplayResult,
   TransactionSearchParams,
   VoidTransactionRequest,
@@ -24,50 +30,72 @@ import {
 /**
  * Typed client for the S168 fuel API.
  *
- * Paths were taken from the controllers and confirmed against the running service's `/v3/api-docs`,
- * not from `docs/fuel/S168_Fuel_API_Inventory.md` — that document lists `GET /policies/{id}`,
- * `GET /imports/{id}` and a `/reconciliations` pair that do not exist. The differences are recorded
- * in `docs/fuel/S168_Fuel_Frontend_Gap_Register.md`. Nothing here calls an endpoint that is not
- * there, and nothing here invents a response shape.
+ * Paths were taken from the controllers and confirmed against the running service's `/v3/api-docs`.
+ * Nothing here calls an endpoint that is not there, and nothing invents a response shape.
  *
- * Two service-wide facts shape this file. **`siteCode` is required** on every collection and on the
- * dashboard, so no query is site-optional. And **there is no pagination** — each collection takes a
- * `size` limit and returns a bare array, which is why `DEFAULT_WINDOW` exists and why the registers
- * page over what came back rather than over the register.
+ * **Every collection is paged.** Fuel collections used to return a bare array capped by a `size`
+ * limit, which is why the registers once filtered client-side over whatever came back and warned
+ * when the window looked full. They now return `FuelPageResponse<T>` with a real total, so a
+ * register shows the register.
  */
 
 const BASE = '/api/v1/fuel';
 
-/**
- * How many records the console asks for.
- *
- * The service defaults to 100 and imposes no ceiling of its own. 200 is a compromise: wide enough
- * that a day's transactions at one site fit inside one window, small enough that the response stays
- * quick. When the service returns exactly this many, every register warns that the window is full.
- */
-export const DEFAULT_WINDOW = 200;
+/** Rows per page. Matches the shared `defaultPageSize` the fleet registers use. */
+export const DEFAULT_PAGE_SIZE = 25;
+
+/** The service caps a page at this; asking for more silently returns this many. */
+export const MAX_PAGE_SIZE = 200;
 
 const asQuery = (params: object | undefined): QueryParams | undefined =>
   params as QueryParams | undefined;
 
 export const fuelPoliciesApi = {
-  /** `GET /policies?siteCode=` — the whole register for a site; there is no paging or filtering. */
-  list: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<FuelPolicy[]>(`${BASE}/policies`, { siteCode }, signal),
+  search: (params: PolicySearchParams, signal?: AbortSignal) =>
+    apiClient.get<FuelPageResponse<FuelPolicy>>(
+      `${BASE}/policies`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
 
+  findById: (policyId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelPolicy>(`${BASE}/policies/${policyId}`, undefined, signal),
+
+  history: (policyId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelAuditEvent[]>(`${BASE}/policies/${policyId}/history`, undefined, signal),
+
+  /**
+   * Refused with 409 `FUEL_POLICY_PERIOD_OVERLAP` when an active policy already covers part of the
+   * period. The conflicting policies come back in the error's `details.conflictingPolicies`.
+   */
   create: (body: CreatePolicyRequest) => apiClient.post<FuelPolicy>(`${BASE}/policies`, body),
 };
 
 export const fuelTransactionsApi = {
   search: (params: TransactionSearchParams, signal?: AbortSignal) =>
-    apiClient.get<FuelTransaction[]>(
+    apiClient.get<FuelPageResponse<FuelTransaction>>(
       `${BASE}/transactions`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
   findById: (transactionId: string, signal?: AbortSignal) =>
     apiClient.get<FuelTransaction>(`${BASE}/transactions/${transactionId}`, undefined, signal),
+
+  /** Every run against the transaction, newest first, each with its full rule result map. */
+  reconciliations: (transactionId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelReconciliation[]>(
+      `${BASE}/transactions/${transactionId}/reconciliations`,
+      undefined,
+      signal,
+    ),
+
+  history: (transactionId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelAuditEvent[]>(
+      `${BASE}/transactions/${transactionId}/history`,
+      undefined,
+      signal,
+    ),
 
   /** Manual capture. The only fuel mutation that reads `Idempotency-Key`, so it is sent. */
   capture: (body: CaptureTransactionRequest) =>
@@ -91,7 +119,7 @@ export const fuelTransactionsApi = {
     }),
 
   /**
-   * `GET /reports/transactions.csv` — a `text/csv` download, capped at 500 rows service-side.
+   * `GET /reports/transactions.csv` — a `text/csv` download of the site's most recent transactions.
    *
    * Fetched rather than linked: the endpoint needs `FUEL_REPORT_EXPORT` and the actor comes from the
    * `X-SFL-*` headers, which a browser navigation would not send.
@@ -117,23 +145,27 @@ export type LogbookTransition = (typeof LOGBOOK_TRANSITIONS)[number];
 
 export const driverLogbooksApi = {
   search: (params: LogbookSearchParams, signal?: AbortSignal) =>
-    apiClient.get<DriverLogbook[]>(
+    apiClient.get<FuelPageResponse<DriverLogbook>>(
       `${BASE}/logbooks`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
   findById: (logbookId: string, signal?: AbortSignal) =>
     apiClient.get<DriverLogbook>(`${BASE}/logbooks/${logbookId}`, undefined, signal),
 
+  /** The record's transitions, from the audit log — draft through review to approval. */
+  history: (logbookId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelAuditEvent[]>(`${BASE}/logbooks/${logbookId}/history`, undefined, signal),
+
   create: (body: CreateLogbookRequest) => apiClient.post<DriverLogbook>(`${BASE}/logbooks`, body),
 
   /**
-   * One path serves all six transitions (`{action:submit|review|return|approve|reopen|cancel}`).
+   * One path serves all six transitions.
    *
-   * `comment` is the single free-text field the service takes; which of the domain's three
-   * fields it lands in depends on the action — `reviewComment` for return and approve,
-   * `transitionReason` for reopen and cancel.
+   * `comment` is the single free-text field the service takes; which of the domain's fields it
+   * lands in depends on the action — `reviewComment` for return and approve, `transitionReason`
+   * for reopen and cancel.
    */
   transition: (logbookId: string, action: LogbookTransition, body: LogbookTransitionRequest) =>
     apiClient.post<DriverLogbook>(`${BASE}/logbooks/${logbookId}/${action}`, body, {
@@ -161,14 +193,17 @@ export type AnomalyAction = (typeof ANOMALY_ACTIONS)[number];
 
 export const fuelAnomaliesApi = {
   search: (params: AnomalySearchParams, signal?: AbortSignal) =>
-    apiClient.get<FuelAnomalyCase[]>(
+    apiClient.get<FuelPageResponse<FuelAnomalyCase>>(
       `${BASE}/anomalies`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
   findById: (anomalyId: string, signal?: AbortSignal) =>
     apiClient.get<FuelAnomalyCase>(`${BASE}/anomalies/${anomalyId}`, undefined, signal),
+
+  history: (anomalyId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelAuditEvent[]>(`${BASE}/anomalies/${anomalyId}/history`, undefined, signal),
 
   /**
    * `value` is overloaded by the service: assignee for assign/reassign, explanation text for
@@ -184,8 +219,8 @@ export const fuelImportsApi = {
   /**
    * `POST /imports/csv` — multipart, with the site and source system as query parameters.
    *
-   * The result is the only view of the batch there will ever be: `fuel_import_batches` and
-   * `fuel_import_rows` are written but no endpoint reads them (gap 2).
+   * A file already imported for this site and source system is refused with 409
+   * `FUEL_IMPORT_ALREADY_PROCESSED` **before** any row is captured.
    */
   uploadCsv: (siteCode: string, sourceSystem: string, file: File) => {
     const form = new FormData();
@@ -194,10 +229,22 @@ export const fuelImportsApi = {
       query: { siteCode, sourceSystem },
     });
   },
+
+  /** Past batches for the site, headers only. */
+  search: (params: ImportSearchParams, signal?: AbortSignal) =>
+    apiClient.get<FuelPageResponse<FuelImportBatch>>(
+      `${BASE}/imports`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
+
+  /** One batch with every row outcome and its retained validation error. */
+  findById: (batchId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelImportBatch>(`${BASE}/imports/${batchId}`, undefined, signal),
 };
 
 export const fuelIntegrationsApi = {
-  /** Inbound provider webhook health — shared inbox, filtered to nothing in particular. */
+  /** Inbound provider webhook health — shared inbox, not filtered to fuel or to a site. */
   inboundHealth: (signal?: AbortSignal) =>
     apiClient.get<IntegrationHealth>(`${BASE}/integrations/health`, undefined, signal),
 
@@ -206,11 +253,9 @@ export const fuelIntegrationsApi = {
     apiClient.get<OutboxHealth>(`${BASE}/integrations/outbox/health`, undefined, signal),
 
   replay: (messageId: string) =>
-    apiClient.post<ReplayResult>(
-      `${BASE}/integrations/outbox/${messageId}/replay`,
-      undefined,
-      { idempotent: false },
-    ),
+    apiClient.post<ReplayResult>(`${BASE}/integrations/outbox/${messageId}/replay`, undefined, {
+      idempotent: false,
+    }),
 };
 
 export const fuelDashboardApi = {

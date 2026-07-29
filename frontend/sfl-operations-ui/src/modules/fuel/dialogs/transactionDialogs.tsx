@@ -28,7 +28,7 @@ const threeColumn = 'grid gap-4 sm:grid-cols-3';
 
 /**
  * `FuelTransaction` computes `quantity × unitPrice` at scale 2 and rejects a supplied `totalCost`
- * that disagrees, so the console derives the same figure the same way rather than letting an
+ * that disagrees, so the dashboard derives the same figure the same way rather than letting an
  * operator type a total that will be refused.
  */
 const derivedTotal = (quantity: string, unitPrice: string): number | null => {
@@ -52,7 +52,7 @@ interface CaptureDialogProps {
  *
  * Two things are deliberately not editable. `sourceSystem` is fixed to `MANUAL`, because that is
  * what selects the `FUEL_TRANSACTION_CAPTURE` permission in the service (any other value routes to
- * the import or integration permission, which a console operator will not hold), and provenance
+ * the import or integration permission, which a dashboard operator will not hold), and provenance
  * should say where a record really came from. And `totalCost` is derived rather than typed, because
  * the domain refuses a total that is not `quantity × unitPrice` to two decimal places.
  *

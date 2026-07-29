@@ -5,7 +5,7 @@ import { AnomalyAction, LogbookTransition } from './fuelApi';
  * The fuel lifecycles, transcribed from the domain records' own `requireState(...)` guards.
  *
  * This is a **mirror, never a replacement**. Every transition still submits and the service still
- * decides; what this buys is that the console offers "Approve" only where approve is actually legal,
+ * decides; what this buys is that the dashboard offers "Approve" only where approve is actually legal,
  * and can say *why* an action is unavailable before the operator spends a round trip finding out.
  *
  * Transcribed from `DriverLogbook`, `FuelAnomalyCase` and `FuelTransaction` in
@@ -241,7 +241,7 @@ export const anomalySlaBreached = (anomaly: FuelAnomalyCase, now = Date.now()): 
  * `FuelTransaction.withStatus` refuses a record that is `VOIDED` or not `ACTIVE`, so reconciliation
  * is only offered on a live record. The service will also refuse it when no ACTIVE policy covers
  * `occurredAt` — that one cannot be predicted client-side, because policies are effective-dated and
- * the console does not re-implement `appliesAt`.
+ * the dashboard does not re-implement `appliesAt`.
  */
 export const transactionReconcilable = (transaction: FuelTransaction): boolean =>
   transaction.lifecycle === 'ACTIVE' && transaction.status !== 'VOIDED';

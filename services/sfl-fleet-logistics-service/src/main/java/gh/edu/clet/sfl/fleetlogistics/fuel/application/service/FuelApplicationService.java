@@ -11,6 +11,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.NotificationPort.No
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
@@ -18,9 +19,12 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FinanceAuditVisibili
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelFleetReferencePort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelOutboxAdminPort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOverlapException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
@@ -59,7 +63,32 @@ public class FuelApplicationService {
     public record CaptureFuel(String siteCode,String providerTransactionId,String sourceSystem,UUID vehicleId,UUID driverId,UUID tripId,Instant occurredAt,String vendorReference,String stationReference,String fuelProduct,BigDecimal quantity,String quantityUnit,BigDecimal unitPrice,BigDecimal totalCost,String currency,String cardReference,long odometerReading,UUID receiptEvidenceId,String comments,String idempotencyKey,ActorContext actor,SourceChannel channel){}
     public record CreateLogbook(String siteCode,UUID driverId,UUID vehicleId,UUID tripId,LocalDate journeyDate,Instant startTime,Instant endTime,String origin,String destination,String routeNotes,DriverLogbook.UseClassification useClassification,String purpose,String passengerLoadNotes,long startOdometer,Long endOdometer,boolean declarationAccepted,UUID evidenceId,ActorContext actor,SourceChannel channel){}
 
-    @Transactional public FuelPolicy createPolicy(CreatePolicy c){access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,c.siteCode(),"FuelPolicy",null);Instant now=clock.instant();var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.name(),c.effectiveFrom(),c.effectiveTo(),c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.allowedFuelProducts(),c.approvedVendors(),FuelPolicy.Status.ACTIVE,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.savePolicy(p);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPolicy",saved.id().toString(),null,saved);return saved;}
+    /**
+     * Creates an effective-dated policy, refusing one that overlaps an active policy for the site.
+     *
+     * <p>The domain model documented "no overlapping active policy for the same scope" as an
+     * invariant and nothing enforced it — not the record, which cannot see its siblings, and not the
+     * database. With two active policies covering one instant, {@code findApplicablePolicy} returns
+     * whichever row the ordering surfaces, so the rules a transaction is judged against and the
+     * policy version stamped on its reconciliation stop being reproducible. That defeats the point
+     * of an effective-dated policy, so the overlap is refused here, inside the same transaction that
+     * writes the record.
+     */
+    @Transactional public FuelPolicy createPolicy(CreatePolicy c){
+        access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,c.siteCode(),"FuelPolicy",null);
+        requireNoOverlap(SiteCode.of(c.siteCode()).value(),c.effectiveFrom(),c.effectiveTo());
+        return persistPolicy(c);
+    }
+
+    private void requireNoOverlap(String site,Instant from,Instant to){
+        var clashes=repository.findOverlappingActivePolicies(site,from,to,null);
+        if(clashes.isEmpty())return;
+        throw FuelPolicyPeriodOverlapException.of(site,from,to,clashes.stream()
+                .map(p->new FuelPolicyPeriodOverlapException.Conflict(p.id(),p.name(),p.policyVersion(),p.effectiveFrom(),p.effectiveTo()))
+                .toList());
+    }
+
+    private FuelPolicy persistPolicy(CreatePolicy c){Instant now=clock.instant();var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.name(),c.effectiveFrom(),c.effectiveTo(),c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.allowedFuelProducts(),c.approvedVendors(),FuelPolicy.Status.ACTIVE,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.savePolicy(p);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPolicy",saved.id().toString(),null,saved);return saved;}
 
     @Transactional public FuelTransaction capture(CaptureFuel c){SflPermission capturePermission=c.sourceSystem().equalsIgnoreCase("MANUAL")?SflPermission.FUEL_TRANSACTION_CAPTURE:access.has(c.actor(),SflPermission.FUEL_TRANSACTION_IMPORT)?SflPermission.FUEL_TRANSACTION_IMPORT:SflPermission.FUEL_INTEGRATION_INGEST;access.require(c.actor(),capturePermission,c.siteCode(),"FuelTransaction",null);String fp=idempotency.fingerprint(c);Optional<UUID> replay=idempotency.findExistingResult("capture-fuel",c.idempotencyKey(),fp);if(replay.isPresent())return transaction(replay.get(),c.actor());var duplicate=repository.findProviderTransaction(c.siteCode(),c.sourceSystem(),c.providerTransactionId());if(duplicate.isPresent())return duplicate.get();fleet.resolve(c.vehicleId(),c.driverId(),c.tripId(),SiteCode.of(c.siteCode()).value());Instant now=clock.instant();var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.providerTransactionId(),c.sourceSystem(),c.vehicleId(),c.driverId(),c.tripId(),c.occurredAt(),c.vendorReference(),c.stationReference(),c.fuelProduct(),c.quantity(),c.quantityUnit(),c.unitPrice(),c.totalCost(),Currency.getInstance(c.currency().toUpperCase()),c.cardReference(),c.odometerReading(),c.receiptEvidenceId(),c.comments(),FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,now,c.idempotencyKey(),RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.saveTransaction(tx);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelTransaction",saved.id().toString(),null,saved);events.publish(FleetEventType.FUEL_TRANSACTION_RECEIVED,"FuelTransaction",saved.id().toString(),saved.siteCode(),c.actor(),Map.of("transactionId",saved.id(),"vehicleId",saved.vehicleId(),"driverId",saved.driverId(),"quantity",saved.quantity(),"currency",saved.currency().getCurrencyCode()));idempotency.recordResult("capture-fuel",c.idempotencyKey(),fp,saved.id(),saved.siteCode().value(),c.actor().actorId());return saved;}
 
@@ -112,16 +141,103 @@ public class FuelApplicationService {
     public FuelTransaction transaction(UUID id,ActorContext actor){var t=repository.findTransaction(id).orElseThrow(()->RecordNotFoundException.of("FuelTransaction",id));access.require(actor,SflPermission.FUEL_TRANSACTION_READ,t.siteCode().value(),"FuelTransaction",id.toString());return t;}
     public DriverLogbook logbook(UUID id,ActorContext actor){var l=repository.findLogbook(id).orElseThrow(()->RecordNotFoundException.of("DriverLogbook",id));access.require(actor,SflPermission.FUEL_LOGBOOK_READ,l.siteCode().value(),"DriverLogbook",id.toString());return l;}
     public FuelAnomalyCase anomaly(UUID id,ActorContext actor){var a=repository.findAnomaly(id).orElseThrow(()->RecordNotFoundException.of("FuelAnomalyCase",id));access.require(actor,SflPermission.FUEL_ANOMALY_READ,a.siteCode().value(),"FuelAnomalyCase",id.toString());return a;}
-    public List<FuelTransaction> transactions(String site,FuelTransaction.Status status,UUID vehicle,UUID driver,Instant from,Instant to,int limit,ActorContext actor){access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelTransaction",null);return repository.findTransactions(List.of(SiteCode.of(site).value()),site,status,vehicle,driver,from,to,limit);}
-    public List<DriverLogbook> logbooks(String site,DriverLogbook.Status status,int limit,ActorContext actor){access.require(actor,SflPermission.FUEL_LOGBOOK_READ,site,"DriverLogbook",null);return repository.findLogbooks(List.of(SiteCode.of(site).value()),actor.actorId(),access.isDriverOnly(actor),status,limit);}
-    public List<FuelAnomalyCase> anomalies(String site,FuelAnomalyCase.Status status,int limit,ActorContext actor){access.require(actor,SflPermission.FUEL_ANOMALY_READ,site,"FuelAnomalyCase",null);return repository.findAnomalies(List.of(SiteCode.of(site).value()),status,null,limit);}
-    public List<FuelPolicy> policies(String site,ActorContext actor){access.require(actor,SflPermission.FUEL_POLICY_READ,site,"FuelPolicy",null);return repository.findPolicies(List.of(SiteCode.of(site).value()));}
-    public Map<String,Object> dashboard(String site,ActorContext actor){access.require(actor,SflPermission.FUEL_REPORT_READ,site,"FuelDashboard",null);var result=new LinkedHashMap<>(repository.dashboard(List.of(SiteCode.of(site).value()),site));Instant updated=(Instant)result.get("sourceUpdatedAt");result.put("stale",updated==null||updated.isBefore(clock.instant().minusSeconds(900)));return result;}
+    /* ---------------------------------------------------------------------------- paged reads */
+
+    public FuelRepository.FuelPage<FuelTransaction> transactions(String site,FuelTransaction.Status status,UUID vehicle,UUID driver,String source,String vendor,Instant from,Instant to,FuelRepository.Paging paging,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelTransaction",null);
+        return repository.findTransactions(new FuelRepository.TransactionQuery(List.of(SiteCode.of(site).value()),site,status,vehicle,driver,source,vendor,from,to,paging));
+    }
+
+    /**
+     * A driver-only actor is restricted to their own records here, not in the dashboard.
+     *
+     * <p>Scoping a query by what the caller may see belongs on this side of the wire: a client-side
+     * filter is a display convention, and the records would still have crossed the boundary.
+     */
+    public FuelRepository.FuelPage<DriverLogbook> logbooks(String site,DriverLogbook.Status status,UUID driver,UUID vehicle,DriverLogbook.UseClassification use,LocalDate journeyFrom,LocalDate journeyTo,FuelRepository.Paging paging,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_LOGBOOK_READ,site,"DriverLogbook",null);
+        return repository.findLogbooks(new FuelRepository.LogbookQuery(List.of(SiteCode.of(site).value()),actor.actorId(),access.isDriverOnly(actor),status,driver,vehicle,use,journeyFrom,journeyTo,paging));
+    }
+
+    /**
+     * The anomaly queue, filtered server-side.
+     *
+     * <p>{@code dueBefore} is what makes "breaching SLA" a query rather than a guess: the sweep
+     * scheduler already used it, and until now nothing else could reach it.
+     */
+    public FuelRepository.FuelPage<FuelAnomalyCase> anomalies(String site,FuelAnomalyCase.Status status,FuelAnomalyCase.Type type,FuelAnomalyCase.Severity severity,String assignee,Boolean unassigned,Boolean material,Boolean openOnly,Instant dueBefore,UUID transactionId,FuelRepository.Paging paging,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_ANOMALY_READ,site,"FuelAnomalyCase",null);
+        return repository.findAnomalies(new FuelRepository.AnomalyQuery(List.of(SiteCode.of(site).value()),status,type,severity,assignee,unassigned,material,openOnly,dueBefore,transactionId,null,null,paging));
+    }
+
+    public FuelRepository.FuelPage<FuelPolicy> policies(String site,FuelPolicy.Status status,boolean inForceOnly,FuelRepository.Paging paging,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_POLICY_READ,site,"FuelPolicy",null);
+        return repository.findPolicies(new FuelRepository.PolicyQuery(List.of(SiteCode.of(site).value()),status,inForceOnly?clock.instant():null,paging));
+    }
+
+    public FuelPolicy policy(UUID id,ActorContext actor){
+        var p=repository.findPolicy(id).orElseThrow(()->RecordNotFoundException.of("FuelPolicy",id));
+        access.require(actor,SflPermission.FUEL_POLICY_READ,p.siteCode().value(),"FuelPolicy",id.toString());
+        return p;
+    }
+
+    /**
+     * Every reconciliation run against the transaction, newest first.
+     *
+     * <p>The rows were written from the first release and readable from none of it, so a screen could
+     * report that a transaction failed but never which rules it passed. Reading them is what makes a
+     * decision reproducible: the policy version it was judged against and the full rule result map.
+     */
+    public List<FuelReconciliation> reconciliations(UUID transactionId,ActorContext actor){
+        var tx=transaction(transactionId,actor);
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,tx.siteCode().value(),"FuelReconciliation",transactionId.toString());
+        return repository.findReconciliations(transactionId);
+    }
+
+    public FuelRepository.FuelPage<FuelImportBatch> importBatches(String site,String source,FuelRepository.Paging paging,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelImportBatch",null);
+        return repository.findImportBatches(new FuelRepository.ImportQuery(List.of(SiteCode.of(site).value()),source,paging));
+    }
+
+    public FuelImportBatch importBatch(UUID id,ActorContext actor){
+        var batch=repository.findImportBatch(id).orElseThrow(()->RecordNotFoundException.of("FuelImportBatch",id));
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,batch.siteCode().value(),"FuelImportBatch",id.toString());
+        return batch;
+    }
+
+    /**
+     * The audit trail for one fuel record.
+     *
+     * <p>Every fuel state change was already written through {@link AuditPort}; what was missing was
+     * a way to read it back against a single record. The read is authorised against the record
+     * itself, so a caller cannot enumerate another site's history through it.
+     */
+    public List<AuditEvent> history(String resourceType,UUID id,ActorContext actor){
+        String site=switch(resourceType){
+            case "FuelTransaction"->transaction(id,actor).siteCode().value();
+            case "DriverLogbook"->logbook(id,actor).siteCode().value();
+            case "FuelAnomalyCase"->anomaly(id,actor).siteCode().value();
+            case "FuelPolicy"->policy(id,actor).siteCode().value();
+            default->throw new IllegalArgumentException("Unknown fuel resource type");
+        };
+        return audit.search(new AuditPort.AuditQuery(List.of(site),resourceType,id.toString(),null,null,null,null,0,200));
+    }
+
+    public Map<String,Object> dashboard(String site,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_REPORT_READ,site,"FuelDashboard",null);
+        Instant now=clock.instant();
+        var result=new LinkedHashMap<>(repository.dashboard(List.of(SiteCode.of(site).value()),site,now));
+        Instant updated=(Instant)result.get("sourceUpdatedAt");
+        result.put("stale",updated==null||updated.isBefore(now.minusSeconds(900)));
+        return result;
+    }
 
     public String transactionReportCsv(String site,ActorContext actor){
         access.require(actor,SflPermission.FUEL_REPORT_EXPORT,site,"FuelTransactionReport",null);
         StringBuilder csv=new StringBuilder("transactionId,occurredAt,vehicleId,driverId,product,quantity,unit,totalCost,currency,status,vendor,receiptEvidenceId\r\n");
-        for(var t:repository.findTransactions(List.of(SiteCode.of(site).value()),site,null,null,null,null,null,500)){
+        var window=new FuelRepository.TransactionQuery(List.of(SiteCode.of(site).value()),site,null,null,null,null,null,null,null,
+                new FuelRepository.Paging(0,FuelRepository.Paging.MAX_SIZE,"occurredAt,desc"));
+        for(var t:repository.findTransactions(window).content()){
             csv.append(t.id()).append(',').append(t.occurredAt()).append(',').append(t.vehicleId()).append(',')
                     .append(t.driverId()).append(',').append(csv(t.fuelProduct())).append(',').append(t.quantity())
                     .append(',').append(csv(t.quantityUnit())).append(',').append(t.totalCost()).append(',')

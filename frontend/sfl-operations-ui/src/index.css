@@ -109,7 +109,7 @@
   --color-gold-900: #713b0c;
   --color-gold-950: #431d06;
 
-  /* Deep Teal — 700 is the brand value and the console's interactive colour */
+  /* Deep Teal — 700 is the brand value and the dashboard's interactive colour */
   --color-teal-25: #f2fafe;
   --color-teal-50: #e0f2fe;
   --color-teal-100: #bae6fd;
@@ -206,7 +206,7 @@
   --color-error-950: #3e0203;
 
   /* Figma Scale (0–160 px) drives spacing and radii. The design system's own table component uses
-     an 8px corner, so 8px is the console's default card radius rather than the 16px it had. */
+     an 8px corner, so 8px is the dashboard's default card radius rather than the 16px it had. */
   --radius-card: 8px;
   --radius-control: 8px;
 
@@ -229,7 +229,7 @@
 }
 
 @layer base {
-  /* Tailwind v4 defaults the border colour to currentColor; the console assumes Borders/primary. */
+  /* Tailwind v4 defaults the border colour to currentColor; the dashboard assumes Borders/primary. */
   *,
   ::after,
   ::before,
@@ -256,7 +256,7 @@
   }
 
   /*
-   * One focus style for the whole console (SC 2.4.7, and SC 2.4.13's 2px-minimum appearance).
+   * One focus style for the whole dashboard (SC 2.4.7, and SC 2.4.13's 2px-minimum appearance).
    * An outline with an offset sits outside the component, so it stays visible on a filled navy
    * button and on a white input alike, and it never shifts layout the way a border swap would.
    */
@@ -271,7 +271,7 @@
     outline-color: var(--color-gold-400);
   }
 
-  /* The console supplies its own pickers; a stray native one should not render a browser-specific
+  /* The dashboard supplies its own pickers; a stray native one should not render a browser-specific
      spinner in the middle of an otherwise consistent form. */
   input[type='date']::-webkit-inner-spin-button,
   input[type='time']::-webkit-inner-spin-button,

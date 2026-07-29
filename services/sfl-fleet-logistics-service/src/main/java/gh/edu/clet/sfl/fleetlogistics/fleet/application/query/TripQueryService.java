@@ -66,7 +66,7 @@ public class TripQueryService {
     }
 
     /**
-     * The readiness preview the console shows before an officer commits to an assignment.
+     * The readiness preview the dashboard shows before an officer commits to an assignment.
      *
      * <p>Answering the same question the assignment path will ask — with the same policy and the same
      * inputs — is what stops the preview and the outcome disagreeing.

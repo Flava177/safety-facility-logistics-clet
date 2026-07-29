@@ -5,7 +5,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.domain.model;
  * SRS-SFL-S166-03 audit record.
  */
 public enum SourceChannel {
-    /** Operator using the fleet console or another authenticated web client. */
+    /** Operator using the fleet dashboard or another authenticated web client. */
     WEB,
     /** Mobile browser capture (inspections, trip closure at the vehicle). */
     MOBILE,

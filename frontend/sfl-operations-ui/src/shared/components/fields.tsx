@@ -4,7 +4,7 @@ import Select, { type SelectOption } from './Select';
 import { cn } from './cn';
 
 /**
- * Form controls for the whole console.
+ * Form controls for the whole dashboard.
  *
  * Every control is white with a grey hairline, a real label above it, and one line reserved
  * underneath for a hint or an error — so a field never changes height when validation fires and a
@@ -18,7 +18,7 @@ import { cn } from './cn';
  * 600; this uses grey-500 (4.9:1), which clears the bar while staying lighter than the text.
  * Placeholders are grey-500 for the same reason the label is grey-800 — both are read.
  *
- * Focus is not styled here. The console has one focus treatment, defined once in `index.css` as a
+ * Focus is not styled here. The dashboard has one focus treatment, defined once in `index.css` as a
  * 2px teal outline with an offset, so every focusable thing on the page looks focused the same way.
  */
 const controlBase =
@@ -272,7 +272,7 @@ interface SelectShellProps extends CommonProps {
   allowEmpty?: boolean;
 }
 
-/** Wraps the console's listbox in the shared label + helper rhythm. */
+/** Wraps the dashboard's listbox in the shared label + helper rhythm. */
 export const SelectInput = ({
   value,
   onChange,

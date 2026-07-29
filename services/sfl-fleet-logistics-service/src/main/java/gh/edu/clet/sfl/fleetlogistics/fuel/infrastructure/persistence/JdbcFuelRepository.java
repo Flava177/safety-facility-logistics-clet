@@ -1,22 +1,30 @@
 package gh.edu.clet.sfl.fleetlogistics.fuel.infrastructure.persistence;
 
 import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyProcessedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Currency;
 import java.util.LinkedHashMap;
@@ -25,8 +33,10 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
+import org.springframework.dao.DuplicateKeyException;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 
 /** Compact JDBC adapter; all business transitions remain in domain/application code.
@@ -34,9 +44,95 @@ import org.springframework.stereotype.Repository;
  *  infer a SQL type for java.time.Instant; columns are TIMESTAMPTZ so UTC OffsetDateTime is exact. */
 @Repository
 public class JdbcFuelRepository implements FuelRepository {
+    private static final TypeReference<Map<String,Object>> RULE_RESULTS=new TypeReference<>(){};
     private final JdbcTemplate jdbc;
     private final ObjectMapper json;
     public JdbcFuelRepository(JdbcTemplate jdbc, ObjectMapper json) { this.jdbc = jdbc; this.json = json; }
+
+    /* ------------------------------------------------------------------ paging and filtering */
+
+    /**
+     * A WHERE clause and its bind values, minus the leading site-scope array.
+     *
+     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * disagree about which records they are describing.
+     */
+    private record Where(StringBuilder sql, List<Object> args) {
+        static Where scoped() { return new Where(new StringBuilder("site_code = ANY (?)"), new ArrayList<>()); }
+        Where and(String fragment, Object value) { if (value != null) { sql.append(" AND ").append(fragment); args.add(value); } return this; }
+        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
+    }
+
+    /**
+     * A validated ORDER BY.
+     *
+     * <p>The requested key is looked up in a per-resource allow-list rather than interpolated, so a
+     * sort parameter can never reach SQL as text. Every ordering ends in {@code id}: rows that share
+     * a sort value would otherwise be free to swap places between two requests, and a page boundary
+     * falling inside such a group silently skips or repeats records.
+     */
+    private record Order(String sql, String describedAs) {}
+
+    private static Order order(String requested, Map<String,String> allowed, String defaultKey, boolean defaultDescending) {
+        String key = defaultKey;
+        boolean descending = defaultDescending;
+        if (requested != null && !requested.isBlank()) {
+            String[] parts = requested.split(",");
+            String candidate = parts[0].trim();
+            if (allowed.containsKey(candidate)) {
+                key = candidate;
+                descending = parts.length > 1 && parts[1].trim().equalsIgnoreCase("desc");
+            }
+        }
+        String direction = descending ? "DESC" : "ASC";
+        return new Order(allowed.get(key) + " " + direction + ", id " + direction, key + ": " + direction);
+    }
+
+    private static final Map<String,String> TRANSACTION_SORTS = Map.of(
+            "occurredAt","occurred_at", "totalCost","total_cost", "quantity","quantity",
+            "odometerReading","odometer_reading", "status","status", "ingestedAt","ingestion_timestamp");
+    private static final Map<String,String> LOGBOOK_SORTS = Map.of(
+            "journeyDate","journey_date", "submittedAt","submitted_at", "approvedAt","approved_at",
+            "status","status", "createdAt","created_at");
+    private static final Map<String,String> ANOMALY_SORTS = Map.of(
+            "slaDueAt","sla_due_at", "severity","severity", "status","status",
+            "createdAt","created_at", "escalationLevel","escalation_level");
+    private static final Map<String,String> POLICY_SORTS = Map.of(
+            "effectiveFrom","effective_from", "policyVersion","policy_version",
+            "name","policy_name", "status","status");
+    private static final Map<String,String> IMPORT_SORTS = Map.of(
+            "submittedAt","submitted_at", "totalRows","total_rows", "rejectedRows","rejected_rows");
+
+    /** Binds the site array at index 1, then the clause's own values. Returns the next free index. */
+    private static int bind(PreparedStatement ps, Connection con, List<String> sites, List<Object> args) throws SQLException {
+        int i = 1;
+        ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
+        for (Object arg : args) ps.setObject(i++, arg);
+        return i;
+    }
+
+    private <T> FuelPage<T> page(String table, List<String> sites, Where where, Order order, Paging paging, RowMapper<T> mapper) {
+        Long total = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + where.sql());
+            bind(ps, con, sites, where.args());
+            return ps;
+        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        long totalElements = total == null ? 0L : total;
+        if (totalElements == 0L) return FuelPage.empty(paging.page(), paging.size(), order.describedAs());
+
+        List<T> content = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT * FROM " + table + " WHERE " + where.sql()
+                    + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?");
+            int i = bind(ps, con, sites, where.args());
+            ps.setInt(i++, paging.size());
+            ps.setInt(i, paging.offset());
+            return ps;
+        }, mapper);
+        return FuelPage.of(content, paging.page(), paging.size(), totalElements, order.describedAs());
+    }
+
+    /* ------------------------------------------------------------------------------ policies */
 
     @Override public FuelPolicy savePolicy(FuelPolicy p) {
         jdbc.update("""
@@ -45,12 +141,48 @@ public class JdbcFuelRepository implements FuelRepository {
             """, p.id(), p.siteCode().value(), p.name(), ts(p.effectiveFrom()), ts(p.effectiveTo()), p.policyVersion(), p.maxPerTransaction(), p.dailyLimit(), p.monthlyLimit(), p.tankCapacity(), p.minConsumption(), p.maxConsumption(), p.odometerJumpTolerance(), p.receiptRequired(), p.receiptGraceHours(), p.materialityAmount(), p.anomalySlaHours(), String.join(",",p.allowedFuelProducts()), String.join(",",p.approvedVendors()), p.status().name(), p.metadata().createdBy(), ts(p.metadata().createdAt()), p.metadata().lastModifiedBy(), ts(p.metadata().lastModifiedAt()), p.metadata().sourceChannel().name(), p.metadata().auditCorrelationId(), p.metadata().version());
         return p;
     }
+
     @Override public Optional<FuelPolicy> findApplicablePolicy(String site, Instant at) {
         return one("SELECT * FROM fleet_logistics.fuel_policies WHERE site_code=? AND status='ACTIVE' AND effective_from<=? AND (effective_to IS NULL OR effective_to>?) ORDER BY effective_from DESC,policy_version DESC LIMIT 1", this::policy, site, ts(at), ts(at));
     }
-    @Override public List<FuelPolicy> findPolicies(List<String> sites) {
-        if (sites.isEmpty()) return List.of(); return jdbc.query("SELECT * FROM fleet_logistics.fuel_policies WHERE site_code = ANY (?) ORDER BY effective_from DESC", ps -> ps.setArray(1, ps.getConnection().createArrayOf("varchar", sites.toArray())), this::policy);
+
+    @Override public Optional<FuelPolicy> findPolicy(UUID id) {
+        return one("SELECT * FROM fleet_logistics.fuel_policies WHERE id=?", this::policy, id);
     }
+
+    @Override public FuelPage<FuelPolicy> findPolicies(PolicyQuery q) {
+        Order order = order(q.paging().sort(), POLICY_SORTS, "effectiveFrom", true);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped().and("status=?", q.status() == null ? null : q.status().name());
+        // "In force at" is an interval test, not a status: an ACTIVE policy whose period has not
+        // started is not in force, and one with no end date runs until something supersedes it.
+        if (q.inForceAt() != null) {
+            where.sql().append(" AND status='ACTIVE' AND effective_from<=? AND (effective_to IS NULL OR effective_to>?)");
+            where.args().add(ts(q.inForceAt()));
+            where.args().add(ts(q.inForceAt()));
+        }
+        return page("fleet_logistics.fuel_policies", q.sites(), where, order, q.paging(), this::policy);
+    }
+
+    @Override public List<FuelPolicy> findOverlappingActivePolicies(String site, Instant from, Instant to, UUID excluding) {
+        // Half-open intervals, null meaning unbounded: two periods overlap unless one ends at or
+        // before the other begins. The null branches are written explicitly rather than relying on
+        // three-valued logic, so an open-ended policy on either side is treated as running forever.
+        StringBuilder sql = new StringBuilder("""
+            SELECT * FROM fleet_logistics.fuel_policies
+            WHERE site_code=? AND status='ACTIVE'
+              AND (effective_to IS NULL OR effective_to > ?)
+            """);
+        List<Object> args = new ArrayList<>();
+        args.add(site);
+        args.add(ts(from));
+        if (to != null) { sql.append(" AND effective_from < ?"); args.add(ts(to)); }
+        if (excluding != null) { sql.append(" AND id<>?"); args.add(excluding); }
+        sql.append(" ORDER BY effective_from");
+        return jdbc.query(sql.toString(), this::policy, args.toArray());
+    }
+
+    /* -------------------------------------------------------------------------- transactions */
 
     @Override public FuelTransaction saveTransaction(FuelTransaction t) {
         int updated = jdbc.update("""
@@ -64,13 +196,30 @@ public class JdbcFuelRepository implements FuelRepository {
         } else if (updated == 0) throw new org.springframework.dao.OptimisticLockingFailureException("FuelTransaction version conflict");
         return findTransaction(t.id()).orElseThrow();
     }
+
     @Override public Optional<FuelTransaction> findTransaction(UUID id) { return one("SELECT * FROM fleet_logistics.fuel_transactions WHERE id=?", this::transaction, id); }
+
     @Override public Optional<FuelTransaction> findProviderTransaction(String site, String source, String providerId) { if (providerId == null) return Optional.empty(); return one("SELECT * FROM fleet_logistics.fuel_transactions WHERE site_code=? AND source_system=? AND provider_transaction_id=?",this::transaction,site,source,providerId); }
-    @Override public List<FuelTransaction> findTransactions(List<String> sites,String site,FuelTransaction.Status status,UUID vehicle,UUID driver,Instant from,Instant to,int limit) {
-        if (sites.isEmpty()) return List.of(); StringBuilder sql=new StringBuilder("SELECT * FROM fleet_logistics.fuel_transactions WHERE site_code = ANY (?)"); List<Object> args=new java.util.ArrayList<>();
-        if(site!=null){sql.append(" AND site_code=?");args.add(site);} if(status!=null){sql.append(" AND status=?");args.add(status.name());} if(vehicle!=null){sql.append(" AND vehicle_id=?");args.add(vehicle);} if(driver!=null){sql.append(" AND driver_id=?");args.add(driver);} if(from!=null){sql.append(" AND occurred_at>=?");args.add(ts(from));} if(to!=null){sql.append(" AND occurred_at<?");args.add(ts(to));} sql.append(" ORDER BY occurred_at DESC LIMIT ?");args.add(Math.min(Math.max(limit,1),500));
-        return jdbc.query(con -> { var ps=con.prepareStatement(sql.toString()); ps.setArray(1,con.createArrayOf("varchar",sites.toArray())); for(int i=0;i<args.size();i++) ps.setObject(i+2,args.get(i)); return ps; },this::transaction);
+
+    @Override public FuelPage<FuelTransaction> findTransactions(TransactionQuery q) {
+        Order order = order(q.paging().sort(), TRANSACTION_SORTS, "occurredAt", true);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("site_code=?", q.siteCode())
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("vehicle_id=?", q.vehicleId())
+                .and("driver_id=?", q.driverId())
+                .and("source_system=?", q.sourceSystem())
+                // Vendor is a contains-match: an operator searches for "CLET", not the exact string.
+                .and("vendor_reference ILIKE ?", q.vendorReference() == null ? null : "%" + q.vendorReference() + "%")
+                .and("occurred_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("occurred_at<?", q.to() == null ? null : ts(q.to()));
+        return page("fleet_logistics.fuel_transactions", q.sites(), where, order, q.paging(), this::transaction);
     }
+
+    @Override public Optional<FuelTransaction> findPreviousTransaction(String site,UUID vehicle,Instant before){return one("SELECT * FROM fleet_logistics.fuel_transactions WHERE site_code=? AND vehicle_id=? AND occurred_at<? AND lifecycle_status='ACTIVE' ORDER BY occurred_at DESC LIMIT 1",this::transaction,site,vehicle,ts(before));}
+
+    /* ------------------------------------------------------------------------------ logbooks */
 
     @Override public DriverLogbook saveLogbook(DriverLogbook l) {
         int updated=jdbc.update("UPDATE fleet_logistics.driver_logbooks SET status=?,review_comment=?,transition_reason=?,submitted_at=?,approved_at=?,evidence_id=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?",l.status().name(),l.reviewComment(),l.transitionReason(),ts(l.submittedAt()),ts(l.approvedAt()),l.evidenceId(),l.metadata().lastModifiedBy(),ts(l.metadata().lastModifiedAt()),l.metadata().sourceChannel().name(),l.metadata().auditCorrelationId(),l.id(),l.metadata().version());
@@ -81,34 +230,213 @@ public class JdbcFuelRepository implements FuelRepository {
         else if(updated==0) throw new org.springframework.dao.OptimisticLockingFailureException("DriverLogbook version conflict");
         return findLogbook(l.id()).orElseThrow();
     }
+
     @Override public Optional<DriverLogbook> findLogbook(UUID id){return one("SELECT * FROM fleet_logistics.driver_logbooks WHERE id=?",this::logbook,id);}
-    @Override public List<DriverLogbook> findLogbooks(List<String> sites,String actor,boolean ownOnly,DriverLogbook.Status status,int limit){if(sites.isEmpty())return List.of(); String sql="SELECT * FROM fleet_logistics.driver_logbooks WHERE site_code = ANY (?)"+(ownOnly?" AND created_by=?":"")+(status!=null?" AND status=?":"")+" ORDER BY journey_date DESC LIMIT ?"; return jdbc.query(con->{var ps=con.prepareStatement(sql);int i=1;ps.setArray(i++,con.createArrayOf("varchar",sites.toArray()));if(ownOnly)ps.setString(i++,actor);if(status!=null)ps.setString(i++,status.name());ps.setInt(i,Math.min(Math.max(limit,1),500));return ps;},this::logbook);}
+
+    @Override public FuelPage<DriverLogbook> findLogbooks(LogbookQuery q) {
+        Order order = order(q.paging().sort(), LOGBOOK_SORTS, "journeyDate", true);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                // A FLEET_DRIVER-only actor sees their own records and nothing else.
+                .and("created_by=?", q.ownOnly() ? q.actorId() : null)
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("driver_id=?", q.driverId())
+                .and("vehicle_id=?", q.vehicleId())
+                .and("use_classification=?", q.useClassification() == null ? null : q.useClassification().name())
+                .and("journey_date>=?", q.journeyFrom())
+                .and("journey_date<=?", q.journeyTo());
+        return page("fleet_logistics.driver_logbooks", q.sites(), where, order, q.paging(), this::logbook);
+    }
+
+    @Override public Optional<DriverLogbook> findLogbookForTrip(UUID trip){if(trip==null)return Optional.empty();return one("SELECT * FROM fleet_logistics.driver_logbooks WHERE trip_id=? AND status<>'CANCELLED' ORDER BY journey_date DESC LIMIT 1",this::logbook,trip);}
+
+    /* ----------------------------------------------------------------------------- anomalies */
 
     @Override public FuelAnomalyCase saveAnomaly(FuelAnomalyCase a){int updated=jdbc.update("UPDATE fleet_logistics.fuel_anomaly_cases SET status=?,assignee=?,explanation=?,evidence_id=?,manager_decision=?,closure_reason=?,escalation_level=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?",a.status().name(),a.assignee(),a.explanation(),a.evidenceId(),a.decision()==null?null:a.decision().name(),a.closureReason(),a.escalationLevel(),a.metadata().lastModifiedBy(),ts(a.metadata().lastModifiedAt()),a.metadata().sourceChannel().name(),a.metadata().auditCorrelationId(),a.id(),a.metadata().version()); if(updated==0&&findAnomaly(a.id()).isEmpty())jdbc.update("""
         INSERT INTO fleet_logistics.fuel_anomaly_cases (id,anomaly_number,site_code,transaction_id,logbook_id,vehicle_id,driver_id,trip_id,anomaly_type,severity,material,status,assignee,sla_due_at,explanation,evidence_id,manager_decision,closure_reason,escalation_level,detected_rules,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?::jsonb,?,?,?,?,?,?,?)
         """,a.id(),a.anomalyNumber(),a.siteCode().value(),a.transactionId(),a.logbookId(),a.vehicleId(),a.driverId(),a.tripId(),a.type().name(),a.severity().name(),a.material(),a.status().name(),a.assignee(),ts(a.slaDueAt()),a.explanation(),a.evidenceId(),a.decision()==null?null:a.decision().name(),a.closureReason(),a.escalationLevel(),json(a.detectedRules()),a.metadata().createdBy(),ts(a.metadata().createdAt()),a.metadata().lastModifiedBy(),ts(a.metadata().lastModifiedAt()),a.metadata().sourceChannel().name(),a.metadata().auditCorrelationId(),a.metadata().version());else if(updated==0)throw new org.springframework.dao.OptimisticLockingFailureException("FuelAnomalyCase version conflict");return findAnomaly(a.id()).orElseThrow();}
+
     @Override public Optional<FuelAnomalyCase> findAnomaly(UUID id){return one("SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE id=?",this::anomaly,id);}
     @Override public Optional<FuelAnomalyCase> findAnomaly(UUID tx,FuelAnomalyCase.Type type){return one("SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE transaction_id=? AND anomaly_type=?",this::anomaly,tx,type.name());}
     @Override public Optional<FuelAnomalyCase> findAnomalyForTrip(UUID trip,FuelAnomalyCase.Type type){return one("SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE trip_id=? AND transaction_id IS NULL AND anomaly_type=?",this::anomaly,trip,type.name());}
-    @Override public List<FuelAnomalyCase> findAnomalies(List<String> sites,FuelAnomalyCase.Status status,Instant due,int limit){if(sites.isEmpty())return List.of();String sql="SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE site_code = ANY (?)"+(status==null?"":" AND status=?")+(due==null?"":" AND sla_due_at<?")+" ORDER BY sla_due_at LIMIT ?";return jdbc.query(con->{var ps=con.prepareStatement(sql);int i=1;ps.setArray(i++,con.createArrayOf("varchar",sites.toArray()));if(status!=null)ps.setString(i++,status.name());if(due!=null)ps.setObject(i++,ts(due));ps.setInt(i,Math.min(Math.max(limit,1),500));return ps;},this::anomaly);}
 
-    @Override public Optional<FuelTransaction> findPreviousTransaction(String site,UUID vehicle,Instant before){return one("SELECT * FROM fleet_logistics.fuel_transactions WHERE site_code=? AND vehicle_id=? AND occurred_at<? AND lifecycle_status='ACTIVE' ORDER BY occurred_at DESC LIMIT 1",this::transaction,site,vehicle,ts(before));}
+    /** Neither closed nor cancelled — what "open" means everywhere in this module. */
+    private static final String OPEN_STATUSES = "status NOT IN ('CLOSED','CANCELLED')";
+
+    @Override public FuelPage<FuelAnomalyCase> findAnomalies(AnomalyQuery q) {
+        Order order = order(q.paging().sort(), ANOMALY_SORTS, "slaDueAt", false);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("anomaly_type=?", q.type() == null ? null : q.type().name())
+                .and("severity=?", q.severity() == null ? null : q.severity().name())
+                .and("assignee ILIKE ?", q.assignee() == null ? null : "%" + q.assignee() + "%")
+                .and("material=?", q.material())
+                .and("sla_due_at<?", q.dueBefore() == null ? null : ts(q.dueBefore()))
+                .and("transaction_id=?", q.transactionId())
+                .and("vehicle_id=?", q.vehicleId())
+                .and("driver_id=?", q.driverId())
+                .when(Boolean.TRUE.equals(q.openOnly()), OPEN_STATUSES)
+                .when(Boolean.TRUE.equals(q.unassigned()), "assignee IS NULL")
+                .when(Boolean.FALSE.equals(q.unassigned()), "assignee IS NOT NULL");
+        return page("fleet_logistics.fuel_anomaly_cases", q.sites(), where, order, q.paging(), this::anomaly);
+    }
+
     @Override public long countRecentAnomalies(List<String> sites,UUID vehicle,UUID driver,Instant since){if(sites.isEmpty())return 0L;Long count=jdbc.query(con->{var ps=con.prepareStatement("SELECT COUNT(*) FROM fleet_logistics.fuel_anomaly_cases WHERE site_code = ANY (?) AND (vehicle_id=? OR driver_id=?) AND created_at>=?");ps.setArray(1,con.createArrayOf("varchar",sites.toArray()));ps.setObject(2,vehicle);ps.setObject(3,driver);ps.setObject(4,ts(since));return ps;},rs->rs.next()?rs.getLong(1):0L);return count==null?0L:count;}
-    @Override public Optional<DriverLogbook> findLogbookForTrip(UUID trip){if(trip==null)return Optional.empty();return one("SELECT * FROM fleet_logistics.driver_logbooks WHERE trip_id=? AND status<>'CANCELLED' ORDER BY journey_date DESC LIMIT 1",this::logbook,trip);}
+
+    /* ----------------------------------------------------------------------- reconciliations */
+
     @Override public void saveReconciliation(UUID id,UUID tx,UUID policy,Integer version,String outcome,BigDecimal consumption,Instant at,String actor,Map<String,Object> rules,String correlation){jdbc.update("INSERT INTO fleet_logistics.fuel_reconciliations(id,transaction_id,policy_id,policy_version,outcome,calculated_consumption,evaluated_at,evaluated_by,rule_results,correlation_id) VALUES (?,?,?,?,?,?,?,?,?::jsonb,?)",id,tx,policy,version,outcome,consumption,ts(at),actor,json(rules),correlation);}
-    @Override public Map<String,Object> dashboard(List<String> sites,String site){if(sites.isEmpty())return Map.of();String sql="SELECT COALESCE(SUM(transaction_count),0),COALESCE(SUM(fuel_volume),0),COALESCE(SUM(fuel_spend),0),COALESCE(SUM(reconciled_count),0),COALESCE(SUM(exception_count),0),MAX(source_updated_at) AS source_updated_at FROM fleet_logistics.fuel_dashboard_summary WHERE site_code = ANY (?)"+(site==null?"":" AND site_code=?");return jdbc.query(con->{var ps=con.prepareStatement(sql);ps.setArray(1,con.createArrayOf("varchar",sites.toArray()));if(site!=null)ps.setString(2,site);return ps;},rs->{if(!rs.next())return Map.of();Map<String,Object> m=new LinkedHashMap<>();m.put("transactionCount",rs.getLong(1));m.put("fuelVolume",rs.getBigDecimal(2));m.put("fuelSpend",rs.getBigDecimal(3));m.put("reconciledCount",rs.getLong(4));m.put("exceptionCount",rs.getLong(5));m.put("sourceUpdatedAt",instant(rs,"source_updated_at"));return m;});}
+
+    @Override public List<FuelReconciliation> findReconciliations(UUID transactionId) {
+        return jdbc.query("SELECT * FROM fleet_logistics.fuel_reconciliations WHERE transaction_id=? ORDER BY evaluated_at DESC",
+                this::reconciliation, transactionId);
+    }
+
+    /* ------------------------------------------------------------------------------- imports */
+
+    @Override public FuelImportBatch saveImportBatch(FuelImportBatch b) {
+        try {
+            jdbc.update("""
+                INSERT INTO fleet_logistics.fuel_import_batches(id,site_code,source_system,file_name,file_hash,status,total_rows,accepted_rows,rejected_rows,submitted_by,submitted_at,correlation_id)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?)
+                """, b.id(), b.siteCode().value(), b.sourceSystem(), b.fileName(), b.fileHash(), b.status().name(),
+                    b.totalRows(), b.acceptedRows(), b.rejectedRows(), b.submittedBy(), ts(b.submittedAt()), b.correlationId());
+        } catch (DuplicateKeyException duplicate) {
+            // uq_fuel_import_file. Before this, the violation escaped unmapped and the operator got a
+            // bare 500; the original batch is looked up so the error can name it.
+            UUID existing = findImportBatchByHash(b.siteCode().value(), b.sourceSystem(), b.fileHash())
+                    .map(FuelImportBatch::id).orElse(null);
+            throw FuelImportAlreadyProcessedException.of(b.siteCode().value(), b.sourceSystem(), b.fileName(),
+                    b.fileHash(), existing);
+        }
+        for (FuelImportRow row : b.rows()) {
+            jdbc.update("""
+                INSERT INTO fleet_logistics.fuel_import_rows(id,batch_id,row_number,status,transaction_id,error_code,error_message,raw_record)
+                VALUES (?,?,?,?,?,?,?,?::jsonb)
+                """, row.id() == null ? UUID.randomUUID() : row.id(), b.id(), row.rowNumber(), row.status().name(),
+                    row.transactionId(), row.errorCode(), row.errorMessage(), "{}");
+        }
+        return findImportBatch(b.id()).orElse(b);
+    }
+
+    @Override public FuelPage<FuelImportBatch> findImportBatches(ImportQuery q) {
+        Order order = order(q.paging().sort(), IMPORT_SORTS, "submittedAt", true);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped().and("source_system=?", q.sourceSystem());
+        // Headers only: a list that dragged every row with it would be unusable at scale.
+        return page("fleet_logistics.fuel_import_batches", q.sites(), where, order, q.paging(), this::importBatchHeader);
+    }
+
+    @Override public Optional<FuelImportBatch> findImportBatch(UUID id) {
+        return one("SELECT * FROM fleet_logistics.fuel_import_batches WHERE id=?", this::importBatchHeader, id)
+                .map(batch -> withRows(batch, jdbc.query(
+                        "SELECT * FROM fleet_logistics.fuel_import_rows WHERE batch_id=? ORDER BY row_number",
+                        this::importRow, id)));
+    }
+
+    @Override public Optional<FuelImportBatch> findImportBatchByHash(String site, String source, String hash) {
+        return one("SELECT * FROM fleet_logistics.fuel_import_batches WHERE site_code=? AND source_system=? AND file_hash=?",
+                this::importBatchHeader, site, source, hash);
+    }
+
+    private static FuelImportBatch withRows(FuelImportBatch batch, List<FuelImportRow> rows) {
+        return new FuelImportBatch(batch.id(), batch.siteCode(), batch.sourceSystem(), batch.fileName(),
+                batch.fileHash(), batch.status(), batch.totalRows(), batch.acceptedRows(), batch.rejectedRows(),
+                batch.submittedBy(), batch.submittedAt(), batch.correlationId(), rows);
+    }
+
+    /* ----------------------------------------------------------------------------- dashboard */
+
+    /**
+     * The site's fuel standing in one round trip.
+     *
+     * <p>The five transaction figures still come from {@code fuel_dashboard_summary}. The anomaly,
+     * logbook and import indicators are counted here rather than derived by the client: a dashboard
+     * that sums whatever a capped list returned reports the truth about its own window, not about
+     * the site, and the difference only shows up once there is enough data for it to matter.
+     */
+    @Override public Map<String,Object> dashboard(List<String> sites,String site,Instant now){
+        if(sites.isEmpty())return Map.of();
+        Map<String,Object> m=new LinkedHashMap<>();
+        String scope=(site==null?"":" AND site_code=?");
+
+        jdbc.query(con->{
+            var ps=con.prepareStatement("SELECT COALESCE(SUM(transaction_count),0),COALESCE(SUM(fuel_volume),0),COALESCE(SUM(fuel_spend),0),COALESCE(SUM(reconciled_count),0),COALESCE(SUM(exception_count),0),MAX(source_updated_at) AS source_updated_at FROM fleet_logistics.fuel_dashboard_summary WHERE site_code = ANY (?)"+scope);
+            ps.setArray(1,con.createArrayOf("varchar",sites.toArray()));if(site!=null)ps.setString(2,site);return ps;},rs->{
+            if(rs.next()){m.put("transactionCount",rs.getLong(1));m.put("fuelVolume",rs.getBigDecimal(2));m.put("fuelSpend",rs.getBigDecimal(3));m.put("reconciledCount",rs.getLong(4));m.put("exceptionCount",rs.getLong(5));m.put("sourceUpdatedAt",instant(rs,"source_updated_at"));}
+            return null;});
+
+        // Transactions that have never been reconciled — the backlog a run would clear.
+        m.put("awaitingReconciliation",count("fleet_logistics.fuel_transactions","status='RECEIVED'",sites,site,null));
+
+        m.put("openAnomalies",count("fleet_logistics.fuel_anomaly_cases",OPEN_STATUSES,sites,site,null));
+        m.put("anomaliesBreachingSla",count("fleet_logistics.fuel_anomaly_cases",OPEN_STATUSES+" AND sla_due_at<?",sites,site,ts(now)));
+        m.put("materialOpenAnomalies",count("fleet_logistics.fuel_anomaly_cases",OPEN_STATUSES+" AND material=true",sites,site,null));
+        m.put("unassignedAnomalies",count("fleet_logistics.fuel_anomaly_cases",OPEN_STATUSES+" AND assignee IS NULL",sites,site,null));
+
+        m.put("pendingLogbookReviews",count("fleet_logistics.driver_logbooks","status IN ('SUBMITTED','RESUBMITTED','UNDER_REVIEW')",sites,site,null));
+        m.put("draftLogbooks",count("fleet_logistics.driver_logbooks","status='DRAFT'",sites,site,null));
+
+        m.put("importBatches",count("fleet_logistics.fuel_import_batches","1=1",sites,site,null));
+        m.put("importBatchesWithErrors",count("fleet_logistics.fuel_import_batches","rejected_rows>0",sites,site,null));
+        jdbc.query(con->{
+            var ps=con.prepareStatement("SELECT MAX(submitted_at) FROM fleet_logistics.fuel_import_batches WHERE site_code = ANY (?)"+scope);
+            ps.setArray(1,con.createArrayOf("varchar",sites.toArray()));if(site!=null)ps.setString(2,site);return ps;},rs->{
+            m.put("lastImportAt",rs.next()?instant(rs,1):null);return null;});
+
+        return m;
+    }
+
+    /** One scoped COUNT. {@code extra} is bound after the site scope when present. */
+    private long count(String table,String predicate,List<String> sites,String site,Object extra){
+        Long value=jdbc.query(con->{
+            var ps=con.prepareStatement("SELECT COUNT(*) FROM "+table+" WHERE site_code = ANY (?)"+(site==null?"":" AND site_code=?")+" AND "+predicate);
+            int i=1;ps.setArray(i++,con.createArrayOf("varchar",sites.toArray()));
+            if(site!=null)ps.setString(i++,site);
+            if(extra!=null)ps.setObject(i,extra);
+            return ps;},rs->rs.next()?rs.getLong(1):0L);
+        return value==null?0L:value;
+    }
+
+    /* ------------------------------------------------------------------------------- mappers */
 
     private FuelPolicy policy(ResultSet r,int n)throws SQLException{return new FuelPolicy(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("policy_name"),instant(r,"effective_from"),instant(r,"effective_to"),r.getInt("policy_version"),r.getBigDecimal("max_per_transaction"),r.getBigDecimal("daily_limit"),r.getBigDecimal("monthly_limit"),r.getBigDecimal("tank_capacity"),r.getBigDecimal("min_consumption"),r.getBigDecimal("max_consumption"),r.getLong("odometer_jump_tolerance"),r.getBoolean("receipt_required"),r.getInt("receipt_grace_hours"),r.getBigDecimal("materiality_amount"),r.getInt("anomaly_sla_hours"),csv(r.getString("allowed_fuel_products")),csv(r.getString("approved_vendors")),FuelPolicy.Status.valueOf(r.getString("status")),metadata(r));}
     private FuelTransaction transaction(ResultSet r,int n)throws SQLException{return new FuelTransaction(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("provider_transaction_id"),r.getString("source_system"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),instant(r,"occurred_at"),r.getString("vendor_reference"),r.getString("station_reference"),r.getString("fuel_product"),r.getBigDecimal("quantity"),r.getString("quantity_unit"),r.getBigDecimal("unit_price"),r.getBigDecimal("total_cost"),Currency.getInstance(r.getString("currency")),r.getString("masked_card_reference"),r.getLong("odometer_reading"),uuid(r,"receipt_evidence_id"),r.getString("comments"),FuelTransaction.Status.valueOf(r.getString("status")),FuelTransaction.Lifecycle.valueOf(r.getString("lifecycle_status")),instant(r,"ingestion_timestamp"),r.getString("idempotency_key"),metadata(r));}
     private DriverLogbook logbook(ResultSet r,int n)throws SQLException{return new DriverLogbook(uuid(r,"id"),r.getString("logbook_number"),SiteCode.of(r.getString("site_code")),uuid(r,"driver_id"),uuid(r,"vehicle_id"),uuid(r,"trip_id"),r.getObject("journey_date",LocalDate.class),instant(r,"start_time"),instant(r,"end_time"),r.getString("origin"),r.getString("destination"),r.getString("route_notes"),DriverLogbook.UseClassification.valueOf(r.getString("use_classification")),r.getString("purpose"),r.getString("passenger_load_notes"),r.getLong("start_odometer"),(Long)r.getObject("end_odometer"),r.getBoolean("declaration_accepted"),uuid(r,"evidence_id"),DriverLogbook.Status.valueOf(r.getString("status")),r.getString("review_comment"),r.getString("transition_reason"),instant(r,"submitted_at"),instant(r,"approved_at"),metadata(r));}
     private FuelAnomalyCase anomaly(ResultSet r,int n)throws SQLException{return new FuelAnomalyCase(uuid(r,"id"),r.getString("anomaly_number"),SiteCode.of(r.getString("site_code")),uuid(r,"transaction_id"),uuid(r,"logbook_id"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),FuelAnomalyCase.Type.valueOf(r.getString("anomaly_type")),FuelAnomalyCase.Severity.valueOf(r.getString("severity")),r.getBoolean("material"),FuelAnomalyCase.Status.valueOf(r.getString("status")),r.getString("assignee"),instant(r,"sla_due_at"),r.getString("explanation"),uuid(r,"evidence_id"),r.getString("manager_decision")==null?null:FuelAnomalyCase.Decision.valueOf(r.getString("manager_decision")),r.getString("closure_reason"),r.getInt("escalation_level"),readList(r.getString("detected_rules")),metadata(r));}
+
+    private FuelReconciliation reconciliation(ResultSet r,int n)throws SQLException{
+        Integer version=(Integer)r.getObject("policy_version");
+        return new FuelReconciliation(uuid(r,"id"),uuid(r,"transaction_id"),uuid(r,"policy_id"),version,
+                r.getString("outcome"),r.getBigDecimal("calculated_consumption"),instant(r,"evaluated_at"),
+                r.getString("evaluated_by"),readMap(r.getString("rule_results")),r.getString("correlation_id"));
+    }
+
+    private FuelImportBatch importBatchHeader(ResultSet r,int n)throws SQLException{
+        return new FuelImportBatch(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("source_system"),
+                r.getString("file_name"),r.getString("file_hash"),FuelImportBatch.Status.valueOf(r.getString("status")),
+                r.getInt("total_rows"),r.getInt("accepted_rows"),r.getInt("rejected_rows"),r.getString("submitted_by"),
+                instant(r,"submitted_at"),r.getString("correlation_id"),List.of());
+    }
+
+    private FuelImportRow importRow(ResultSet r,int n)throws SQLException{
+        return new FuelImportRow(uuid(r,"id"),r.getInt("row_number"),
+                FuelImportRow.Status.valueOf(r.getString("status")),uuid(r,"transaction_id"),
+                r.getString("error_code"),r.getString("error_message"));
+    }
+
+    /* ------------------------------------------------------------------------------- helpers */
+
     private RecordMetadata metadata(ResultSet r)throws SQLException{return RecordMetadata.rehydrate(r.getString("created_by"),instant(r,"created_at"),r.getString("last_modified_by"),instant(r,"last_modified_at"),r.getLong("version"),SourceChannel.valueOf(r.getString("source_channel")),r.getString("audit_correlation_id"));}
-    private <T> Optional<T> one(String sql,org.springframework.jdbc.core.RowMapper<T> mapper,Object...args){try{return Optional.ofNullable(jdbc.queryForObject(sql,mapper,args));}catch(EmptyResultDataAccessException e){return Optional.empty();}}
+    private <T> Optional<T> one(String sql,RowMapper<T> mapper,Object...args){try{return Optional.ofNullable(jdbc.queryForObject(sql,mapper,args));}catch(EmptyResultDataAccessException e){return Optional.empty();}}
     private UUID uuid(ResultSet r,String name)throws SQLException{Object v=r.getObject(name);return v==null?null:(UUID)v;}
     private Instant instant(ResultSet r,String name)throws SQLException{var v=r.getTimestamp(name);return v==null?null:v.toInstant();}
+    private Instant instant(ResultSet r,int index)throws SQLException{var v=r.getTimestamp(index);return v==null?null:v.toInstant();}
     /** Bind an Instant as a UTC OffsetDateTime; the pgjdbc driver cannot infer a type for Instant. */
     private static OffsetDateTime ts(Instant i){return i==null?null:OffsetDateTime.ofInstant(i,ZoneOffset.UTC);}
     private Set<String> csv(String v){return v==null||v.isBlank()?Set.of():Set.copyOf(Arrays.asList(v.split(",")));}
     private String json(Object v){try{return json.writeValueAsString(v);}catch(JacksonException e){throw new IllegalArgumentException("Cannot serialize fuel record",e);}}
     private List<String> readList(String v){try{return v==null?List.of():json.readValue(v,json.getTypeFactory().constructCollectionType(List.class,String.class));}catch(JacksonException e){throw new IllegalStateException("Invalid stored rule list",e);}}
+    private Map<String,Object> readMap(String v){try{return v==null||v.isBlank()?Map.of():json.readValue(v,RULE_RESULTS);}catch(JacksonException e){throw new IllegalStateException("Invalid stored rule results",e);}}
 }

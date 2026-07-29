@@ -26,7 +26,7 @@ const roles = sflActor.roles
 /**
  * The product bar: full width, CLET Navy, above everything including the navigation rail.
  *
- * It carries identity rather than controls. What sits on the right is the actor the console is
+ * It carries identity rather than controls. What sits on the right is the actor the dashboard is
  * actually sending — `X-SFL-User`, roles and site scope go out on every request — because "why
  * can't I see that vehicle?" is nearly always a site-scope question, and the answer belongs on
  * screen rather than in a network trace.
@@ -144,7 +144,7 @@ const TopBar = () => {
                   </div>
                   <div>
                     <dt className="text-theme-xs font-semibold tracking-wide text-gray-500 uppercase">
-                      Console build
+                      Dashboard build
                     </dt>
                     <dd className="mt-0.5 text-theme-xs text-gray-700">
                       {new Date(__BUILD_STAMP__).toLocaleString()}

@@ -8,7 +8,7 @@
 | SRS-SFL-S168fuel-02 | In progress | Core transitions and sweeps exist; complete rule coverage, hold/reassignment/cancellation and notifications remain open |
 | SRS-SFL-S168fuel-03 | In progress | Audit-port calls and evidence references exist; governed evidence/export and tamper-path verification remain open |
 | SRS-SFL-S168fuel-04 | In progress | Provider-neutral ingestion/import and events exist; replay, Finance/Audit delivery and retry/dead-letter proof remain open |
-| SRS-SFL-S168fuel-05 | In progress | Basic totals, CSV and console exist; required snapshots, filters, drilldowns and screens remain open |
+| SRS-SFL-S168fuel-05 | In progress | Basic totals, CSV and dashboard exist; required snapshots, filters, drilldowns and screens remain open |
 
 ## Delivered design
 
@@ -18,7 +18,7 @@ authoritative for vehicles, drivers, trips and accepted odometer state. V10–V1
 applied Fleet migrations. V15 strengthens trip-based missing-logbook anomaly idempotency without changing an
 already-applied migration.
 
-Swagger is at `/swagger-ui.html`, OpenAPI JSON at `/v3/api-docs`, and the operational console at `/fuel/`.
+Swagger is at `/swagger-ui.html`, OpenAPI JSON at `/v3/api-docs`, and the operational dashboard at `/fuel/`.
 Twenty additive permissions cover driver, officer, manager, reporting, audit, compliance, administration and
 integration roles. Card references are masked, money uses decimal arithmetic, and core workflow transitions are explicit.
 
@@ -27,7 +27,7 @@ integration roles. Card references are masked, money uses decimal arithmetic, an
 - Production provider HMAC/mTLS field mapping awaits vendor selection.
 - Finance acknowledgement/materiality contracts await Finance/Audit approval.
 - Institutional numeric limits and retention periods must replace local policy values before go-live.
-- Native offline mobile is not Phase 1 scope; the delivered console is responsive and browser-based.
+- Native offline mobile is not Phase 1 scope; the delivered dashboard is responsive and browser-based.
 
 ## Verification record
 

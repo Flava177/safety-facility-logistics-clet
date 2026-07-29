@@ -5,7 +5,7 @@ import { CurrencyValue, SiteCodeValue } from 'modules/fuel/api/dto';
  *
  * The general ones (`formatDateTime`, `formatNumber`, `formatOdometer`) are in
  * `shared/components/format` and are used unchanged. These three exist because the fuel wire types
- * carry two value objects the rest of the console never sees, and because money on this module is
+ * carry two value objects the rest of the dashboard never sees, and because money on this module is
  * always a `BigDecimal` paired with an ISO currency code rather than a bare number.
  */
 
@@ -45,7 +45,7 @@ export const formatMoney = (
 /**
  * Quantity with its unit — "20.000 L".
  *
- * Three decimal places because that is the scale `FuelTransaction` rounds to, so the console never
+ * Three decimal places because that is the scale `FuelTransaction` rounds to, so the dashboard never
  * shows a figure the record does not hold.
  */
 export const formatQuantity = (

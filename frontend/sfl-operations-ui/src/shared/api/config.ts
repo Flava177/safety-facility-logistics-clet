@@ -30,7 +30,7 @@ export interface SflActorConfig {
  * Base URL of the Fleet service.
  *
  * An empty value means same origin — which is what the embedded build uses, because the Spring Boot
- * service serves both the API and this console. `npm run dev` points at `http://localhost:8093`
+ * service serves both the API and this dashboard. `npm run dev` points at `http://localhost:8093`
  * instead, and the service allows `http://localhost:5005` as a CORS origin.
  */
 export const fleetApiBaseUrl = readOptionalEnv('VITE_FLEET_API_BASE_URL', 'http://localhost:8093');

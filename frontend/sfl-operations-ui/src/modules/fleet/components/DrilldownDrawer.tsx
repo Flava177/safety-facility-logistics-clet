@@ -79,7 +79,7 @@ const DrilldownDrawer = ({ indicator, siteCode, onClose }: DrilldownDrawerProps)
                   </p>
                   <p className="mt-0.5 text-theme-sm font-semibold text-gray-900">{row.summary}</p>
                   {link ? (
-                    // Teal is the console's interactive colour, and the row is tall enough to clear
+                    // Teal is the dashboard's interactive colour, and the row is tall enough to clear
                     // the 24px target minimum of SC 2.5.8 without a larger type size.
                     <RouterLink
                       to={link}
