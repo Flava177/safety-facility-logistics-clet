@@ -101,6 +101,8 @@ public class JdbcFuelRepository implements FuelRepository {
     private static final Map<String,String> POLICY_SORTS = Map.of(
             "effectiveFrom","effective_from", "policyVersion","policy_version",
             "name","policy_name", "status","status");
+    private static final Map<String,String> IMPORT_ROW_SORTS = Map.of(
+            "rowNumber","row_number", "status","status", "errorCode","error_code");
     private static final Map<String,String> IMPORT_SORTS = Map.of(
             "submittedAt","submitted_at", "totalRows","total_rows", "rejectedRows","rejected_rows");
 
@@ -356,6 +358,64 @@ public class JdbcFuelRepository implements FuelRepository {
      * that sums whatever a capped list returned reports the truth about its own window, not about
      * the site, and the difference only shows up once there is enough data for it to matter.
      */
+    @Override public FuelPage<FuelImportRow> findImportRows(UUID batchId,Paging paging){
+        Order order=order(paging.sort(),IMPORT_ROW_SORTS,"rowNumber",false);
+        Long total=jdbc.queryForObject("SELECT COUNT(*) FROM fleet_logistics.fuel_import_rows WHERE batch_id=?",Long.class,batchId);
+        long totalElements=total==null?0L:total;
+        if(totalElements==0L)return FuelPage.empty(paging.page(),paging.size(),order.describedAs());
+        List<FuelImportRow> content=jdbc.query("SELECT * FROM fleet_logistics.fuel_import_rows WHERE batch_id=? ORDER BY "
+                +order.sql()+" LIMIT ? OFFSET ?",this::importRow,batchId,paging.size(),paging.offset());
+        return FuelPage.of(content,paging.page(),paging.size(),totalElements,order.describedAs());
+    }
+
+    @Override public List<DailyFuelTotals> dailyTotals(List<String> sites,String site,Instant from,Instant to){
+        if(sites.isEmpty())return List.of();
+        // date_trunc to a day in UTC, matching how every other timestamp in this schema is stored.
+        StringBuilder sql=new StringBuilder("""
+                SELECT (date_trunc('day', occurred_at) AT TIME ZONE 'UTC')::date AS day,
+                       COALESCE(SUM(total_cost),0) AS total_cost,
+                       COALESCE(SUM(quantity),0) AS quantity,
+                       COUNT(*) AS transaction_count
+                  FROM fleet_logistics.fuel_transactions
+                 WHERE site_code = ANY (?) AND lifecycle_status='ACTIVE'
+                """);
+        List<Object> args=new ArrayList<>();
+        if(site!=null){sql.append(" AND site_code=?");args.add(SiteCode.of(site).value());}
+        if(from!=null){sql.append(" AND occurred_at>=?");args.add(ts(from));}
+        if(to!=null){sql.append(" AND occurred_at<?");args.add(ts(to));}
+        sql.append(" GROUP BY day ORDER BY day");
+        String query=sql.toString();
+        return jdbc.query(con->{
+            var ps=con.prepareStatement(query);
+            int i=1;
+            ps.setArray(i++,con.createArrayOf("varchar",sites.toArray()));
+            for(Object arg:args)ps.setObject(i++,arg);
+            return ps;
+        },(rs,n)->new DailyFuelTotals(rs.getObject("day",java.time.LocalDate.class),
+                rs.getBigDecimal("total_cost"),rs.getBigDecimal("quantity"),rs.getLong("transaction_count")));
+    }
+
+    @Override public Map<String,Long> anomalyCountsByType(List<String> sites,String site){
+        if(sites.isEmpty())return Map.of();
+        StringBuilder sql=new StringBuilder("""
+                SELECT anomaly_type, COUNT(*) FROM fleet_logistics.fuel_anomaly_cases
+                 WHERE site_code = ANY (?) AND status NOT IN ('CLOSED','CANCELLED')
+                """);
+        List<Object> args=new ArrayList<>();
+        if(site!=null){sql.append(" AND site_code=?");args.add(SiteCode.of(site).value());}
+        sql.append(" GROUP BY anomaly_type");
+        String query=sql.toString();
+        Map<String,Long> counts=new LinkedHashMap<>();
+        jdbc.query(con->{
+            var ps=con.prepareStatement(query);
+            int i=1;
+            ps.setArray(i++,con.createArrayOf("varchar",sites.toArray()));
+            for(Object arg:args)ps.setObject(i++,arg);
+            return ps;
+        },(org.springframework.jdbc.core.RowCallbackHandler)rs->counts.put(rs.getString(1),rs.getLong(2)));
+        return counts;
+    }
+
     @Override public Map<String,Object> dashboard(List<String> sites,String site,Instant now){
         if(sites.isEmpty())return Map.of();
         Map<String,Object> m=new LinkedHashMap<>();

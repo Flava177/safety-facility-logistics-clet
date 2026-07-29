@@ -1,16 +1,91 @@
 # S166 — Frontend Gap Register
 
-Raised while building `frontend/sfl-operations-ui` against `sfl-fleet-logistics-service`.
+**Status (29 July 2026): all twelve gaps closed.**
 
-Every item below was found by reading the controllers, request/response records and domain enums in
-`services/sfl-fleet-logistics-service/src/main/java/gh/edu/clet/sfl/fleetlogistics/fleet` and
-comparing them with `docs/fleet/S166_API_Inventory.md`. No API contract in the UI was inferred from
-documentation alone.
+| # | Gap | Was | Closed by |
+| --- | --- | --- | --- |
+| 1 | Dashboard and report paths differ from the inventory | `DOC` | The inventory corrected. Every implemented path was right; four documented ones were wrong, and `dashboard/compliance-report` was never implemented at all |
+| 2 | Vehicle readiness has no dedicated endpoint | `WORKAROUND` | `GET /vehicles/{id}/readiness` — the same `FleetReadinessService.assessVehicle` policy `assignment-preview` runs, reached without pretending a trip is involved |
+| 3 | Vehicle movement / telematics history not exposed | `MISSING` | `GET /vehicles/{id}/movement?size=` plus `VehicleLocationRepository.findByVehicle` |
+| 4 | Standalone periodic inspection cannot be recorded | `MISSING` | `POST /vehicles/{id}/inspections` |
+| 5 | No evidence search endpoint | `WORKAROUND` | `GET /evidence?relatedRecordType=&relatedRecordId=` |
+| 6 | Evidence export paths differ from the inventory | `DOC` | The inventory corrected — `/decision` not `/approval`, `POST .../export` not `GET .../download` |
+| 7 | Audit paths differ from the inventory | `DOC` | The inventory corrected — `/audit/records` and `/audit/chain/verification` |
+| 8 | Integration intake path, and no inbox search | `DOC` / `MISSING` | The intake path corrected, and `GET /integrations/messages?sourceSystem=&status=&eventType=` implemented |
+| 9 | Documented filters the controllers do not accept | `DOC` | `severity` added to `GET /workflow-items`; `complianceExpiringBefore` answered by the new compliance search; the undocumented ones documented |
+| 10 | Compliance only reachable per vehicle | `WORKAROUND` | `GET /vehicles/compliance-documents?documentType=&status=&expiringBefore=&size=` |
+| 11 | Drilldown indicators are a fixed set of four | noted | Documented in the inventory, so a reader knows which four are clickable and that a fifth returns an empty list rather than a 404 |
+| 12 | `RetentionClass` vs `EvidenceRetentionClass` | noted | **Left as it is** — see below |
 
-**Status key** — `DOC` documentation disagrees with the implementation · `MISSING` the UI needs an
-endpoint that does not exist · `WORKAROUND` the UI ships a bounded alternative.
+### Gap 4 — what it was blocking
+
+Inspections could only be recorded against a trip, so a vehicle sitting in the yard could not be
+inspected at all. That blocked the periodic-inspection half of SRS-SFL-S166-01. The request record
+and the service path both existed already — `TripApplicationService.recordInspection` has always
+accepted a null trip with an explicit vehicle — and nothing mapped it. Verified live: a `PERIODIC`
+inspection with no trip returns `201` and a real inspection record.
+
+### Gap 5 — the main usability cost, now removed
+
+With no search, every closure dialog asked an operator to paste an evidence reference id from
+somewhere else. `EvidenceRepository.findByRelatedRecord` had answered that question since the service
+was built and nothing exposed it. A trip or workflow closure can offer a picker now.
+
+### Gap 12 — deliberately not resolved
+
+Two retention vocabularies still coexist: `RetentionClass` on compliance documents
+(`OPERATIONAL_SHORT` … `LEGAL_HOLD`) and `EvidenceRetentionClass` on evidence
+(`OPERATIONAL_1_YEAR` … `LEGAL_HOLD`). Merging them is a **records-management decision with a
+migration behind it**, not a code change: existing rows carry the old values, and choosing which
+vocabulary survives decides how long already-filed evidence is kept. That is not a call to make from
+a gap register. `RetentionClass`'s own Javadoc already flags its periods as an unconfirmed assumption
+(gap report C-08); it should be settled with compliance before go-live.
+
+## One defect found while verifying, and fixed
+
+`GET /vehicles/compliance-documents?expiringBefore=…` returned **500** —
+`could not determine data type of parameter $7`.
+
+This is the same defect that made `GET /fleet/audit/records` return 500 on every call before the S168
+round. Hibernate expands a named parameter used twice into **two** JDBC placeholders, so the one
+inside `:param is null` stands alone, and Postgres cannot infer a type for a parameter it only ever
+sees compared to null. The fix is `cast(:param as date)` in the null test; the same cast was applied
+to the new inbox search, which had the identical shape.
+
+Worth recording that a comment had been written into that query claiming the pattern was safe
+*because* each parameter also appeared in a comparison. That reasoning was wrong, and only driving
+the endpoint showed it.
+
+## Also found while verifying — not fixed, needs a decision
+
+`GET /fleet/audit/chain/verification` reports **`intact: false`** against the local development
+database, diverging at sequence 0 of 207 records with "Record hash does not match the stored
+content".
+
+The endpoint is behaving correctly — detecting a divergence and reporting it with
+`FLEET_AUDIT_CHAIN_FAILURE` and a 409 is exactly what it is for. And the chain logic is sound: the
+"audit chain stays intact" tests pass against a freshly migrated database. So this is about **this
+database's history**, most likely rows written before a change to the canonicaliser.
+
+It is recorded rather than diagnosed. Confirming it properly means comparing a stored row against what
+the current canonicaliser produces for the same content, and if that is the cause it has a bearing on
+whether any pre-change audit row can still be verified — which is a compliance question, not a
+refactor.
+
+## Front-end limitations recorded honestly
+
+- No mock data is shipped. `VITE_FLEET_DEV_FALLBACK` exists as a named switch but no screen uses a
+  fallback.
+- Vehicle and driver pickers in the trip dialogs load up to 200 records per site. Beyond that a
+  server-side typeahead endpoint would be needed.
+- The front end has not yet been changed to *use* the six new endpoints. The backend closes the gaps;
+  the screens still work the way they did, which means the readiness panel, the movement panel, the
+  evidence picker, the compliance search and the dead-letter finder are all now possible and not yet
+  built.
 
 ---
+
+## The original findings, kept for the evidence
 
 ## 1. Dashboard and report paths differ from the inventory — `DOC`
 

@@ -81,31 +81,31 @@ verbatim, plus `fieldErrors[]` for Bean Validation failures.
 | # | Method & path | Purpose | Success | Failure codes |
 |---|---|---|---|---|
 | E1 | `POST /api/v1/fleet/evidence` | Register an evidence reference (file reference + hash + retention class) | `201` | 400, 403, 422 `FLEET_RETENTION_CLASS_MISSING` |
-| E2 | `GET /api/v1/fleet/evidence` | Search evidence (`siteCode`, `relatedWorkflowId`, `evidenceType`, `retentionClass`, `legalHold`) | `200` | 403 |
+| E2 | `GET /api/v1/fleet/evidence` | Evidence for one record: `relatedRecordType` + `relatedRecordId`, both required, site-scoped from the actor. The wider filter set below was documented and never implemented | `200` | 403 |
 | E3 | `GET /api/v1/fleet/evidence/{evidenceId}` | Evidence metadata + access history (records an access entry) | `200` | 403, 404 |
 | E4 | `POST /api/v1/fleet/evidence/{evidenceId}/export-requests` | Request an export with justification + recipient | `202` | 400, 403, 404, 422 |
-| E5 | `PATCH /api/v1/fleet/evidence/export-requests/{requestId}/approval` | Approve or reject (approver ≠ requester) | `200` | 403 `FLEET_UNAUTHORIZED_APPROVAL`, 404, 409 |
-| E6 | `GET /api/v1/fleet/evidence/export-requests/{requestId}/download` | Retrieve the approved export descriptor | `200` | 403 `FLEET_EXPORT_NOT_APPROVED`, 404 |
-| A1 | `GET /api/v1/fleet/audit` | Audit search (`siteCode`, `resourceType`, `resourceId`, `actorId`, `action`, `from`, `to`) — auditor roles only | `200` | 403 |
-| A2 | `GET /api/v1/fleet/audit/integrity-check` | Replay the hash chain and report the first divergence | `200` | 403, 409 `FLEET_AUDIT_CHAIN_FAILURE` |
+| E5 | `PATCH /api/v1/fleet/evidence/export-requests/{requestId}/decision` | Approve or reject (approver ≠ requester) | `200` | 403 `FLEET_UNAUTHORIZED_APPROVAL`, 404, 409 |
+| E6 | `POST /api/v1/fleet/evidence/export-requests/{requestId}/export` | Retrieve the approved export descriptor. A POST, not a GET: it records the export as an access event | `200` | 403 `FLEET_EXPORT_NOT_APPROVED`, 404 |
+| A1 | `GET /api/v1/fleet/audit/records` | Audit search (`siteCode`, `resourceType`, `resourceId`, `actorId`, `action`, `from`, `to`) — auditor roles only | `200` | 403 |
+| A2 | `GET /api/v1/fleet/audit/chain/verification` | Replay the hash chain and report the first divergence | `200` | 403, 409 `FLEET_AUDIT_CHAIN_FAILURE` |
 
 ## 6. Integrations — `SRS-SFL-S166-04`
 
 | # | Method & path | Purpose | Success | Failure codes |
 |---|---|---|---|---|
-| I1 | `POST /api/v1/integrations/webhooks/telematics` | Signed telematics ingestion (HMAC + allowlist + schema + inbox + idempotency) | `202` accepted · `200` duplicate ignored | 401 `FLEET_INTEGRATION_INVALID_SIGNATURE`, 403 `FLEET_INTEGRATION_SOURCE_NOT_ALLOWED`, 422 `FLEET_INTEGRATION_SCHEMA_INVALID` |
+| I1 | `POST /api/v1/fleet/integrations/{sourceSystem}/messages` | Signed telematics ingestion (HMAC + allowlist + schema + inbox + idempotency) | `202` accepted · `200` duplicate ignored | 401 `FLEET_INTEGRATION_INVALID_SIGNATURE`, 403 `FLEET_INTEGRATION_SOURCE_NOT_ALLOWED`, 422 `FLEET_INTEGRATION_SCHEMA_INVALID` |
 | I2 | `GET /api/v1/fleet/integrations/health` | Integration health projection (per source: status, backlog, failures, dead letters, last success) | `200` | 403 |
-| I3 | `GET /api/v1/fleet/integrations/messages` | Inbox message search (`source`, `status`, `from`, `to`) | `200` | 403 |
+| I3 | `GET /api/v1/fleet/integrations/messages` | Inbox message search (`sourceSystem`, `status`, `eventType`, `size`). Implemented 29 July 2026 — without it, dead-letter replay could not be reached from the console | `200` | 403 |
 | I4 | `POST /api/v1/fleet/integrations/messages/{messageId}/replay` | Replay a dead-lettered message (privileged, idempotent) | `202` | 403, 404, 409 |
 
 ## 7. Dashboards and reports — `SRS-SFL-S166-05`
 
 | # | Method & path | Purpose | Success | Failure codes |
 |---|---|---|---|---|
-| B1 | `GET /api/v1/fleet/dashboard` | Indicators with `snapshotGeneratedAt`, `stale` flag and warning message. Filters: `siteCode`, `from`, `to`, `status`, `priority`, `responsibleUnit`, `operatingMode`, `reconcile` | `200` (+ stale warning) | 403 `FLEET_DASHBOARD_NO_SCOPE` |
-| B2 | `GET /api/v1/fleet/dashboard/drilldown/{metricCode}` | Source records behind a metric | `200` | 403 `FLEET_DASHBOARD_RESTRICTED_DRILLDOWN`, 404 |
-| B3 | `GET /api/v1/fleet/dashboard/readiness-report` | Operational / go-live readiness report | `200` | 403 |
-| B4 | `GET /api/v1/fleet/dashboard/compliance-report` | Compliance + service exposure report (data-minimised, access audited) | `200` | 403 |
+| B1 | `GET /api/v1/fleet/dashboards/operations` | Indicators with `snapshotGeneratedAt`, `stale` flag and warning message. Filters: `siteCode`, `from`, `to`, `status`, `priority`, `responsibleUnit`, `operatingMode`, `requireFresh` (**not** `reconcile`) | `200` (+ stale warning) | 403 `FLEET_DASHBOARD_NO_SCOPE` |
+| B2 | `GET /api/v1/fleet/dashboards/operations/drilldowns/{indicator}` | Source records behind an indicator. Four are recognised — `EXPIRED_COMPLIANCE`, `SERVICE_DUE`, `READINESS_BLOCKERS`, `ASSIGNMENT_CONFLICTS`; any other returns an empty list rather than a 404 | `200` | 403 `FLEET_DASHBOARD_RESTRICTED_DRILLDOWN`, 404 |
+| B3 | `GET /api/v1/fleet/reports/go-live-readiness` | Operational / go-live readiness report | `200` | 403 |
+| B4 | ~~`GET /api/v1/fleet/dashboard/compliance-report`~~ | **Not implemented.** The compliance exposure question is answered by `GET /api/v1/fleet/vehicles/compliance-documents` (V13) and the `EXPIRED_COMPLIANCE` drilldown | — | — |
 
 ## 8. System
 
@@ -122,3 +122,45 @@ verbatim, plus `fieldErrors[]` for Bean Validation failures.
 |---|---|
 | `POST /api/v1/fleet/emergency-logistics` | Deferred — not derivable from `SRS-SFL-S166-01…05`; workplan mapping is a category error. Operating mode `EMERGENCY` on trips and workflow items delivers the in-scope behaviour. See conflict **C-12**. |
 | `DELETE` on any operational, audit, evidence or assignment resource | Prohibited by the SRS (no hard deletion of history). Lifecycle transitions replace deletion. |
+
+---
+
+## Corrections applied 29 July 2026
+
+The entries above were reconciled against the controllers. **In every case the code was correct and
+this document was wrong**, so the document changed and no working endpoint was moved. Recorded as
+gaps 1, 6, 7, 8 and 9 of `S166_Frontend_Gap_Register.md`.
+
+| Was documented as | Actually implemented |
+| --- | --- |
+| `GET /fleet/dashboard` | `GET /fleet/dashboards/operations` |
+| `GET /fleet/dashboard/drilldown/{metricCode}` | `GET /fleet/dashboards/operations/drilldowns/{indicator}` |
+| `GET /fleet/dashboard/readiness-report` | `GET /fleet/reports/go-live-readiness` |
+| `GET /fleet/dashboard/compliance-report` | never implemented |
+| `PATCH /evidence/export-requests/{id}/approval` | `.../decision` |
+| `GET /evidence/export-requests/{id}/download` | `POST .../export` |
+| `GET /fleet/audit` | `GET /fleet/audit/records` |
+| `GET /fleet/audit/integrity-check` | `GET /fleet/audit/chain/verification` |
+| `POST /api/v1/integrations/webhooks/telematics` | `POST /api/v1/fleet/integrations/{sourceSystem}/messages` |
+| `reconcile` query parameter on B1 | `requireFresh` |
+
+### Endpoints that existed and were undocumented
+
+| Endpoint | Purpose |
+| --- | --- |
+| `GET /fleet/dashboards/operations/reconciliation` | Reconciles indicator counts against their source tables |
+| `POST /fleet/evidence/{id}/access` | Records an access entry against an evidence reference |
+| `GET /fleet/drivers?search=` | Free-text driver search |
+| `sort`, `page`, `size` on `GET /fleet/vehicles` | Paging and ordering, present from the first release |
+
+### Endpoints added in the same round
+
+| ID | Endpoint | Closes |
+| --- | --- | --- |
+| V6 | `GET /fleet/vehicles/{id}/readiness` | Gap 2 — readiness was reachable only through `trips/assignment-preview` |
+| V12 | `GET /fleet/vehicles/{id}/movement?size=` | Gap 3 — snapshots were written on every telematics callback and only the latest was readable |
+| V13 | `GET /fleet/vehicles/compliance-documents?documentType=&status=&expiringBefore=&size=` | Gap 10 — the screen fanned out over the first fifty vehicles |
+| V14 | `POST /fleet/vehicles/{id}/inspections` | Gap 4 — a vehicle with no open trip could not be inspected at all, which blocked the periodic-inspection half of SRS-SFL-S166-01 |
+| E2 | `GET /fleet/evidence?relatedRecordType=&relatedRecordId=` | Gap 5 — closure dialogs had to ask an operator to paste a reference id |
+| I3 | `GET /fleet/integrations/messages` | Gap 8 — dead-letter replay needs an identifier nothing could produce |
+| — | `severity` on `GET /fleet/workflow-items` | Gap 9 — the domain has carried `WorkflowSeverity` from the start and the search could not filter on it |

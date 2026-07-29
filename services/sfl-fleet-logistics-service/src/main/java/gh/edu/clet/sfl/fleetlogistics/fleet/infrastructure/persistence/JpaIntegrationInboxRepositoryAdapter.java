@@ -57,6 +57,22 @@ class JpaIntegrationInboxRepositoryAdapter implements IntegrationInboxRepository
 
     @Override
     @Transactional(readOnly = true)
+    public List<IntegrationInboxMessage> search(String sourceSystem, IntegrationMessageStatus status,
+            String eventType, int limit) {
+        return messages.search(blankToNull(sourceSystem), status, blankToNull(eventType),
+                        PageRequest.of(0, Math.max(1, Math.min(limit, 200))))
+                .stream()
+                .map(IntegrationInboxMessageEntity::toDomain)
+                .toList();
+    }
+
+    /** A blank filter means "no filter", not "match the empty string". */
+    private static String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public long countByStatus(IntegrationMessageStatus status) {
         return messages.countByStatus(status);
     }

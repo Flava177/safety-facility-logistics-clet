@@ -8,6 +8,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowSeverity;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -52,6 +53,7 @@ interface FleetWorkflowItemJpaRepository extends JpaRepository<FleetWorkflowItem
               and (:status is null or i.status = :status)
               and (:workflowType is null or i.workflowType = :workflowType)
               and (:priority is null or i.priority = :priority)
+              and (:severity is null or i.severity = :severity)
               and (:operatingMode is null or i.operatingMode = :operatingMode)
               and (:assignee is null or i.assignee = :assignee)
               and (:overdueOnly = false or (i.slaDueAt < :now
@@ -69,6 +71,7 @@ interface FleetWorkflowItemJpaRepository extends JpaRepository<FleetWorkflowItem
             @Param("status") FleetWorkflowStatus status,
             @Param("workflowType") FleetWorkflowType workflowType,
             @Param("priority") WorkflowPriority priority,
+            @Param("severity") WorkflowSeverity severity,
             @Param("operatingMode") OperatingMode operatingMode,
             @Param("assignee") String assignee,
             @Param("overdueOnly") boolean overdueOnly,
