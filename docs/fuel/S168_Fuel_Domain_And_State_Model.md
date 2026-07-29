@@ -16,8 +16,18 @@
 `FuelTransaction`: `RECEIVED -> VALIDATING -> MATCHED -> RECONCILED|EXCEPTION|REJECTED`; any non-void
 state may become `VOIDED` only through a privileged reasoned action.
 
-`DriverLogbook`: `DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED`; review may move to `RETURNED`, then
-back to `DRAFT`; `APPROVED -> REOPENED` is privileged; draft/submitted records may be `CANCELLED` with reason.
+`DriverLogbook`: `DRAFT -> SUBMITTED -> UNDER_REVIEW -> APPROVED`; review may move to `RETURNED`, and
+a returned logbook resubmits to **`RESUBMITTED`**, not back to `DRAFT`. `APPROVED -> REOPENED` is
+privileged; draft/submitted records may be `CANCELLED` with reason.
+
+`RESUBMITTED` exists so a reviewer can tell a first submission from a corrected one — a returned
+logbook that reappeared as `DRAFT` would be indistinguishable from one never submitted, and the
+reviewer would have no way to know their own comments had been acted on. `startReview` accepts both
+`SUBMITTED` and `RESUBMITTED`, so the review path is the same either way.
+
+*This paragraph said "back to `DRAFT`" until 29 July 2026. The code was correct
+(`DriverLogbook.submit` returns `RESUBMITTED` when the current state is `RETURNED`); the document was
+wrong. Recorded as gap 7 of the frontend register, now closed by correcting this text.*
 
 `FuelAnomalyCase`: `DETECTED -> ASSIGNED -> UNDER_REVIEW -> AWAITING_EXPLANATION ->
 EXPLANATION_RECEIVED -> APPROVED|REJECTED|ESCALATED -> CLOSED`. Hold, reassignment, cancellation and

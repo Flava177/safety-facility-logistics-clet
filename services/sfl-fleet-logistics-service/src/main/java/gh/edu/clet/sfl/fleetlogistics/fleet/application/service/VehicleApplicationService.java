@@ -13,6 +13,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.ComplianceDocumentR
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IdempotencyPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.RuntimeConfigurationPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleLocationRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleServiceRecordRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
@@ -20,6 +21,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DuplicateActiveIden
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.OptimisticLockConflictException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OdometerReading;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OdometerSource;
@@ -27,6 +30,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RegistrationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RestrictedUse;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleLocationSnapshot;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ReadinessAssessment;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleIdentificationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleLifecycleStatus;
@@ -34,10 +39,12 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceRecord;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.VehicleLifecyclePolicy;
 import java.time.Clock;
+import java.time.LocalDate;
 import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Optional;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,6 +67,8 @@ public class VehicleApplicationService {
     private final VehicleRepository vehicles;
     private final ComplianceDocumentRepository complianceDocuments;
     private final VehicleServiceRecordRepository serviceRecords;
+    private final VehicleLocationRepository vehicleLocations;
+    private final FleetReadinessService readinessService;
     private final FleetAccessPolicy accessPolicy;
     private final AuditPort auditPort;
     private final IntegrationEventPublisher eventPublisher;
@@ -68,12 +77,15 @@ public class VehicleApplicationService {
     private final Clock clock;
 
     public VehicleApplicationService(VehicleRepository vehicles, ComplianceDocumentRepository complianceDocuments,
-            VehicleServiceRecordRepository serviceRecords, FleetAccessPolicy accessPolicy, AuditPort auditPort,
+            VehicleServiceRecordRepository serviceRecords, VehicleLocationRepository vehicleLocations,
+            FleetReadinessService readinessService, FleetAccessPolicy accessPolicy, AuditPort auditPort,
             IntegrationEventPublisher eventPublisher, IdempotencyPort idempotency,
             RuntimeConfigurationPort runtimeConfiguration, Clock clock) {
         this.vehicles = vehicles;
         this.complianceDocuments = complianceDocuments;
         this.serviceRecords = serviceRecords;
+        this.vehicleLocations = vehicleLocations;
+        this.readinessService = readinessService;
         this.accessPolicy = accessPolicy;
         this.auditPort = auditPort;
         this.eventPublisher = eventPublisher;
@@ -197,6 +209,55 @@ public class VehicleApplicationService {
             publishAvailabilityChanged(command.actor(), existing, saved, "LIFECYCLE_CHANGE");
         }
         return saved;
+    }
+
+    /**
+     * One vehicle's readiness, on its own terms.
+     *
+     * <p>Closes gap 2. The only readiness answer available was {@code trips/assignment-preview},
+     * which runs the same policy but reads oddly on a vehicle screen and demands a trip shape for a
+     * question that has nothing to do with a trip. Same policy, same answer, vehicle-centric door.
+     */
+    @Transactional(readOnly = true)
+    public ReadinessAssessment readiness(UUID vehicleId, ActorContext actor) {
+        Vehicle vehicle = vehicles.findById(vehicleId)
+                .orElseThrow(() -> RecordNotFoundException.of(RESOURCE_TYPE, vehicleId));
+        accessPolicy.require(actor, SflPermission.FLEET_VEHICLE_READ, vehicle.siteCode(), RESOURCE_TYPE,
+                vehicleId.toString());
+        return readinessService.assessVehicle(vehicle);
+    }
+
+    /**
+     * One vehicle's movement history, newest first.
+     *
+     * <p>Closes gap 3. The snapshots were written on every telematics callback and only the latest
+     * was readable, so the vehicle screen could say where a vehicle is and never where it had been.
+     *
+     * <p>The freshness of each snapshot is the operator's own judgement to make from
+     * {@code recordedAt}: this is a vendor projection, and how stale is too stale depends on what the
+     * question is.
+     */
+    @Transactional(readOnly = true)
+    public List<VehicleLocationSnapshot> movementHistory(UUID vehicleId, int limit, ActorContext actor) {
+        Vehicle vehicle = vehicles.findById(vehicleId)
+                .orElseThrow(() -> RecordNotFoundException.of(RESOURCE_TYPE, vehicleId));
+        accessPolicy.require(actor, SflPermission.FLEET_VEHICLE_READ, vehicle.siteCode(), RESOURCE_TYPE,
+                vehicleId.toString());
+        return vehicleLocations.findByVehicle(vehicleId, limit);
+    }
+
+    /**
+     * Cross-fleet compliance search.
+     *
+     * <p>Closes gap 10. The compliance screen fanned out over the first fifty active vehicles in
+     * scope and said so on the page — correct for a small fleet and quietly wrong for any other.
+     */
+    @Transactional(readOnly = true)
+    public List<ComplianceDocument> searchComplianceDocuments(ComplianceDocumentType documentType,
+            ComplianceDocumentStatus status, LocalDate expiringBefore, int limit, ActorContext actor) {
+        accessPolicy.requirePermission(actor, SflPermission.FLEET_VEHICLE_READ, "ComplianceDocument");
+        return complianceDocuments.search(accessPolicy.requireSiteScopeFilter(actor), documentType, status,
+                expiringBefore, limit);
     }
 
     /** SRS-SFL-S166-01: register a compliance document, superseding any current one of the same type. */

@@ -6,7 +6,7 @@ not find, and what has since been done about it.
 Every entry was confirmed against the running service on port 8093 — the controllers, the domain
 records, `/v3/api-docs` and a live probe — not against the API inventory document.
 
-**Status.** Eleven of the thirteen gaps are **closed** by the backend work on
+**Status.** All thirteen gaps are **closed** (29 July 2026). Eleven were closed by the backend work on
 `feat/fuel-backend-gaps`; two need nothing. Each entry keeps its original finding so the reasoning
 survives, and states what changed.
 
@@ -258,10 +258,27 @@ content type. Recorded because it is a trap for any other client.
 
 ## What is still worth doing
 
-- **Gap 7** — correct `S168_Fuel_Domain_And_State_Model.md` to describe `RESUBMITTED`.
-- **Gap 8** — decide whether `VALIDATING`, `MATCHED` and `REJECTED` should be implemented or removed.
-- **A time-series endpoint** for fuel spend and volume by day, so the dashboard's one remaining
-  derived panel can stop bucketing in the browser.
-- **An anomaly aggregation endpoint** (counts by type) so the by-type chart stops reading a page.
-- **`GET /api/v1/fuel/imports/{id}/rows`**, paged, for a batch with thousands of rows; the detail
-  read currently returns them all.
+All five are now done (29 July 2026).
+
+- **Gap 7 — closed.** `S168_Fuel_Domain_And_State_Model.md` said a returned logbook goes "back to
+  `DRAFT`". The code was right: `DriverLogbook.submit` returns `RESUBMITTED` when the current state is
+  `RETURNED`, and `startReview` accepts both. The document is corrected, and it now also says *why*
+  the state exists — a returned logbook reappearing as `DRAFT` would be indistinguishable from one
+  never submitted, so a reviewer would have no way to know their comments had been acted on.
+- **Gap 8 — closed as a decision: the three statuses stay.** `VALIDATING`, `MATCHED` and `REJECTED`
+  are unreachable through any transition today, and they are **not** being removed. Two reasons.
+  Stored rows may already carry them, and an enum value deleted from the code is a row that no longer
+  deserialises. And they describe a provider-reconciliation path this module is built to grow into —
+  `RECONCILED` and `EXCEPTION` are the settled ends of it. What was wrong was the register implying a
+  choice was pending; the choice is made and recorded here.
+- **A time-series endpoint — added.** `GET /fuel/dashboard/daily-totals?siteCode=&from=&to=` returns
+  spend, volume and a transaction count per day, aggregated in SQL. The chart used to bucket a page of
+  fetched transactions in the browser, so it described that page rather than the site.
+- **An anomaly aggregation endpoint — added.** `GET /fuel/dashboard/anomaly-counts?siteCode=` returns
+  open counts by type. Verified live: seven types with counts, from a single query.
+- **Paged import rows — added.** `GET /fuel/imports/{id}/rows?page=&size=&sort=`. The detail read
+  still returns every row, which is fine for a hundred and unusable for thousands.
+
+**Not yet done:** the fuel screens have not been changed to *use* the two new dashboard endpoints, so
+the spend chart and the by-type chart still bucket client-side and are still captioned as derived.
+The endpoints exist; the screens have not caught up.

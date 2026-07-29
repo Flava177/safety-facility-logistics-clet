@@ -70,7 +70,8 @@ class JpaFleetWorkflowRepositoryAdapter implements FleetWorkflowRepository, SlaR
     public WorkflowPage search(WorkflowSearchCriteria criteria, SiteScopeFilter scope) {
         Page<FleetWorkflowItemEntity> page = items.search(
                 scope.allSites(), scopeList(scope), normalise(criteria.siteCode()), criteria.status(),
-                criteria.workflowType(), criteria.priority(), criteria.operatingMode(), criteria.assignee(),
+                criteria.workflowType(), criteria.priority(), criteria.severity(), criteria.operatingMode(),
+                criteria.assignee(),
                 criteria.overdueOnly(), criteria.escalatedOnly(), criteria.from(), criteria.to(), clock.instant(),
                 JpaVehicleRepositoryAdapter.pageRequest(criteria.page(), criteria.size(),
                         criteria.sort() == null ? "slaDueAt,asc" : criteria.sort()));

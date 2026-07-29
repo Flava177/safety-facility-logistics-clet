@@ -20,6 +20,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import java.time.Clock;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -75,6 +76,21 @@ public class FleetEvidenceApplicationService {
     }
 
     @Transactional
+    /**
+     * Evidence attached to one record.
+     *
+     * <p>Closes gap 5, which the register called the main usability cost in the whole console: with
+     * no search, every closure dialog asked an operator to paste an evidence reference id from
+     * somewhere else. The repository has answered this question since the service was built and
+     * nothing exposed it.
+     */
+    public List<EvidenceReference> findByRelatedRecord(String relatedRecordType, String relatedRecordId,
+            ActorContext actor) {
+        accessPolicy.requirePermission(actor, SflPermission.FLEET_EVIDENCE_READ, EVIDENCE);
+        return evidenceRepository.findByRelatedRecord(relatedRecordType, relatedRecordId,
+                accessPolicy.requireSiteScopeFilter(actor));
+    }
+
     public EvidenceReference recordAccess(UUID evidenceId, ActorContext actor,
             gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel sourceChannel) {
         EvidenceReference evidence = findById(evidenceId, actor);

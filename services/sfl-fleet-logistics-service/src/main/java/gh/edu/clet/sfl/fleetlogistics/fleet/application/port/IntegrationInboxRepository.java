@@ -16,6 +16,14 @@ public interface IntegrationInboxRepository {
     Optional<IntegrationInboxMessage> findBySourceAndIdempotencyKey(String sourceSystem, String idempotencyKey);
 
     List<IntegrationInboxMessage> findRecent(int limit);
+    /**
+     * Searches the inbox.
+     *
+     * <p>Closes gap 8. Replay needs a message identifier and there was no way to find one from
+     * the console — which made dead-letter replay a documented capability nobody could reach.
+     */
+    List<IntegrationInboxMessage> search(String sourceSystem, IntegrationMessageStatus status,
+            String eventType, int limit);
 
     long countByStatus(IntegrationMessageStatus status);
 }
