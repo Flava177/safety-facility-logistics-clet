@@ -35,10 +35,52 @@ export interface SflActorConfig {
  */
 export const fleetApiBaseUrl = readOptionalEnv('VITE_FLEET_API_BASE_URL', 'http://localhost:8093');
 
+/**
+ * Base URL of the Emergency Notification service.
+ *
+ * S174 is a **separate service on a separate port** — `sfl-emergency-notification-service`, port
+ * 8095, its own schema and its own permission matrix. Fleet, fuel and dispatch all live in
+ * `sfl-fleet-logistics-service`, so this is the first time the dashboards talk to two services, and
+ * it is why the API client takes a base URL per call rather than reading one global.
+ *
+ * The emergency service allows `http://localhost:8093` (the bundled dashboard's origin) and
+ * `http://localhost:5005` (`npm run dev`), so both work over CORS without a proxy. Behind a
+ * gateway this becomes a same-origin path prefix and nothing else changes.
+ */
+export const emergencyApiBaseUrl = readOptionalEnv(
+  'VITE_EMERGENCY_API_BASE_URL',
+  'http://localhost:8095',
+);
+
+/**
+ * The development actor's roles, when `VITE_SFL_ROLES` is not set.
+ *
+ * One header serves both services and each reads only the roles its own matrix knows — an
+ * unrecognised name grants nothing rather than failing the request, so the two sets can sit in one
+ * list. The four emergency roles are what it takes to exercise S174 end to end: the coordinator
+ * composes and sends, the command role approves and records after-action approval, the auditor
+ * exports, and the integration engineer replays a dead letter.
+ *
+ * **In production these are four different people**, and the S174 screens are built on that: the
+ * approve button does not appear for an actor who cannot use it. A single actor holding all of them
+ * is a local-development convenience, not the design. This default is kept in step with
+ * `.env.production`; `.env` is git-ignored, so a developer with an older one must add the four
+ * emergency roles by hand or every emergency screen will answer 403.
+ */
+const defaultRoles = [
+  'FLEET_MANAGER',
+  'FLEET_DISPATCHER',
+  'FLEET_AUDITOR',
+  'EMERGENCY_COORDINATOR',
+  'COMMAND_ROLE',
+  'AUDITOR',
+  'INTEGRATION_ENGINEER',
+].join(',');
+
 export const sflActor: SflActorConfig = {
   user: readEnv('VITE_SFL_USER', 'fleet.operator'),
   displayName: readEnv('VITE_SFL_DISPLAY_NAME', 'Fleet Operator'),
-  roles: readEnv('VITE_SFL_ROLES', 'FLEET_MANAGER,FLEET_DISPATCHER,FLEET_AUDITOR'),
+  roles: readEnv('VITE_SFL_ROLES', defaultRoles),
   sites: readEnv('VITE_SFL_SITES', 'CLET-HQ'),
   sourceChannel: 'WEB',
 };

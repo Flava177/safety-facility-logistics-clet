@@ -1,6 +1,6 @@
 import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
-import { fleetApiBaseUrl, sflActor } from './config';
+import { emergencyApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
 
 /**
  * The single HTTP entry point for every SFL service call.
@@ -8,7 +8,12 @@ import { fleetApiBaseUrl, sflActor } from './config';
  * Header policy, correlation, idempotency and envelope parsing live here so no feature module ever
  * hand-rolls a `fetch`. Every request carries the actor headers the services expect in local
  * development plus an `X-Correlation-ID`; state-creating POSTs carry an `Idempotency-Key`, which
- * the fleet service requires for replay-safe creates.
+ * the services require for replay-safe creates.
+ *
+ * Calls address one of two services. Fleet, fuel and dispatch are three modules of the one
+ * `sfl-fleet-logistics-service`; emergency notification (S174) is a service of its own on another
+ * port. The envelope, the actor headers and the error catalogue are identical across both — only
+ * the origin differs — so the target is a per-call option rather than a second client.
  */
 
 export const HEADER_USER = 'X-SFL-User';
@@ -46,12 +51,44 @@ export const buildQueryString = (params?: QueryParams): string => {
   return serialised ? `?${serialised}` : '';
 };
 
+/**
+ * Which SFL service a call is addressed to.
+ *
+ * `fleet` covers the fleet, fuel and dispatch modules — one service, one origin. `emergency` is
+ * the separate S174 notification service. Named rather than passed as a raw URL so a module cannot
+ * quietly point at something that is not an SFL service.
+ */
+export type SflService = 'fleet' | 'emergency';
+
+const serviceOrigins: Record<SflService, string> = {
+  fleet: fleetApiBaseUrl,
+  emergency: emergencyApiBaseUrl,
+};
+
+const serviceNames: Record<SflService, string> = {
+  fleet: 'Fleet & Logistics service',
+  emergency: 'Emergency Notification service',
+};
+
+const servicePorts: Record<SflService, string> = {
+  fleet: '8093',
+  emergency: '8095',
+};
+
+const unreachable = (service: SflService): FleetApiError =>
+  FleetApiError.transport(
+    `Could not reach the ${serviceNames[service]} at ${serviceOrigins[service] || 'this origin'}. ` +
+      `Check that it is running on port ${servicePorts[service]}.`,
+  );
+
 export interface RequestOptions {
   query?: QueryParams;
   body?: unknown;
   /** Sends an `Idempotency-Key`; required by the service for state-creating POSTs. */
   idempotent?: boolean;
   signal?: AbortSignal;
+  /** Which service to call. Defaults to fleet, which is where most of the dashboard lives. */
+  service?: SflService;
   /**
    * Overrides `Accept` for an endpoint that does not produce JSON.
    *
@@ -109,7 +146,8 @@ async function request<T>(
   // A `FormData` body is sent as-is: the browser has to write the multipart boundary into the
   // Content-Type itself, so setting that header by hand produces a request the server cannot parse.
   const multipart = hasBody && options.body instanceof FormData;
-  const url = `${fleetApiBaseUrl}${path}${buildQueryString(options.query)}`;
+  const service = options.service ?? 'fleet';
+  const url = `${serviceOrigins[service]}${path}${buildQueryString(options.query)}`;
 
   let response: Response;
   try {
@@ -123,9 +161,7 @@ async function request<T>(
     if (cause instanceof DOMException && cause.name === 'AbortError') {
       throw cause;
     }
-    throw FleetApiError.transport(
-      `Could not reach the Fleet service at ${fleetApiBaseUrl}. Check that it is running on port 8093.`,
-    );
+    throw unreachable(service);
   }
 
   const envelope = await parseEnvelope<T>(response);
@@ -170,16 +206,15 @@ export async function downloadFile(
    * instead of "you are not authorised".
    */
   accept = 'text/csv, application/json',
+  service: SflService = 'fleet',
 ): Promise<string> {
-  const url = `${fleetApiBaseUrl}${path}${buildQueryString(query)}`;
+  const url = `${serviceOrigins[service]}${path}${buildQueryString(query)}`;
 
   let response: Response;
   try {
     response = await fetch(url, { method: 'GET', headers: buildHeaders({ accept }, false) });
   } catch {
-    throw FleetApiError.transport(
-      `Could not reach the Fleet service at ${fleetApiBaseUrl}. Check that it is running on port 8093.`,
-    );
+    throw unreachable(service);
   }
 
   if (!response.ok) {
@@ -219,8 +254,8 @@ export async function downloadFile(
 }
 
 export const apiClient = {
-  get: <T>(path: string, query?: QueryParams, signal?: AbortSignal) =>
-    request<T>('GET', path, { query, signal }),
+  get: <T>(path: string, query?: QueryParams, signal?: AbortSignal, service?: SflService) =>
+    request<T>('GET', path, { query, signal, service }),
 
   /** POSTs that create state — carries an `Idempotency-Key` by default. */
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>

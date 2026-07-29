@@ -61,7 +61,12 @@ export type IconName =
   | 'coins'
   | 'package'
   | 'clipboard-list'
-  | 'shield-lock';
+  | 'shield-lock'
+  | 'megaphone'
+  | 'siren'
+  | 'zap'
+  | 'users'
+  | 'target';
 
 const glyphs: Record<IconName, ReactElement> = {
   dashboard: (
@@ -333,6 +338,40 @@ const glyphs: Record<IconName, ReactElement> = {
       <ellipse cx="9" cy="6.8" rx="5.5" ry="2.6" />
       <path d="M3.5 6.8v4.4c0 1.4 2.5 2.6 5.5 2.6s5.5-1.2 5.5-2.6V6.8" />
       <path d="M14.5 11.4c2.7.2 6 1.3 6 2.6v3.2c0 1.4-2.5 2.6-5.5 2.6s-5.5-1.2-5.5-2.6v-3.4" />
+    </>
+  ),
+  // S174. A broadcast, a live alarm, the break-glass path, an audience and a drill target.
+  megaphone: (
+    <>
+      <path d="M3.5 10.2v3.6a1.6 1.6 0 0 0 1.6 1.6h1.7l9.4 4.1a1 1 0 0 0 1.4-.9V5.4a1 1 0 0 0-1.4-.9L6.8 8.6H5.1a1.6 1.6 0 0 0-1.6 1.6Z" />
+      <path d="M6.8 8.6v6.8" />
+      <path d="M9.6 16.6v2.1a1.9 1.9 0 0 0 3.8 0v-.4" />
+      <path d="M20.5 9.8v4.4" />
+    </>
+  ),
+  siren: (
+    <>
+      <path d="M6.5 17.5v-4.9a5.5 5.5 0 0 1 11 0v4.9" />
+      <rect x="4.4" y="17.5" width="15.2" height="3.1" rx="1.2" />
+      <path d="M12 3.4V1.9" />
+      <path d="M18.6 6.1 19.7 5" />
+      <path d="M5.4 6.1 4.3 5" />
+    </>
+  ),
+  zap: <path d="M13.4 2.5 4.9 13.1a.6.6 0 0 0 .5 1h5.1l-.9 7.4 8.5-10.6a.6.6 0 0 0-.5-1h-5.1Z" />,
+  users: (
+    <>
+      <circle cx="9.2" cy="8.1" r="3.5" />
+      <path d="M2.8 20.1a6.4 6.4 0 0 1 12.8 0" />
+      <path d="M16.3 4.9a3.5 3.5 0 0 1 0 6.6" />
+      <path d="M17.8 14.3a6.4 6.4 0 0 1 3.4 5.8" />
+    </>
+  ),
+  target: (
+    <>
+      <circle cx="12" cy="12" r="8.6" />
+      <circle cx="12" cy="12" r="4.9" />
+      <circle cx="12" cy="12" r="1.3" />
     </>
   ),
 };
