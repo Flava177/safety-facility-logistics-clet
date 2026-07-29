@@ -352,7 +352,7 @@ public class JdbcFuelRepository implements FuelRepository {
      * The site's fuel standing in one round trip.
      *
      * <p>The five transaction figures still come from {@code fuel_dashboard_summary}. The anomaly,
-     * logbook and import indicators are counted here rather than derived by the client: a console
+     * logbook and import indicators are counted here rather than derived by the client: a dashboard
      * that sums whatever a capped list returned reports the truth about its own window, not about
      * the site, and the difference only shows up once there is enough data for it to matter.
      */

@@ -1,9 +1,9 @@
 import { ReactElement, SVGProps } from 'react';
 
 /**
- * The console's icon set.
+ * The dashboard's icon set.
  *
- * Drawn inline rather than fetched from an icon CDN at runtime: this console runs inside the
+ * Drawn inline rather than fetched from an icon CDN at runtime: this dashboard runs inside the
  * directorate network, and an icon library that resolves over the public internet is a screen full
  * of empty squares the day that host is unreachable. Every glyph here is a stroked 24x24 outline,
  * so a new one can be added without matching a font or a sprite sheet.

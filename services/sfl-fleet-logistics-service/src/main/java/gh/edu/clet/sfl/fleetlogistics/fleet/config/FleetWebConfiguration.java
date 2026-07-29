@@ -13,10 +13,10 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
- * Web wiring for the fleet consoles: CORS, the legacy static consoles, and the React operations UI.
+ * Web wiring for the fleet dashboards: CORS, the legacy static dashboards, and the React operations UI.
  *
- * <p>The SFL Operations UI is built with a {@code /ui/} base and copied into {@code static/ui} by the
- * service build, so a single {@code spring-boot:run} serves the API, Swagger and the console from one
+ * <p>The SFL Operations dashboards is built with a {@code /ui/} base and copied into {@code static/ui} by the
+ * service build, so a single {@code spring-boot:run} serves the API, Swagger and the dashboard from one
  * origin.
  *
  * <p>Serving a single-page app takes two pieces. Both {@code /ui} and {@code /ui/} are forwarded to
@@ -27,7 +27,7 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
  *
  * <p>When the bundle has not been built the {@code /ui} routes are not registered at all, so the
  * service still starts and the API is unaffected. {@link FleetUiStartupReporter} says so on the
- * console rather than leaving a silent 404.
+ * dashboard rather than leaving a silent 404.
  */
 @Configuration(proxyBeanMethods = false)
 class FleetWebConfiguration {
@@ -66,7 +66,7 @@ class FleetWebConfiguration {
                 registry.addViewController("/dispatch/").setViewName("forward:/dispatch/index.html");
 
                 if (uiBundled) {
-                    // Landing on the service root opens the operations console.
+                    // Landing on the service root opens the operations dashboards.
                     registry.addRedirectViewController("/", "/ui/");
                     // Both spellings, because "/ui/" alone reaches the resource handler with an
                     // empty path and Spring answers 404 before the fallback resolver is consulted.

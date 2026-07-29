@@ -50,7 +50,7 @@ public final class FleetWorkflowResponses {
             long version) {
     }
 
-    /** An inspection, with the derived flags a console needs to render its consequence. */
+    /** An inspection, with the derived flags a dashboard needs to render its consequence. */
     public record InspectionResponse(
             UUID id,
             UUID vehicleId,

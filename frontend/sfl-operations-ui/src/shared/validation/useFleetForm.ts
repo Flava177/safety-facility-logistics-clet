@@ -40,7 +40,7 @@ export interface FleetForm<T extends object> {
 /**
  * Form state with inline validation and server-error mapping.
  *
- * Two behaviours matter for this console. Errors show on blur and on submit, not on first
+ * Two behaviours matter for this dashboard. Errors show on blur and on submit, not on first
  * keystroke, so a half-typed registration number does not shout at the operator. And a failed
  * submit maps the service's `fieldErrors` onto the same `errors` map the client rules use, so a
  * server-only rule (duplicate identifier, odometer regression) lands on the field that caused it

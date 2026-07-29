@@ -38,7 +38,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 
 /**
- * Proof for the gaps closed after the S168 console was built.
+ * Proof for the gaps closed after the S168 dashboard was built.
  *
  * <p>Each test names the gap it covers. They exist because every one of these was a real defect
  * found by driving the running service, not by reading the source — the kind that a compiling build
@@ -245,7 +245,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
                 .content()).extracting(FuelAnomalyCase::id).contains(one.id());
     }
 
-    /** Gap 6: indicators the dashboard did not publish, so the console had to derive them. */
+    /** Gap 6: indicators the dashboard did not publish, so the dashboard had to derive them. */
     @Test void dashboard_publishes_anomaly_logbook_and_import_indicators() {
         Fixture f = newFixture(true);
         var tx = capture(f,"PROVIDER-DASH",new BigDecimal("70"),1100);

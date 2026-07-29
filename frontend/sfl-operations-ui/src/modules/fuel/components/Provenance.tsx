@@ -2,12 +2,12 @@ import { ReactNode } from 'react';
 import Icon from 'shared/components/Icon';
 
 /**
- * A caption for a figure the console worked out for itself.
+ * A caption for a figure this application worked out for itself.
  *
  * Far less of the fuel module needs this than once did: the dashboard publishes its anomaly,
  * logbook and import indicators, the registers page properly, and the detail screens read a real
  * audit history. What is left is genuinely derived — a chart bucketed by day from fetched records,
- * a freshness threshold this console chose — and it still says so, because a derived figure sitting
+ * a freshness threshold this application chose — and it still says so, because a derived figure sitting
  * silently beside a published one is how a dashboard starts lying.
  */
 export const DerivedNote = ({ children }: { children: ReactNode }) => (

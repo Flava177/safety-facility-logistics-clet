@@ -149,7 +149,7 @@ public class FuelApplicationService {
     }
 
     /**
-     * A driver-only actor is restricted to their own records here, not in the console.
+     * A driver-only actor is restricted to their own records here, not in the dashboard.
      *
      * <p>Scoping a query by what the caller may see belongs on this side of the wire: a client-side
      * filter is a display convention, and the records would still have crossed the boundary.

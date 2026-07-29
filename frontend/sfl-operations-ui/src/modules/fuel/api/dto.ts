@@ -289,7 +289,7 @@ export interface TransactionSearchParams extends FuelPageParams {
   status?: FuelTransactionStatus | '';
   vehicleId?: string;
   driverId?: string;
-  /** Exact match. `MANUAL` is what this console writes; imports and providers write their own. */
+  /** Exact match. `MANUAL` is what this dashboard writes; imports and providers write their own. */
   sourceSystem?: string;
   /** Contains-match, case insensitive. */
   vendorReference?: string;
@@ -479,7 +479,7 @@ export interface ReplayResult {
  *
  * The five transaction figures come from the `fuel_dashboard_summary` view; the anomaly, logbook
  * and import indicators are counted by the service. Every figure here is published, so nothing on
- * the dashboard has to be derived by the console any more.
+ * the dashboard page has to be derived by this application any more.
  */
 export interface FuelDashboardSnapshot {
   transactionCount: number;

@@ -6,7 +6,8 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
 /**
  * A fuel record's real transition history, read from the hash-chained audit log.
  *
- * This replaces a timeline the console used to reconstruct from the record's own timestamps, which
+ * This replaces a timeline this application used to reconstruct from the record's own timestamps,
+ * which
  * could show a logbook's creation and approval but nothing in between — the fuel aggregates had no
  * history endpoint, and the fleet audit search that would have served one returned 500 on every
  * call. Both are fixed, so these are the actual recorded transitions, in chain order, with the actor

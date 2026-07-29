@@ -16,7 +16,7 @@ import java.util.UUID;
  * stamped on its reconciliation record, stop being reproducible. That is the whole point of an
  * effective-dated policy, so the overlap is refused at creation rather than left to be discovered.
  *
- * <p>The conflicting policies travel in {@link #details()} so the console can name them.
+ * <p>The conflicting policies travel in {@link #details()} so the dashboard can name them.
  */
 public class FuelPolicyPeriodOverlapException extends FleetDomainException {
 

@@ -498,7 +498,7 @@ public class TripApplicationService {
         return image;
     }
 
-    /** Operating modes a client may request; exposed for the console's assignment form. */
+    /** Operating modes a client may request; exposed for the dashboard's assignment form. */
     public static List<OperatingMode> supportedOperatingModes() {
         return List.of(OperatingMode.values());
     }

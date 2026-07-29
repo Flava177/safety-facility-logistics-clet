@@ -186,3 +186,99 @@ shown two different retention answers for the same evidence.
   was authored in (its npm registry egress was blocked). The code was verified by TypeScript
   parse-checking every file, resolving every local import against real exports, checking for unused
   imports and formatting with Prettier. Run the three commands locally before merging.
+
+---
+
+# Driver logbook — contract review (28 July 2026)
+
+Reviewed ahead of building a Driver Logbook module. **The Fleet & Logistics service exposes no
+driver logbook API.** This is recorded here rather than worked around: nothing was mocked and no
+screen was built.
+
+## Evidence
+
+The service's full source tree under
+`services/sfl-fleet-logistics-service/src/main/java/.../fleet` contains:
+
+- **Controllers** — `DriverController`, `TripController`, `VehicleController`,
+  `FleetWorkflowController`, `FleetDashboardController`, `FleetEvidenceController`,
+  `FleetAuditController`, `FleetIntegrationController`. There is no logbook controller.
+- **Domain models** — no `LogbookEntry`, `DutyLog`, `Journey`, `Shift` or equivalent aggregate.
+- **Application ports** — no logbook repository; the port list stops at trips, vehicles, drivers,
+  inspections, compliance documents, service records, workflow items, evidence, audit, integration
+  inbox, SLA rules and dashboard snapshots.
+- **Persistence** — no logbook entity, JPA repository or adapter.
+
+## What exists that a logbook would be assembled from
+
+`Trip` is the journey record and already carries most of the raw material:
+
+| Field | Source |
+| --- | --- |
+| `driverId`, `vehicleId`, `siteCode` | assignment |
+| `origin`, `destination`, `purpose`, `operatingMode` | plan |
+| `plannedStart` / `plannedEnd`, `actualStart` / `actualEnd` | plan and execution |
+| `startOdometer`, `endOdometer`, `distanceCovered` | captured at start and closure; **distance is computed by the service** |
+| `status`, `holdReason`, `cancellationReason`, `closureReason`, `closureEvidenceId` | lifecycle |
+
+`GET /api/v1/fleet/trips` accepts `driverId`, `vehicleId`, `siteCode`, `status`, `operatingMode`,
+`from`, `to`, `page`, `size` and `sort`, so a per-driver, per-period view **can** be assembled from
+real, server-filtered records. `VehicleInspection` supplies pre- and post-trip checks with their own
+odometer reading; `EvidenceReference` supplies attachments; the audit chain supplies the trail.
+
+## What is missing for a logbook module as specified
+
+1. **No logbook resource.** No `/drivers/{id}/logbook`, no logbook entry, no create or amend
+   endpoint distinct from the trip lifecycle.
+2. **No duty or shift concept.** Nothing models on-duty and off-duty periods, rest, or
+   hours-of-service limits, so a "driver day" has no server-side definition and no limit to breach.
+3. **No logbook lifecycle.** Trips transition PLANNED → IN_PROGRESS → ON_HOLD → COMPLETED /
+   CANCELLED, which describes the movement, not a driver's log being submitted, reviewed, corrected
+   or approved. There is therefore no review queue and no approver role.
+4. **No aggregates.** `DashboardIndicators` returns vehicles available, expired compliance, service
+   due, assignment conflicts, readiness blockers, open and escalated workflow items, and integration
+   dead letters. Nothing per driver: no distance logged, no entries today, no drivers on duty.
+   Running totals would have to be summed client-side from the fetched page, which is only honest
+   for the window actually retrieved.
+5. **No logbook-specific exceptions.** "Unclosed entry" and "missing odometer" are inferable from
+   trip status and null odometer fields, but the service raises no workflow item for either.
+
+## Consequence
+
+A logbook module built today would be a **derived view over trips**, not a system of record. That is
+buildable and honest provided every panel says what it is derived from — but it cannot support
+submission, review, approval, hours-of-service, or any per-driver total beyond the page fetched.
+A logbook as a system of record requires service work first: an aggregate, its lifecycle and
+permissions, a repository and migration, query endpoints filterable by driver and period, and
+aggregate indicators.
+
+---
+
+## Correction (29 July 2026) — a driver logbook system of record already exists
+
+**The review above is right about the `fleet` package and wrong about the service.** It searched
+`services/sfl-fleet-logistics-service/src/main/java/.../fleet` and concluded correctly that there is
+no logbook aggregate there. The logbook lives in the **`fuel`** package (S168), which that search did
+not cover:
+
+| Concern the review found missing | Where it actually is |
+| --- | --- |
+| Logbook aggregate | `fuel.domain.model.DriverLogbook` |
+| Logbook lifecycle with review and approval | `DRAFT → SUBMITTED → UNDER_REVIEW → APPROVED`, plus `RETURNED → RESUBMITTED`, privileged `REOPENED`, and `CANCELLED` with a reason |
+| Repository and migration | `FuelRepository`, `V11__fuel_driver_logbooks.sql` |
+| Query endpoints filterable by driver and period | `GET /api/v1/fuel/logbooks` — site, status, driver, vehicle, use classification, journey range, paged |
+| Permissions | `FUEL_LOGBOOK_CREATE`, `_SUBMIT`, `_REVIEW`, `_REOPEN`, `_READ` in `FuelPermissionMatrix` |
+| Aggregate indicators | `pendingLogbookReviews` and `draftLogbooks` on `GET /api/v1/fuel/dashboard` |
+| Exception raising | `MISSING_LOGBOOK` anomaly cases, raised by `FuelSweepScheduler` for a completed trip with no logbook |
+
+So a logbook module **is** a system of record, not a derived view over trips, and it supports
+submission, review, correction and approval end to end. It was built as part of the S168 **Fuel &
+Driver Logbooks** module; see `docs/fuel/S168_Fuel_Frontend_Gap_Register.md`.
+
+The two things the review named that are genuinely absent remain absent: there is **no duty or shift
+concept** — nothing models on-duty and off-duty periods, rest, or hours-of-service limits — and there
+are **no per-driver aggregates** beyond the site-level counts above. Both are still service work if
+they are wanted.
+
+**The lesson worth keeping:** `sfl-fleet-logistics-service` holds three modules — `fleet`, `fuel` and
+`dispatch` — and searching one package is not searching the service.

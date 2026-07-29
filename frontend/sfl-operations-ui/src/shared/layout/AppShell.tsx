@@ -43,7 +43,7 @@ const ShellBody = () => {
   );
 };
 
-/** Product bar + navigation rail + routed content. Every console screen renders inside this. */
+/** Product bar + navigation rail + routed content. Every dashboard screen renders inside this. */
 const AppShell = () => (
   <SidebarProvider>
     <ShellBody />

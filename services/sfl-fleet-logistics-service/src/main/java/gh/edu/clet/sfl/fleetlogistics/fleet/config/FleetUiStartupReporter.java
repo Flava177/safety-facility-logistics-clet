@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Prints the service's front doors once it is up, and optionally opens them in a browser.
  *
  * <p>The point is that starting the service is the whole ceremony: the log says where the API docs
- * and the console are, and {@code sfl.fleet.open-browser=true} — which the local start script sets —
+ * and the dashboard are, and {@code sfl.fleet.open-browser=true} — which the local start script sets —
  * opens both tabs.
  *
  * <p>The browser is launched with the platform's own opener rather than {@code java.awt.Desktop},
@@ -43,16 +43,16 @@ class FleetUiStartupReporter {
         String root = "http://localhost:" + port + contextPath;
         String swagger = root + "/swagger-ui.html";
         boolean uiBundled = FleetUiBundle.isPresent();
-        String console = root + FleetUiBundle.PATH;
+        String dashboard = root + FleetUiBundle.PATH;
 
         log.info("");
         log.info("  SFL Fleet & Logistics service is ready");
         log.info("    API docs (Swagger) : {}", swagger);
         log.info("    OpenAPI JSON       : {}", root + "/v3/api-docs");
         if (uiBundled) {
-            log.info("    Operations console : {}", console);
+            log.info("    Operations dashboards : {}", dashboard);
         } else {
-            log.info("    Operations console : not bundled. Build it with");
+            log.info("    Operations dashboards : not bundled. Build it with");
             log.info("                         mvn -pl sfl-fleet-logistics-service -Pui spring-boot:run");
             log.info("                         or run it separately with 'npm run dev' on port 5005");
         }
@@ -61,9 +61,9 @@ class FleetUiStartupReporter {
         if (!openBrowser) {
             return;
         }
-        // Console first so it ends up as the focused tab.
+        // Dashboard first so it ends up as the focused tab.
         if (uiBundled) {
-            open(console);
+            open(dashboard);
         }
         open(swagger);
     }
