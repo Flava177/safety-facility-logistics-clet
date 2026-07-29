@@ -9,14 +9,8 @@ import {
   ExceptionStatus,
   ExceptionType,
 } from 'modules/dispatch/api/enums';
-import {
-  DEFAULT_WINDOW,
-  dispatchExceptionsApi,
-  dispatchReportsApi,
-} from 'modules/dispatch/api/dispatchApi';
+import { dispatchExceptionsApi, dispatchReportsApi } from 'modules/dispatch/api/dispatchApi';
 import { exceptionOpen, exceptionSlaBreached } from 'modules/dispatch/api/workflow';
-import WindowNotice from 'modules/dispatch/components/WindowNotice';
-import { useClientWindow } from 'modules/dispatch/components/useClientWindow';
 import { formatDueIn } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
@@ -33,6 +27,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
 import { formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
 
 const QUEUE_VIEWS = [
@@ -48,7 +43,7 @@ const QUEUE_VIEWS = [
  * `GET /exceptions` accepts a site, a type and a status; severity, assignee, security relevance and
  * SLA standing are filtered here over the returned window, and each control says so. With more open
  * cases than the window holds, the "breaching SLA" view is the breaches *in the window* rather than
- * at the site — `WindowNotice` makes that visible instead of leaving it to be discovered.
+ * at the site. Every one of them is a server-side predicate now, so the two are the same thing.
  *
  * The stakes are higher here than on a normal queue: an open case blocks the manifest it belongs to
  * from closing, so a case nobody can see is a consignment nobody can close.
@@ -70,52 +65,72 @@ const DispatchExceptionsPage = () => {
   const [assignee, setAssignee] = useState('');
   const [exporting, setExporting] = useState(false);
 
+  /**
+   * Each view is a set of server-side predicates, not a pass over whatever came back.
+   *
+   * This was gap 2. "Breaching SLA" used to mean the breaches *in the loaded window*, which at a
+   * busy site is a different and much smaller number than the breaches at the site — and the
+   * difference only showed up when somebody went looking for a case nobody had seen.
+   */
+  const viewParams =
+    view === 'OPEN'
+      ? { openOnly: true }
+      : view === 'BREACHED'
+        ? { openOnly: true, dueBefore: new Date().toISOString() }
+        : view === 'SECURITY'
+          ? { openOnly: true, securityRelevant: true }
+          : view === 'UNASSIGNED'
+            ? { openOnly: true, unassigned: true }
+            : {};
+
+  const filterKey = `${siteCode}|${type}|${status}|${view}|${severity}|${assignee}`;
+  const paging = useServerPage(filterKey);
+
   const query = useApiQuery(
     (signal) =>
       dispatchExceptionsApi.search(
-        { siteCode, type: type || undefined, status: status || undefined },
+        {
+          siteCode,
+          type: type || undefined,
+          status: status || undefined,
+          severity: severity || undefined,
+          assignee: assignee.trim() || undefined,
+          ...viewParams,
+          page: paging.page,
+          size: paging.size,
+        },
         signal,
       ),
-    [siteCode, type, status],
+    [siteCode, type, status, severity, assignee, view, paging.page, paging.size],
   );
 
-  const all = useMemo(() => query.data ?? [], [query.data]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
-  const filtered = useMemo(() => {
-    let rows = all;
-    if (view === 'OPEN') {
-      rows = rows.filter(exceptionOpen);
-    } else if (view === 'BREACHED') {
-      rows = rows.filter((row) => exceptionSlaBreached(row));
-    } else if (view === 'SECURITY') {
-      rows = rows.filter((row) => row.securityRelevant && exceptionOpen(row));
-    } else if (view === 'UNASSIGNED') {
-      rows = rows.filter((row) => !row.assignee && exceptionOpen(row));
-    }
-    if (severity) {
-      rows = rows.filter((row) => row.severity === severity);
-    }
-    if (assignee.trim()) {
-      const needle = assignee.trim().toLowerCase();
-      rows = rows.filter((row) => (row.assignee ?? '').toLowerCase().includes(needle));
-    }
-    // Oldest SLA first: a queue is ordered by what is most overdue.
-    return [...rows].sort((left, right) => left.slaDueAt.localeCompare(right.slaDueAt));
-  }, [all, view, severity, assignee]);
-
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${type}|${status}|${view}|${severity}|${assignee}`,
-    all.length,
+  /**
+   * The four queue counts, each its own site-wide query.
+   *
+   * Counted by the service rather than from the page on screen: a page of twenty-five records
+   * cannot tell an operator how many open cases the site has, and a header figure that silently
+   * meant "on this page" is exactly the kind of number somebody plans around.
+   */
+  const counts = useApiQuery(
+    (signal) =>
+      Promise.all([
+        dispatchExceptionsApi.search({ siteCode, openOnly: true, size: 1 }, signal),
+        dispatchExceptionsApi.search(
+          { siteCode, openOnly: true, dueBefore: new Date().toISOString(), size: 1 },
+          signal,
+        ),
+        dispatchExceptionsApi.search({ siteCode, openOnly: true, securityRelevant: true, size: 1 }, signal),
+        dispatchExceptionsApi.search({ siteCode, openOnly: true, unassigned: true, size: 1 }, signal),
+      ]).then(([open, breaching, secure, unassignedCases]) => ({
+        open: open.totalElements,
+        breached: breaching.totalElements,
+        security: secure.totalElements,
+        unassigned: unassignedCases.totalElements,
+      })),
+    [siteCode],
   );
-
-  const openCases = useMemo(() => all.filter(exceptionOpen), [all]);
-  const breached = useMemo(
-    () => openCases.filter((row) => exceptionSlaBreached(row)),
-    [openCases],
-  );
-  const security = useMemo(() => openCases.filter((row) => row.securityRelevant), [openCases]);
-  const unassigned = useMemo(() => openCases.filter((row) => !row.assignee), [openCases]);
 
   const exportReport = async () => {
     setExporting(true);
@@ -239,33 +254,33 @@ const DispatchExceptionsPage = () => {
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Open cases"
-          value={formatNumber(openCases.length)}
+          value={formatNumber(counts.data?.open ?? 0)}
           icon="alert-triangle"
-          tone={openCases.length > 0 ? 'caution' : 'neutral'}
+          tone={(counts.data?.open ?? 0) > 0 ? 'caution' : 'neutral'}
           caption="Each blocks its manifest from closing"
           onClick={() => setView('OPEN')}
         />
         <StatCard
           label="Breaching SLA"
-          value={formatNumber(breached.length)}
+          value={formatNumber(counts.data?.breached ?? 0)}
           icon="clock"
-          tone={breached.length > 0 ? 'critical' : 'neutral'}
+          tone={(counts.data?.breached ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Past the resolution target"
           onClick={() => setView('BREACHED')}
         />
         <StatCard
           label="Security relevant"
-          value={formatNumber(security.length)}
+          value={formatNumber(counts.data?.security ?? 0)}
           icon="shield-lock"
-          tone={security.length > 0 ? 'critical' : 'neutral'}
+          tone={(counts.data?.security ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Surfaced to the security function"
           onClick={() => setView('SECURITY')}
         />
         <StatCard
           label="Unassigned"
-          value={formatNumber(unassigned.length)}
+          value={formatNumber(counts.data?.unassigned ?? 0)}
           icon="user-plus"
-          tone={unassigned.length > 0 ? 'caution' : 'neutral'}
+          tone={(counts.data?.unassigned ?? 0) > 0 ? 'caution' : 'neutral'}
           caption="Nobody is accountable yet"
           onClick={() => setView('UNASSIGNED')}
         />
@@ -304,7 +319,6 @@ const DispatchExceptionsPage = () => {
             options={QUEUE_VIEWS}
             allowEmpty
             emptyLabel="Everything returned"
-            helperText="Filters the loaded records."
           />
           <EnumSelect
             label="Severity"
@@ -312,14 +326,12 @@ const DispatchExceptionsPage = () => {
             options={EXCEPTION_SEVERITIES}
             onChange={(value) => setSeverity(value)}
             allowEmpty
-            helperText="Filters the loaded records."
           />
           <TextInput
             label="Assignee"
             value={assignee}
             onChange={setAssignee}
             placeholder="Part of a name"
-            helperText="Filters the loaded records."
           />
         </FilterBar>
       </SectionCard>
@@ -333,28 +345,21 @@ const DispatchExceptionsPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(dispatchPaths.exceptionDetail(row.id))}
               caption="Dispatch exception cases matching the current filters, ordered by SLA due time, with assignee, severity, security relevance, whether they block a manifest, and status."
               emptyMessage="No case matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={all.length}
-          requestedSize={DEFAULT_WINDOW}
-          noun="exception cases"
-        />
       </div>
     </div>
   );

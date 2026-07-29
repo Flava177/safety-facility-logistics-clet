@@ -8,13 +8,8 @@ import {
   PRIORITIES,
 } from 'modules/emergency/api/enums';
 import type { ActivationMode, ActivationStatus, Priority } from 'modules/emergency/api/enums';
-import { ACTIVATION_WINDOW, activationsApi, emergencyReportsApi } from 'modules/emergency/api/emergencyApi';
-import {
-  activationLive,
-  activationOpen,
-  afterActionOutstanding,
-  awaitingApproval,
-} from 'modules/emergency/api/workflow';
+import { activationsApi, emergencyReportsApi } from 'modules/emergency/api/emergencyApi';
+import { afterActionOutstanding } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed } from 'modules/emergency/components/emergencyFormat';
 import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
@@ -31,11 +26,10 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import WindowNotice from 'shared/components/WindowNotice';
 import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
-import { useClientWindow } from 'shared/hooks/useClientWindow';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
 
 const QUEUE_VIEWS = [
@@ -74,56 +68,71 @@ const ActivationsPage = () => {
   const [composing, setComposing] = useState(false);
   const [exporting, setExporting] = useState(false);
 
+  /**
+   * Each view is a set of server-side predicates, not a pass over what came back.
+   *
+   * That was gap 2. The service knows what "open", "live", "awaiting approval" and "after-action
+   * due" mean now — `NotificationActivation.open()` and `.active()` are expressed as SQL rather
+   * than re-implemented here over a window.
+   */
+  const viewParams =
+    view === 'OPEN'
+      ? { openOnly: true }
+      : view === 'LIVE'
+        ? { liveOnly: true }
+        : view === 'AWAITING_APPROVAL'
+          ? { status: 'PENDING_APPROVAL' as const }
+          : view === 'AFTER_ACTION_DUE'
+            ? { afterActionOutstanding: true }
+            : {};
+
+  const filterKey = `${siteCode}|${status}|${view}|${mode}|${priority}|${reference}`;
+  const paging = useServerPage(filterKey);
+
   const records = useSiteRecords(siteCode);
 
   const query = useApiQuery(
-    (signal) => activationsApi.search({ siteCode, status: status || undefined }, signal),
-    [siteCode, status],
+    (signal) =>
+      activationsApi.search(
+        {
+          siteCode,
+          status: status || undefined,
+          mode: mode || undefined,
+          priority: priority || undefined,
+          incidentReference: reference.trim() || undefined,
+          ...viewParams,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
+      ),
+    [siteCode, status, mode, priority, reference, view, paging.page, paging.size],
   );
 
-  const all = useMemo(() => query.data ?? [], [query.data]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
-  const filtered = useMemo(() => {
-    let rows = all;
-    if (view === 'OPEN') {
-      rows = rows.filter(activationOpen);
-    } else if (view === 'LIVE') {
-      rows = rows.filter(activationLive);
-    } else if (view === 'AWAITING_APPROVAL') {
-      rows = rows.filter(awaitingApproval);
-    } else if (view === 'AFTER_ACTION_DUE') {
-      rows = rows.filter(afterActionOutstanding);
-    }
-    if (mode) {
-      rows = rows.filter((row) => row.mode === mode);
-    }
-    if (priority) {
-      rows = rows.filter((row) => row.priority === priority);
-    }
-    if (reference.trim()) {
-      const needle = reference.trim().toLowerCase();
-      rows = rows.filter(
-        (row) =>
-          (row.incidentReference ?? '').toLowerCase().includes(needle) ||
-          row.activationNumber.toLowerCase().includes(needle),
-      );
-    }
-    // Most recently touched first: an emergency register is read from the top.
-    return [...rows].sort((left, right) =>
-      right.metadata.lastModifiedAt.localeCompare(left.metadata.lastModifiedAt),
-    );
-  }, [all, view, mode, priority, reference]);
-
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${status}|${view}|${mode}|${priority}|${reference}`,
-    all.length,
-    ACTIVATION_WINDOW,
+  /**
+   * The four header counts, each its own site-wide query.
+   *
+   * Counted by the service, not from the page on screen. "After-action due" in particular is the
+   * outstanding break-glass sends at the **site** — reading it off a page of twenty-five would
+   * have quietly under-reported the one number an auditor asks about.
+   */
+  const counts = useApiQuery(
+    (signal) =>
+      Promise.all([
+        activationsApi.search({ siteCode, liveOnly: true, size: 1 }, signal),
+        activationsApi.search({ siteCode, status: 'PENDING_APPROVAL', size: 1 }, signal),
+        activationsApi.search({ siteCode, afterActionOutstanding: true, size: 1 }, signal),
+        activationsApi.search({ siteCode, openOnly: true, size: 1 }, signal),
+      ]).then(([liveNow, pendingApproval, afterAction, open]) => ({
+        live: liveNow.totalElements,
+        pending: pendingApproval.totalElements,
+        afterActionDue: afterAction.totalElements,
+        open: open.totalElements,
+      })),
+    [siteCode],
   );
-
-  const live = useMemo(() => all.filter(activationLive), [all]);
-  const pending = useMemo(() => all.filter(awaitingApproval), [all]);
-  const afterActionDue = useMemo(() => all.filter(afterActionOutstanding), [all]);
 
   const exportReport = async () => {
     setExporting(true);
@@ -225,7 +234,6 @@ const ActivationsPage = () => {
   );
 
   const filtersApplied = Boolean(status || mode || priority || reference || view !== 'OPEN');
-  const derivedHint = 'Filters the loaded records.';
 
   return (
     <div>
@@ -256,31 +264,31 @@ const ActivationsPage = () => {
       <div className="mb-5 grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           label="Live now"
-          value={formatNumber(live.length)}
+          value={formatNumber(counts.data?.live ?? 0)}
           icon="siren"
-          tone={live.length > 0 ? 'critical' : 'neutral'}
+          tone={(counts.data?.live ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Broadcast out, not stood down"
           onClick={() => setView('LIVE')}
         />
         <StatCard
           label="Awaiting approval"
-          value={formatNumber(pending.length)}
+          value={formatNumber(counts.data?.pending ?? 0)}
           icon="user-plus"
-          tone={pending.length > 0 ? 'caution' : 'neutral'}
+          tone={(counts.data?.pending ?? 0) > 0 ? 'caution' : 'neutral'}
           caption="Submitted, nobody has decided"
           onClick={() => setView('AWAITING_APPROVAL')}
         />
         <StatCard
           label="After-action due"
-          value={formatNumber(afterActionDue.length)}
+          value={formatNumber(counts.data?.afterActionDue ?? 0)}
           icon="zap"
-          tone={afterActionDue.length > 0 ? 'critical' : 'neutral'}
+          tone={(counts.data?.afterActionDue ?? 0) > 0 ? 'critical' : 'neutral'}
           caption="Break-glass sends blocking closure"
           onClick={() => setView('AFTER_ACTION_DUE')}
         />
         <StatCard
           label="Open at this site"
-          value={formatNumber(all.filter(activationOpen).length)}
+          value={formatNumber(counts.data?.open ?? 0)}
           icon="megaphone"
           caption="Not closed, cancelled or rejected"
           onClick={() => setView('OPEN')}
@@ -310,7 +318,6 @@ const ActivationsPage = () => {
                 ? humanise(option)
                 : `${humanise(option)} (set elsewhere)`
             }
-            helperText="Reaches the service."
           />
           <SelectInput
             label="View"
@@ -319,7 +326,6 @@ const ActivationsPage = () => {
             options={QUEUE_VIEWS}
             allowEmpty
             emptyLabel="Everything returned"
-            helperText={derivedHint}
           />
           <EnumSelect
             label="Mode"
@@ -327,7 +333,6 @@ const ActivationsPage = () => {
             options={ACTIVATION_MODES}
             onChange={(value) => setMode(value)}
             allowEmpty
-            helperText={derivedHint}
           />
           <EnumSelect
             label="Priority"
@@ -335,14 +340,12 @@ const ActivationsPage = () => {
             options={PRIORITIES}
             onChange={(value) => setPriority(value)}
             allowEmpty
-            helperText={derivedHint}
           />
           <TextInput
             label="Reference"
             value={reference}
             onChange={setReference}
             placeholder="Activation or incident"
-            helperText={derivedHint}
           />
         </FilterBar>
       </SectionCard>
@@ -356,29 +359,21 @@ const ActivationsPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(emergencyPaths.activationDetail(row.id))}
               caption="Activations matching the current filters, with mode, priority, audience reach, channel count, time to send, last change and status."
               emptyMessage="No activation matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={all.length}
-          requestedSize={ACTIVATION_WINDOW}
-          noun="activations"
-          service="emergency notification service"
-        />
       </div>
 
       {composing && (

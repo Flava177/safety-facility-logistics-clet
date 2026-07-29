@@ -2,14 +2,12 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { CourierItem } from 'modules/dispatch/api/dto';
 import { ITEM_STATUSES, ItemStatus } from 'modules/dispatch/api/enums';
-import { DEFAULT_WINDOW, inboundMailApi } from 'modules/dispatch/api/dispatchApi';
+import { inboundMailApi } from 'modules/dispatch/api/dispatchApi';
 import { itemDistributable } from 'modules/dispatch/api/workflow';
 import {
   DistributeInboundDialog,
   RegisterItemDialog,
 } from 'modules/dispatch/dialogs/itemDialogs';
-import WindowNotice from 'modules/dispatch/components/WindowNotice';
-import { useClientWindow } from 'modules/dispatch/components/useClientWindow';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -26,6 +24,7 @@ import { DateTimeField } from 'shared/components/DateField';
 import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
 
 /**
@@ -49,6 +48,9 @@ const InboundMailPage = () => {
   const [registering, setRegistering] = useState(false);
   const [distributing, setDistributing] = useState<CourierItem | null>(null);
 
+  const filterKey = `${siteCode}|${status}|${handler}|${from}|${to}`;
+  const paging = useServerPage(filterKey);
+
   const query = useApiQuery(
     (signal) =>
       inboundMailApi.search(
@@ -58,26 +60,19 @@ const InboundMailPage = () => {
           handler: handler.trim() || undefined,
           from: from ? new Date(from).toISOString() : undefined,
           to: to ? new Date(to).toISOString() : undefined,
+          page: paging.page,
+          size: paging.size,
         },
         signal,
       ),
-    [siteCode, status, handler, from, to],
+    [siteCode, status, handler, from, to, paging.page, paging.size],
   );
 
-  const windowed = useClientWindow(
-    query.data,
-    `${siteCode}|${status}|${handler}|${from}|${to}`,
-    query.data?.length,
-  );
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
-  const awaitingDistribution = useMemo(
-    () => (query.data ?? []).filter(itemDistributable),
-    [query.data],
-  );
-  const acknowledged = useMemo(
-    () => (query.data ?? []).filter((item) => Boolean(item.acknowledgedBy)),
-    [query.data],
-  );
+  const rows = useMemo(() => query.data?.content ?? [], [query.data]);
+  const awaitingDistribution = useMemo(() => rows.filter(itemDistributable), [rows]);
+  const acknowledged = useMemo(() => rows.filter((item) => Boolean(item.acknowledgedBy)), [rows]);
 
   const columns = useMemo<Column<CourierItem>[]>(
     () => [
@@ -177,9 +172,9 @@ const InboundMailPage = () => {
         />
         <StatCard
           label="Registered in this window"
-          value={formatNumber(query.data?.length ?? 0)}
+          value={formatNumber(query.data?.totalElements ?? 0)}
           icon="package"
-          caption="Inbound items matching the filters"
+          caption="Inbound items matching the filters, site-wide"
         />
       </div>
 
@@ -227,28 +222,21 @@ const InboundMailPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={rows}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(dispatchPaths.itemDetail(row.id))}
               caption="Inbound mail at this site, with the recipient, sensitivity, whether distribution has been acknowledged, and status."
               emptyMessage="No inbound item matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={query.data?.length ?? 0}
-          requestedSize={DEFAULT_WINDOW}
-          noun="inbound items"
-        />
       </div>
 
       {registering && (

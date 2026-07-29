@@ -118,8 +118,24 @@ export interface CustodyHandover {
 }
 
 /** What `CustodyChainPolicy` makes of the recorded handovers. `closable` gates manifest closure. */
+/**
+ * `CustodyChainPolicy.Gap` — one break in the chain, as structured data.
+ *
+ * These used to arrive as formatted strings with the structure baked in
+ * (`BROKEN_SEAL@TRANSIT(BROKEN)`), so the client parsed a wire format with a regular expression just
+ * to colour a row. The service returns the parts now, and `parseCustodyGap` is gone.
+ */
+export interface CustodyGap {
+  reason: 'BROKEN_SEAL' | 'COUNT_MISMATCH' | 'OUT_OF_ORDER';
+  hop: CustodyHop;
+  /** The handover that caused it — what lets a screen link straight to the cause. */
+  handoverId: string;
+  /** The cause's own particulars: seal state, or the expected and verified counts. */
+  detail: Record<string, unknown>;
+}
+
 export interface CustodyGaps {
-  gaps: string[];
+  gaps: CustodyGap[];
   missingClosureHops: CustodyHop[];
   closable: boolean;
 }
@@ -352,41 +368,101 @@ export interface ExceptionActionRequest {
 
 /* ---------------------------------------------------------------- queries */
 
-export interface ItemSearchParams {
+/**
+ * Paging every collection accepts.
+ *
+ * `sort` is a key from the resource's own allow-list — an unrecognised one falls back to the
+ * default rather than reaching SQL, and the response echoes back the ordering actually applied.
+ */
+export interface PagingParams {
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface ItemSearchParams extends PagingParams {
   siteCode: string;
   direction?: ItemDirection | '';
   status?: ItemStatus | '';
   sensitivity?: Sensitivity | '';
+  itemType?: ItemType | '';
   handler?: string;
+  /** Contains-match over item number, sender and recipient. */
+  reference?: string;
+  /** Items on one manifest, resolved through the join table by the service. */
+  dispatchId?: string;
+  undelivered?: boolean;
   from?: string;
   to?: string;
-  size?: number;
 }
 
-export interface InboundSearchParams {
+export interface InboundSearchParams extends PagingParams {
   siteCode: string;
   status?: ItemStatus | '';
   handler?: string;
+  reference?: string;
   from?: string;
   to?: string;
-  size?: number;
 }
 
-export interface ManifestSearchParams {
+export interface ManifestSearchParams extends PagingParams {
   siteCode: string;
   status?: DispatchStatus | '';
   destinationCentre?: string;
   tripId?: string;
+  handler?: string;
   from?: string;
   to?: string;
-  size?: number;
 }
 
-export interface ExceptionSearchParams {
+/**
+ * Everything the exception queue can now ask the service for.
+ *
+ * Severity, assignee, security relevance and SLA standing used to be applied client-side over
+ * whatever window came back, which meant "breaching SLA" was the breaches *in the window* rather
+ * than at the site. That was gap 2.
+ */
+export interface ExceptionSearchParams extends PagingParams {
   siteCode: string;
   type?: ExceptionType | '';
   status?: ExceptionStatus | '';
-  size?: number;
+  severity?: ExceptionSeverity | '';
+  assignee?: string;
+  unassigned?: boolean;
+  securityRelevant?: boolean;
+  openOnly?: boolean;
+  /** Cases whose SLA falls before this instant. Open cases only — the service pairs the two. */
+  dueBefore?: string;
+  dispatchId?: string;
+  courierItemId?: string;
+}
+
+export interface ScanBatchSearchParams extends PagingParams {
+  siteCode: string;
+  sourceSystem?: string;
+  dispatchId?: string;
+  status?: ScanBatchStatus | '';
+}
+
+export interface CustodySearchParams extends PagingParams {
+  siteCode: string;
+  dispatchId?: string;
+  hop?: CustodyHop | '';
+  /** Matches either side of the handover — who gave it up, or who took it. */
+  custodian?: string;
+  sealState?: SealState | '';
+  from?: string;
+  to?: string;
+}
+
+export interface ReceiptSearchParams extends PagingParams {
+  siteCode: string;
+  dispatchId?: string;
+  outcome?: ReceiptOutcome | '';
+  varianceType?: VarianceType | '';
+  recipient?: string;
+  from?: string;
+  to?: string;
 }
 
 /* -------------------------------------------------------------- dashboard */
@@ -447,4 +523,42 @@ export interface DispatchIntegrationHealth {
       createdAt: string;
     }[];
   };
+}
+
+/**
+ * `DispatchPageResponse<T>` — the envelope every dispatch collection now returns.
+ *
+ * Identical in shape to the fleet and fuel ones. Before the gap-closure round these endpoints
+ * returned a bare array capped by `size`, which is why the registers paged a window client-side and
+ * warned when it came back full. Both are gone.
+ */
+export interface DispatchPageResponse<T> {
+  content: T[];
+  page: number;
+  size: number;
+  totalElements: number;
+  totalPages: number;
+  first: boolean;
+  last: boolean;
+  sort: string | null;
+}
+
+/** `DispatchManifestService.ManifestLine` — a manifest line with its courier item resolved. */
+export interface ManifestLine {
+  line: DispatchManifestItem;
+  /** Null only if the item was purged; the line survives it. */
+  item: CourierItem | null;
+}
+
+/** An audit event as the dispatch history endpoints return it. */
+export interface DispatchAuditEvent {
+  id: string;
+  actorId: string | null;
+  action: string;
+  resourceType: string;
+  resourceId: string;
+  occurredAt: string;
+  sourceChannel: string | null;
+  correlationId: string | null;
+  reason: string | null;
 }

@@ -44,6 +44,7 @@ public class DispatchItemController {
             @RequestParam(required = false) CourierItem.Direction direction,
             @RequestParam(required = false) CourierItem.Status status,
             @RequestParam(required = false) CourierItem.Sensitivity sensitivity,
+            @RequestParam(required = false) CourierItem.Type itemType,
             @RequestParam(required = false) String handler,
             @RequestParam(required = false) String reference,
             @RequestParam(required = false) UUID dispatchId,
@@ -53,8 +54,8 @@ public class DispatchItemController {
             @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
             @RequestParam(required = false) String sort,
             HttpServletRequest h) {
-        return ApiResponse.ok(DispatchPageResponse.of(service.items(siteCode, direction, status, sensitivity, handler,
-                reference, dispatchId, undelivered, from, to, DispatchPageResponse.paging(page, size, sort),
+        return ApiResponse.ok(DispatchPageResponse.of(service.items(siteCode, direction, status, sensitivity, itemType,
+                handler, reference, dispatchId, undelivered, from, to, DispatchPageResponse.paging(page, size, sort),
                 actors.resolve(h))));
     }
 
