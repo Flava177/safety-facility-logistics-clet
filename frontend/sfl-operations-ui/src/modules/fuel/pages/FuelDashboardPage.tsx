@@ -1,16 +1,19 @@
 import { ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
-import { DriverLogbook, FuelAnomalyCase, FuelTransaction } from 'modules/fuel/api/dto';
+import {
+  DailyFuelTotals,
+  DriverLogbook,
+  FuelAnomalyCase,
+  FuelTransaction,
+} from 'modules/fuel/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import {
-  MAX_PAGE_SIZE,
   driverLogbooksApi,
   fuelAnomaliesApi,
   fuelDashboardApi,
   fuelTransactionsApi,
 } from 'modules/fuel/api/fuelApi';
-import { anomalySlaBreached } from 'modules/fuel/api/workflow';
 import AnomalyMixChart, { AnomalyBar } from 'modules/fuel/charts/AnomalyMixChart';
 import ReconciliationChart from 'modules/fuel/charts/ReconciliationChart';
 import SpendChart, { SpendPoint } from 'modules/fuel/charts/SpendChart';
@@ -39,29 +42,27 @@ import { fuelPaths } from 'shared/layout/navigation';
 const SPEND_DAYS = 14;
 
 /**
- * Buckets transactions into one point per day so the chart window is fixed even where a day has no
- * fuel at all — a gap in the line would otherwise read as missing data rather than a quiet day.
+ * Lays the service's daily totals onto a fixed window.
+ *
+ * The arithmetic is the service's — this only supplies the days it had nothing to report, so the
+ * axis stays a full fortnight. A gap in the line would read as missing data rather than a quiet day,
+ * which is a presentation problem and is why it is solved here rather than in a query.
  */
-const bucketByDay = (transactions: FuelTransaction[], days: number): SpendPoint[] => {
+const toSpendPoints = (totals: DailyFuelTotals[], days: number): SpendPoint[] => {
+  const byDay = new Map(totals.map((total) => [total.day, total]));
   const start = dayjs()
     .startOf('day')
     .subtract(days - 1, 'day');
-  const buckets = new Map<string, SpendPoint>();
 
-  for (let offset = 0; offset < days; offset += 1) {
+  return Array.from({ length: days }, (_unused, offset) => {
     const day = start.add(offset, 'day');
-    buckets.set(day.format('YYYY-MM-DD'), { label: day.format('D MMM'), spend: 0, volume: 0 });
-  }
-
-  transactions.forEach((transaction) => {
-    const bucket = buckets.get(dayjs(transaction.occurredAt).format('YYYY-MM-DD'));
-    if (bucket) {
-      bucket.spend = Math.round((bucket.spend + (transaction.totalCost ?? 0)) * 100) / 100;
-      bucket.volume = Math.round((bucket.volume + (transaction.quantity ?? 0)) * 1000) / 1000;
-    }
+    const total = byDay.get(day.format('YYYY-MM-DD'));
+    return {
+      label: day.format('D MMM'),
+      spend: total?.totalCost ?? 0,
+      volume: total?.quantity ?? 0,
+    };
   });
-
-  return [...buckets.values()];
 };
 
 /** Header metadata: when the snapshot was taken and what it covers. Facts, so no tone. */
@@ -80,12 +81,16 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
 /**
  * The Fuel & Driver Logbooks workspace.
  *
- * Every indicator here is published by the service and counted across the whole site. That was not
+ * Every indicator and every chart here is counted by the service across the whole site. That was not
  * true when this screen was first built: the dashboard endpoint returned five transaction figures,
  * so the anomaly, logbook and reconciliation counts had to be derived from whatever list this
- * application could fetch, and were captioned to say so. The endpoint counts them itself now, so the derived
- * section is gone and the only remaining caption is on the spend trend, which really is bucketed
- * here — there is still no time-series endpoint.
+ * application could fetch, and were captioned to say so.
+ *
+ * The last two derivations went with `/dashboard/daily-totals` and `/dashboard/anomaly-counts`. The
+ * spend trend was bucketed in the browser from one page of transactions, and the by-type breakdown
+ * counted a page of the anomaly queue — both correct for a quiet site and both silently short for a
+ * busy one. The one remaining caption is on reconciliation, where a single figure really is a
+ * remainder of two others.
  *
  * `siteCode` is required by every fuel endpoint, so this page is single-site by construction. There
  * is no "all sites" option, because there is no query that would answer it.
@@ -109,27 +114,37 @@ const FuelDashboardPage = () => {
     [siteCode],
   );
 
-  /** The spend trend still needs the records themselves — there is no time-series endpoint. */
-  const recentTransactions = useApiQuery(
-    (signal) =>
-      fuelTransactionsApi.search(
-        { siteCode, from: windowStart, to: windowEnd, size: MAX_PAGE_SIZE },
-        signal,
-      ),
+  const dailyTotals = useApiQuery(
+    (signal) => fuelDashboardApi.dailyTotals(siteCode, windowStart, windowEnd, signal),
     [siteCode, windowStart, windowEnd],
   );
 
+  const anomalyCounts = useApiQuery(
+    (signal) => fuelDashboardApi.anomalyCounts(siteCode, signal),
+    [siteCode],
+  );
+
   /**
-   * Open cases, a page at a time.
+   * One transaction, for the currency and the quantity unit.
    *
-   * A page is enough for the exception list, which shows six, but the by-type chart wants the whole
-   * set and there is no aggregation endpoint — so it asks for the largest page the service allows
-   * and the chart says how many cases it covers. The *counts* above it come from the dashboard
-   * snapshot, which counts across the site.
+   * The aggregate carries neither, and both belong to the site rather than to the row — a site
+   * transacts in one currency and dispenses in one unit. This used to be the whole spend window, a
+   * page of records fetched so two labels could be read off the first one.
+   */
+  const currencySample = useApiQuery(
+    (signal) => fuelTransactionsApi.search({ siteCode, size: 1 }, signal),
+    [siteCode],
+  );
+
+  /**
+   * The six most pressing open cases.
+   *
+   * Six, not the largest page the service allows. It used to ask for two hundred because the by-type
+   * chart counted them here; the chart is a real aggregate now, so this query is back to being what
+   * the list beside it needs.
    */
   const anomalies = useApiQuery(
-    (signal) =>
-      fuelAnomaliesApi.search({ siteCode, openOnly: true, size: MAX_PAGE_SIZE }, signal),
+    (signal) => fuelAnomaliesApi.search({ siteCode, openOnly: true, size: 6 }, signal),
     [siteCode],
   );
 
@@ -149,12 +164,12 @@ const FuelDashboardPage = () => {
   const pendingReviews = useMemo(() => logbooks.data?.content ?? [], [logbooks.data]);
 
   /** The currency and unit the site actually transacts in, taken from its own records. */
-  const currencyCode = currencyCodeOf(recentTransactions.data?.content?.[0]?.currency);
-  const quantityUnit = recentTransactions.data?.content?.[0]?.quantityUnit ?? '';
+  const currencyCode = currencyCodeOf(currencySample.data?.content?.[0]?.currency);
+  const quantityUnit = currencySample.data?.content?.[0]?.quantityUnit ?? '';
 
   const spendPoints = useMemo(
-    () => bucketByDay(recentTransactions.data?.content ?? [], SPEND_DAYS),
-    [recentTransactions.data],
+    () => toSpendPoints(dailyTotals.data ?? [], SPEND_DAYS),
+    [dailyTotals.data],
   );
 
   const reconciliationSlices = useMemo(() => {
@@ -169,30 +184,22 @@ const FuelDashboardPage = () => {
     ];
   }, [data]);
 
-  const anomalyBars = useMemo<AnomalyBar[]>(() => {
-    const counts = new Map<string, { total: number; urgent: number }>();
-    openAnomalies.forEach((anomaly) => {
-      const entry = counts.get(anomaly.type) ?? { total: 0, urgent: 0 };
-      entry.total += 1;
-      if (anomaly.material || anomalySlaBreached(anomaly)) {
-        entry.urgent += 1;
-      }
-      counts.set(anomaly.type, entry);
-    });
-    return [...counts.entries()]
-      .sort((left, right) => right[1].total - left[1].total)
-      .slice(0, 8)
-      .flatMap(([type, entry]) => {
-        const bars: AnomalyBar[] = [];
-        if (entry.urgent > 0) {
-          bars.push({ label: humanise(type), value: entry.urgent, urgent: true });
-        }
-        if (entry.total - entry.urgent > 0) {
-          bars.push({ label: humanise(type), value: entry.total - entry.urgent });
-        }
-        return bars;
-      });
-  }, [openAnomalies]);
+  /**
+   * Open cases by type, across the site.
+   *
+   * There is no urgent/ordinary split any more. The aggregate does not carry one, and mixing a
+   * site-wide total with an urgency count read off one page of the queue would have produced a chart
+   * whose two halves counted different things. The urgent figures are on the indicators above, and
+   * the queue beside this chart shows each case's own SLA.
+   */
+  const anomalyBars = useMemo<AnomalyBar[]>(
+    () =>
+      Object.entries(anomalyCounts.data ?? {})
+        .sort((left, right) => right[1] - left[1])
+        .slice(0, 8)
+        .map(([type, count]) => ({ label: humanise(type), value: count })),
+    [anomalyCounts.data],
+  );
 
   const anomalyColumns = useMemo<Column<FuelAnomalyCase>[]>(
     () => [
@@ -268,7 +275,9 @@ const FuelDashboardPage = () => {
 
   const refreshAll = () => {
     snapshot.refetch();
-    recentTransactions.refetch();
+    dailyTotals.refetch();
+    anomalyCounts.refetch();
+    currencySample.refetch();
     anomalies.refetch();
     logbooks.refetch();
     unreconciled.refetch();
@@ -421,9 +430,9 @@ const FuelDashboardPage = () => {
                   subtitle={`By day · last ${SPEND_DAYS} days`}
                 >
                   <DataState
-                    loading={recentTransactions.initialising}
-                    error={recentTransactions.error}
-                    onRetry={recentTransactions.refetch}
+                    loading={dailyTotals.initialising}
+                    error={dailyTotals.error}
+                    onRetry={dailyTotals.refetch}
                     minHeight={280}
                   >
                     <SpendChart
@@ -431,10 +440,6 @@ const FuelDashboardPage = () => {
                       currencyCode={currencyCode}
                       unit={quantityUnit}
                     />
-                    <DerivedNote>
-                      Bucketed by day from the {recentTransactions.data?.totalElements ?? 0} transactions
-                      returned for this window. The fuel service exposes no time-series endpoint.
-                    </DerivedNote>
                   </DataState>
                 </SectionCard>
 
@@ -477,7 +482,7 @@ const FuelDashboardPage = () => {
                     minHeight={160}
                   >
                     <DataTable
-                      rows={openAnomalies.slice(0, 6)}
+                      rows={openAnomalies}
                       columns={anomalyColumns}
                       getRowId={(row) => row.id}
                       loading={anomalies.loading}
@@ -526,21 +531,20 @@ const FuelDashboardPage = () => {
               </div>
 
               <div className="grid gap-5 xl:grid-cols-2">
-                <SectionCard title="Open cases by type" subtitle="Where the exceptions are coming from">
+                <SectionCard
+                  title="Open cases by type"
+                  subtitle="Every open case at this site, counted by the service"
+                >
                   <DataState
-                    loading={anomalies.initialising}
-                    error={anomalies.error}
+                    loading={anomalyCounts.initialising}
+                    error={anomalyCounts.error}
                     empty={anomalyBars.length === 0}
                     emptyTitle="No open cases"
                     emptyHint="There is nothing to break down."
-                    onRetry={anomalies.refetch}
+                    onRetry={anomalyCounts.refetch}
                     minHeight={260}
                   >
                     <AnomalyMixChart bars={anomalyBars} />
-                    <DerivedNote>
-                      Counted from the {openAnomalies.length} open cases on this page of the queue. A case
-                      counts as urgent when it is material or past its SLA.
-                    </DerivedNote>
                   </DataState>
                 </SectionCard>
 

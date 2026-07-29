@@ -56,14 +56,16 @@ public class FuelImportController {
      * The batch's rows, paged.
      *
      * <p>The detail read above carries every row, which a file of thousands makes unusable. This is
-     * the same rows with a page around them.
+     * the same rows with a page around them, and with the one filter that matters: {@code status}, so
+     * "show me what was rejected" is a query rather than a scroll.
      */
     @GetMapping("/{id}/rows") public ApiResponse<FuelPageResponse<FuelImportRow>> rows(@PathVariable UUID id,
+            @RequestParam(required=false)FuelImportRow.Status status,
             @RequestParam(defaultValue="0")int page,
             @RequestParam(defaultValue="50")int size,
             @RequestParam(required=false)String sort,
             HttpServletRequest h){
-        return ApiResponse.ok(FuelPageResponse.of(service.importRows(id,FuelPageResponse.paging(page,size,sort),
+        return ApiResponse.ok(FuelPageResponse.of(service.importRows(id,status,FuelPageResponse.paging(page,size,sort),
                 actors.resolve(h))));
     }
 }

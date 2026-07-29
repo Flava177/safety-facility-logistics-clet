@@ -7,7 +7,9 @@ import {
   FleetWorkflowStatus,
   FleetWorkflowType,
   WORKFLOW_PRIORITIES,
+  WORKFLOW_SEVERITIES,
   WorkflowPriority,
+  WorkflowSeverity,
   humanise,
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
@@ -32,6 +34,14 @@ interface Filters {
   status: FleetWorkflowStatus | '';
   type: FleetWorkflowType | '';
   priority: WorkflowPriority | '';
+  /**
+   * Severity, which the queue could not filter on.
+   *
+   * The service has accepted it since the search endpoint was written, and the column has always
+   * shown it — so a supervisor looking for the critical defects could see which rows were critical
+   * and had no way to ask for only those.
+   */
+  severity: WorkflowSeverity | '';
   assignee: string;
   overdueOnly: boolean;
   escalatedOnly: boolean;
@@ -42,6 +52,7 @@ const emptyFilters: Filters = {
   status: '',
   type: '',
   priority: '',
+  severity: '',
   assignee: '',
   overdueOnly: false,
   escalatedOnly: false,
@@ -75,6 +86,7 @@ const WorkflowQueuePage = () => {
           status: filters.status || undefined,
           type: filters.type || undefined,
           priority: filters.priority || undefined,
+          severity: filters.severity || undefined,
           assignee: filters.assignee || undefined,
           overdueOnly: filters.overdueOnly || undefined,
           escalatedOnly: filters.escalatedOnly || undefined,
@@ -215,6 +227,13 @@ const WorkflowQueuePage = () => {
             value={filters.priority}
             options={WORKFLOW_PRIORITIES}
             onChange={(value) => setFilter('priority', value)}
+            allowEmpty
+          />
+          <EnumSelect
+            label="Severity"
+            value={filters.severity}
+            options={WORKFLOW_SEVERITIES}
+            onChange={(value) => setFilter('severity', value)}
             allowEmpty
           />
           <TextInput

@@ -10,6 +10,7 @@ import {
   WorkflowSeverity,
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
+import { EvidenceSelect } from 'modules/fleet/components/EvidenceSelect';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
@@ -243,12 +244,14 @@ export const CloseWorkflowItemDialog = ({
       onSubmit={form.submit}
     >
       <Alert variant="info">
-        Register the evidence under Evidence &amp; audit first. Closing without it is refused with
-        FLEET_CLOSURE_EVIDENCE_MISSING.
+        Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING. If nothing is filed
+        against this record yet, register it under Evidence &amp; audit first.
       </Alert>
-      <TextInput
-        label="Closure evidence reference ID"
+      <EvidenceSelect
+        label="Closure evidence"
         required
+        relatedRecordType={item.relatedRecordType}
+        relatedRecordId={item.relatedRecordId}
         value={form.values.closureEvidenceId}
         onChange={(value) => form.setValue('closureEvidenceId', value)}
         {...form.fieldProps('closureEvidenceId')}

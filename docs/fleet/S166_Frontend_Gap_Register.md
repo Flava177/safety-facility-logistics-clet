@@ -78,10 +78,55 @@ refactor.
   fallback.
 - Vehicle and driver pickers in the trip dialogs load up to 200 records per site. Beyond that a
   server-side typeahead endpoint would be needed.
-- The front end has not yet been changed to *use* the six new endpoints. The backend closes the gaps;
-  the screens still work the way they did, which means the readiness panel, the movement panel, the
-  evidence picker, the compliance search and the dead-letter finder are all now possible and not yet
-  built.
+### The screens now use the new endpoints
+
+Built and walked through against the running service on 29 July 2026.
+
+- **Readiness panel** — `GET /vehicles/{id}/readiness`. It used to be fetched through
+  `trips/assignment-preview` with only a `vehicleId`: the right answer through an endpoint shaped for a
+  question nobody was asking on that screen. Confirmed live on GT-9902-26 — one blocking issue
+  (`VEHICLE_REGISTRATION` missing) and one advisory (a roadworthiness certificate expiring 2026-08-14,
+  picked up from a document registered minutes earlier).
+- **Movement panel** — `GET /vehicles/{id}/movement`, a new tab on the vehicle record. Coordinates at
+  five decimal places, `recordedAt` leading every row, and a caption saying plainly that this is a
+  vendor projection SFL does not correct. **Verified empty only.** No telematics source is allowlisted
+  in the dev database, so the populated table has not been seen in a browser; the endpoint returns 200
+  and the empty state is right.
+- **Standalone inspection** — `POST /vehicles/{id}/inspections`, from a "Record inspection" button on
+  the readiness card. The dialog previews the *derived* result rather than offering it as a field, and
+  refreshes readiness on save because a critical finding takes the vehicle out of service.
+- **Compliance search** — `GET /vehicles/compliance-documents`. The screen was fanning out over the
+  first fifty active vehicles in scope and saying so on the page; it is one query now, with document
+  type, status and expiry filters. Confirmed live: four documents ordered by expiry, and
+  `status=EXPIRED` narrowing to the one that the server-computed dashboard drilldown reports
+  independently on the same screen.
+- **Evidence picker** — `GET /evidence?relatedRecordType=&relatedRecordId=`, wired into the
+  workflow-closure dialog as `EvidenceSelect`. This is the gap this register called the main usability
+  cost in the whole console. A workflow item already carries the record it is about, so the picker
+  needs no new convention: it lists what is filed against that record, and keeps a text field for a
+  reference held elsewhere, because a site-wide certificate closes a dozen items and belongs to none of
+  them. Confirmed live — two evidence records offered by file name and type, and the close attempt
+  reached the service with the picked id: it was refused for `FLEET_INVALID_STATE_TRANSITION`, not
+  `FLEET_CLOSURE_EVIDENCE_MISSING`.
+- **Evidence by record** on Evidence & audit, replacing a paste-an-id-only screen and the notice
+  claiming no evidence search existed. Open-by-identifier stays, for an id that came from a log.
+- **Dead-letter finder** — `GET /integrations/messages`, replacing a loosely-typed read of whatever the
+  health projection happened to carry. Rows are typed, replay is offered inline on anything not already
+  `PROCESSED`, and the dead-letter alert has a "Show them" shortcut. **Verified empty only**, for the
+  same reason as movement: nothing has arrived through the signed intake endpoint in this database.
+- **Severity filter** on the workflow queue. The service has accepted `severity` since the search
+  endpoint was written and the column has always shown it, so a supervisor could see which rows were
+  critical and had no way to ask for only those. Confirmed live: `MAJOR` returns the seeded item,
+  `CRITICAL` returns nothing.
+
+**Still open:** an `EvidenceSelect` on the compliance, service and odometer dialogs. Those forms take
+an evidence reference for a record that does not exist yet at the moment the form is open, and there is
+no convention for filing evidence against a `Vehicle` — inventing one here would have shipped a
+dropdown that is always empty. The text field stays until that convention is decided.
+
+**Noticed, not fixed:** the workflow detail screen offers every transition button regardless of the
+current status, so "Close" is clickable on an `OPEN` item the service will refuse. Pre-existing, outside
+this round, and worth gating against the permitted transitions.
 
 ---
 

@@ -368,3 +368,34 @@ It has been left in place — removing a working page is a decision for whoever 
 a side effect of building this module. Worth deciding on before go-live: two front ends over one
 service will drift, and the vanilla-JS one has none of the state guards, none of the permission
 awareness and none of the derived-figure captioning built here.
+
+---
+
+## Round 6 — the record registers stopped filtering in the browser
+
+Added 29 July 2026, alongside the S166 and S168 screen work.
+
+The templates, scenarios, audience-group and recipient-zone tables were loading two hundred records per
+site through `useSiteRecords` and filtering them in the browser. The search box was captioned "Filters
+the loaded records" — true, and useless: it narrowed the first two hundred records the site happened to
+return and said nothing about the rest.
+
+No service change was needed. `search`, `lifecycle` and `breakGlassEligible` have been accepted by
+`/templates`, `/scenarios`, `/audience-groups` and `/recipient-zones` since those endpoints were
+written. The screens simply were not asking.
+
+- All four tables are server-searched, server-filtered and server-paged, with a lifecycle filter beside
+  the search box. Confirmed live: searching `muster` on the templates register returned the one template
+  whose **body** contains it, with the total, the tab count and the pager all coming from the service's
+  own page metadata.
+- The break-glass banner counts with two filtered `size=1` reads and takes `totalElements`. It is a
+  statement about the site's exposure, so tallying a page would have understated it the moment either
+  register ran past one page. Confirmed live: one template and one scenario, matching the eligibility
+  chips in the table.
+- `useSiteRecords` is still loaded on both screens, for what a page cannot answer: a scenario row names
+  a default template that may sit on any page of the template register, the create-scenario dialog needs
+  that same list, and the audiences screen's reach total and zero-sized warning are a sum and a roll-call
+  that no endpoint aggregates.
+- Those two audience figures now say what they cover — "Summed here across up to 200 groups", and
+  "Checked across up to 200 groups at this site" on the zero-sized warning. An aggregate for site reach
+  would remove the caveat. That is a missing query, not a broken screen.

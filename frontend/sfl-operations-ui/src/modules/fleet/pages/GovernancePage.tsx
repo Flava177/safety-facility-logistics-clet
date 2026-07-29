@@ -1,5 +1,9 @@
 import { useMemo, useState } from 'react';
-import { AuditEventResponse, EvidenceResponse } from 'modules/fleet/api/dto';
+import {
+  AuditEventResponse,
+  EvidenceResponse,
+  EvidenceSearchParams,
+} from 'modules/fleet/api/dto';
 import {
   EVIDENCE_RETENTION_CLASSES,
   EvidenceRetentionClass,
@@ -38,14 +42,27 @@ interface AuditRow {
 /**
  * Evidence and audit governance.
  *
- * The service exposes evidence by id — there is no evidence search endpoint — so this screen is
- * built around lookup, registration and export approval rather than a browsable list. That
- * limitation is stated on the page instead of being papered over with a fake table.
+ * Evidence is reachable two ways: by its own identifier, and by the record it evidences. The second
+ * is new, and is the one an operator can actually use — the identifier is a UUID that appears on no
+ * paperwork, whereas the record is the thing they were looking at when they needed the evidence.
+ *
+ * There is still no browsable list of all evidence, and there should not be. Every read names a
+ * record or an identifier, which keeps this screen from becoming an index of every incident at every
+ * site that anyone with the console open can page through.
  */
 const GovernancePage = () => {
   const { notifyError, notifySuccess } = useNotifier();
   const [tab, setTab] = useState<TabKey>('evidence');
   const [lookupId, setLookupId] = useState('');
+  const [recordType, setRecordType] = useState('');
+  const [recordId, setRecordId] = useState('');
+  /**
+   * The committed search, set by the button rather than by typing.
+   *
+   * A record id is a UUID. Querying on every keystroke would fire three dozen requests to answer one
+   * question, and the answer to all but the last would be an error.
+   */
+  const [criteria, setCriteria] = useState<EvidenceSearchParams | undefined>(undefined);
   const [evidence, setEvidence] = useState<EvidenceResponse | undefined>(undefined);
   const [lookupError, setLookupError] = useState<FleetApiError | undefined>(undefined);
   const [lookingUp, setLookingUp] = useState(false);
@@ -62,6 +79,11 @@ const GovernancePage = () => {
   const integrity = useApiQuery(
     (signal) => (tab === 'integrity' ? auditApi.verifyChain(signal) : Promise.resolve(undefined)),
     [tab],
+  );
+
+  const byRecord = useApiQuery(
+    (signal) => (criteria ? evidenceApi.search(criteria, signal) : Promise.resolve(undefined)),
+    [criteria],
   );
 
   const lookup = async () => {
@@ -104,6 +126,40 @@ const GovernancePage = () => {
   const auditRows = useMemo<AuditRow[]>(
     () => (audit.data ?? []).map((record, index) => ({ key: String(record.id ?? index), record })),
     [audit.data],
+  );
+
+  const evidenceColumns = useMemo<Column<EvidenceResponse>[]>(
+    () => [
+      {
+        key: 'file',
+        header: 'File',
+        width: 320,
+        cell: (row) => (
+          <CellStack primary={row.fileName} secondary={`${row.evidenceType} · ${row.contentType}`} />
+        ),
+      },
+      {
+        key: 'retention',
+        header: 'Retention',
+        width: 190,
+        cell: (row) => (
+          <div className="flex flex-wrap items-center gap-1.5">
+            <StatusChip value={row.retentionClass} label={humanise(row.retentionClass)} tone="neutral" />
+            {row.legalHold && <StatusChip value="LEGAL_HOLD" label="Legal hold" tone="blocked" />}
+          </div>
+        ),
+      },
+      {
+        key: 'registered',
+        header: 'Registered',
+        width: 170,
+        align: 'right',
+        cell: (row) => (
+          <span className="text-theme-xs text-gray-500">{formatDateTime(row.createdAt)}</span>
+        ),
+      },
+    ],
+    [],
   );
 
   const auditColumns = useMemo<Column<AuditRow>[]>(
@@ -176,28 +232,91 @@ const GovernancePage = () => {
         <div className="p-5">
           {tab === 'evidence' && (
             <div className="space-y-5">
-              <Alert variant="info">
-                The service exposes evidence by identifier only — there is no evidence search
-                endpoint. Paste a reference ID from a trip closure, inspection or compliance record
-                to open it.
-              </Alert>
+              <SectionCard
+                title="Find by record"
+                subtitle="What is filed against a trip, an inspection, a compliance document or a workflow item"
+              >
+                {/* A grid rather than a flex row: the type field carries a helper line, and under
+                    `items-end` that line pushes its neighbour out of alignment. */}
+                <div className="grid gap-3 lg:grid-cols-[240px_minmax(0,1fr)_auto] lg:items-start">
+                  <TextInput
+                    label="Related record type"
+                    value={recordType}
+                    onChange={setRecordType}
+                    placeholder="Trip"
+                    helperText="As it was registered — for example Trip or VehicleInspection."
+                  />
+                  <TextInput
+                    label="Related record ID"
+                    value={recordId}
+                    onChange={setRecordId}
+                    placeholder="The record's UUID"
+                  />
+                  <Button
+                    variant="primary"
+                    startIcon="search"
+                    className="justify-self-start lg:mt-6"
+                    disabled={!recordType.trim() || !recordId.trim()}
+                    onClick={() =>
+                      setCriteria({
+                        relatedRecordType: recordType.trim(),
+                        relatedRecordId: recordId.trim(),
+                      })
+                    }
+                  >
+                    Find evidence
+                  </Button>
+                </div>
 
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
-                <TextInput
-                  label="Evidence reference ID"
-                  value={lookupId}
-                  onChange={setLookupId}
-                  className="sm:max-w-[420px] sm:flex-1"
-                />
-                <Button
-                  variant="primary"
-                  loading={lookingUp}
-                  disabled={!lookupId.trim()}
-                  onClick={lookup}
-                >
-                  {lookingUp ? 'Looking up…' : 'Open evidence'}
-                </Button>
-              </div>
+                {criteria && (
+                  <div className="mt-4">
+                    <DataState
+                      loading={byRecord.initialising}
+                      error={byRecord.error}
+                      empty={(byRecord.data?.length ?? 0) === 0}
+                      emptyTitle="Nothing filed against this record"
+                      emptyHint="Check the record type spelling — it is stored exactly as it was registered."
+                      onRetry={byRecord.refetch}
+                      minHeight={120}
+                    >
+                      <DataTable
+                        rows={byRecord.data ?? []}
+                        columns={evidenceColumns}
+                        getRowId={(row) => row.id}
+                        loading={byRecord.loading}
+                        onRowClick={(row) => {
+                          setEvidence(row);
+                          setLookupError(undefined);
+                        }}
+                        caption="Evidence registered against this record, with its retention class and whether it is under legal hold."
+                        dense
+                      />
+                    </DataState>
+                  </div>
+                )}
+              </SectionCard>
+
+              <SectionCard
+                title="Open by identifier"
+                subtitle="When the reference id came from a closure record or an incident note"
+              >
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+                  <TextInput
+                    label="Evidence reference ID"
+                    value={lookupId}
+                    onChange={setLookupId}
+                    className="sm:max-w-[420px] sm:flex-1"
+                  />
+                  <Button
+                    variant="outline"
+                    loading={lookingUp}
+                    disabled={!lookupId.trim()}
+                    onClick={lookup}
+                  >
+                    {lookingUp ? 'Looking up…' : 'Open evidence'}
+                  </Button>
+                </div>
+              </SectionCard>
 
               {lookupError && (
                 <Alert

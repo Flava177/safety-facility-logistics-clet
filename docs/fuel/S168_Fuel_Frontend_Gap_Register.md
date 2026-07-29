@@ -276,9 +276,36 @@ All five are now done (29 July 2026).
   fetched transactions in the browser, so it described that page rather than the site.
 - **An anomaly aggregation endpoint — added.** `GET /fuel/dashboard/anomaly-counts?siteCode=` returns
   open counts by type. Verified live: seven types with counts, from a single query.
-- **Paged import rows — added.** `GET /fuel/imports/{id}/rows?page=&size=&sort=`. The detail read
-  still returns every row, which is fine for a hundred and unusable for thousands.
+- **Paged import rows — added.** `GET /fuel/imports/{id}/rows?status=&page=&size=&sort=`. The detail
+  read still returns every row, which is fine for a hundred and unusable for thousands. `status` was
+  added when the screen was built: the rejected rows are the only view of an import anybody needs, and
+  a status filter applied to a page would have found the rejections that happened to land on the page
+  being looked at. It filters in SQL, and the count shares the predicate with the page so the total
+  describes the filter rather than the batch.
 
-**Not yet done:** the fuel screens have not been changed to *use* the two new dashboard endpoints, so
-the spend chart and the by-type chart still bucket client-side and are still captioned as derived.
-The endpoints exist; the screens have not caught up.
+### The screens now use them
+
+Built 29 July 2026.
+
+- **Spend chart** — `daily-totals`. The client-side day bucketing and its derived-data caption are
+  gone. Only the empty days are still supplied here, so the axis stays a full fortnight: a gap in the
+  line would read as missing data rather than a quiet day, which is a presentation problem and not a
+  query. Confirmed live against CLET-HQ.
+- **By-type chart** — `anomaly-counts`. Confirmed live: seven types summing to nineteen, matching the
+  `openAnomalies` indicator that a different query computes on the same screen.
+  - **The urgency split had to go with it.** The chart used to stack "breaching SLA or material"
+    against "within SLA", split in the browser from the page of cases the dashboard had loaded. The
+    aggregate carries no urgency, and keeping the two-colour legend over a single-valued series would
+    have been worse than losing it: every bar rendered as "within SLA", which is a claim about nineteen
+    cases that the "Breaching SLA 19" indicator beside it contradicts. It is one series now, and
+    urgency lives where it can be stated exactly — the SLA and material counters above the chart, and
+    the per-case SLA in the queue next to it.
+  - The anomaly query behind the exception list dropped from two hundred rows to six, which is what
+    that list actually shows.
+- **Import rows** — paged, with the status filter as three buttons. **Not yet exercised end to end in a
+  browser:** the running service predates the `status` parameter, so the filter is sent, accepted and
+  ignored until that service restarts. The SQL filter is proven against real Postgres by
+  `FuelGapClosureEndToEndTest.import_batches_and_their_rows_are_readable_afterwards` — every row,
+  rejected only and accepted only, each with the total its own filter implies.
+- The spend window's page of transactions is now a single-row read, kept only for the site's currency
+  and quantity unit. The aggregate carries neither, and both belong to the site rather than to a row.
