@@ -77,8 +77,10 @@ public class DrillService {
         return d;
     }
 
-    public List<DrillRun> list(String site, ActorContext actor) {
+    public EmergencyRepository.EmergencyPage<DrillRun> list(String site, DrillRun.Status status, UUID scenarioId,
+            java.time.Instant from, java.time.Instant to, EmergencyRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_ACTIVATION_READ, site, "DrillRun", null);
-        return repository.findDrills(List.of(SiteCode.of(site).value()), 200);
+        return repository.findDrills(new EmergencyRepository.DrillQuery(List.of(SiteCode.of(site).value()), status,
+                scenarioId, from, to, paging));
     }
 }

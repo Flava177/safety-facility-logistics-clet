@@ -2,7 +2,9 @@ package gh.edu.clet.sfl.fleetlogistics.dispatch.api;
 
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchExceptionService;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.api.DispatchPageResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchExceptionCase;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
@@ -24,11 +26,28 @@ public class DispatchExceptionController {
     }
 
     @GetMapping
-    public ApiResponse<List<DispatchExceptionCase>> list(@RequestParam String siteCode,
+    public ApiResponse<DispatchPageResponse<DispatchExceptionCase>> list(@RequestParam String siteCode,
             @RequestParam(required = false) DispatchExceptionCase.Type type,
             @RequestParam(required = false) DispatchExceptionCase.Status status,
-            @RequestParam(defaultValue = "100") int size, HttpServletRequest h) {
-        return ApiResponse.ok(service.exceptions(siteCode, type, status, size, actors.resolve(h)));
+            @RequestParam(required = false) DispatchExceptionCase.Severity severity,
+            @RequestParam(required = false) String assignee,
+            @RequestParam(required = false) Boolean unassigned,
+            @RequestParam(required = false) Boolean securityRelevant,
+            @RequestParam(required = false) Boolean openOnly,
+            @RequestParam(required = false) java.time.Instant dueBefore,
+            @RequestParam(required = false) UUID dispatchId,
+            @RequestParam(required = false) UUID courierItemId,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest h) {
+        return ApiResponse.ok(DispatchPageResponse.of(service.exceptions(siteCode, type, status, severity, assignee,
+                unassigned, securityRelevant, openOnly, dueBefore, dispatchId, courierItemId,
+                DispatchPageResponse.paging(page, size, sort), actors.resolve(h))));
+    }
+
+    /** The case's transition history: assignment, review, explanation, decision, escalation, closure. */
+    @GetMapping("/{id}/history")
+    public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
     @GetMapping("/{id}")

@@ -55,17 +55,50 @@ public class EmergencyDashboardService {
                 stale ? "Source data older than the configured freshness threshold" : null);
     }
 
+    /** The dashboard's counts split by status, priority, mode and channel. Closes gap 12. */
+    public Map<String, Map<String, Long>> breakdown(String site, ActorContext actor) {
+        access.require(actor, SflPermission.EMERGENCY_REPORT_READ, site, "EmergencyDashboard", null);
+        return repository.dashboardBreakdown(List.of(SiteCode.of(site).value()), site);
+    }
+
     public String activationsReportCsv(String site, ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_REPORT_EXPORT, site, "EmergencyActivationReport", null);
         StringBuilder csv = new StringBuilder(
                 "activationNumber,mode,status,priority,incidentReference,approvedBy,afterActionApprovedBy,closureReason\r\n");
-        for (NotificationActivation a : repository.findActivations(List.of(SiteCode.of(site).value()), null, 500)) {
+        for (NotificationActivation a : drain(site)) {
             csv.append(cell(a.activationNumber())).append(',').append(a.mode()).append(',').append(a.status())
                     .append(',').append(a.priority()).append(',').append(cell(a.incidentReference())).append(',')
                     .append(cell(a.approvedBy())).append(',').append(cell(a.afterActionApprovedBy())).append(',')
                     .append(cell(a.closureReason())).append("\r\n");
         }
         return csv.toString();
+    }
+
+    /**
+     * Every activation at the site, a page at a time.
+     *
+     * <p>Closes gap 11 — the only gap on this service with a compliance consequence rather than an
+     * operational one. The export stopped at the first 500 activations with nothing in the file, the
+     * headers or the response to say so, so a busy site got a quietly incomplete compliance export
+     * and neither the screen nor the file could tell. {@code EXPORT_CAP} is a runaway guard rather
+     * than a limit anybody is expected to reach.
+     */
+    private static final int EXPORT_CAP = 50_000;
+
+    private List<NotificationActivation> drain(String site) {
+        List<NotificationActivation> all = new java.util.ArrayList<>();
+        int page = 0;
+        while (all.size() < EXPORT_CAP) {
+            var result = repository.findActivations(new EmergencyRepository.ActivationQuery(
+                    List.of(SiteCode.of(site).value()), null, null, null, null, null, null, null, null, null, null,
+                    null, new EmergencyRepository.Paging(page, EmergencyRepository.Paging.MAX_SIZE, "createdAt")));
+            all.addAll(result.content());
+            if (result.content().isEmpty() || page >= result.totalPages() - 1) {
+                break;
+            }
+            page++;
+        }
+        return all;
     }
 
     private boolean isStale(String site, Instant sourceUpdatedAt) {

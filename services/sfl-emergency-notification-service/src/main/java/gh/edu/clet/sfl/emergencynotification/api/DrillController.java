@@ -36,8 +36,16 @@ public class DrillController {
     }
 
     @GetMapping
-    public ApiResponse<List<DrillRun>> list(@RequestParam String siteCode, HttpServletRequest h) {
-        return ApiResponse.ok(service.list(siteCode, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<DrillRun>> list(@RequestParam String siteCode,
+            @RequestParam(required = false) DrillRun.Status status,
+            @RequestParam(required = false) UUID scenarioId,
+            @RequestParam(required = false) java.time.Instant from,
+            @RequestParam(required = false) java.time.Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.list(siteCode, status, scenarioId, from, to,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
     @PostMapping("/{id}/complete")

@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchReposito
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.SecurityVisibilityPort;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchExceptionCase;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.NotificationPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.NotificationPort.NotificationKind;
@@ -138,10 +139,22 @@ public class DispatchExceptionService {
         return kase;
     }
 
-    public List<DispatchExceptionCase> exceptions(String site, DispatchExceptionCase.Type type,
-            DispatchExceptionCase.Status status, int limit, ActorContext actor) {
+    public DispatchRepository.DispatchPage<DispatchExceptionCase> exceptions(String site,
+            DispatchExceptionCase.Type type, DispatchExceptionCase.Status status,
+            DispatchExceptionCase.Severity severity, String assignee, Boolean unassigned, Boolean securityRelevant,
+            Boolean openOnly, java.time.Instant dueBefore, UUID dispatchId, UUID courierItemId,
+            DispatchRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.DISPATCH_EXCEPTION_READ, site, "DispatchExceptionCase", null);
-        return repository.findExceptions(List.of(SiteCode.of(site).value()), type, status, null, limit);
+        return repository.findExceptions(new DispatchRepository.ExceptionQuery(List.of(SiteCode.of(site).value()),
+                type, status, severity, assignee, unassigned, securityRelevant, openOnly, dueBefore, dispatchId,
+                courierItemId, paging));
+    }
+
+    /** The case's transition history: assignment, review, explanation, decision and closure. */
+    public List<AuditEvent> history(UUID id, ActorContext actor) {
+        var kase = exceptionCase(id, actor);
+        return audit.search(new AuditPort.AuditQuery(List.of(kase.siteCode().value()), "DispatchExceptionCase",
+                id.toString(), null, null, null, null, 0, 200));
     }
 
     public DispatchOutboxAdminPort.OutboxHealth integrationHealth(ActorContext actor) {

@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchEvide
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CourierItem;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchExceptionCase;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DuplicateActiveIdentifierException;
@@ -149,9 +150,25 @@ public class CourierItemService {
         return item;
     }
 
-    public List<CourierItem> items(String site, CourierItem.Direction direction, CourierItem.Status status,
-            CourierItem.Sensitivity sensitivity, String handler, Instant from, Instant to, int limit, ActorContext actor) {
+    public DispatchRepository.DispatchPage<CourierItem> items(String site, CourierItem.Direction direction,
+            CourierItem.Status status, CourierItem.Sensitivity sensitivity, String handler, String reference,
+            UUID dispatchId, Boolean undelivered, Instant from, Instant to, DispatchRepository.Paging paging,
+            ActorContext actor) {
         access.require(actor, SflPermission.DISPATCH_ITEM_READ, site, "CourierItem", null);
-        return repository.findItems(List.of(SiteCode.of(site).value()), direction, status, sensitivity, handler, from, to, limit);
+        return repository.findItems(new DispatchRepository.ItemQuery(List.of(SiteCode.of(site).value()), direction,
+                status, sensitivity, handler, reference, dispatchId, undelivered, from, to, paging));
+    }
+
+    /**
+     * The item's transition history.
+     *
+     * <p>Every state change already reaches the audit log through {@link AuditPort}; what was missing
+     * was a dispatch-side read authorised against the record itself, so a detail screen could show a
+     * real timeline instead of reconstructing one from whatever fields the record still carried.
+     */
+    public List<AuditEvent> history(UUID id, ActorContext actor) {
+        var item = item(id, actor);
+        return audit.search(new AuditPort.AuditQuery(List.of(item.siteCode().value()), "CourierItem", id.toString(),
+                null, null, null, null, 0, 200));
     }
 }

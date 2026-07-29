@@ -41,9 +41,31 @@ public class DispatchReceiptController {
                 actors.resolve(h), actors.resolveSourceChannel(h))));
     }
 
+    /**
+      * Destination receipts.
+      *
+      * <p>A {@code dispatchId} reads one consignment's receipts. A {@code siteCode} reads across
+      * them — closing gap 7, so "every variance this month" is a query rather than a manifest-by-
+      * manifest hunt.
+      */
     @GetMapping
-    public ApiResponse<List<DispatchReceipt>> receipts(@RequestParam UUID dispatchId, HttpServletRequest h) {
-        return ApiResponse.ok(service.receipts(dispatchId, actors.resolve(h)));
+    public ApiResponse<?> receipts(@RequestParam(required = false) UUID dispatchId,
+            @RequestParam(required = false) String siteCode,
+            @RequestParam(required = false) DispatchReceipt.ReceiptOutcome outcome,
+            @RequestParam(required = false) DispatchReceipt.VarianceType varianceType,
+            @RequestParam(required = false) String recipient,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest h) {
+        var actor = actors.resolve(h);
+        if (siteCode != null && !siteCode.isBlank()) {
+            return ApiResponse.ok(DispatchPageResponse.of(service.receipts(siteCode, dispatchId, outcome, varianceType,
+                    recipient, from, to, DispatchPageResponse.paging(page, size, sort), actor)));
+        }
+        if (dispatchId == null) {
+            throw new IllegalArgumentException("Either dispatchId or siteCode is required");
+        }
+        return ApiResponse.ok(service.receipts(dispatchId, actor));
     }
 
     @GetMapping("/{id}")

@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchEvidencePort;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchEvidenceSupport.EvidenceMeta;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CustodyHandover;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CustodyHop;
@@ -76,23 +77,53 @@ public class DispatchCustodyService {
         events.publish(FleetEventType.CUSTODY_HANDOVER_RECORDED, "CustodyHandover", saved.id().toString(),
                 dispatch.siteCode(), c.actor(), Map.of("dispatchId", c.dispatchId(), "hop", c.hop(),
                         "sequenceNo", saved.sequenceNo(), "sealState", c.sealState()));
-        List<String> gaps = CustodyChainPolicy.detectGaps(repository.findHandovers(c.dispatchId()),
+        List<CustodyChainPolicy.Gap> gaps = CustodyChainPolicy.detectGaps(repository.findHandovers(c.dispatchId()),
                 dispatch.itemCount());
         if (!gaps.isEmpty()) {
             boolean securityRelevant = c.sealState().isCompromised()
-                    || gaps.stream().anyMatch(g -> g.startsWith("BROKEN_SEAL"));
+                    || gaps.stream().anyMatch(g -> g.reason() == CustodyChainPolicy.GapReason.BROKEN_SEAL);
             exceptions.openCase(new DispatchExceptionService.OpenCase(dispatch.siteCode().value(),
                     DispatchExceptionCase.Type.CUSTODY_GAP,
                     securityRelevant ? DispatchExceptionCase.Severity.HIGH : DispatchExceptionCase.Severity.MEDIUM,
                     securityRelevant, "CUSTODY_GAP:" + c.dispatchId(), null, c.dispatchId(), saved.id(), null,
-                    dispatch.tripId(), gaps, c.actor(), c.channel()));
+                    dispatch.tripId(), gaps.stream().map(DispatchCustodyService::describe).toList(),
+                    c.actor(), c.channel()));
         }
         return saved;
+    }
+
+    /**
+     * A gap as one line of text, for the {@code detectedRules} list on an exception case.
+     *
+     * <p>The only place a gap is still flattened to a string. It is a case's own summary of why it
+     * was raised, not a wire format anybody parses — the custody read returns the structured gaps.
+     */
+    private static String describe(CustodyChainPolicy.Gap gap) {
+        StringBuilder text = new StringBuilder(gap.reason().name()).append(" at ").append(gap.hop());
+        if (!gap.detail().isEmpty()) {
+            text.append(' ').append(gap.detail());
+        }
+        return text.toString();
     }
 
     public List<CustodyHandover> handovers(UUID dispatchId, ActorContext actor) {
         requireRead(dispatchId, actor);
         return repository.findHandovers(dispatchId);
+    }
+
+    /**
+     * Custody handovers across a site's consignments.
+     *
+     * <p>Closes gap 7. Custody was readable per consignment only, so "everything this custodian
+     * handled last week" needed the manifests to be known first — which is the wrong way round when
+     * the custodian is the reason for asking.
+     */
+    public DispatchRepository.DispatchPage<CustodyHandover> handovers(String site, UUID dispatchId, CustodyHop hop,
+            String custodian, SealState sealState, java.time.Instant from, java.time.Instant to,
+            DispatchRepository.Paging paging, ActorContext actor) {
+        access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, site, "CustodyHandover", null);
+        return repository.findHandovers(new DispatchRepository.CustodyQuery(List.of(SiteCode.of(site).value()),
+                dispatchId, hop, custodian, sealState, from, to, paging));
     }
 
     /** Human-readable custody gap descriptions, plus any closure-required hops still missing. */
@@ -104,7 +135,8 @@ public class DispatchCustodyService {
                 CustodyChainPolicy.closable(handovers, dispatch.itemCount()));
     }
 
-    public record CustodyGaps(List<String> gaps, List<String> missingClosureHops, boolean closable) {}
+    public record CustodyGaps(List<CustodyChainPolicy.Gap> gaps, List<String> missingClosureHops,
+            boolean closable) {}
 
     private Dispatch requireDispatch(UUID id) {
         return repository.findDispatch(id).orElseThrow(() -> RecordNotFoundException.of("Dispatch", id));
