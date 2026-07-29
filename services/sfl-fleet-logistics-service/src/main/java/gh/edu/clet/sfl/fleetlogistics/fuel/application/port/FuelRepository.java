@@ -2,7 +2,9 @@ package gh.edu.clet.sfl.fleetlogistics.fuel.application.port;
 
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -13,29 +15,189 @@ import java.util.UUID;
 
 /** Persistence port for S168_fuel. It exposes domain records, never JDBC/JPA types. */
 public interface FuelRepository {
+
+    /**
+     * A page of fuel records.
+     *
+     * <p>Deliberately shaped like the fleet {@code PageResponse} so the two modules page the same
+     * way from an operator's point of view, but declared here rather than imported from the API
+     * layer — the port must not depend on a transport type.
+     *
+     * <p>{@code sort} is echoed back because the caller may have asked for a default: a client that
+     * cannot see which ordering it got cannot tell a stable page from a shifting one.
+     */
+    record FuelPage<T>(List<T> content, int page, int size, long totalElements, int totalPages, String sort) {
+
+        public static <T> FuelPage<T> of(List<T> content, int page, int size, long totalElements, String sort) {
+            int pages = size <= 0 ? 0 : (int) Math.ceil((double) totalElements / size);
+            return new FuelPage<>(content, page, size, totalElements, pages, sort);
+        }
+
+        public static <T> FuelPage<T> empty(int page, int size, String sort) {
+            return new FuelPage<>(List.of(), page, size, 0L, 0, sort);
+        }
+    }
+
+    /**
+     * Paging and ordering, normalised.
+     *
+     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL — the adapter maps
+     * it to a column plus a deterministic tiebreak on {@code id}, because a page over rows that
+     * share a sort value will otherwise skip or repeat records between requests.
+     */
+    record Paging(int page, int size, String sort) {
+
+        public static final int MAX_SIZE = 200;
+
+        public Paging {
+            page = Math.max(page, 0);
+            size = size <= 0 ? 25 : Math.min(size, MAX_SIZE);
+        }
+
+        public int offset() {
+            return page * size;
+        }
+    }
+
+    /** Filters `GET /api/v1/fuel/transactions` accepts. Any field may be null. */
+    record TransactionQuery(
+            List<String> sites,
+            String siteCode,
+            FuelTransaction.Status status,
+            UUID vehicleId,
+            UUID driverId,
+            String sourceSystem,
+            String vendorReference,
+            Instant from,
+            Instant to,
+            Paging paging) {
+    }
+
+    /** Filters `GET /api/v1/fuel/logbooks` accepts. */
+    record LogbookQuery(
+            List<String> sites,
+            String actorId,
+            boolean ownOnly,
+            DriverLogbook.Status status,
+            UUID driverId,
+            UUID vehicleId,
+            DriverLogbook.UseClassification useClassification,
+            java.time.LocalDate journeyFrom,
+            java.time.LocalDate journeyTo,
+            Paging paging) {
+    }
+
+    /**
+     * Filters `GET /api/v1/fuel/anomalies` accepts.
+     *
+     * <p>{@code dueBefore} was reachable only from the sweep scheduler before; exposing it is what
+     * makes a "breaching SLA" queue a server-side query rather than a client-side guess over
+     * whatever the window happened to return.
+     */
+    record AnomalyQuery(
+            List<String> sites,
+            FuelAnomalyCase.Status status,
+            FuelAnomalyCase.Type type,
+            FuelAnomalyCase.Severity severity,
+            String assignee,
+            Boolean unassigned,
+            Boolean material,
+            Boolean openOnly,
+            Instant dueBefore,
+            UUID transactionId,
+            UUID vehicleId,
+            UUID driverId,
+            Paging paging) {
+    }
+
+    /** Filters `GET /api/v1/fuel/policies` accepts. */
+    record PolicyQuery(List<String> sites, FuelPolicy.Status status, Instant inForceAt, Paging paging) {
+    }
+
+    /** Filters `GET /api/v1/fuel/imports` accepts. */
+    record ImportQuery(List<String> sites, String sourceSystem, Paging paging) {
+    }
+
+    // --- policies ------------------------------------------------------------------------------
+
     FuelPolicy savePolicy(FuelPolicy policy);
+
     Optional<FuelPolicy> findApplicablePolicy(String siteCode, Instant at);
-    List<FuelPolicy> findPolicies(List<String> sites);
+
+    Optional<FuelPolicy> findPolicy(UUID id);
+
+    FuelPage<FuelPolicy> findPolicies(PolicyQuery query);
+
+    /**
+     * ACTIVE policies for the site whose effective period intersects {@code [from, to)}.
+     *
+     * <p>An open-ended policy runs to infinity, so a null {@code effective_to} on either side counts
+     * as an overlap. Used to enforce the documented no-overlap invariant at creation.
+     */
+    List<FuelPolicy> findOverlappingActivePolicies(String siteCode, Instant from, Instant to, UUID excludingId);
+
+    // --- transactions --------------------------------------------------------------------------
+
     FuelTransaction saveTransaction(FuelTransaction transaction);
+
     Optional<FuelTransaction> findTransaction(UUID id);
+
     Optional<FuelTransaction> findProviderTransaction(String siteCode, String sourceSystem, String providerId);
-    List<FuelTransaction> findTransactions(List<String> sites, String site, FuelTransaction.Status status, UUID vehicleId, UUID driverId, Instant from, Instant to, int limit);
-    DriverLogbook saveLogbook(DriverLogbook logbook);
-    Optional<DriverLogbook> findLogbook(UUID id);
-    List<DriverLogbook> findLogbooks(List<String> sites, String actorId, boolean ownOnly, DriverLogbook.Status status, int limit);
-    FuelAnomalyCase saveAnomaly(FuelAnomalyCase anomaly);
-    Optional<FuelAnomalyCase> findAnomaly(UUID id);
-    Optional<FuelAnomalyCase> findAnomaly(UUID transactionId, FuelAnomalyCase.Type type);
-    Optional<FuelAnomalyCase> findAnomalyForTrip(UUID tripId, FuelAnomalyCase.Type type);
-    List<FuelAnomalyCase> findAnomalies(List<String> sites, FuelAnomalyCase.Status status, Instant dueBefore, int limit);
-    /** Most recent active transaction for the vehicle strictly before {@code before}, for consumption and cost-variance rules. */
+
+    FuelPage<FuelTransaction> findTransactions(TransactionQuery query);
+
+    /** Most recent active transaction for the vehicle strictly before {@code before}. */
     Optional<FuelTransaction> findPreviousTransaction(String siteCode, UUID vehicleId, Instant before);
-    /** Count of anomaly cases raised for the same vehicle or driver since {@code since}, for repeated-pattern detection. */
-    long countRecentAnomalies(List<String> sites, UUID vehicleId, UUID driverId, Instant since);
-    /** Latest non-cancelled driver logbook associated with the trip, for logbook/fuel mismatch detection. */
+
+    // --- logbooks ------------------------------------------------------------------------------
+
+    DriverLogbook saveLogbook(DriverLogbook logbook);
+
+    Optional<DriverLogbook> findLogbook(UUID id);
+
+    FuelPage<DriverLogbook> findLogbooks(LogbookQuery query);
+
+    /** Latest non-cancelled driver logbook associated with the trip, for mismatch detection. */
     Optional<DriverLogbook> findLogbookForTrip(UUID tripId);
+
+    // --- anomalies -----------------------------------------------------------------------------
+
+    FuelAnomalyCase saveAnomaly(FuelAnomalyCase anomaly);
+
+    Optional<FuelAnomalyCase> findAnomaly(UUID id);
+
+    Optional<FuelAnomalyCase> findAnomaly(UUID transactionId, FuelAnomalyCase.Type type);
+
+    Optional<FuelAnomalyCase> findAnomalyForTrip(UUID tripId, FuelAnomalyCase.Type type);
+
+    FuelPage<FuelAnomalyCase> findAnomalies(AnomalyQuery query);
+
+    /** Count of cases raised for the same vehicle or driver since {@code since}. */
+    long countRecentAnomalies(List<String> sites, UUID vehicleId, UUID driverId, Instant since);
+
+    // --- reconciliations -----------------------------------------------------------------------
+
     void saveReconciliation(UUID id, UUID transactionId, UUID policyId, Integer policyVersion, String outcome,
             BigDecimal consumption, Instant evaluatedAt, String actor, Map<String, Object> ruleResults,
             String correlationId);
-    Map<String, Object> dashboard(List<String> sites, String siteCode);
+
+    /** Every run against the transaction, newest first. A rerun appends rather than amending. */
+    List<FuelReconciliation> findReconciliations(UUID transactionId);
+
+    // --- imports -------------------------------------------------------------------------------
+
+    /** Records the batch and its rows. Raises the duplicate-file domain error rather than a 500. */
+    FuelImportBatch saveImportBatch(FuelImportBatch batch);
+
+    /** Batch header only; the rows are a separate read so a list does not carry every row. */
+    FuelPage<FuelImportBatch> findImportBatches(ImportQuery query);
+
+    /** Batch with its rows populated. */
+    Optional<FuelImportBatch> findImportBatch(UUID id);
+
+    Optional<FuelImportBatch> findImportBatchByHash(String siteCode, String sourceSystem, String fileHash);
+
+    // --- dashboard -----------------------------------------------------------------------------
+
+    Map<String, Object> dashboard(List<String> sites, String siteCode, Instant now);
 }

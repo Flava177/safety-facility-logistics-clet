@@ -1,17 +1,10 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import { FuelPolicy, FuelTransaction } from 'modules/fuel/api/dto';
+import { FuelPolicy, FuelTransaction, rulePassed } from 'modules/fuel/api/dto';
 import { RECONCILIATION_RULES, RULE_DESCRIPTIONS } from 'modules/fuel/api/enums';
-import {
-  DEFAULT_WINDOW,
-  fuelAnomaliesApi,
-  fuelPoliciesApi,
-  fuelTransactionsApi,
-} from 'modules/fuel/api/fuelApi';
+import { fuelPoliciesApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import { transactionReconcilable } from 'modules/fuel/api/workflow';
-import { DerivedNote } from 'modules/fuel/components/Provenance';
-import WindowNotice from 'modules/fuel/components/WindowNotice';
-import { useClientWindow } from 'modules/fuel/components/useClientWindow';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { formatMoney, formatQuantity } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -40,10 +33,13 @@ const SCOPE_LABELS: Record<Scope, string> = {
   EXCEPTION: 'Previously in exception',
 };
 
-/** The outcome of one transaction in a run. */
+/** The outcome of one transaction in a run, with the rules the service actually recorded. */
 interface RunOutcome {
   transaction: FuelTransaction;
   status: 'RECONCILED' | 'EXCEPTION' | 'REFUSED';
+  failedRules: string[];
+  passedCount: number;
+  policyVersion: number | null;
   message?: string;
 }
 
@@ -68,27 +64,48 @@ const FuelReconciliationPage = () => {
   const [running, setRunning] = useState(false);
   const [outcomes, setOutcomes] = useState<RunOutcome[]>([]);
 
+  const filterKey = siteCode + '|' + scope;
+  const paging = useServerPage(filterKey);
+
   const candidates = useApiQuery(
-    (signal) => fuelTransactionsApi.search({ siteCode, status: scope }, signal),
-    [siteCode, scope],
+    (signal) =>
+      fuelTransactionsApi.search(
+        { siteCode, status: scope, page: paging.page, size: paging.size },
+        signal,
+      ),
+    [filterKey, paging.page, paging.size],
   );
 
+  useClampPage(paging.page, candidates.data?.totalPages, paging.setPage);
+
+  /** The policies a run would actually resolve against, asked of the service. */
   const policies = useApiQuery(
-    (signal) => fuelPoliciesApi.list(siteCode, signal),
+    (signal) => fuelPoliciesApi.search({ siteCode, inForceOnly: true, size: 50 }, signal),
     [siteCode],
   );
 
-  const anomalies = useApiQuery(
-    (signal) => fuelAnomaliesApi.search({ siteCode }, signal),
-    [siteCode],
-  );
+  const activePolicies = useMemo(() => policies.data?.content ?? [], [policies.data]);
 
-  const activePolicies = useMemo(
-    () => (policies.data ?? []).filter((policy) => policy.status === 'ACTIVE'),
-    [policies.data],
-  );
-
-  const windowed = useClientWindow(candidates.data, `${siteCode}|${scope}`);
+  /**
+   * Reads back the run the service just recorded, so the outcome names real rules.
+   *
+   * The reconciliation record carries the full per-rule map and the policy version it applied.
+   * Before that read existed, the failing rules had to be inferred from the anomaly cases the run
+   * raised — which could only ever show failures, never what passed.
+   */
+  const outcomeFor = async (transaction: FuelTransaction): Promise<RunOutcome> => {
+    const result = await fuelTransactionsApi.reconcile(transaction.id);
+    const runs = await fuelTransactionsApi.reconciliations(transaction.id);
+    const latest = runs[0];
+    const rules = Object.entries(latest?.ruleResults ?? {});
+    return {
+      transaction: result,
+      status: result.status === 'RECONCILED' ? 'RECONCILED' : 'EXCEPTION',
+      failedRules: rules.filter(([, outcome]) => !rulePassed(outcome)).map(([rule]) => rule),
+      passedCount: rules.filter(([, outcome]) => rulePassed(outcome)).length,
+      policyVersion: latest?.policyVersion ?? null,
+    };
+  };
 
   /**
    * Reconciles every candidate in sequence.
@@ -99,7 +116,7 @@ const FuelReconciliationPage = () => {
    * state and produce outcomes that depend on scheduling.
    */
   const runAll = async () => {
-    const targets = (candidates.data ?? []).filter(transactionReconcilable);
+    const targets = (candidates.data?.content ?? []).filter(transactionReconcilable);
     if (targets.length === 0) {
       return;
     }
@@ -109,15 +126,14 @@ const FuelReconciliationPage = () => {
 
     for (const transaction of targets) {
       try {
-        const result = await fuelTransactionsApi.reconcile(transaction.id);
-        results.push({
-          transaction: result,
-          status: result.status === 'RECONCILED' ? 'RECONCILED' : 'EXCEPTION',
-        });
+        results.push(await outcomeFor(transaction));
       } catch (error) {
         results.push({
           transaction,
           status: 'REFUSED',
+          failedRules: [],
+          passedCount: 0,
+          policyVersion: null,
           message: error instanceof Error ? error.message : 'The service refused this transaction.',
         });
       }
@@ -142,26 +158,21 @@ const FuelReconciliationPage = () => {
       );
     }
     candidates.refetch();
-    anomalies.refetch();
   };
 
   const runOne = async (transaction: FuelTransaction) => {
     try {
-      const result = await fuelTransactionsApi.reconcile(transaction.id);
+      const outcome = await outcomeFor(transaction);
       setOutcomes((current) => [
-        {
-          transaction: result,
-          status: result.status === 'RECONCILED' ? 'RECONCILED' : 'EXCEPTION',
-        },
-        ...current.filter((outcome) => outcome.transaction.id !== transaction.id),
+        outcome,
+        ...current.filter((entry) => entry.transaction.id !== transaction.id),
       ]);
       notifySuccess(
-        result.status === 'RECONCILED'
-          ? 'Reconciled. Every policy rule passed.'
-          : 'Reconciliation completed with exceptions.',
+        outcome.status === 'RECONCILED'
+          ? `Reconciled. All ${outcome.passedCount} policy rules passed.`
+          : `Reconciliation completed with ${outcome.failedRules.length} failed rule${outcome.failedRules.length === 1 ? '' : 's'}.`,
       );
       candidates.refetch();
-      anomalies.refetch();
     } catch (error) {
       notifyError(error);
     }
@@ -250,21 +261,32 @@ const FuelReconciliationPage = () => {
       },
       {
         key: 'rules',
-        header: 'Rules that failed',
-        width: 280,
+        header: 'Rules',
+        width: 300,
         cell: (row) => {
           if (row.status === 'REFUSED') {
             return <span className="text-error-800">{row.message}</span>;
           }
-          if (row.status === 'RECONCILED') {
-            return <span className="text-gray-600">None — every rule passed</span>;
+          if (row.failedRules.length === 0) {
+            return (
+              <span className="text-gray-600">
+                All {row.passedCount} rules passed
+                {row.policyVersion !== null ? ` · policy version ${row.policyVersion}` : ''}
+              </span>
+            );
           }
-          const rules = (anomalies.data ?? [])
-            .filter((anomaly) => anomaly.transactionId === row.transaction.id)
-            .flatMap((anomaly) => anomaly.detectedRules);
-          return rules.length > 0
-            ? [...new Set(rules)].map((rule) => humanise(rule)).join(', ')
-            : 'Cases were raised; reload to see which rules.';
+          return (
+            <span>
+              <span className="font-medium text-error-800">
+                {row.failedRules.map((rule) => humanise(rule)).join(', ')}
+              </span>
+              <span className="text-gray-600">
+                {' '}
+                · {row.passedCount} passed
+                {row.policyVersion !== null ? ` · policy version ${row.policyVersion}` : ''}
+              </span>
+            </span>
+          );
         },
       },
       {
@@ -284,10 +306,10 @@ const FuelReconciliationPage = () => {
         ),
       },
     ],
-    [anomalies.data, navigate],
+    [navigate],
   );
 
-  const runnable = (candidates.data ?? []).filter(transactionReconcilable).length;
+  const runnable = (candidates.data?.content ?? []).filter(transactionReconcilable).length;
 
   return (
     <div>
@@ -343,9 +365,9 @@ const FuelReconciliationPage = () => {
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
           <StatCard
             label="Awaiting a run"
-            value={formatNumber(candidates.data?.length ?? 0)}
+            value={formatNumber(candidates.data?.totalElements ?? 0)}
             icon="scale"
-            tone={(candidates.data?.length ?? 0) > 0 ? 'caution' : 'neutral'}
+            tone={(candidates.data?.totalElements ?? 0) > 0 ? 'caution' : 'neutral'}
             caption={SCOPE_LABELS[scope].toLowerCase()}
           />
           <StatCard
@@ -395,13 +417,6 @@ const FuelReconciliationPage = () => {
               caption="The outcome of each transaction in the most recent reconciliation run, with the rules that failed."
               dense
             />
-            <div className="px-5 pt-2 pb-4">
-              <DerivedNote>
-                Rule names are read from the anomaly cases each run raised. The service records every
-                rule’s outcome against the reconciliation, including those that passed, but exposes
-                no endpoint to read them.
-              </DerivedNote>
-            </div>
           </SectionCard>
         )}
 
@@ -413,33 +428,26 @@ const FuelReconciliationPage = () => {
           <DataState
             loading={candidates.initialising}
             error={candidates.error}
-            empty={(candidates.data?.length ?? 0) === 0}
+            empty={(candidates.data?.totalElements ?? 0) === 0}
             emptyTitle="Nothing in scope"
             emptyHint={`No transaction at ${siteCode} is ${SCOPE_LABELS[scope].toLowerCase()}.`}
             onRetry={candidates.refetch}
             minHeight={220}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={candidates.data?.content ?? []}
               columns={candidateColumns}
               getRowId={(row) => row.id}
               loading={candidates.loading}
               caption="Fuel transactions eligible for reconciliation, with quantity, cost, current status and a control to run each."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={candidates.data?.page ?? paging.page}
+              pageSize={candidates.data?.size ?? paging.size}
+              totalElements={candidates.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={windowed.total}
-          requestedSize={DEFAULT_WINDOW}
-          noun="transactions"
-        />
 
         <div className="grid gap-5 xl:grid-cols-2">
           <SectionCard
@@ -457,11 +465,12 @@ const FuelReconciliationPage = () => {
                 </li>
               ))}
             </ol>
-            <DerivedNote>
+            <p className="mt-3 text-theme-xs text-gray-600">
               Transcribed from the service’s reconciliation routine. Three of them only run when the
               policy supplies the relevant limit, and two only when a previous transaction exists for
-              the vehicle.
-            </DerivedNote>
+              the vehicle. Which ones actually ran is recorded against each transaction and shown on
+              its detail screen.
+            </p>
           </SectionCard>
 
           <SectionCard
@@ -472,7 +481,7 @@ const FuelReconciliationPage = () => {
               loading={policies.initialising}
               error={policies.error}
               empty={activePolicies.length === 0}
-              emptyTitle="No active policy"
+              emptyTitle="No policy in force"
               emptyHint="Reconciliation cannot run without one."
               onRetry={policies.refetch}
               minHeight={180}

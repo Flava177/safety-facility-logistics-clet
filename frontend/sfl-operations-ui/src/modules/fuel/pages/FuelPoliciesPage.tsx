@@ -2,11 +2,8 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import { FuelPolicy } from 'modules/fuel/api/dto';
 import { fuelPoliciesApi } from 'modules/fuel/api/fuelApi';
-import {
-  CreatePolicyDialog,
-  overlappingActivePolicies,
-} from 'modules/fuel/dialogs/policyDialogs';
-import { DerivedNote } from 'modules/fuel/components/Provenance';
+import { CreatePolicyDialog } from 'modules/fuel/dialogs/policyDialogs';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -45,46 +42,34 @@ const FuelPoliciesPage = () => {
   const [activeOnly, setActiveOnly] = useState(false);
   const [creating, setCreating] = useState(false);
 
-  const query = useApiQuery((signal) => fuelPoliciesApi.list(siteCode, signal), [siteCode]);
+  const filterKey = `${siteCode}|${activeOnly}`;
+  const paging = useServerPage(filterKey);
 
-  const policies = useMemo(() => query.data ?? [], [query.data]);
-
-  const rows = useMemo(
-    () =>
-      [...(activeOnly ? policies.filter((policy) => policy.status === 'ACTIVE') : policies)].sort(
-        (left, right) => right.effectiveFrom.localeCompare(left.effectiveFrom),
+  const query = useApiQuery(
+    (signal) =>
+      fuelPoliciesApi.search(
+        { siteCode, status: activeOnly ? 'ACTIVE' : undefined, page: paging.page, size: paging.size },
+        signal,
       ),
-    [policies, activeOnly],
+    [filterKey, paging.page, paging.size],
   );
 
-  const currentlyInForce = useMemo(() => policies.filter((policy) => inForce(policy)), [policies]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
+
+  const policies = useMemo(() => query.data?.content ?? [], [query.data]);
 
   /**
-   * Active policies whose effective periods overlap one another.
+   * The policies in force right now, asked of the service.
    *
-   * The domain document states this cannot happen; the service does not enforce it (gap 11). Where
-   * two active policies cover one instant, `findApplicablePolicy` returns whichever the query
-   * surfaces, so the rules a transaction is judged against stop being reproducible — which is worth
-   * saying loudly on the register that owns them.
+   * `inForceOnly` is an interval test the console cannot do correctly over a page: a policy that
+   * covers today may sit on any page of the register.
    */
-  const overlaps = useMemo(() => {
-    const clashing = new Set<string>();
-    policies
-      .filter((policy) => policy.status === 'ACTIVE')
-      .forEach((policy) => {
-        const others = policies.filter((other) => other.id !== policy.id);
-        overlappingActivePolicies(
-          others,
-          policy.siteCode.value,
-          policy.effectiveFrom,
-          policy.effectiveTo,
-        ).forEach((other) => {
-          clashing.add(policy.id);
-          clashing.add(other.id);
-        });
-      });
-    return clashing;
-  }, [policies]);
+  const inForceNow = useApiQuery(
+    (signal) => fuelPoliciesApi.search({ siteCode, inForceOnly: true, size: 50 }, signal),
+    [siteCode],
+  );
+
+  const currentlyInForce = useMemo(() => inForceNow.data?.content ?? [], [inForceNow.data]);
 
   const columns = useMemo<Column<FuelPolicy>[]>(
     () => [
@@ -152,17 +137,10 @@ const FuelPoliciesPage = () => {
         header: 'Status',
         width: 150,
         align: 'right',
-        cell: (row) => (
-          <div className="flex items-center justify-end gap-1.5">
-            {overlaps.has(row.id) && (
-              <StatusChip value="WARNING" label="Overlapping" tone="caution" />
-            )}
-            <StatusChip value={row.status} />
-          </div>
-        ),
+        cell: (row) => <StatusChip value={row.status} />,
       },
     ],
-    [overlaps],
+    [],
   );
 
   return (
@@ -201,37 +179,28 @@ const FuelPoliciesPage = () => {
           </Alert>
         )}
 
-        {overlaps.size > 0 && (
-          <Alert
-            variant="warning"
-            title={`${overlaps.size} active policies have overlapping effective periods`}
-          >
-            Where two active policies cover the same instant, which one reconciliation reads is not
-            reproducible. Close the earlier policy’s period, or archive it.
-            <DerivedNote>
-              A check this console makes over the policies it loaded. The service does not enforce
-              it, despite the domain model documenting it as an invariant.
-            </DerivedNote>
-          </Alert>
-        )}
-
         <SectionCard flush>
           <DataState
             loading={query.initialising}
             error={query.error}
-            empty={rows.length === 0}
+            empty={policies.length === 0}
             emptyTitle="No fuel policy at this site"
             emptyHint="Create one before capturing transactions, or reconciliation will have nothing to judge them against."
             onRetry={query.refetch}
             minHeight={280}
           >
             <DataTable
-              rows={rows}
+              rows={policies}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(fuelPaths.policyDetail(row.id))}
               caption="Fuel policies at this site, with their effective period, per-transaction limit, anomaly SLA, receipt rule and status."
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
@@ -270,7 +239,6 @@ const FuelPoliciesPage = () => {
         <CreatePolicyDialog
           open
           defaultSiteCode={siteCode}
-          existingPolicies={policies}
           onClose={() => setCreating(false)}
           onSaved={(policy) => {
             notifySuccess(
@@ -278,6 +246,7 @@ const FuelPoliciesPage = () => {
               `Version ${policy.policyVersion}, effective from ${formatDate(policy.effectiveFrom)}.`,
             );
             query.refetch();
+            inForceNow.refetch();
           }}
         />
       )}

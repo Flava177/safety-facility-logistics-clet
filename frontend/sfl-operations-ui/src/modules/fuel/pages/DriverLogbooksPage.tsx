@@ -7,10 +7,10 @@ import {
   LogbookStatus,
   LogbookUseClassification,
 } from 'modules/fuel/api/enums';
-import { DEFAULT_WINDOW, driverLogbooksApi } from 'modules/fuel/api/fuelApi';
+import { driverLogbooksApi } from 'modules/fuel/api/fuelApi';
 import { CreateLogbookDialog } from 'modules/fuel/dialogs/logbookDialogs';
-import WindowNotice from 'modules/fuel/components/WindowNotice';
-import { useClientWindow } from 'modules/fuel/components/useClientWindow';
+import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -20,7 +20,8 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { DateField } from 'shared/components/DateField';
+import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
@@ -46,37 +47,35 @@ const DriverLogbooksPage = () => {
     (searchParams.get('status') as LogbookStatus | null) ?? '',
   );
   const [useClass, setUseClass] = useState<LogbookUseClassification | ''>('');
-  const [search, setSearch] = useState('');
+  const [driverId, setDriverId] = useState('');
+  const [vehicleId, setVehicleId] = useState('');
+  const [journeyFrom, setJourneyFrom] = useState('');
+  const [journeyTo, setJourneyTo] = useState('');
   const [creating, setCreating] = useState(false);
 
+  const filterKey = `${siteCode}|${status}|${useClass}|${driverId}|${vehicleId}|${journeyFrom}|${journeyTo}`;
+  const paging = useServerPage(filterKey);
+
   const query = useApiQuery(
-    (signal) => driverLogbooksApi.search({ siteCode, status: status || undefined }, signal),
-    [siteCode, status],
+    (signal) =>
+      driverLogbooksApi.search(
+        {
+          siteCode,
+          status: status || undefined,
+          useClassification: useClass || undefined,
+          driverId: driverId || undefined,
+          vehicleId: vehicleId || undefined,
+          journeyFrom: journeyFrom || undefined,
+          journeyTo: journeyTo || undefined,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
+      ),
+    [filterKey, paging.page, paging.size],
   );
 
-  const filtered = useMemo(() => {
-    let rows = query.data ?? [];
-    if (useClass) {
-      rows = rows.filter((row) => row.useClassification === useClass);
-    }
-    if (search.trim()) {
-      const needle = search.trim().toLowerCase();
-      rows = rows.filter(
-        (row) =>
-          row.logbookNumber.toLowerCase().includes(needle) ||
-          row.origin.toLowerCase().includes(needle) ||
-          row.destination.toLowerCase().includes(needle) ||
-          row.purpose.toLowerCase().includes(needle),
-      );
-    }
-    return rows;
-  }, [query.data, useClass, search]);
-
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${status}|${useClass}|${search}`,
-    query.data?.length,
-  );
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
   const columns = useMemo<Column<DriverLogbook>[]>(
     () => [
@@ -132,7 +131,9 @@ const DriverLogbooksPage = () => {
     [],
   );
 
-  const filtersApplied = Boolean(status || useClass || search);
+  const filtersApplied = Boolean(
+    status || useClass || driverId || vehicleId || journeyFrom || journeyTo,
+  );
 
   return (
     <div>
@@ -152,7 +153,10 @@ const DriverLogbooksPage = () => {
           onReset={() => {
             setStatus('');
             setUseClass('');
-            setSearch('');
+            setDriverId('');
+            setVehicleId('');
+            setJourneyFrom('');
+            setJourneyTo('');
           }}
           resetDisabled={!filtersApplied}
         >
@@ -170,15 +174,25 @@ const DriverLogbooksPage = () => {
             options={LOGBOOK_USE_CLASSIFICATIONS}
             onChange={(value) => setUseClass(value)}
             allowEmpty
-            helperText="Filters the loaded records."
           />
-          <TextInput
-            label="Search"
-            value={search}
-            onChange={setSearch}
-            placeholder="Number, route or purpose"
-            helperText="Filters the loaded records."
+          <DriverSelect
+            siteCode={siteCode}
+            value={driverId}
+            onChange={setDriverId}
+            allowEmpty
+            emptyLabel="Any driver"
+            helperText=" "
           />
+          <VehicleSelect
+            siteCode={siteCode}
+            value={vehicleId}
+            onChange={setVehicleId}
+            allowEmpty
+            emptyLabel="Any vehicle"
+            helperText=" "
+          />
+          <DateField label="Journey from" value={journeyFrom} onChange={setJourneyFrom} />
+          <DateField label="Journey to" value={journeyTo} onChange={setJourneyTo} />
         </FilterBar>
       </SectionCard>
 
@@ -191,28 +205,21 @@ const DriverLogbooksPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(fuelPaths.logbookDetail(row.id))}
               caption="Driver logbooks matching the current filters, with journey date, distance, use classification, submission time and status."
               emptyMessage="No logbook matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={query.data?.length ?? 0}
-          requestedSize={DEFAULT_WINDOW}
-          noun="logbooks"
-        />
       </div>
 
       {creating && (

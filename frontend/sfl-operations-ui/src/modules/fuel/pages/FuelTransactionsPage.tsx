@@ -2,14 +2,10 @@ import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router';
 import { FuelTransaction } from 'modules/fuel/api/dto';
 import { FUEL_TRANSACTION_STATUSES, FuelTransactionStatus } from 'modules/fuel/api/enums';
-import { DEFAULT_WINDOW, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
+import { fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import { CaptureTransactionDialog } from 'modules/fuel/dialogs/transactionDialogs';
-import {
-  DriverSelect,
-  VehicleSelect,
-} from 'modules/fuel/components/FleetReferenceSelect';
-import WindowNotice from 'modules/fuel/components/WindowNotice';
-import { useClientWindow } from 'modules/fuel/components/useClientWindow';
+import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { formatMoney, formatQuantity, shortId } from 'modules/fuel/components/fuelFormat';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
@@ -26,24 +22,18 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
 
-/**
- * Manual capture, CSV import and provider ingest all write `sourceSystem`; `MANUAL` is the only one
- * the console produces, so "manual" versus "everything else" is the distinction an operator draws.
- */
+/** `sourceSystem` is an exact match on the wire; these are the values this deployment writes. */
 const SOURCE_FILTERS = [
   { value: 'MANUAL', label: 'Manual capture' },
-  { value: 'NOT_MANUAL', label: 'Imported or provider' },
+  { value: 'CSV-IMPORT', label: 'CSV import' },
 ];
 
 /**
  * The fuel transaction register.
  *
- * Site, status, vehicle, driver and the date range all go to the service — they are the five filters
- * `GET /transactions` accepts. Source and vendor are filtered here over the returned window, and are
- * labelled as such, because the endpoint has no parameter for either.
- *
- * There is no pagination on the fuel side (gap 4), so the footer counts the window the service
- * returned and `WindowNotice` says plainly when that window came back full.
+ * Every filter here goes to the service, and the table is server-paged with a real total. Source
+ * and vendor used to be applied in the browser over a capped window — so "manual captures at this
+ * site" really meant "manual captures among the first two hundred" — and are now query parameters.
  */
 const FuelTransactionsPage = () => {
   const navigate = useNavigate();
@@ -65,27 +55,8 @@ const FuelTransactionsPage = () => {
   const [capturing, setCapturing] = useState(false);
   const [exporting, setExporting] = useState(false);
 
-  /**
-   * The service's own report, not the filtered table.
-   *
-   * `GET /reports/transactions.csv` takes a site and nothing else, and caps at 500 rows — so the
-   * download is deliberately described as the site's report rather than "these results", which it
-   * is not.
-   */
-  const exportReport = async () => {
-    setExporting(true);
-    try {
-      const fileName = await fuelTransactionsApi.downloadReport(siteCode);
-      notifySuccess(
-        `Downloaded ${fileName}.`,
-        'The service exports the site’s most recent 500 transactions, not the filtered view.',
-      );
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setExporting(false);
-    }
-  };
+  const filterKey = `${siteCode}|${status}|${vehicleId}|${driverId}|${from}|${to}|${source}|${vendor}`;
+  const paging = useServerPage(filterKey);
 
   const query = useApiQuery(
     (signal) =>
@@ -95,33 +66,40 @@ const FuelTransactionsPage = () => {
           status: status || undefined,
           vehicleId: vehicleId || undefined,
           driverId: driverId || undefined,
+          sourceSystem: source || undefined,
+          vendorReference: vendor.trim() || undefined,
           from: from ? new Date(from).toISOString() : undefined,
           to: to ? new Date(to).toISOString() : undefined,
+          page: paging.page,
+          size: paging.size,
         },
         signal,
       ),
-    [siteCode, status, vehicleId, driverId, from, to],
+    [filterKey, paging.page, paging.size],
   );
 
-  const filtered = useMemo(() => {
-    let rows = query.data ?? [];
-    if (source === 'MANUAL') {
-      rows = rows.filter((row) => row.sourceSystem.toUpperCase() === 'MANUAL');
-    } else if (source === 'NOT_MANUAL') {
-      rows = rows.filter((row) => row.sourceSystem.toUpperCase() !== 'MANUAL');
-    }
-    if (vendor.trim()) {
-      const needle = vendor.trim().toLowerCase();
-      rows = rows.filter((row) => row.vendorReference.toLowerCase().includes(needle));
-    }
-    return rows;
-  }, [query.data, source, vendor]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
 
-  const windowed = useClientWindow(
-    filtered,
-    `${siteCode}|${status}|${vehicleId}|${driverId}|${from}|${to}|${source}|${vendor}`,
-    query.data?.length,
-  );
+  /**
+   * The service's own report, not the filtered table.
+   *
+   * `GET /reports/transactions.csv` takes a site and nothing else, so the download is described as
+   * the site's report rather than "these results", which it is not.
+   */
+  const exportReport = async () => {
+    setExporting(true);
+    try {
+      const fileName = await fuelTransactionsApi.downloadReport(siteCode);
+      notifySuccess(
+        `Downloaded ${fileName}.`,
+        'The service exports the site’s most recent transactions, not the filtered view.',
+      );
+    } catch (error) {
+      notifyError(error);
+    } finally {
+      setExporting(false);
+    }
+  };
 
   const columns = useMemo<Column<FuelTransaction>[]>(
     () => [
@@ -268,14 +246,12 @@ const FuelTransactionsPage = () => {
             options={SOURCE_FILTERS}
             allowEmpty
             emptyLabel="Any source"
-            helperText="Filters the loaded records."
           />
           <TextInput
             label="Vendor"
             value={vendor}
             onChange={setVendor}
             placeholder="Part of the vendor name"
-            helperText="Filters the loaded records."
           />
         </FilterBar>
       </SectionCard>
@@ -289,28 +265,21 @@ const FuelTransactionsPage = () => {
             minHeight={300}
           >
             <DataTable
-              rows={windowed.rows}
+              rows={query.data?.content ?? []}
               columns={columns}
               getRowId={(row) => row.id}
               loading={query.loading}
               onRowClick={(row) => navigate(fuelPaths.transactionDetail(row.id))}
               caption="Fuel transactions matching the current filters, with quantity, cost, odometer reading, source, receipt standing and status."
               emptyMessage="No transaction matches these filters."
-              page={windowed.page}
-              pageSize={windowed.pageSize}
-              totalElements={windowed.total}
-              onPageChange={windowed.setPage}
-              onPageSizeChange={windowed.setPageSize}
+              page={query.data?.page ?? paging.page}
+              pageSize={query.data?.size ?? paging.size}
+              totalElements={query.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           </DataState>
         </SectionCard>
-
-        <WindowNotice
-          truncated={windowed.truncated}
-          total={query.data?.length ?? 0}
-          requestedSize={DEFAULT_WINDOW}
-          noun="transactions"
-        />
       </div>
 
       {capturing && (

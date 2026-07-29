@@ -52,7 +52,22 @@ public enum FleetErrorCode {
     FLEET_INTEGRATION_SOURCE_NOT_ALLOWED("Integration message rejected: source system is not allowlisted.", false),
     FLEET_INTEGRATION_NOT_CONFIGURED("The required integration is not configured for this environment.", false),
     FLEET_IDEMPOTENCY_KEY_REQUIRED("An Idempotency-Key header is required for this request.", false),
-    FLEET_IDEMPOTENCY_KEY_CONFLICT("This Idempotency-Key was already used with a different request payload.", false);
+    FLEET_IDEMPOTENCY_KEY_CONFLICT("This Idempotency-Key was already used with a different request payload.", false),
+
+    // --- S168 fuel -------------------------------------------------------------------------
+    /**
+     * The {@code FuelPolicy} invariant "no overlapping active policy for the same scope", which the
+     * domain model documented but nothing enforced. Two active policies covering one instant make
+     * the rule set a transaction is judged against depend on which row the query happens to return.
+     */
+    FUEL_POLICY_PERIOD_OVERLAP(
+            "An active fuel policy already covers part of this period for this site.", false),
+    /**
+     * The same file content re-imported for one site and source system. The unique constraint on the
+     * batch file hash caught this already; without a mapped code it surfaced as an unhandled 500.
+     */
+    FUEL_IMPORT_ALREADY_PROCESSED(
+            "This file has already been imported for this site and source system.", false);
 
     private final String message;
     private final boolean srsDefined;

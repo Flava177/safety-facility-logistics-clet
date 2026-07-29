@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import { IntegrationMessageSummary, OutboxEntry } from 'modules/fuel/api/dto';
-import { fuelIntegrationsApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
+import { MAX_PAGE_SIZE, fuelIntegrationsApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import { DerivedNote } from 'modules/fuel/components/Provenance';
 import { shortId } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
@@ -53,7 +53,7 @@ const FuelIntegrationPage = () => {
   const outbox = useApiQuery((signal) => fuelIntegrationsApi.outboxHealth(signal), []);
 
   const transactions = useApiQuery(
-    (signal) => fuelTransactionsApi.search({ siteCode }, signal),
+    (signal) => fuelTransactionsApi.search({ siteCode, size: MAX_PAGE_SIZE }, signal),
     [siteCode],
   );
 
@@ -63,7 +63,7 @@ const FuelIntegrationPage = () => {
       string,
       { source: string; count: number; latest: string; withReference: number }
     >();
-    (transactions.data ?? []).forEach((transaction) => {
+    (transactions.data?.content ?? []).forEach((transaction) => {
       const key = transaction.sourceSystem;
       const entry = grouped.get(key) ?? {
         source: key,
@@ -378,7 +378,7 @@ const FuelIntegrationPage = () => {
           </DataState>
           <div className="px-5 pt-2 pb-4">
             <DerivedNote>
-              Grouped by source system from the {transactions.data?.length ?? 0} transactions this
+              Grouped by source system from the {transactions.data?.content.length ?? 0} transactions this
               console fetched for {siteCode}. The service exposes no per-provider ingest endpoint, so
               a provider that has never sent anything does not appear here at all.
             </DerivedNote>

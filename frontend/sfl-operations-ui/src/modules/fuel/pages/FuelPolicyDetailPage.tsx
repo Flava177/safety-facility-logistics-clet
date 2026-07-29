@@ -1,9 +1,7 @@
-import { useMemo, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { FuelPolicy } from 'modules/fuel/api/dto';
 import { fuelPoliciesApi } from 'modules/fuel/api/fuelApi';
-import { overlappingActivePolicies } from 'modules/fuel/dialogs/policyDialogs';
-import RecordProvenance, { DerivedNote } from 'modules/fuel/components/Provenance';
+import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -12,9 +10,8 @@ import DataState from 'shared/components/DataState';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
-import SiteSelect, { defaultSite, sflSites } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
+import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
 
@@ -26,51 +23,26 @@ const inForce = (policy: FuelPolicy, at = Date.now()): boolean =>
 /**
  * A fuel policy in full.
  *
- * There is no `GET /policies/{id}` (gap 3), so the policy is selected out of the site's list. That
- * costs nothing in completeness — the list returns whole `FuelPolicy` records — but it does mean the
- * page has to know which site to ask. It opens on the actor's default site and, if the policy is not
- * there, tries the actor's other sites before giving up; a site picker is offered either way so a
- * deep link into a policy at a second site is recoverable rather than a dead end.
+ * Read by id. That was not possible when this screen was first built — there was no
+ * `GET /policies/{id}`, so the page walked the actor's sites listing policies until it found one,
+ * and a deep link into a policy at a site the picker had not selected was a dead end. A policy
+ * outside the actor's scope now answers with the service's own not-found or authorisation error.
  */
 const FuelPolicyDetailPage = () => {
   const { policyId = '' } = useParams();
   const navigate = useNavigate();
-  const [siteCode, setSiteCode] = useState(defaultSite);
 
-  /**
-   * Searches the actor's sites for the policy, starting with the selected one.
-   *
-   * Sequential rather than parallel: the first site nearly always holds it, and firing a request at
-   * every site the actor can read to find one record is a lot of load for a rare case.
-   */
   const lookup = useApiQuery(
-    async (signal) => {
-      const ordered = [siteCode, ...sflSites.filter((site) => site !== siteCode)];
-      for (const site of ordered) {
-        const policies = await fuelPoliciesApi.list(site, signal);
-        const match = policies.find((policy) => policy.id === policyId);
-        if (match) {
-          return { policy: match, siblings: policies, site };
-        }
-      }
-      return { policy: undefined, siblings: [], site: siteCode };
-    },
-    [policyId, siteCode],
+    (signal) => fuelPoliciesApi.findById(policyId, signal),
+    [policyId],
   );
 
-  const policy = lookup.data?.policy;
+  const history = useApiQuery(
+    (signal) => fuelPoliciesApi.history(policyId, signal),
+    [policyId],
+  );
 
-  const overlaps = useMemo(() => {
-    if (!policy || policy.status !== 'ACTIVE') {
-      return [];
-    }
-    return overlappingActivePolicies(
-      (lookup.data?.siblings ?? []).filter((other) => other.id !== policy.id),
-      policy.siteCode.value,
-      policy.effectiveFrom,
-      policy.effectiveTo,
-    );
-  }, [policy, lookup.data]);
+  const policy = lookup.data;
 
   return (
     <div>
@@ -111,43 +83,8 @@ const FuelPolicyDetailPage = () => {
         onRetry={lookup.refetch}
         minHeight={300}
       >
-        {!policy ? (
+        {policy && (
           <div className="space-y-5">
-            <Alert variant="warning" title="This policy was not found in your site scope">
-              Policies are read through the site register — the service has no per-policy endpoint —
-              so it can only be found at a site you can read. Choose a different site if you expect
-              it elsewhere.
-            </Alert>
-            <SectionCard title="Look at another site">
-              <div className="max-w-xs">
-                <SiteSelect value={siteCode} onChange={setSiteCode} required />
-              </div>
-            </SectionCard>
-          </div>
-        ) : (
-          <div className="space-y-5">
-            {overlaps.length > 0 && (
-              <Alert
-                variant="warning"
-                title={`Overlaps ${overlaps.length} other active ${overlaps.length === 1 ? 'policy' : 'policies'}`}
-              >
-                <ul className="mt-1 list-disc space-y-1 pl-4">
-                  {overlaps.map((other) => (
-                    <li key={other.id}>
-                      {other.name} (version {other.policyVersion}) · from{' '}
-                      {formatDate(other.effectiveFrom)}
-                      {other.effectiveTo ? ` to ${formatDate(other.effectiveTo)}` : ' with no end date'}
-                    </li>
-                  ))}
-                </ul>
-                <DerivedNote>
-                  A check this console makes over the site’s policies. The service does not enforce
-                  non-overlap, so which policy a transaction is judged against is not reproducible
-                  while this stands.
-                </DerivedNote>
-              </Alert>
-            )}
-
             <div className="grid gap-5 xl:grid-cols-[1.4fr_1fr]">
               <div className="space-y-5">
                 <SectionCard title="Effective period" subtitle="What reconciliation resolves against">
@@ -222,11 +159,11 @@ const FuelPolicyDetailPage = () => {
                       { label: 'Anomaly SLA', value: `${policy.anomalySlaHours} hours` },
                     ]}
                   />
-                  <DerivedNote>
+                  <p className="mt-3 text-theme-xs text-gray-600">
                     The consumption rule only runs when both bounds are set and a previous
                     transaction exists for the vehicle. The daily and monthly limits are stored but
                     the current reconciliation routine does not read them.
-                  </DerivedNote>
+                  </p>
                 </SectionCard>
 
                 <SectionCard title="Allowed products and vendors">
@@ -289,15 +226,23 @@ const FuelPolicyDetailPage = () => {
                   </p>
                 </SectionCard>
 
-                <SectionCard title="History">
-                  <RecordProvenance metadata={policy.metadata} recordNoun="policy" />
+                <SectionCard title="History" subtitle="Recorded changes, from the audit log">
+                  <DataState
+                    loading={history.initialising}
+                    error={history.error}
+                    onRetry={history.refetch}
+                    minHeight={140}
+                  >
+                    <HistoryTimeline events={history.data} recordNoun="policy" />
+                  </DataState>
                 </SectionCard>
 
                 <SectionCard title="Editing">
                   <Alert variant="info" title="Policies are not editable">
                     The service exposes create and read only — there is no update or archive
-                    endpoint. Superseding a policy means creating a new version and, if the old one
-                    should stop applying, giving it an end date, which is itself not possible today.
+                    endpoint. Superseding a policy means creating one whose period begins where this
+                    one ends; an overlapping period is refused, so an open-ended policy has to be
+                    given an end date before a successor can be created, which is not possible today.
                   </Alert>
                 </SectionCard>
               </div>

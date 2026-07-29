@@ -85,8 +85,21 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("70"),"LITRE",new BigDecimal("10"),new BigDecimal("700"),"GHS","1234567890",reading,UUID.randomUUID(),null,"tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 
+    /** The first page at the size these scenarios need; every fuel collection is paged. */
+    private static FuelRepository.Paging firstPage() {
+        return new FuelRepository.Paging(0, 100, null);
+    }
+
+    private List<FuelAnomalyCase> anomalies(Fixture f) {
+        return fuel.anomalies(f.site(),null,null,null,null,null,null,null,null,null,firstPage(),f.manager()).content();
+    }
+
+    private List<FuelTransaction> transactions(Fixture f) {
+        return fuel.transactions(f.site(),null,null,null,null,null,null,null,firstPage(),f.manager()).content();
+    }
+
     private FuelAnomalyCase anomalyOfType(Fixture f, FuelAnomalyCase.Type type) {
-        return fuel.anomalies(f.site(),null,100,f.manager()).stream().filter(a -> a.type()==type).findFirst().orElseThrow();
+        return anomalies(f).stream().filter(a -> a.type()==type).findFirst().orElseThrow();
     }
 
     // 1
@@ -103,10 +116,10 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         // Identical command (same idempotency key AND same payload fingerprint) — a re-delivered provider transaction.
         var command = new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-DUP","MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,UUID.randomUUID(),"official trip","tx-dup-"+f.site(),f.manager(),SourceChannel.WEB);
         var first = fuel.capture(command);
-        int sizeAfterFirst = fuel.transactions(f.site(),null,null,null,null,null,100,f.manager()).size();
+        int sizeAfterFirst = transactions(f).size();
         var second = fuel.capture(command);
         assertThat(second.id()).isEqualTo(first.id());
-        assertThat(fuel.transactions(f.site(),null,null,null,null,null,100,f.manager())).hasSize(sizeAfterFirst);
+        assertThat(transactions(f)).hasSize(sizeAfterFirst);
     }
 
     // 3
@@ -114,7 +127,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         Fixture f = newFixture();
         var tx = captureExcessive(f,"PROVIDER-LIMIT",1100);
         assertThat(fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB).status()).isEqualTo(FuelTransaction.Status.EXCEPTION);
-        assertThat(fuel.anomalies(f.site(),null,100,f.manager())).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.LIMIT_EXCEEDED);
+        assertThat(anomalies(f)).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.LIMIT_EXCEEDED);
     }
 
     // 4
@@ -125,7 +138,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var tx = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-MR","MANUAL",f.vehicle().id(),f.driver().id(),null,afterGrace,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,null,"no receipt","tx-mr-"+f.site(),f.manager(),SourceChannel.WEB));
         var reconciled = fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB);
         assertThat(reconciled.status()).isEqualTo(FuelTransaction.Status.EXCEPTION);
-        assertThat(fuel.anomalies(f.site(),null,100,f.manager())).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.MISSING_RECEIPT);
+        assertThat(anomalies(f)).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.MISSING_RECEIPT);
     }
 
     // 5
@@ -134,7 +147,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         // Vehicle keeps its registered odometer of 1000; the capture reads 900 (a regression).
         var tx = captureValid(f,"PROVIDER-REG",900,Instant.now());
         assertThat(fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB).status()).isEqualTo(FuelTransaction.Status.EXCEPTION);
-        assertThat(fuel.anomalies(f.site(),null,100,f.manager())).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.ODOMETER_REGRESSION);
+        assertThat(anomalies(f)).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.ODOMETER_REGRESSION);
         assertThat(vehicles.findById(f.vehicle().id()).orElseThrow().odometer().value()).isEqualTo(1000);
     }
 
@@ -211,7 +224,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         assertThat(escalated.status()).isEqualTo(FuelAnomalyCase.Status.ESCALATED);
         assertThat(escalated.escalationLevel()).isEqualTo(1);
         // Proxy for the overdue-selection query FuelSweepScheduler runs: the case is returned when its SLA due-time falls before the cutoff.
-        assertThat(repository.findAnomalies(List.of(f.site()),null,Instant.now().plusSeconds(3600*48),100)).extracting(FuelAnomalyCase::id).contains(anomaly.id());
+        assertThat(repository.findAnomalies(new FuelRepository.AnomalyQuery(List.of(f.site()),null,null,null,null,null,null,null,Instant.now().plusSeconds(3600*48),null,null,null,firstPage())).content()).extracting(FuelAnomalyCase::id).contains(anomaly.id());
     }
 
     // 12
@@ -221,7 +234,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         fuel.reconcile(txA.id(),f.manager(),SourceChannel.WEB);
         var txB = captureExcessive(f,"PROVIDER-CLOSE-B",1150);
         fuel.reconcile(txB.id(),f.manager(),SourceChannel.WEB);
-        var open = fuel.anomalies(f.site(),null,100,f.manager()).stream().filter(a -> a.type()==FuelAnomalyCase.Type.LIMIT_EXCEEDED).toList();
+        var open = anomalies(f).stream().filter(a -> a.type()==FuelAnomalyCase.Type.LIMIT_EXCEEDED).toList();
         assertThat(open).hasSizeGreaterThanOrEqualTo(2);
         UUID negativeId = open.get(0).id();
         UUID happyId = open.get(1).id();
