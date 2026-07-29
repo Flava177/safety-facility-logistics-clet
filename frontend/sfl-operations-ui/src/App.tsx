@@ -1,9 +1,10 @@
 import { Suspense, lazy } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
 import { Spinner } from 'shared/components/DataState';
 import { NotifierProvider } from 'shared/components/Notifier';
 import AppShell from 'shared/layout/AppShell';
-import { fleetPaths } from 'shared/layout/navigation';
+import RequireProgramme, { NoProgrammePage } from 'shared/layout/RequireProgramme';
+import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
 
@@ -82,15 +83,36 @@ const PageFallback = () => (
   </div>
 );
 
-const App = () => (
+/**
+ * A programme's routes, refused when the actor is not entitled to it.
+ *
+ * The wrapper sits on the parent route so every child inherits it — there is no way to add a screen
+ * under `fleet` or `emergency` and forget the check. It is a usability control, not the enforcement
+ * point: the services authorise every call regardless. See `RequireProgramme` and ADR 0005.
+ */
+const ProgrammeRoutes = ({ programme }: { programme: 'IFIMP' | 'SSEMP' | 'FTLMP' | 'AVAMP' }) => (
+  <RequireProgramme programme={programme}>
+    <Outlet />
+  </RequireProgramme>
+);
+
+const App = () => {
+  // Where this actor lands, which is their first entitled destination rather than the fleet
+  // dashboard — that is only the right answer for a fleet user.
+  const home = landingPath();
+
+  return (
   <BrowserRouter basename={basename}>
     <ScrollToTop />
     <NotifierProvider>
       <Suspense fallback={<PageFallback />}>
         <Routes>
           <Route element={<AppShell />}>
-            <Route index element={<Navigate to={fleetPaths.dashboard} replace />} />
-            <Route path="fleet">
+            <Route
+              index
+              element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
+            />
+            <Route path="fleet" element={<ProgrammeRoutes programme="FTLMP" />}>
               <Route index element={<FleetDashboardPage />} />
               <Route path="vehicles">
                 <Route index element={<VehicleRegisterPage />} />
@@ -112,7 +134,7 @@ const App = () => (
               <Route path="governance" element={<GovernancePage />} />
               <Route path="integrations" element={<IntegrationHealthPage />} />
             </Route>
-            <Route path="fuel">
+            <Route path="fuel" element={<ProgrammeRoutes programme="FTLMP" />}>
               <Route index element={<FuelDashboardPage />} />
               <Route path="transactions">
                 <Route index element={<FuelTransactionsPage />} />
@@ -134,7 +156,7 @@ const App = () => (
               </Route>
               <Route path="integrations" element={<FuelIntegrationPage />} />
             </Route>
-            <Route path="dispatch">
+            <Route path="dispatch" element={<ProgrammeRoutes programme="FTLMP" />}>
               <Route index element={<DispatchDashboardPage />} />
               <Route path="items">
                 <Route index element={<CourierItemsPage />} />
@@ -152,7 +174,7 @@ const App = () => (
               <Route path="scans" element={<ScanImportsPage />} />
               <Route path="integrations" element={<DispatchIntegrationPage />} />
             </Route>
-            <Route path="emergency">
+            <Route path="emergency" element={<ProgrammeRoutes programme="SSEMP" />}>
               <Route index element={<EmergencyDashboardPage />} />
               <Route path="activations">
                 <Route index element={<ActivationsPage />} />
@@ -173,6 +195,7 @@ const App = () => (
       </Suspense>
     </NotifierProvider>
   </BrowserRouter>
-);
+  );
+};
 
 export default App;

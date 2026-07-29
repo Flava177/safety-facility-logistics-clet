@@ -1,6 +1,6 @@
 # ADR 0005 — Programme-scoped portals and navigation entitlement
 
-- Status: Accepted (principle) / Open (mechanism — see "What is not yet decided")
+- Status: Accepted — principle and mechanism (a). Mechanism (b) deferred, see below.
 - Date: 2026-07-29
 - Deciders: SFL platform / F&L directorate
 - Relates: [0004 S174 as a separate deployable](0004-s174-emergency-notification-as-separate-service.md);
@@ -50,50 +50,72 @@ they will be refused if they click it.
    only thing standing between a user and data they are not entitled to — the **service** authorises
    every call, and the nav merely stops offering work that will be refused.
 
-## Current state — and the one thing that does not yet conform
+## Mechanism — decided
 
-`frontend/sfl-operations-ui` is, today, **the FTLMP portal**. It is served by
-`sfl-fleet-logistics-service` from `/ui/`, its `directorate.module` says "Fleet & Logistics", and three
-of its four navigation groups are FTLMP systems: fleet, fuel, dispatch.
+**(a) One bundle, entitlement-filtered navigation.** Implemented.
+
+- `shared/layout/programmeModel.ts` holds the role → programme mapping and the derivation. It imports
+  **nothing** — no config, no `import.meta.env`, no React — which is what lets "who sees what" be
+  exercised directly rather than only through a running application. 25 cases are checked against it,
+  including every persona the rule exists for, both fake roles that were in `.env`, and the shipped
+  default list.
+- `shared/layout/programmes.ts` is the thin part: read the actor's roles, apply an optional
+  `VITE_SFL_PROGRAMMES` override, expose `entitledTo` and `portalLabel`.
+- `NavSection` gains `programme`. The sidebar renders only entitled sections; `RequireProgramme`
+  refuses the routes of an unentitled programme, so a bookmark or a typed address is answered properly
+  instead of producing a screen full of `403`s.
+- The landing route is the actor's **first entitled destination**, not the fleet dashboard — which was
+  only ever the right answer for a fleet user.
+
+**Entitlement is derived from roles, not from a separate list**, because that is what IAM will do: a
+role already implies a programme, and a second list would drift out of step with the first. When IAM
+lands, `programmesFor(roles)` is replaced by a claim and nothing else changes.
+
+**(b) A bundle per programme** stays deferred. It is the better long-term answer for blast radius, but
+it strands a single-module SSEMP portal until the other six SSEMP systems have screens — and (a) does
+not block it: a section that already declares its programme can be split out unchanged.
+
+## Current state — and the one thing that no longer leaks
+
+`frontend/sfl-operations-ui` is served by `sfl-fleet-logistics-service` from `/ui/`, and three of its
+four navigation groups are FTLMP systems: fleet, fuel, dispatch. It had a fixed `directorate.module`
+label reading "Fleet & Logistics", which was only ever true for a fleet user; that constant is gone and
+the shell now names whichever programme the actor is actually looking at.
 
 **The fourth group, "Emergency notifications", is SSEMP.** It was built into this bundle because that is
 where the shared component kit, design system and API client live, and building a second application for
 one module would have forked the design system — the one thing the module playbook forbids. The module
 itself is correct: it addresses `sfl-emergency-notification-service` on its own port through the
 client's `service: 'emergency'` routing, holds no fleet data and shares no schema. **Only its placement
-in the sidebar crosses a programme boundary**, and today every user of that bundle sees it.
+was the problem**, and it is now declared `programme: 'SSEMP'` and filtered accordingly: a fleet
+operator no longer sees it, and `/emergency` answers with an explanation rather than the screen.
 
-That is the exact leak this ADR exists to prevent, and it is recorded here rather than quietly left,
-because it will look deliberate to whoever reads the navigation file next.
+The bundle therefore still *contains* four modules while showing a single-programme user only their
+own. That is the intended end state of mechanism (a), and it is why (b) can wait.
 
-## What is not yet decided
+## What is still open
 
-**The mechanism**, because it depends on work that has not been done: **IAM is not integrated.** There is
-no centralised auth and no Zitadel wiring yet. Roles reach the services through `X-SFL-*` development
-headers, and the dashboards read the same values from `VITE_SFL_ROLES` — so there is currently no
-authenticated identity for a portal to scope itself against.
-
-Two candidate mechanisms, to be chosen when IAM lands:
-
-- **(a) One bundle, entitlement-filtered navigation.** Each nav section declares its programme; the shell
-  renders only the sections the actor is entitled to. Cheap, reversible, and it is what IAM claims will
-  drive anyway. Keeps one component kit and one design system.
-- **(b) A bundle per programme.** The shared kit stays shared; each programme's service serves its own
-  build. Correct long-term and better for blast radius, but it strands a single-module SSEMP portal until
-  the other six SSEMP systems have screens.
-
-**Neither is blocked on the other.** (a) is the near-term step and is compatible with (b) later: a
-section that already declares its programme is a section that can be split out unchanged.
+**IAM.** There is no centralised auth and no Zitadel wiring. Roles reach the services through `X-SFL-*`
+development headers and the dashboards read the same values from `VITE_SFL_ROLES`, so entitlement today
+is derived from a header the client sets for itself. That is acceptable for what this is — see the
+consequence below — and it is the one piece that must change before any of this means anything about
+identity.
 
 ## Consequences
 
-- `navigation.ts` gains a programme on every section, whichever mechanism is chosen. Doing that early
-  costs one field and makes both paths open.
-- The `directorate.module` label becomes per-programme rather than fixed to "Fleet & Logistics".
-- Until IAM is integrated, any filtering is driven by development role headers and is therefore a
-  **usability** control, not a security control. The services already authorise every call
-  independently — S174 refuses an unentitled actor with `EMERGENCY_UNAUTHORIZED_SCOPE` whether or not
-  the nav entry was shown — and that must stay true. **Navigation entitlement must never be relied on
-  as the enforcement point.**
+- Every `NavSection` carries a programme. One field, and it is the same field mechanism (b) would need,
+  so choosing (a) now closes nothing off.
+- `directorate.module` is removed. The portal names itself from entitlement via `portalLabel()`,
+  because a fixed label was a claim about the reader that the application had no basis for.
+- Filtering is driven by development role headers and is therefore a **usability** control, not a
+  security control — and it would remain one even with IAM, because a hidden link protects nothing.
+  The services already authorise every call independently: S174 refuses an unentitled actor with
+  `EMERGENCY_UNAUTHORIZED_SCOPE` whether or not the nav entry was shown. **Navigation entitlement must
+  never be relied on as the enforcement point.** `RequireProgramme` says so in its own docblock, where
+  somebody will be reading it at the moment they are tempted to.
+- Two role names in the shipped configuration were **not real** `SflRole` constants —
+  `FLEET_DISPATCHER` and `FLEET_AUDITOR`. Every service silently dropped them, so they had been
+  granting nothing. Replaced with `DISPATCH_CONTROLLER` and `FLEET_REPORTING_VIEWER`. Worth knowing
+  that an unrecognised role fails quietly, in the services and here alike.
 - When IAM lands, programme entitlement should come from the token, alongside the site scopes the
   services already read from `site_scopes`.

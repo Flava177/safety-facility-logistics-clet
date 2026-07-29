@@ -425,18 +425,22 @@ exception is what makes the rule worth having.
 - **Deployment topology must not be inferable from a sidebar.** Three systems in one service appear as
   three systems; two services in one programme appear as one programme.
 
-**Where the current build does not conform.** The emergency module's nav group sits in the FTLMP portal,
-so every user of this bundle sees it. That was the right call for the code — a second application for one
-module would have forked the design system, which §4 forbids — and it is the wrong place for the *nav
-entry*. It is recorded in ADR 0005 rather than left to be discovered, and the fix waits on IAM.
+**How it works.** `shared/layout/programmeModel.ts` maps role → programme and imports nothing, so the
+decision can be checked directly. `programmes.ts` reads the actor's roles and exposes `entitledTo`.
+Every `NavSection` declares a `programme`; the sidebar renders only entitled sections,
+`RequireProgramme` refuses the routes of an unentitled one, and the landing route is the actor's
+**first entitled destination** rather than the fleet dashboard.
 
-**IAM is not integrated.** No centralised auth, no Zitadel. Roles reach the services through `X-SFL-*`
-headers and this bundle reads them from `VITE_SFL_ROLES`, so there is no authenticated identity to scope
-a portal against yet. Anything built before then is a **usability** control, not a security control —
-every service authorises every call independently, and a screen must never be the only thing standing
-between a user and data they are not entitled to. Build as though the nav filter does not exist and the
-service is the enforcement point, because that is the truth.
+Entitlement is **derived from roles**, not from a second list, because that is what IAM will do — a
+role already implies a programme. Drop `EMERGENCY_COORDINATOR` and `COMMAND_ROLE` from
+`VITE_SFL_ROLES` and the emergency section disappears; that is the fleet-operator view.
 
-**What to do when you add the next module.** Name its programme in `navigation.ts` alongside its heading.
-One field, whichever way the portal question is later settled — a section that already declares its
-programme is a section that can be filtered in place or split into its own bundle unchanged.
+**IAM is not integrated.** No centralised auth, no Zitadel. Roles arrive in `X-SFL-*` headers the
+client sets for itself, so this is a **usability** control and not a security control — and it would
+stay one even with IAM, because a hidden link protects nothing. Every service authorises every call
+independently. **Build as though the nav filter does not exist and the service is the enforcement
+point, because that is the truth.**
+
+**What to do when you add the next module.** Declare its programme on the section, and wrap its route
+subtree in `RequireProgramme`. Two lines, and they are the same two lines whether the portal is later
+split per programme or left as one bundle.
