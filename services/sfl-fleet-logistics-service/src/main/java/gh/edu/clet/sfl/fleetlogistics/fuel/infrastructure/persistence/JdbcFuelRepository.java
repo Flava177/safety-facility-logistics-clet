@@ -358,13 +358,22 @@ public class JdbcFuelRepository implements FuelRepository {
      * that sums whatever a capped list returned reports the truth about its own window, not about
      * the site, and the difference only shows up once there is enough data for it to matter.
      */
-    @Override public FuelPage<FuelImportRow> findImportRows(UUID batchId,Paging paging){
+    @Override public FuelPage<FuelImportRow> findImportRows(UUID batchId,FuelImportRow.Status status,Paging paging){
         Order order=order(paging.sort(),IMPORT_ROW_SORTS,"rowNumber",false);
-        Long total=jdbc.queryForObject("SELECT COUNT(*) FROM fleet_logistics.fuel_import_rows WHERE batch_id=?",Long.class,batchId);
+        // The same predicate for the count and the page, so the total describes what is being paged.
+        String where="WHERE batch_id=?"+(status==null?"":" AND status=?");
+        List<Object> args=new ArrayList<>();
+        args.add(batchId);
+        if(status!=null)args.add(status.name());
+        Long total=jdbc.queryForObject("SELECT COUNT(*) FROM fleet_logistics.fuel_import_rows "+where,Long.class,
+                args.toArray());
         long totalElements=total==null?0L:total;
         if(totalElements==0L)return FuelPage.empty(paging.page(),paging.size(),order.describedAs());
-        List<FuelImportRow> content=jdbc.query("SELECT * FROM fleet_logistics.fuel_import_rows WHERE batch_id=? ORDER BY "
-                +order.sql()+" LIMIT ? OFFSET ?",this::importRow,batchId,paging.size(),paging.offset());
+        List<Object> pageArgs=new ArrayList<>(args);
+        pageArgs.add(paging.size());
+        pageArgs.add(paging.offset());
+        List<FuelImportRow> content=jdbc.query("SELECT * FROM fleet_logistics.fuel_import_rows "+where+" ORDER BY "
+                +order.sql()+" LIMIT ? OFFSET ?",this::importRow,pageArgs.toArray());
         return FuelPage.of(content,paging.page(),paging.size(),totalElements,order.describedAs());
     }
 

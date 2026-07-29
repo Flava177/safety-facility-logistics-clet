@@ -29,10 +29,12 @@ import {
   formatNumber,
   formatOdometer,
 } from 'shared/components/format';
+import { VehicleLocationResponse } from 'modules/fleet/api/dto';
+import { RecordStandaloneInspectionDialog } from 'modules/fleet/dialogs/inspectionDialogs';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 
-type TabKey = 'overview' | 'compliance' | 'service' | 'trips';
+type TabKey = 'overview' | 'compliance' | 'service' | 'trips' | 'movement';
 
 /** A record row inside a tab panel — bordered, two columns, wraps on narrow viewports. */
 const recordRow =
@@ -41,9 +43,13 @@ const recordRow =
 /**
  * Vehicle detail.
  *
- * Readiness comes from the assignment-preview endpoint rather than a per-vehicle readiness route,
- * because that is the endpoint the service actually exposes and it runs the same policy the
- * assignment itself will run.
+ * Readiness comes from `GET /vehicles/{id}/readiness` — the same `FleetReadinessService` policy the
+ * assignment itself runs, now with a door of its own. It used to be fetched through
+ * `trips/assignment-preview` with only a `vehicleId`, which gave the right answer through an endpoint
+ * shaped for a question nobody was asking here.
+ *
+ * Movement is a **vendor projection**, so the panel shows `recordedAt` on every row and does not
+ * decide on the reader's behalf how stale is too stale — that depends on what is being asked.
  */
 const VehicleDetailPage = () => {
   const { vehicleId = '' } = useParams();
@@ -51,14 +57,12 @@ const VehicleDetailPage = () => {
   const { notifySuccess } = useNotifier();
   const [tab, setTab] = useState<TabKey>('overview');
   const [dialog, setDialog] = useState<
-    'edit' | 'lifecycle' | 'compliance' | 'service' | 'odometer' | null
+    'edit' | 'lifecycle' | 'compliance' | 'service' | 'odometer' | 'inspection' | null
   >(null);
 
   const vehicle = useApiQuery((signal) => vehiclesApi.findById(vehicleId, signal), [vehicleId]);
-  const readiness = useApiQuery(
-    (signal) => tripsApi.assignmentPreview({ vehicleId }, signal),
-    [vehicleId],
-  );
+  const readiness = useApiQuery((signal) => vehiclesApi.readiness(vehicleId, signal), [vehicleId]);
+  const movement = useApiQuery((signal) => vehiclesApi.movement(vehicleId, 25, signal), [vehicleId]);
   const compliance = useApiQuery(
     (signal) => vehiclesApi.complianceDocuments(vehicleId, signal),
     [vehicleId],
@@ -72,9 +76,70 @@ const VehicleDetailPage = () => {
     [vehicleId],
   );
 
+  /**
+   * Movement snapshots.
+   *
+   * Coordinates are shown to five decimal places — about a metre, which is finer than any fleet
+   * telematics feed is honest to and coarse enough not to imply survey accuracy. `recordedAt` leads
+   * the row because it is the only thing that says whether the position still means anything.
+   */
+  const movementColumns = useMemo<Column<VehicleLocationResponse>[]>(
+    () => [
+      {
+        key: 'recordedAt',
+        header: 'Recorded',
+        width: 180,
+        cell: (row) => (
+          <CellStack
+            primary={formatDateTime(row.recordedAt)}
+            secondary={row.sourceSystem ?? 'source not recorded'}
+          />
+        ),
+      },
+      {
+        key: 'position',
+        header: 'Position',
+        width: 200,
+        cell: (row) =>
+          row.latitude !== null && row.longitude !== null ? (
+            <span className="font-mono text-theme-xs">
+              {row.latitude.toFixed(5)}, {row.longitude.toFixed(5)}
+            </span>
+          ) : (
+            <span className="text-gray-500">Not reported</span>
+          ),
+      },
+      {
+        key: 'odometer',
+        header: 'Odometer',
+        width: 130,
+        align: 'right',
+        cell: (row) =>
+          row.odometerValue === null ? (
+            <span className="text-gray-500">—</span>
+          ) : (
+            formatOdometer(row.odometerValue)
+          ),
+      },
+      {
+        key: 'correlation',
+        header: 'Correlation',
+        width: 160,
+        hideBelowLg: true,
+        cell: (row) => (
+          <span className="font-mono text-theme-xs text-gray-600">
+            {row.correlationId ? row.correlationId.slice(0, 8) : '—'}
+          </span>
+        ),
+      },
+    ],
+    [],
+  );
+
   const refreshAll = () => {
     vehicle.refetch();
     readiness.refetch();
+    movement.refetch();
     compliance.refetch();
     service.refetch();
   };
@@ -163,9 +228,19 @@ const VehicleDetailPage = () => {
               title="Readiness"
               subtitle="Assessed with the same policy the assignment will use"
               actions={
-                <Button size="sm" variant="ghost" startIcon="refresh" onClick={readiness.refetch}>
-                  Re-assess
-                </Button>
+                <>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    startIcon="shield-check"
+                    onClick={() => setDialog('inspection')}
+                  >
+                    Record inspection
+                  </Button>
+                  <Button size="sm" variant="ghost" startIcon="refresh" onClick={readiness.refetch}>
+                    Re-assess
+                  </Button>
+                </>
               }
             >
               <DataState
@@ -198,6 +273,7 @@ const VehicleDetailPage = () => {
                   { value: 'compliance', label: 'Compliance', count: compliance.data?.length },
                   { value: 'service', label: 'Service history', count: service.data?.history.length },
                   { value: 'trips', label: 'Trips', count: trips.data?.content.length },
+                  { value: 'movement', label: 'Movement', count: movement.data?.length },
                 ]}
                 value={tab}
                 onChange={(value) => setTab(value as TabKey)}
@@ -444,6 +520,32 @@ const VehicleDetailPage = () => {
                     </div>
                   </DataState>
                 )}
+                {tab === 'movement' && (
+                  <DataState
+                    loading={movement.initialising}
+                    error={movement.error}
+                    empty={(movement.data?.length ?? 0) === 0}
+                    emptyTitle="No movement recorded"
+                    emptyHint="No telematics provider has reported a position for this vehicle."
+                    onRetry={movement.refetch}
+                    minHeight={160}
+                  >
+                    <div className="-mx-5">
+                      <DataTable
+                        rows={movement.data ?? []}
+                        columns={movementColumns}
+                        getRowId={(row) => row.id}
+                        dense
+                      />
+                      <p className="px-5 pt-3 text-theme-xs text-gray-500">
+                        The twenty-five most recent snapshots. This is a vendor projection — SFL
+                        records what a telematics provider reported and when, and does not correct
+                        it. Judge freshness from the recorded time: a position from last week is not
+                        wrong, it is just old.
+                      </p>
+                    </div>
+                  </DataState>
+                )}
               </div>
             </SectionCard>
 
@@ -460,6 +562,26 @@ const VehicleDetailPage = () => {
              * refetch the edit form would still be offering the superseded make, capacity and
              * odometer back to the service.
              */}
+            {/*
+              * A periodic inspection needs no trip, which is exactly why the action lives here on
+              * the vehicle rather than only on a trip. Recording one can change readiness — a
+              * critical finding takes the vehicle out of service — so the readiness card refetches.
+              */}
+            {dialog === 'inspection' && (
+              <RecordStandaloneInspectionDialog
+                open
+                vehicle={vehicle.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess(
+                    'Inspection recorded.',
+                    'Readiness has been re-assessed against it.',
+                  );
+                  refreshAll();
+                }}
+              />
+            )}
+
             {dialog === 'edit' && (
               <EditVehicleDialog
                 open

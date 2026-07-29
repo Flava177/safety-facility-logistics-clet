@@ -1,125 +1,184 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useMemo, useState } from 'react';
+import { InboxMessageResponse } from 'modules/fleet/api/dto';
+import { INTEGRATION_MESSAGE_STATUSES, IntegrationMessageStatus } from 'modules/fleet/api/enums';
 import { integrationsApi } from 'modules/fleet/api/fleetApi';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
-import DataTable, { Column } from 'shared/components/DataTable';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { TextInput } from 'shared/components/fields';
+import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 
-/** Reads a display value out of a loosely-typed integration message summary. */
-const field = (summary: Record<string, unknown>, ...keys: string[]): string | undefined => {
-  for (const key of keys) {
-    const value = summary[key];
-    if (typeof value === 'string' || typeof value === 'number') {
-      return String(value);
-    }
-  }
-  return undefined;
-};
-
-/** The projection's entries have no guaranteed identifier, so position is the key of last resort. */
-interface MessageRow {
-  key: string;
-  summary: Record<string, unknown>;
-}
+/** How many messages the inbox search asks for. The service clamps at 500. */
+const SEARCH_LIMIT = 100;
 
 /**
  * Telematics and integration intake health.
  *
- * The service exposes a health projection and a replay operation, but no inbox search — so recent
- * messages come from the health projection itself, and replay takes a message id. Dead letters are
- * called out because they are the only class of message that will not resolve on its own.
+ * The counters come from the health projection; the messages come from `GET /integrations/messages`.
+ * That search is why this page changed: replay takes a message identifier, and the only messages the
+ * console could see were the handful the health projection happened to carry — so replaying a dead
+ * letter meant knowing its id from somewhere else entirely. Dead-letter replay was a documented
+ * capability that could not be reached from here at all.
+ *
+ * The rows are typed now rather than read out of a loosely-shaped projection summary, so a missing
+ * field is a compile error instead of an empty cell.
+ *
+ * Replay is offered on any message that is not already `PROCESSED`. That mirrors the service, which
+ * treats replaying a processed message as a no-op rather than an error — the operation is
+ * idempotent, and the audit entry is written either way.
  */
 const IntegrationHealthPage = () => {
   const { notifyError, notifySuccess } = useNotifier();
+  const [sourceSystem, setSourceSystem] = useState('');
+  const [status, setStatus] = useState<IntegrationMessageStatus | ''>('');
+  const [eventType, setEventType] = useState('');
   const [replayId, setReplayId] = useState('');
-  const [replaying, setReplaying] = useState(false);
+  const [replaying, setReplaying] = useState<string | null>(null);
+  const filtered = Boolean(sourceSystem || status || eventType);
 
   const health = useApiQuery((signal) => integrationsApi.health(signal), []);
 
-  const replay = async () => {
-    if (!replayId.trim()) {
-      return;
-    }
-    setReplaying(true);
-    try {
-      await integrationsApi.replay(replayId.trim());
-      notifySuccess('Replay accepted.');
-      setReplayId('');
-      health.refetch();
-    } catch (error) {
-      notifyError(error);
-    } finally {
-      setReplaying(false);
-    }
-  };
+  const messages = useApiQuery(
+    (signal) =>
+      integrationsApi.messages(
+        {
+          sourceSystem: sourceSystem.trim() || undefined,
+          status: status || undefined,
+          eventType: eventType.trim() || undefined,
+          size: SEARCH_LIMIT,
+        },
+        signal,
+      ),
+    [sourceSystem, status, eventType],
+  );
 
-  const rows = useMemo<MessageRow[]>(() => {
-    const recent = (health.data?.recentMessages ?? []) as Record<string, unknown>[];
-    return recent.map((summary, index) => ({
-      key: field(summary, 'id', 'messageId') ?? String(index),
-      summary,
-    }));
-  }, [health.data]);
+  // Pulled out as locals because they are the stable half of the query objects, and the memoised
+  // `replay` below depends on the refetch and not on the data.
+  const { refetch: refetchHealth } = health;
+  const { refetch: refetchMessages } = messages;
 
-  const columns = useMemo<Column<MessageRow>[]>(
+  const refreshAll = useCallback(() => {
+    refetchHealth();
+    refetchMessages();
+  }, [refetchHealth, refetchMessages]);
+
+  /**
+   * Shared by the row action and the replay-by-id card, so both report the same way.
+   *
+   * Memoised because the column definitions close over it, and `useApiQuery` hands back a stable
+   * `refetch`, so this identity only changes when the notifier does.
+   */
+  const replay = useCallback(
+    async (messageId: string, onDone?: () => void) => {
+      setReplaying(messageId);
+      try {
+        await integrationsApi.replay(messageId);
+        notifySuccess('Replay accepted.');
+        onDone?.();
+        refreshAll();
+      } catch (error) {
+        notifyError(error);
+      } finally {
+        setReplaying(null);
+      }
+    },
+    [refreshAll, notifyError, notifySuccess],
+  );
+
+  const columns = useMemo<Column<InboxMessageResponse>[]>(
     () => [
       {
         key: 'message',
         header: 'Message',
-        width: 340,
-        cell: ({ summary }) => {
-          const failureReason = field(summary, 'failureReason');
-          return (
-            <div className="min-w-0">
-              <div className="truncate font-semibold text-gray-800">
-                {field(summary, 'sourceSystem', 'source') ?? 'Unknown source'} ·{' '}
-                {field(summary, 'eventType') ?? 'event'}
-              </div>
-              <div className="truncate text-theme-xs text-gray-500">
-                {field(summary, 'id', 'messageId') ?? '—'} · received{' '}
-                {formatDateTime(field(summary, 'receivedAt', 'occurredAt') ?? null)}
-              </div>
-              {failureReason && (
-                <div className="text-theme-xs text-error-600">{failureReason}</div>
-              )}
-            </div>
-          );
-        },
+        width: 300,
+        cell: (row) => (
+          <div className="min-w-0">
+            <CellStack
+              primary={`${row.sourceSystem} · ${row.eventType ?? 'event'}`}
+              secondary={`Received ${formatDateTime(row.receivedAt)}`}
+            />
+            {row.failureReason && (
+              <div className="mt-1 text-theme-xs text-error-600">{row.failureReason}</div>
+            )}
+          </div>
+        ),
       },
       {
         key: 'status',
         header: 'Status',
+        width: 140,
+        cell: (row) => (
+          <div>
+            <StatusChip value={row.status} />
+            {/* Attempts only tell a story once there has been more than one. */}
+            {row.attempts > 1 && (
+              <div className="mt-1 text-theme-xs text-gray-500">{row.attempts} attempts</div>
+            )}
+          </div>
+        ),
+      },
+      {
+        key: 'site',
+        header: 'Site',
+        width: 100,
+        hideBelowLg: true,
+        cell: (row) => (
+          <span className="text-theme-xs text-gray-600">{row.siteCode ?? '—'}</span>
+        ),
+      },
+      {
+        key: 'processedAt',
+        header: 'Processed',
+        width: 170,
+        hideBelowLg: true,
+        cell: (row) =>
+          row.processedAt ? (
+            <span className="text-theme-xs text-gray-600">{formatDateTime(row.processedAt)}</span>
+          ) : (
+            <span className="text-theme-xs text-gray-500">Not processed</span>
+          ),
+      },
+      {
+        key: 'correlation',
+        header: 'Correlation',
         width: 130,
-        cell: ({ summary }) => {
-          const status = field(summary, 'status');
-          return status ? <StatusChip value={status} /> : null;
-        },
+        hideBelowLg: true,
+        cell: (row) => (
+          <span className="font-mono text-theme-xs text-gray-600">
+            {row.correlationId ? row.correlationId.slice(0, 8) : '—'}
+          </span>
+        ),
       },
       {
         key: 'actions',
         header: <span className="sr-only">Actions</span>,
         width: 110,
         align: 'right',
-        cell: ({ summary }) => {
-          const id = field(summary, 'id', 'messageId');
-          return field(summary, 'status') === 'DEAD_LETTER' && id ? (
-            <Button size="sm" variant="ghost" onClick={() => setReplayId(id)}>
-              Use ID
+        cell: (row) =>
+          row.status === 'PROCESSED' ? null : (
+            <Button
+              size="sm"
+              variant="ghost"
+              startIcon="refresh"
+              loading={replaying === row.id}
+              onClick={() => void replay(row.id)}
+            >
+              Replay
             </Button>
-          ) : null;
-        },
+          ),
       },
     ],
-    [],
+    // `replaying` decides which row shows a spinner, so the columns depend on it.
+    [replaying, replay],
   );
 
   return (
@@ -129,7 +188,7 @@ const IntegrationHealthPage = () => {
         subtitle="Signed telematics intake: what has been processed, rejected or dead-lettered."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Integration health' }]}
         actions={
-          <Button variant="outline" startIcon="refresh" onClick={health.refetch}>
+          <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
             Refresh
           </Button>
         }
@@ -152,9 +211,21 @@ const IntegrationHealthPage = () => {
           <div className="space-y-5">
             {health.data.deadLetterMessages > 0 && (
               <Alert variant="error">
-                {health.data.deadLetterMessages} message
-                {health.data.deadLetterMessages === 1 ? '' : 's'} require replay or operator review.
-                Until they are cleared, vehicle movement data may be stale.
+                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <span>
+                    {health.data.deadLetterMessages} message
+                    {health.data.deadLetterMessages === 1 ? '' : 's'} require replay or operator
+                    review. Until they are cleared, vehicle movement data may be stale.
+                  </span>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setStatus('DEAD_LETTER')}
+                    disabled={status === 'DEAD_LETTER'}
+                  >
+                    Show them
+                  </Button>
+                </div>
               </Alert>
             )}
 
@@ -182,9 +253,68 @@ const IntegrationHealthPage = () => {
               />
             </div>
 
+            <SectionCard title="Inbound messages" subtitle="Newest first" flush>
+              <FilterBar
+                onReset={() => {
+                  setSourceSystem('');
+                  setStatus('');
+                  setEventType('');
+                }}
+                resetDisabled={!filtered}
+              >
+                <TextInput
+                  label="Source system"
+                  value={sourceSystem}
+                  onChange={setSourceSystem}
+                  helperText="Matches on part of the name."
+                />
+                <EnumSelect
+                  label="Status"
+                  value={status}
+                  options={INTEGRATION_MESSAGE_STATUSES}
+                  onChange={(value) => setStatus(value as IntegrationMessageStatus | '')}
+                  allowEmpty
+                />
+                <TextInput
+                  label="Event type"
+                  value={eventType}
+                  onChange={setEventType}
+                  helperText="For example, vehicle.location."
+                />
+              </FilterBar>
+
+              <DataState
+                loading={messages.initialising}
+                error={messages.error}
+                empty={(messages.data?.length ?? 0) === 0}
+                emptyTitle={filtered ? 'No messages match these filters' : 'No inbound messages'}
+                emptyHint={
+                  filtered
+                    ? 'Adjust the filters, or reset them to see the whole inbox.'
+                    : 'Nothing has arrived through the signed intake endpoint yet.'
+                }
+                onRetry={messages.refetch}
+                minHeight={200}
+              >
+                <DataTable
+                  rows={messages.data ?? []}
+                  columns={columns}
+                  getRowId={(row) => row.id}
+                  loading={messages.loading}
+                  dense
+                />
+                {(messages.data?.length ?? 0) >= SEARCH_LIMIT && (
+                  <p className="px-5 pt-3 pb-1 text-theme-xs text-gray-500">
+                    The most recent {SEARCH_LIMIT} messages. Filter by status or source system to see
+                    further back.
+                  </p>
+                )}
+              </DataState>
+            </SectionCard>
+
             <SectionCard
-              title="Replay a dead-lettered message"
-              subtitle="Privileged and idempotent — replaying the same message twice is safe"
+              title="Replay by message identifier"
+              subtitle="For an identifier that came from a log or an incident note rather than the list above"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
                 <TextInput
@@ -192,43 +322,19 @@ const IntegrationHealthPage = () => {
                   value={replayId}
                   onChange={setReplayId}
                   className="sm:max-w-[420px] sm:flex-1"
+                  helperText="Privileged and idempotent — replaying the same message twice is safe."
                 />
                 <Button
                   variant="primary"
                   startIcon="refresh"
-                  loading={replaying}
+                  loading={replaying === replayId.trim()}
                   disabled={!replayId.trim()}
-                  onClick={replay}
+                  onClick={() => void replay(replayId.trim(), () => setReplayId(''))}
                 >
-                  {replaying ? 'Replaying…' : 'Replay'}
+                  Replay
                 </Button>
               </div>
             </SectionCard>
-
-            <SectionCard
-              title="Recent messages"
-              subtitle="From the service's health projection"
-              flush
-            >
-              {rows.length === 0 ? (
-                <p className="p-5 text-theme-sm text-gray-500">
-                  No recent integration messages in the projection.
-                </p>
-              ) : (
-                <DataTable
-                  rows={rows}
-                  columns={columns}
-                  getRowId={(row) => row.key}
-                  loading={health.loading}
-                  dense
-                />
-              )}
-            </SectionCard>
-
-            <Alert variant="info">
-              The service does not expose an inbox search endpoint, so this page shows only the
-              messages carried in the health projection. Replay is available by message identifier.
-            </Alert>
           </div>
         )}
       </DataState>

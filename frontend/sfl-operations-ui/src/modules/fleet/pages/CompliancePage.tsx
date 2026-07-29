@@ -5,28 +5,55 @@ import {
   DashboardDrilldownRow,
   VehicleResponse,
 } from 'modules/fleet/api/dto';
-import { humanise } from 'modules/fleet/api/enums';
+import {
+  COMPLIANCE_DOCUMENT_STATUSES,
+  COMPLIANCE_DOCUMENT_TYPES,
+  ComplianceDocumentStatus,
+  ComplianceDocumentType,
+  humanise,
+} from 'modules/fleet/api/enums';
 import { dashboardApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
 
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import { DateField } from 'shared/components/DateField';
+import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
+import { EnumSelect } from 'shared/components/fields';
 import StatusChip from 'shared/components/StatusChip';
 import Tabs from 'shared/components/Tabs';
 import { formatDate, formatDaysRemaining, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 
-/** How many vehicles the cross-fleet view will fan out over. See the gap note on this page. */
-const AGGREGATION_LIMIT = 50;
+/**
+ * How many documents the search asks for.
+ *
+ * A real limit on a real query now, not a fan-out ceiling. The service clamps at 500.
+ */
+const SEARCH_LIMIT = 200;
 
 interface DocumentRow {
   document: ComplianceDocumentResponse;
-  vehicle: VehicleResponse;
+  /**
+   * The vehicle the document belongs to, when it could be resolved.
+   *
+   * The search returns documents, and a document carries a `vehicleId` but no registration number.
+   * The site's vehicles are fetched **once** and indexed, so a row can name its vehicle without a
+   * request per document. Null when the vehicle is outside the fetched page — the document is still
+   * shown, because a compliance exposure does not stop mattering because a lookup missed.
+   */
+  vehicle: VehicleResponse | null;
+}
+
+/** What one search produced, and whether the service had more to give. */
+interface DocumentSet {
+  rows: DocumentRow[];
+  truncated: boolean;
 }
 
 type TabKey = 'expiring' | 'service' | 'all';
@@ -42,15 +69,23 @@ const expiryClass = (daysUntilExpiry: number): string => {
 /**
  * Compliance and service exposure across the fleet.
  *
- * The service has no cross-fleet compliance search — documents are only exposed per vehicle — so
- * this screen fans out over the first {@link AGGREGATION_LIMIT} vehicles in scope and says so.
- * The authoritative expired-document count stays the dashboard indicator, which is computed
- * server-side over the whole scope.
+ * Documents come from `GET /vehicles/compliance-documents` — one query, filtered and ordered by the
+ * service. This screen used to fan out over the first fifty active vehicles in scope and say so on
+ * the page: correct for a small fleet and quietly wrong for any other, because a document on the
+ * fifty-first vehicle simply was not there.
+ *
+ * The authoritative expired count is still the dashboard indicator. That is not a hedge — the
+ * indicator is computed server-side over the whole scope and reconciled against its source, so it
+ * remains the number to plan against even now that the list beside it is complete.
  */
 const CompliancePage = () => {
   const navigate = useNavigate();
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState<TabKey>('expiring');
+  const [documentType, setDocumentType] = useState<ComplianceDocumentType | ''>('');
+  const [status, setStatus] = useState<ComplianceDocumentStatus | ''>('');
+  const [expiringBefore, setExpiringBefore] = useState('');
+  const filtered = Boolean(documentType || status || expiringBefore);
 
   const snapshot = useApiQuery(
     (signal) => dashboardApi.operations({ siteCode: siteCode || undefined }, signal),
@@ -68,31 +103,39 @@ const CompliancePage = () => {
     [siteCode],
   );
 
+  /**
+   * One search, plus one vehicle page to name the rows.
+   *
+   * Two requests where there used to be fifty-one, and the answer is the site's whole compliance
+   * position rather than the part of it that happened to sit on the first fifty vehicles.
+   */
   const documents = useApiQuery(
-    async (signal): Promise<DocumentRow[]> => {
-      const page = await vehiclesApi.search(
-        { siteCode: siteCode || undefined, status: 'ACTIVE', size: AGGREGATION_LIMIT },
-        signal,
-      );
-      const perVehicle = await Promise.all(
-        page.content.map(async (vehicle) => {
-          try {
-            const documentList = await vehiclesApi.complianceDocuments(vehicle.id, signal);
-            return documentList.map((document) => ({ document, vehicle }));
-          } catch {
-            // A vehicle the caller cannot read is skipped rather than failing the whole view.
-            return [];
-          }
-        }),
-      );
-      return perVehicle
-        .flat()
-        .sort((left, right) => left.document.daysUntilExpiry - right.document.daysUntilExpiry);
+    async (signal): Promise<DocumentSet> => {
+      const [documentList, vehiclePage] = await Promise.all([
+        vehiclesApi.searchComplianceDocuments(
+          {
+            documentType: documentType || undefined,
+            status: status || undefined,
+            expiringBefore: expiringBefore || undefined,
+            size: SEARCH_LIMIT,
+          },
+          signal,
+        ),
+        vehiclesApi.search({ siteCode: siteCode || undefined, size: 200 }, signal),
+      ]);
+      const byId = new Map(vehiclePage.content.map((vehicle) => [vehicle.id, vehicle]));
+      const rows = documentList
+        // The search is scoped to the actor's own sites, which can be wider than the one site this
+        // screen is showing, so the chosen site is applied here.
+        .filter((document) => !siteCode || document.siteCode === siteCode)
+        .map((document) => ({ document, vehicle: byId.get(document.vehicleId) ?? null }));
+      // Measured before the site filter, because the cap applies to what the service returned.
+      return { rows, truncated: documentList.length >= SEARCH_LIMIT };
     },
-    [siteCode],
+    [siteCode, documentType, status, expiringBefore],
   );
 
-  const rows = documents.data ?? [];
+  const rows = documents.data?.rows ?? [];
   // Kept separate from `visibleRows` so the tab count means the same thing on every tab.
   const expiringRows = rows.filter(
     (row) => row.document.daysUntilExpiry < 60 || row.document.status !== 'ACTIVE',
@@ -105,9 +148,17 @@ const CompliancePage = () => {
         key: 'vehicle',
         header: 'Vehicle',
         width: 180,
-        cell: (row) => (
-          <CellStack primary={row.vehicle.registrationNumber} secondary={row.vehicle.siteCode} />
-        ),
+        cell: (row) =>
+          row.vehicle ? (
+            <CellStack primary={row.vehicle.registrationNumber} secondary={row.vehicle.siteCode} />
+          ) : (
+            // The document is real even when its vehicle is outside the fetched page; showing the
+            // shortened id is more use than hiding the exposure.
+            <CellStack
+              primary={`Vehicle ${row.document.vehicleId.slice(0, 8)}`}
+              secondary={row.document.siteCode}
+            />
+          ),
       },
       {
         key: 'document',
@@ -219,11 +270,13 @@ const CompliancePage = () => {
           />
         </SectionCard>
 
-        <Alert variant="info">
-          The service exposes compliance documents per vehicle only. This view aggregates the first{' '}
-          {AGGREGATION_LIMIT} active vehicles in scope — the scope-wide counts above come from the
-          server-computed dashboard indicators and are authoritative.
-        </Alert>
+        {documents.data?.truncated && (
+          <Alert variant="warning">
+            The search returned its maximum of {SEARCH_LIMIT} documents, so there are more than are
+            listed here. Narrow it with a document type, a status or an expiry date — the counts
+            above are computed server-side over the whole scope and stay right either way.
+          </Alert>
+        )}
 
         <SectionCard flush>
           <Tabs
@@ -238,11 +291,43 @@ const CompliancePage = () => {
                 label: 'Service exposure',
                 count: serviceDrilldown.data?.length,
               },
-              { value: 'all', label: 'All documents', count: documents.data?.length },
+              { value: 'all', label: 'All documents', count: documents.data?.rows.length },
             ]}
             value={tab}
             onChange={(value) => setTab(value as TabKey)}
           />
+
+          {tab !== 'service' && (
+            <FilterBar
+              onReset={() => {
+                setDocumentType('');
+                setStatus('');
+                setExpiringBefore('');
+              }}
+              resetDisabled={!filtered}
+            >
+              <EnumSelect
+                label="Document type"
+                value={documentType}
+                options={COMPLIANCE_DOCUMENT_TYPES}
+                onChange={(value) => setDocumentType(value as ComplianceDocumentType | '')}
+                allowEmpty
+              />
+              <EnumSelect
+                label="Status"
+                value={status}
+                options={COMPLIANCE_DOCUMENT_STATUSES}
+                onChange={(value) => setStatus(value as ComplianceDocumentStatus | '')}
+                allowEmpty
+              />
+              <DateField
+                label="Expiring before"
+                value={expiringBefore}
+                onChange={setExpiringBefore}
+                helperText="Includes documents that have already expired."
+              />
+            </FilterBar>
+          )}
 
           <div className="p-5">
             {tab === 'service' ? (
@@ -274,8 +359,10 @@ const CompliancePage = () => {
                 }
                 emptyHint={
                   tab === 'expiring'
-                    ? 'No document in the aggregated set expires within 60 days.'
-                    : 'Register compliance documents from a vehicle record.'
+                    ? 'Nothing in this scope expires within 60 days or is already expired.'
+                    : filtered
+                      ? 'No document matches these filters.'
+                      : 'Register compliance documents from a vehicle record.'
                 }
                 onRetry={documents.refetch}
                 minHeight={200}
@@ -285,7 +372,8 @@ const CompliancePage = () => {
                   columns={documentColumns}
                   getRowId={(row) => row.document.id}
                   loading={documents.loading}
-                  onRowClick={(row) => navigate(fleetPaths.vehicleDetail(row.vehicle.id))}
+                  // The document's own `vehicleId` is always present; the resolved vehicle is not.
+                  onRowClick={(row) => navigate(fleetPaths.vehicleDetail(row.document.vehicleId))}
                 />
               </DataState>
             )}

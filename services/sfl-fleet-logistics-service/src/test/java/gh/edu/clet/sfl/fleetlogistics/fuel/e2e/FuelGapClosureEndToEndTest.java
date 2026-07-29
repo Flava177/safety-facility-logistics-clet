@@ -25,6 +25,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyPro
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOverlapException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
@@ -138,6 +139,23 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
             }
         });
         assertThat(fuel.importBatches(f.site(),null,page(0,25),f.manager()).totalElements()).isEqualTo(1);
+
+        // The rows are also readable a page at a time, and the status filter runs in SQL. The screen
+        // used to take every row from the detail read above and filter the array, so "rejected only"
+        // on a large file found the rejections that happened to be on the page being looked at.
+        var everyRow = fuel.importRows(result.batchId(),null,page(0,25),f.manager());
+        assertThat(everyRow.totalElements()).isEqualTo(2);
+
+        var rejected = fuel.importRows(result.batchId(),FuelImportRow.Status.REJECTED,page(0,25),f.manager());
+        // The total describes the filter, not the batch — count and page share one predicate.
+        assertThat(rejected.totalElements()).isEqualTo(1);
+        assertThat(rejected.content()).singleElement()
+                .satisfies(row -> assertThat(row.status()).isEqualTo(FuelImportRow.Status.REJECTED));
+
+        var accepted = fuel.importRows(result.batchId(),FuelImportRow.Status.ACCEPTED,page(0,25),f.manager());
+        assertThat(accepted.totalElements()).isEqualTo(1);
+        assertThat(accepted.content()).singleElement()
+                .satisfies(row -> assertThat(row.accepted()).isTrue());
     }
 
     /** Gap 12: a re-uploaded file was refused by the constraint and escaped as an unmapped 500. */

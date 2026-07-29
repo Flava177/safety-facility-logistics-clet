@@ -201,8 +201,12 @@ public interface FuelRepository {
      *
      * <p>The detail read returns every row, which is fine for a hundred and not for a file with
      * thousands. Paged here so a large import can be reviewed a screen at a time.
+     *
+     * <p>{@code status} is nullable and filters in SQL. It has to: the only view of an import that
+     * matters is the rejected rows, and a status filter applied to a page would have found only the
+     * rejections that happened to land on the page being looked at.
      */
-    FuelPage<FuelImportRow> findImportRows(UUID batchId, Paging paging);
+    FuelPage<FuelImportRow> findImportRows(UUID batchId, FuelImportRow.Status status, Paging paging);
 
     /**
      * Fuel spend and volume by day.

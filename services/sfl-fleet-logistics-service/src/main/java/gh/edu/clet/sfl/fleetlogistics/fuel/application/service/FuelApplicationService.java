@@ -230,11 +230,12 @@ public class FuelApplicationService {
      * <p>The detail read returns every row, which is fine for a hundred and not for a file with
      * thousands.
      */
-    public FuelRepository.FuelPage<FuelImportRow> importRows(UUID id,FuelRepository.Paging paging,ActorContext actor){
+    public FuelRepository.FuelPage<FuelImportRow> importRows(UUID id,FuelImportRow.Status status,
+            FuelRepository.Paging paging,ActorContext actor){
         // importBatch already authorises against the batch's own site, so the rows inherit that check
         // rather than repeating it with a permission that does not exist.
         importBatch(id,actor);
-        return repository.findImportRows(id,paging);
+        return repository.findImportRows(id,status,paging);
     }
 
     /**
