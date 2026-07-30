@@ -16,6 +16,7 @@ import gh.edu.clet.sfl.facilities.maintenance.infrastructure.persistence.Facilit
 import gh.edu.clet.sfl.facilities.maintenance.infrastructure.persistence.WorkOrderRecord;
 import gh.edu.clet.sfl.facilities.maintenance.infrastructure.persistence.WorkOrderRepository;
 import gh.edu.clet.sfl.facilities.shared.application.ServiceOutbox;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -48,11 +49,21 @@ public class WorkOrderService {
     private final Clock clock;
     private final AuthorizationPolicy authorization;
 
+    /**
+     * The constructor Spring uses.
+     *
+     * <p>Explicitly annotated because this class has two constructors and neither was marked. Spring
+     * considers non-public constructors as candidates too, so with two unannotated it falls back to a
+     * no-arg constructor that does not exist — the service could not start at all. Found the first
+     * time the facilities service was run against a real database, during the S152 build.
+     */
+    @Autowired
     public WorkOrderService(WorkOrderRepository workOrders, FacilityFaultRepository facilityFaults,
             ServiceOutbox outbox, Clock clock) {
         this(workOrders, facilityFaults, outbox, clock, new AuthorizationPolicy());
     }
 
+    /** The seam the unit tests use to inject an authorisation policy. */
     WorkOrderService(WorkOrderRepository workOrders, FacilityFaultRepository facilityFaults,
             ServiceOutbox outbox, Clock clock, AuthorizationPolicy authorization) {
         this.workOrders = workOrders;

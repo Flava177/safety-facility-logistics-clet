@@ -1,17 +1,21 @@
 package gh.edu.clet.sfl.facilities.masterdata.infrastructure.persistence;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityFloor;
+import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 @Entity
 @Table(name = "facility_floors", schema = "facilities")
 public class FacilityFloorRecord {
+
     @Id
     private UUID id;
     @Column(name = "building_id", nullable = false)
@@ -24,8 +28,11 @@ public class FacilityFloorRecord {
     private String name;
     @Column(name = "level_number")
     private Integer levelNumber;
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lifecycle_status", nullable = false, length = 20)
+    private RecordLifecycleStatus lifecycleStatus;
+    @Embedded
+    private RecordMetadataEmbeddable metadata;
 
     protected FacilityFloorRecord() {
     }
@@ -37,7 +44,8 @@ public class FacilityFloorRecord {
         floorCode = floor.floorCode();
         name = floor.name();
         levelNumber = floor.levelNumber();
-        createdAt = floor.createdAt();
+        lifecycleStatus = floor.lifecycleStatus();
+        metadata = RecordMetadataEmbeddable.from(floor.metadata());
     }
 
     public static FacilityFloorRecord from(FacilityFloor floor) {
@@ -45,6 +53,7 @@ public class FacilityFloorRecord {
     }
 
     public FacilityFloor toDomain() {
-        return new FacilityFloor(id, buildingId, siteCode, floorCode, name, levelNumber, createdAt);
+        return new FacilityFloor(id, buildingId, siteCode, floorCode, name, levelNumber, lifecycleStatus,
+                metadata.toDomain());
     }
 }
