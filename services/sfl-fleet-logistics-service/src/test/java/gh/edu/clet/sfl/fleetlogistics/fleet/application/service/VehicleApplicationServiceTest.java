@@ -62,6 +62,8 @@ class VehicleApplicationServiceTest {
         events = new FleetTestDoubles.RecordingEventPublisher();
         idempotency = new FleetTestDoubles.InMemoryIdempotencyPort();
         service = new VehicleApplicationService(vehicles, complianceDocuments, serviceRecords,
+                new FleetTestDoubles.InMemoryLocationRepository(),
+                FleetTestDoubles.readinessService(complianceDocuments, clock),
                 new FleetAccessPolicy(), audit, events, idempotency,
                 new FleetTestDoubles.FixedRuntimeConfiguration(), clock);
     }

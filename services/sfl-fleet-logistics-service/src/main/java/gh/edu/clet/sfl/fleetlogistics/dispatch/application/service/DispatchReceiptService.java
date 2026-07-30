@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchEvidencePort;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchEvidenceSupport.EvidenceMeta;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.Dispatch;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchExceptionCase;
@@ -126,6 +127,19 @@ public class DispatchReceiptService {
         access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, dispatch.siteCode().value(), "DispatchReceipt",
                 dispatchId.toString());
         return repository.findReceipts(dispatchId);
+    }
+
+    /**
+     * Receipts across a site's consignments.
+     *
+     * <p>Closes gap 7. "Every variance this month" was previously a manifest-by-manifest hunt.
+     */
+    public DispatchRepository.DispatchPage<DispatchReceipt> receipts(String site, UUID dispatchId,
+            DispatchReceipt.ReceiptOutcome outcome, DispatchReceipt.VarianceType varianceType, String recipient,
+            java.time.Instant from, java.time.Instant to, DispatchRepository.Paging paging, ActorContext actor) {
+        access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, site, "DispatchReceipt", null);
+        return repository.findReceipts(new DispatchRepository.ReceiptQuery(List.of(SiteCode.of(site).value()),
+                dispatchId, outcome, varianceType, recipient, from, to, paging));
     }
 
     private Dispatch requireDispatch(UUID id) {

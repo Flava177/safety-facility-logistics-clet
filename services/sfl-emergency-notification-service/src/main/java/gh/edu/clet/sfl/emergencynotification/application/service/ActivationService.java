@@ -268,10 +268,44 @@ public class ActivationService {
         return activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_READ);
     }
 
-    public List<NotificationActivation> list(String site, NotificationActivation.Status status, ActorContext actor) {
+    public EmergencyRepository.EmergencyPage<NotificationActivation> list(String site,
+            NotificationActivation.Status status, NotificationActivation.Mode mode, Priority priority,
+            String incidentReference, Boolean openOnly, Boolean liveOnly, Boolean afterActionOutstanding,
+            UUID scenarioId, UUID templateId, Instant from, Instant to, EmergencyRepository.Paging paging,
+            ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_ACTIVATION_READ, site, "NotificationActivation", null);
-        return repository.findActivations(List.of(SiteCode.of(site).value()), status, 200);
+        return repository.findActivations(new EmergencyRepository.ActivationQuery(List.of(SiteCode.of(site).value()),
+                status, mode, priority, incidentReference, openOnly, liveOnly, afterActionOutstanding, scenarioId,
+                templateId, from, to, paging));
     }
+
+    /**
+     * The activation's recorded transitions.
+     *
+     * <p>Closes gap 4. {@code saveActivationHistory} has been called on every transition since day
+     * one and nothing ever read it back, so the detail screen reconstructed a timeline from whatever
+     * fields the record still carried — which silently omitted any transition that left none.
+     */
+    public List<EmergencyRepository.ActivationHistoryEntry> history(UUID id, ActorContext actor) {
+        activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_READ);
+        return repository.findActivationHistory(id);
+    }
+
+    /** Per-recipient delivery receipts and acknowledgements. Closes gap 8. */
+    public DeliveryDetail deliveryDetail(UUID id, ActorContext actor) {
+        activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_READ);
+        return new DeliveryDetail(repository.findReceipts(id), repository.findAcknowledgements(id));
+    }
+
+    /**
+     * Every provider fact recorded against one activation.
+     *
+     * <p>{@code failedRecipientCount} on the dashboard used to be a number with nothing behind it:
+     * the receipts carry the recipient, provider, provider message id and the provider's own reason,
+     * and none of it was readable.
+     */
+    public record DeliveryDetail(List<gh.edu.clet.sfl.emergencynotification.domain.model.DeliveryReceipt> receipts,
+            List<gh.edu.clet.sfl.emergencynotification.domain.model.Acknowledgement> acknowledgements) {}
 
     public ActivationStatusView status(UUID id, ActorContext actor) {
         var activation = activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_READ);

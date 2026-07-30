@@ -21,12 +21,18 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditChainVerification;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditHashChain;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RegistrationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleInspectionRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleLocationRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetReadinessService;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleInspection;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleLocationSnapshot;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceRecord;
 import java.time.Clock;
 import java.time.Duration;
@@ -184,6 +190,25 @@ public final class FleetTestDoubles {
             return store.values().stream()
                     .filter(document -> document.vehicleId().equals(vehicleId))
                     .sorted(Comparator.comparing(ComplianceDocument::expiresOn).reversed())
+                    .toList();
+        }
+
+        /**
+         * The real filter, applied in memory.
+         *
+         * <p>Returning an empty list here would let a test pass while the search did nothing, which
+         * is the whole failure mode a double is supposed to avoid.
+         */
+        @Override
+        public List<ComplianceDocument> search(SiteScopeFilter scope, ComplianceDocumentType documentType,
+                ComplianceDocumentStatus status, LocalDate expiringBefore, int limit) {
+            return store.values().stream()
+                    .filter(document -> scope.allSites() || scope.sites().contains(document.siteCode().value()))
+                    .filter(document -> documentType == null || document.documentType() == documentType)
+                    .filter(document -> status == null || document.status() == status)
+                    .filter(document -> expiringBefore == null || !document.expiresOn().isAfter(expiringBefore))
+                    .sorted(Comparator.comparing(ComplianceDocument::expiresOn))
+                    .limit(Math.max(1, limit))
                     .toList();
         }
 
@@ -623,5 +648,96 @@ public final class FleetTestDoubles {
         public List<String> sent() {
             return List.copyOf(sent);
         }
+    }
+
+    // --- Movement projection and readiness ----------------------------------------------
+
+    /**
+     * A movement projection that records what it is given.
+     *
+     * <p>Real rather than empty, because the movement read is now a real endpoint: a double that
+     * always returned nothing would let a test pass while the query did nothing at all.
+     */
+    public static final class InMemoryLocationRepository implements VehicleLocationRepository {
+
+        private final List<VehicleLocationSnapshot> store = new ArrayList<>();
+
+        @Override
+        public VehicleLocationSnapshot save(VehicleLocationSnapshot snapshot) {
+            store.add(snapshot);
+            return snapshot;
+        }
+
+        @Override
+        public Optional<VehicleLocationSnapshot> findLatestByVehicle(UUID vehicleId) {
+            return findByVehicle(vehicleId, 1).stream().findFirst();
+        }
+
+        @Override
+        public List<VehicleLocationSnapshot> findByVehicle(UUID vehicleId, int limit) {
+            return store.stream()
+                    .filter(snapshot -> snapshot.vehicleId().equals(vehicleId))
+                    .sorted(Comparator.comparing(VehicleLocationSnapshot::recordedAt).reversed())
+                    .limit(Math.max(1, limit))
+                    .toList();
+        }
+
+        @Override
+        public List<VehicleLocationSnapshot> findRecentInScope(SiteScopeFilter scope, int limit) {
+            return store.stream()
+                    .filter(snapshot -> scope.permits(snapshot.siteCode().value()))
+                    .sorted(Comparator.comparing(VehicleLocationSnapshot::recordedAt).reversed())
+                    .limit(Math.max(1, limit))
+                    .toList();
+        }
+    }
+
+    /**
+     * A readiness service wired from in-memory doubles.
+     *
+     * <p>{@code FleetReadinessService} needs four repositories and a caller usually cares about one
+     * or two, so the rest are anonymous here rather than three more named classes nobody reads.
+     */
+    public static FleetReadinessService readinessService(ComplianceDocumentRepository complianceDocuments,
+            Clock clock) {
+        VehicleInspectionRepository inspections = new VehicleInspectionRepository() {
+            @Override
+            public VehicleInspection save(VehicleInspection inspection) {
+                return inspection;
+            }
+
+            @Override
+            public Optional<VehicleInspection> findById(UUID id) {
+                return Optional.empty();
+            }
+
+            @Override
+            public Optional<VehicleInspection> findLatestByVehicle(UUID vehicleId) {
+                return Optional.empty();
+            }
+
+            @Override
+            public List<VehicleInspection> findByVehicle(UUID vehicleId) {
+                return List.of();
+            }
+
+            @Override
+            public List<VehicleInspection> findByTrip(UUID tripId) {
+                return List.of();
+            }
+
+            @Override
+            public List<VehicleInspection> findLatestInScope(SiteScopeFilter scope) {
+                return List.of();
+            }
+
+            @Override
+            public List<VehicleInspection> findFailuresSince(SiteScopeFilter scope, Instant from) {
+                return List.of();
+            }
+        };
+        return new FleetReadinessService(complianceDocuments, inspections,
+                new FleetWorkflowTestDoubles.InMemoryTripRepository(), new InMemoryDriverProfileRepository(),
+                new FixedRuntimeConfiguration(), clock);
     }
 }

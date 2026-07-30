@@ -9,13 +9,16 @@ import {
   DriverLogbook,
   FuelAnomalyCase,
   FuelAuditEvent,
+  DailyFuelTotals,
   FuelDashboardSnapshot,
   FuelImportBatch,
   FuelPageResponse,
+  FuelImportRow,
   FuelPolicy,
   FuelReconciliation,
   FuelTransaction,
   ImportResult,
+  ImportRowSearchParams,
   ImportSearchParams,
   IntegrationHealth,
   LogbookSearchParams,
@@ -238,9 +241,28 @@ export const fuelImportsApi = {
       signal,
     ),
 
-  /** One batch with every row outcome and its retained validation error. */
+  /**
+   * One batch header.
+   *
+   * The response also carries every row, which is why {@link rows} exists — a file of thousands made
+   * the detail read unusable, and the screen filtered those rows in the browser.
+   */
   findById: (batchId: string, signal?: AbortSignal) =>
     apiClient.get<FuelImportBatch>(`${BASE}/imports/${batchId}`, undefined, signal),
+
+  /**
+   * The batch's rows, paged and filtered by the service.
+   *
+   * `status` matters more than the paging does. The rejected rows are the only view of an import
+   * anybody needs, and filtering them out of a page would have found the rejections that happened to
+   * land on the page being looked at rather than the ones in the file.
+   */
+  rows: (batchId: string, params: ImportRowSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<FuelPageResponse<FuelImportRow>>(
+      `${BASE}/imports/${batchId}/rows`,
+      asQuery({ size: 50, ...params }),
+      signal,
+    ),
 };
 
 export const fuelIntegrationsApi = {
@@ -261,4 +283,29 @@ export const fuelIntegrationsApi = {
 export const fuelDashboardApi = {
   snapshot: (siteCode: string, signal?: AbortSignal) =>
     apiClient.get<FuelDashboardSnapshot>(`${BASE}/dashboard`, { siteCode }, signal),
+
+  /**
+   * Spend and volume by day, aggregated by the service.
+   *
+   * The spend chart used to bucket a page of transactions in the browser, so it described that page
+   * rather than the site — and quietly under-reported the moment a busy fortnight exceeded one page.
+   */
+  dailyTotals: (siteCode: string, from: string, to: string, signal?: AbortSignal) =>
+    apiClient.get<DailyFuelTotals[]>(
+      `${BASE}/dashboard/daily-totals`,
+      { siteCode, from, to },
+      signal,
+    ),
+
+  /**
+   * Open anomaly cases counted by type, across the whole site.
+   *
+   * Open means anything not closed or cancelled, which is the same definition the queue uses.
+   */
+  anomalyCounts: (siteCode: string, signal?: AbortSignal) =>
+    apiClient.get<Record<string, number>>(
+      `${BASE}/dashboard/anomaly-counts`,
+      { siteCode },
+      signal,
+    ),
 };

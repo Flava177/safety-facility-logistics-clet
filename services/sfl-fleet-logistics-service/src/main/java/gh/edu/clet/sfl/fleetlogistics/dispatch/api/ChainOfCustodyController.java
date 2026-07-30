@@ -40,9 +40,32 @@ public class ChainOfCustodyController {
                 r.notes(), evidence, actors.resolve(h), actors.resolveSourceChannel(h))));
     }
 
+    /**
+      * Custody handovers.
+      *
+      * <p>A {@code dispatchId} reads one consignment's chain, which is what the manifest screen
+      * wants. A {@code siteCode} reads across consignments — closing gap 7, which made questions
+      * like "every handover this custodian touched last week" unanswerable without knowing each
+      * manifest in advance.
+      */
     @GetMapping
-    public ApiResponse<List<CustodyHandover>> handovers(@RequestParam UUID dispatchId, HttpServletRequest h) {
-        return ApiResponse.ok(service.handovers(dispatchId, actors.resolve(h)));
+    public ApiResponse<?> handovers(@RequestParam(required = false) UUID dispatchId,
+            @RequestParam(required = false) String siteCode,
+            @RequestParam(required = false) CustodyHop hop,
+            @RequestParam(required = false) String custodian,
+            @RequestParam(required = false) SealState sealState,
+            @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest h) {
+        var actor = actors.resolve(h);
+        if (siteCode != null && !siteCode.isBlank()) {
+            return ApiResponse.ok(DispatchPageResponse.of(service.handovers(siteCode, dispatchId, hop, custodian,
+                    sealState, from, to, DispatchPageResponse.paging(page, size, sort), actor)));
+        }
+        if (dispatchId == null) {
+            throw new IllegalArgumentException("Either dispatchId or siteCode is required");
+        }
+        return ApiResponse.ok(service.handovers(dispatchId, actor));
     }
 
     @GetMapping("/{dispatchId}/gaps")

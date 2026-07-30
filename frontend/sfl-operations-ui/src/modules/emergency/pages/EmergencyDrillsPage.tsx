@@ -18,6 +18,7 @@ import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
 
 /**
@@ -39,9 +40,15 @@ const EmergencyDrillsPage = () => {
   const [completing, setCompleting] = useState<DrillRun | null>(null);
 
   const records = useSiteRecords(siteCode);
-  const query = useApiQuery((signal) => drillsApi.search(siteCode, signal), [siteCode]);
+  const paging = useServerPage(siteCode);
+  const query = useApiQuery(
+    (signal) => drillsApi.search({ siteCode, page: paging.page, size: paging.size }, signal),
+    [siteCode, paging.page, paging.size],
+  );
 
-  const all = useMemo(() => query.data ?? [], [query.data]);
+  useClampPage(paging.page, query.data?.totalPages, paging.setPage);
+
+  const all = useMemo(() => query.data?.content ?? [], [query.data]);
   const running = useMemo(() => all.filter((drill) => drill.status === 'RUNNING'), [all]);
   const completed = useMemo(
     () =>

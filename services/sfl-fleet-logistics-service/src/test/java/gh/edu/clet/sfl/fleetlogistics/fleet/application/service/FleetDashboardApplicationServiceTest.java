@@ -170,6 +170,12 @@ class FleetDashboardApplicationServiceTest {
         }
 
         @Override
+        public List<IntegrationInboxMessage> search(String sourceSystem, IntegrationMessageStatus status,
+                String eventType, int limit) {
+            return List.of();
+        }
+
+        @Override
         public long countByStatus(IntegrationMessageStatus status) {
             return 0;
         }
@@ -189,6 +195,11 @@ class FleetDashboardApplicationServiceTest {
 
         @Override
         public List<VehicleLocationSnapshot> findRecentInScope(SiteScopeFilter scope, int limit) {
+            return List.of();
+        }
+
+        @Override
+        public List<VehicleLocationSnapshot> findByVehicle(UUID vehicleId, int limit) {
             return List.of();
         }
     }

@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.application.port;
 
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.SiteScopeFilter;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
 import java.time.LocalDate;
 import java.util.List;
@@ -29,4 +30,14 @@ public interface ComplianceDocumentRepository {
 
     /** Site-filtered documents for dashboard indicators and drilldowns. */
     List<ComplianceDocument> findInScope(SiteScopeFilter scope);
+
+    /**
+     * Cross-fleet compliance search.
+     *
+     * <p>Closes gap 10. There was no search, so the compliance screen fanned out over the first
+     * fifty active vehicles in scope and said so on the page — correct for a small fleet and
+     * quietly wrong for any other.
+     */
+    List<ComplianceDocument> search(SiteScopeFilter scope, ComplianceDocumentType documentType,
+            ComplianceDocumentStatus status, LocalDate expiringBefore, int limit);
 }

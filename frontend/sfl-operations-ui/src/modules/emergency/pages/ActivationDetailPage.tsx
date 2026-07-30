@@ -26,7 +26,6 @@ import {
   RejectActivationDialog,
   SendActivationDialog,
 } from 'modules/emergency/dialogs/activationDialogs';
-import { DerivedNote } from 'modules/fuel/components/Provenance';
 import { shortId, siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -52,11 +51,9 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * fan-out and the acknowledgement count in a single request — so the record and its counters can
  * never be a refresh apart from each other.
  *
- * The history is reconstructed from the activation's own timestamps rather than fetched. The
- * service writes a transition history on every change and exposes no endpoint to read it, so what
- * is shown here is what the record itself still remembers: approval, the send, the all-clear,
- * after-action approval and closure. Intermediate transitions that left no field behind are simply
- * not there, and the caption says so rather than letting the timeline read as complete.
+ * The history is the service's own record of every transition, read from `activation_history`. It
+ * used to be reconstructed from whatever timestamps the activation still carried, which silently
+ * omitted any transition that left no field behind — that was gap 4, and it is closed.
  */
 const ActivationDetailPage = () => {
   const { activationId = '' } = useParams();
@@ -94,83 +91,34 @@ const ActivationDetailPage = () => {
     }
   };
 
-  const timeline = useMemo<TimelineEntry[]>(() => {
-    if (!activation) {
-      return [];
-    }
-    const entries: TimelineEntry[] = [
-      {
-        id: 'created',
-        title: 'Composed',
-        detail: `${humanise(activation.mode)} activation for ${listChannels(activation.channels)}`,
-        actor: activation.metadata.createdBy,
-        occurredAt: activation.metadata.createdAt,
-      },
-    ];
-    if (activation.approvedBy && activation.approvedAt) {
-      entries.push({
-        id: 'approved',
-        title: 'Approved',
-        detail: 'Cleared to send',
-        actor: activation.approvedBy,
-        occurredAt: activation.approvedAt,
-        tone: 'accent',
-      });
-    }
-    if (activation.rejectionReason) {
-      entries.push({
-        id: 'rejected',
-        title: 'Rejected',
-        detail: activation.rejectionReason,
-        actor: activation.metadata.lastModifiedBy,
-        occurredAt: activation.metadata.lastModifiedAt,
-        tone: 'danger',
-      });
-    }
-    if (activation.fastLaneMillis !== null) {
-      entries.push({
-        id: 'sent',
-        title: activation.mode === 'BREAK_GLASS' ? 'Broadcast without approval' : 'Broadcast sent',
-        detail: `Handed to ${channels.length || activation.channels.length} channel${
-          (channels.length || activation.channels.length) === 1 ? '' : 's'
-        } in ${formatElapsed(activation.fastLaneMillis)}`,
-        actor: activation.metadata.lastModifiedBy,
-        // The service does not record the send time as a field of its own; the elapsed measure is
-        // what it keeps. Anchoring to the record's own creation is the closest honest point.
-        occurredAt: activation.metadata.createdAt,
-        tone: 'danger',
-      });
-    }
-    if (activation.afterActionApprovedBy && activation.afterActionApprovedAt) {
-      entries.push({
-        id: 'after-action',
-        title: 'After-the-fact approval recorded',
-        detail: activation.afterActionJustification,
-        actor: activation.afterActionApprovedBy,
-        occurredAt: activation.afterActionApprovedAt,
-        tone: 'accent',
-      });
-    }
-    if (activation.allClearAt) {
-      entries.push({
-        id: 'all-clear',
-        title: 'All-clear sent',
-        detail: 'Emergency stood down',
-        actor: activation.metadata.lastModifiedBy,
-        occurredAt: activation.allClearAt,
-      });
-    }
-    if (activation.status === 'CLOSED') {
-      entries.push({
-        id: 'closed',
-        title: 'Closed',
-        detail: activation.closureReason,
-        actor: activation.metadata.lastModifiedBy,
-        occurredAt: activation.metadata.lastModifiedAt,
-      });
-    }
-    return entries.sort((left, right) => left.occurredAt.localeCompare(right.occurredAt));
-  }, [activation, channels.length]);
+  /** The service's own transition record. Written on every change since day one; readable now. */
+  const history = useApiQuery(
+    (signal) => activationsApi.history(activationId, signal),
+    [activationId],
+  );
+
+  const timeline = useMemo<TimelineEntry[]>(
+    () =>
+      (history.data ?? []).map((entry) => ({
+        id: entry.id,
+        title: humanise(entry.action),
+        detail: entry.fromStatus
+          ? `${humanise(entry.fromStatus)} → ${humanise(entry.toStatus)}${
+              entry.comment ? ` — ${entry.comment}` : ''
+            }`
+          : `${humanise(entry.toStatus)}${entry.comment ? ` — ${entry.comment}` : ''}`,
+        actor: entry.actor,
+        occurredAt: entry.occurredAt,
+        // Break-glass and escalation are the two an operator scanning the column must not miss.
+        tone:
+          entry.toStatus === 'BREAK_GLASS_ACTIVE' || entry.toStatus === 'ESCALATED'
+            ? ('danger' as const)
+            : entry.toStatus === 'APPROVED' || entry.action === 'after-action-approve'
+              ? ('accent' as const)
+              : ('default' as const),
+      })),
+    [history.data],
+  );
 
   const channelColumns = useMemo<Column<NotificationChannel>[]>(
     () => [
@@ -483,17 +431,21 @@ const ActivationDetailPage = () => {
                 )}
               </SectionCard>
 
-              <SectionCard title="What happened" subtitle="Reconstructed from the record itself">
-                <WorkflowTimeline
-                  entries={timeline}
-                  emptyMessage="Nothing has happened to this activation beyond its composition."
-                />
-                <DerivedNote>
-                  Built from the timestamps the activation still carries — approval, the send, the
-                  all-clear, after-action approval and closure. The service writes a full transition
-                  history and publishes no endpoint to read it, so a transition that left no field
-                  behind does not appear here.
-                </DerivedNote>
+              <SectionCard
+                title="What happened"
+                subtitle="Every transition the service recorded, oldest first"
+              >
+                <DataState
+                  loading={history.initialising}
+                  error={history.error}
+                  onRetry={history.refetch}
+                  minHeight={120}
+                >
+                  <WorkflowTimeline
+                    entries={timeline}
+                    emptyMessage="No transition has been recorded against this activation."
+                  />
+                </DataState>
               </SectionCard>
 
               {activation.status === 'CLOSED' && (

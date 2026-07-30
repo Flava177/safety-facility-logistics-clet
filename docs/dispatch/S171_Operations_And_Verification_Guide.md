@@ -34,10 +34,11 @@ OIDC/JWT resource server unchanged.
 | Health | `GET http://localhost:8093/actuator/health` | `{"status":"UP"}` |
 | OpenAPI JSON | `GET http://localhost:8093/v3/api-docs` | OpenAPI document incl. the nine Dispatch tags |
 | Swagger UI | `http://localhost:8093/swagger-ui.html` | Dispatch Items, Inbound Mail, Dispatch Manifests, Chain of Custody, Dispatch Receipts, Return Reconciliation, Dispatch Exceptions, Dispatch Integrations, Dispatch Dashboards and Reports |
-| Console | `http://localhost:8093/dispatch/` | Mailroom / Courier & Dispatch Tracking console |
+| Dashboard | `http://localhost:8093/ui/dispatch` | Courier & dispatch screens in the SFL Operations dashboard |
+| Retired route | `http://localhost:8093/dispatch/` | Redirects to the dashboard. The page that used to be here was retired by ADR 0006 |
 | PostgreSQL | `psql -h localhost -p 5443 -U sfl -d sfl__fleet_vehicle_service -c '\dt fleet_logistics.courier_items'` | table present |
 
-Dev headers for Swagger "Authorize" or the console toolbar:
+Dev headers for Swagger "Authorize" or the dashboard's actor configuration:
 
 ```
 X-SFL-User=dispatch.controller
@@ -50,7 +51,7 @@ X-SFL-Source-Channel=WEB
 `DispatchPermissionMatrix` (DISPATCH_CONTROLLER, LOGISTICS_COORDINATOR, CENTRE_MANAGER, MAILROOM_OFFICER,
 SECURITY_OFFICER, AUDITOR, COMPLIANCE_OFFICER, DTI_ADMIN, INTEGRATION_ENGINEER, SERVICE_INTEGRATION).
 
-## 4. A CT-05 smoke walk-through (console or API)
+## 4. A CT-05 smoke walk-through (dashboard or API)
 
 1. **Register** two `EXAMINATION_PAPER` / `SECRET` items — `POST /api/v1/dispatch/items`.
 2. **Create** a manifest — `POST /api/v1/dispatch/manifests` — then **add** both items (`/items`),

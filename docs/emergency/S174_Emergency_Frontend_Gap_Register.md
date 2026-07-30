@@ -1,17 +1,66 @@
 # S174 Emergency Mass Notification — Frontend Gap Register
 
-What the SFL Operations dashboards need from `sfl-emergency-notification-service` and cannot get,
-and what each screen does instead. Written while building the module, from the running service on
-port 8095 — not from documentation.
+**Status (29 July 2026): ten of twelve gaps closed.**
 
-**Nothing here is worked around with mock data.** Every gap is either shown to the operator on the
-screen it affects, or captioned as derived where a figure had to be worked out client-side.
+| # | Gap | Status |
+| --- | --- | --- |
+| 1 | No pagination on any collection | **Closed** — `EmergencyPageResponse<T>` on activations, all four record registers and drills |
+| 2 | Activations filtered on site + status only | **Closed** — mode, priority, incident reference, `openOnly`, `liveOnly`, `afterActionOutstanding`, scenario, template, date range |
+| 3 | **No read of the inbound provider feed** | **Closed** — `GET /integrations/inbox`, with processed, rejected and dead-lettered counts and recent envelopes |
+| 4 | History written on every transition, never readable | **Closed** — `GET /activations/{id}/history` off `activation_history` |
+| 5 | Only templates had a detail endpoint | **Closed** — scenario, audience group and recipient zone detail added |
+| 6 | Master data could not be corrected or retired | **Closed** — `PATCH /audience-groups/{id}` and `PATCH /{resource}/{id}/lifecycle` |
+| 7 | `cancel`, `escalate`, `reopen`, `withDegradedFallback` have no endpoint | **Open** — see below |
+| 8 | No per-recipient delivery or acknowledgement read | **Closed** — `GET /activations/{id}/delivery` |
+| 9 | `RecordMetadata` differs between services | **Open by design** — recorded so nobody "fixes" it into a shared type |
+| 10 | The dashboards address two origins | **Closed in the previous round** |
+| 11 | CSV export truncated silently at 500 | **Closed** — the export drains its pages |
+| 12 | Dashboard published totals with no breakdown | **Closed** — `GET /dashboard/breakdown` by status, priority, mode and channel |
 
-Contract established 29 July 2026 against the live service: **24 paths, 30 operations, 8
-controllers, 11 domain records, 2 policies.** Twenty-eight of the thirty operations are integrated.
-The two that are not are the provider callbacks — see "Not gaps" below.
+### Gap 3 — why it mattered most
+
+The inbound feed is the **only** thing that ever writes `delivered`, `failed` and `acknowledged`. An
+activation showing 480 sent and 0 delivered could not be told apart from one whose provider was
+posting and being rejected on every callback. Both counts are on the provider integration screen
+now, and its empty state says exactly why those figures read zero when no provider has posted.
+
+Payloads are deliberately **not** shown: a callback names recipients, and an integration-health
+screen has no business displaying contact detail. Replay stays outbound-only, also deliberately — a
+rejected inbound message failed signature or schema validation, so the sending system has to correct
+and re-send it.
+
+### Gap 6 — the sharp edge
+
+`AudienceGroup.recipientCount` is what the service fans out to and the denominator every delivery and
+acknowledgement percentage is read against, and it could not be corrected through any endpoint. A
+group sized at zero sent to nobody and reported a completely successful broadcast. It is correctable
+now. The **name** deliberately is not: closed activations cite this group, and renaming it would
+rewrite what they say they were sent to.
+
+### Gap 7 — still open, and why
+
+`cancel`, `reopen` and `withDegradedFallback` remain unexposed. Adding them is not the hard part;
+deciding what they mean operationally is. A cancelled activation and a rejected one are different
+records to an auditor, and `reopen` on a closed activation raises a question about closure evidence
+that nobody has answered yet. The register keeps this rather than the endpoints being added on a
+guess. `escalate` is reachable through the scheduled SLA sweep and does not need a manual door.
+
+### Gap 9 — open by design
+
+`auditCorrelationId` in fleet-logistics, `correlationId` here, and non-null fields where fleet's are
+optional. Recorded so nobody consolidates them into one shared type: re-using the fuel type
+type-checked and would have rendered an empty correlation id on every emergency screen.
+
+## Still client-side, and captioned as such
+
+The **templates** and **audiences** register screens still search over loaded records. They read
+through `useSiteRecords`, which fetches all four registers for the composer dialogs, so converting
+them means giving each register its own paged query separate from the composer's. Their
+"Filters the loaded records." captions are still there because they are still true.
 
 ---
+
+## The original findings, kept for the evidence
 
 ## Gap 1 — No pagination on any collection
 
@@ -312,10 +361,43 @@ against yet.
 
 The emergency service still serves its own standalone front end at
 `src/main/resources/static/emergency/` (`index.html`, `emergency-console.js`,
-`emergency-console.css`), reachable at `http://localhost:8095/emergency`. It predates these
+`emergency-console.css`), reachable at `http://localhost:8095/emergency`. **Retired on 30 July 2026 by
+ADR 0006**: the two asset files are deleted and `index.html` is a notice page that redirects to the
+dashboard's emergency screens. It predated these
 dashboards and now duplicates them.
 
 It has been left in place — removing a working page is a decision for whoever owns that service, not
 a side effect of building this module. Worth deciding on before go-live: two front ends over one
 service will drift, and the vanilla-JS one has none of the state guards, none of the permission
 awareness and none of the derived-figure captioning built here.
+
+---
+
+## Round 6 — the record registers stopped filtering in the browser
+
+Added 29 July 2026, alongside the S166 and S168 screen work.
+
+The templates, scenarios, audience-group and recipient-zone tables were loading two hundred records per
+site through `useSiteRecords` and filtering them in the browser. The search box was captioned "Filters
+the loaded records" — true, and useless: it narrowed the first two hundred records the site happened to
+return and said nothing about the rest.
+
+No service change was needed. `search`, `lifecycle` and `breakGlassEligible` have been accepted by
+`/templates`, `/scenarios`, `/audience-groups` and `/recipient-zones` since those endpoints were
+written. The screens simply were not asking.
+
+- All four tables are server-searched, server-filtered and server-paged, with a lifecycle filter beside
+  the search box. Confirmed live: searching `muster` on the templates register returned the one template
+  whose **body** contains it, with the total, the tab count and the pager all coming from the service's
+  own page metadata.
+- The break-glass banner counts with two filtered `size=1` reads and takes `totalElements`. It is a
+  statement about the site's exposure, so tallying a page would have understated it the moment either
+  register ran past one page. Confirmed live: one template and one scenario, matching the eligibility
+  chips in the table.
+- `useSiteRecords` is still loaded on both screens, for what a page cannot answer: a scenario row names
+  a default template that may sit on any page of the template register, the create-scenario dialog needs
+  that same list, and the audiences screen's reach total and zero-sized warning are a sum and a roll-call
+  that no endpoint aggregates.
+- Those two audience figures now say what they cover — "Summed here across up to 200 groups", and
+  "Checked across up to 200 groups at this site" on the zero-sized warning. An aggregate for site reach
+  would remove the caveat. That is a missing query, not a broken screen.

@@ -8,7 +8,7 @@ import {
   dispatchExceptionsApi,
   manifestsApi,
 } from 'modules/dispatch/api/dispatchApi';
-import { exceptionOpen, exceptionSlaBreached } from 'modules/dispatch/api/workflow';
+import { exceptionSlaBreached } from 'modules/dispatch/api/workflow';
 import ExceptionMixChart, { ExceptionBar } from 'modules/dispatch/charts/ExceptionMixChart';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -67,27 +67,23 @@ const DispatchDashboardPage = () => {
     [siteCode],
   );
 
-  const items = useApiQuery((signal) => courierItemsApi.search({ siteCode }, signal), [siteCode]);
+  const items = useApiQuery(
+    (signal) => courierItemsApi.search({ siteCode, undelivered: true, size: 25 }, signal),
+    [siteCode],
+  );
 
   const data = snapshot.data;
 
-  const openCases = useMemo(
-    () => (exceptions.data ?? []).filter(exceptionOpen),
-    [exceptions.data],
-  );
-
-  const activeManifests = useMemo(
-    () =>
-      (manifests.data ?? []).filter((manifest) =>
-        ['SEALED', 'DISPATCHED', 'IN_TRANSIT', 'RECEIVED', 'RETURNED'].includes(manifest.status),
-      ),
-    [manifests.data],
-  );
-
-  const undeliveredItems = useMemo(
-    () => (items.data ?? []).filter((item) => item.undelivered || item.status === 'EXCEPTION'),
-    [items.data],
-  );
+  /**
+   * Each list is now the service's own answer to its own question, not a sieve over one window.
+   *
+   * The exception queue asks for open cases, the manifest list for the ones in flight, the item
+   * list for what is undelivered. Each is capped at what a dashboard panel can usefully show, and
+   * the counts beside them come from the service's `totalElements` rather than from the rows.
+   */
+  const openCases = useMemo(() => exceptions.data?.content ?? [], [exceptions.data]);
+  const activeManifests = useMemo(() => manifests.data?.content ?? [], [manifests.data]);
+  const undeliveredItems = useMemo(() => items.data?.content ?? [], [items.data]);
 
   const exceptionBars = useMemo<ExceptionBar[]>(() => {
     const counts = new Map<string, { total: number; urgent: number }>();

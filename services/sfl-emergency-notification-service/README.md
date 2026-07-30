@@ -8,7 +8,7 @@ provider-neutral ports only.
 
 | URL | Purpose |
 |---|---|
-| `http://localhost:8095/emergency/` | Operational console |
+| `http://localhost:8095/emergency/` | Redirects to the dashboard's emergency screens. Target: `sfl.dashboard.base-url` (ADR 0006) |
 | `http://localhost:8095/swagger-ui.html` | Swagger UI |
 | `http://localhost:8095/v3/api-docs` | OpenAPI JSON |
 | `http://localhost:8095/actuator/health` | Health |

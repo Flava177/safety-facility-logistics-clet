@@ -21,8 +21,9 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
 
-const ROW_FILTERS = [
-  { value: 'ALL', label: 'Every row' },
+/** `''` means every row, and is what the service reads as no filter. */
+const ROW_FILTERS: { value: FuelImportRow['status'] | ''; label: string }[] = [
+  { value: '', label: 'Every row' },
   { value: 'REJECTED', label: 'Rejected only' },
   { value: 'ACCEPTED', label: 'Accepted only' },
 ];
@@ -33,6 +34,12 @@ const ROW_FILTERS = [
  * Every batch and every row outcome is readable. This screen used to hold the batches uploaded in
  * one browsing session and warn that leaving the page lost them — the rows were written and nothing
  * read them back — so a rejected row an operator did not deal with immediately was simply gone.
+ *
+ * The rows are paged and filtered by the service. They used to come from the batch detail read,
+ * which returns all of them, and the rejected-only filter ran over that array — so a file of several
+ * thousand rows arrived whole and was filtered in the browser. `GET /imports/{id}/rows?status=` does
+ * both properly, which matters most for the filter: the rejected rows are the reason anyone opens
+ * this screen.
  *
  * The one thing that has not changed is the most important: a batch is **never rejected as a whole
  * for a bad row**. Each row goes through the same capture command as a manual entry and is accepted
@@ -45,7 +52,7 @@ const FuelImportsPage = () => {
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [importing, setImporting] = useState(false);
   const [selectedBatchId, setSelectedBatchId] = useState<string | null>(null);
-  const [rowFilter, setRowFilter] = useState('ALL');
+  const [rowFilter, setRowFilter] = useState<FuelImportRow['status'] | ''>('');
 
   const paging = useServerPage(siteCode, 10);
 
@@ -66,16 +73,24 @@ const FuelImportsPage = () => {
     [activeBatchId],
   );
 
-  const rows = useMemo(() => {
-    const all = batch.data?.rows ?? [];
-    if (rowFilter === 'REJECTED') {
-      return all.filter((row) => row.status !== 'ACCEPTED');
-    }
-    if (rowFilter === 'ACCEPTED') {
-      return all.filter((row) => row.status === 'ACCEPTED');
-    }
-    return all;
-  }, [batch.data, rowFilter]);
+  /** Reset to the first page when the batch or the filter changes — page 4 of the old set is nothing. */
+  const rowPaging = useServerPage(`${activeBatchId ?? ''}-${rowFilter}`, 50);
+
+  const rowPage = useApiQuery(
+    (signal) =>
+      activeBatchId
+        ? fuelImportsApi.rows(
+            activeBatchId,
+            { status: rowFilter || undefined, page: rowPaging.page, size: rowPaging.size },
+            signal,
+          )
+        : Promise.resolve(undefined),
+    [activeBatchId, rowFilter, rowPaging.page, rowPaging.size],
+  );
+
+  useClampPage(rowPaging.page, rowPage.data?.totalPages, rowPaging.setPage);
+
+  const rows = rowPage.data?.content ?? [];
 
   const batchColumns = useMemo<Column<FuelImportBatch>[]>(
     () => [
@@ -222,7 +237,7 @@ const FuelImportsPage = () => {
               loading={batches.loading}
               onRowClick={(row) => {
                 setSelectedBatchId(row.id);
-                setRowFilter(row.rejectedRows > 0 ? 'REJECTED' : 'ALL');
+                setRowFilter(row.rejectedRows > 0 ? 'REJECTED' : '');
               }}
               caption="Fuel CSV import batches at this site, with row counts, who imported each and whether any rows were rejected."
               page={batches.data?.page ?? paging.page}
@@ -286,24 +301,31 @@ const FuelImportsPage = () => {
               flush
             >
               <DataState
-                loading={batch.initialising}
-                error={batch.error}
-                empty={rows.length === 0}
+                loading={rowPage.initialising}
+                error={rowPage.error}
+                empty={(rowPage.data?.totalElements ?? 0) === 0}
                 emptyTitle="No rows match this filter"
                 emptyHint={
                   rowFilter === 'REJECTED'
                     ? 'Every row in this batch was accepted.'
-                    : 'Nothing to show.'
+                    : rowFilter === 'ACCEPTED'
+                      ? 'Every row in this batch was rejected.'
+                      : 'Nothing to show.'
                 }
-                onRetry={batch.refetch}
+                onRetry={rowPage.refetch}
                 minHeight={200}
               >
                 <DataTable
                   rows={rows}
                   columns={rowColumns}
                   getRowId={(row) => row.id}
-                  loading={batch.loading}
+                  loading={rowPage.loading}
                   caption="The outcome of every row in this import batch, with the validation error the service recorded for each rejected row."
+                  page={rowPage.data?.page ?? rowPaging.page}
+                  pageSize={rowPage.data?.size ?? rowPaging.size}
+                  totalElements={rowPage.data?.totalElements ?? 0}
+                  onPageChange={rowPaging.setPage}
+                  onPageSizeChange={rowPaging.setSize}
                   dense
                 />
               </DataState>
@@ -391,7 +413,7 @@ const FuelImportsPage = () => {
           onClose={() => setImporting(false)}
           onImported={(result) => {
             setSelectedBatchId(result.batchId);
-            setRowFilter(result.rejectedRows > 0 ? 'REJECTED' : 'ALL');
+            setRowFilter(result.rejectedRows > 0 ? 'REJECTED' : '');
             notifySuccess(
               `Imported ${result.acceptedRows} of ${result.totalRows} rows.`,
               result.rejectedRows > 0

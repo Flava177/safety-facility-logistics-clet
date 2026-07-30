@@ -40,13 +40,18 @@ public class InboundMailController {
     }
 
     @GetMapping
-    public ApiResponse<List<CourierItem>> list(@RequestParam String siteCode,
+    public ApiResponse<DispatchPageResponse<CourierItem>> list(@RequestParam String siteCode,
             @RequestParam(required = false) CourierItem.Status status,
-            @RequestParam(required = false) String handler, @RequestParam(required = false) Instant from,
-            @RequestParam(required = false) Instant to, @RequestParam(defaultValue = "100") int size,
+            @RequestParam(required = false) String handler,
+            @RequestParam(required = false) String reference,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
             HttpServletRequest h) {
-        return ApiResponse.ok(service.items(siteCode, CourierItem.Direction.INBOUND, status, null, handler, from, to,
-                size, actors.resolve(h)));
+        return ApiResponse.ok(DispatchPageResponse.of(service.items(siteCode, CourierItem.Direction.INBOUND, status,
+                null, null, handler, reference, null, null, from, to, DispatchPageResponse.paging(page, size, sort),
+                actors.resolve(h))));
     }
 
     @PostMapping("/{id}/distribute")

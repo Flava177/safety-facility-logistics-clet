@@ -1,4 +1,4 @@
-import { DependencyList, useCallback, useEffect, useRef, useState } from 'react';
+import { DependencyList, useCallback, useEffect, useState } from 'react';
 import { FleetApiError } from 'shared/errors/FleetApiError';
 
 export interface ApiQueryState<T> {
@@ -25,7 +25,15 @@ export function useApiQuery<T>(
   const [error, setError] = useState<FleetApiError | undefined>(undefined);
   const [loading, setLoading] = useState(true);
   const [reloadToken, setReloadToken] = useState(0);
-  const loadedOnce = useRef(false);
+  /**
+   * Whether a first response has ever landed — state, not a ref.
+   *
+   * It was a ref, and `initialising` read `loadedOnce.current` during render. That is exactly
+   * what `react-hooks/refs` forbids: a ref read during render is invisible to React, so under
+   * concurrent rendering the value can differ between the render that computed it and the one
+   * that commits. It drives a spinner, so it has to be state.
+   */
+  const [loadedOnce, setLoadedOnce] = useState(false);
 
   const refetch = useCallback(() => setReloadToken((token) => token + 1), []);
 
@@ -39,7 +47,7 @@ export function useApiQuery<T>(
         if (!active) {
           return;
         }
-        loadedOnce.current = true;
+        setLoadedOnce(true);
         setData(result);
         setError(undefined);
       })
@@ -47,7 +55,7 @@ export function useApiQuery<T>(
         if (!active || (cause instanceof DOMException && cause.name === 'AbortError')) {
           return;
         }
-        loadedOnce.current = true;
+        setLoadedOnce(true);
         setError(
           cause instanceof FleetApiError
             ? cause
@@ -64,7 +72,11 @@ export function useApiQuery<T>(
       active = false;
       controller.abort();
     };
+    // The dependency array is the caller's, by design: this hook exists to re-run a fetch when
+    // the caller's inputs change, and it cannot know what those are. `fetcher` is deliberately
+    // absent — it is an inline closure at every call site and would re-run on every render.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, reloadToken]);
 
-  return { data, loading, error, initialising: loading && !loadedOnce.current, refetch };
+  return { data, loading, error, initialising: loading && !loadedOnce, refetch };
 }

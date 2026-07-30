@@ -8,9 +8,11 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.FleetIntegrationRespons
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.IntegrationCommands.ReceiveIntegrationMessage;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.IntegrationCommands.ReplayIntegrationMessage;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetIntegrationApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.IntegrationMessageStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
@@ -19,6 +21,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import tools.jackson.core.JacksonException;
@@ -63,6 +66,25 @@ class FleetIntegrationController {
                 actorResolver.resolveSourceChannel(httpRequest)));
         return ResponseEntity.created(URI.create("/api/v1/fleet/integrations/messages/" + message.id()))
                 .body(ApiResponse.ok(mapper.toResponse(message)));
+    }
+
+    /**
+      * Searches the inbound integration inbox.
+      *
+      * <p>Closes gap 8. Replay takes a message identifier and the health projection carried only a
+      * handful of recent messages, so dead-letter replay was a documented capability that could not
+      * be reached from the dashboard at all.
+      */
+    @GetMapping("/messages")
+    public ApiResponse<List<InboxMessageResponse>> messages(
+            @RequestParam(required = false) String sourceSystem,
+            @RequestParam(required = false) IntegrationMessageStatus status,
+            @RequestParam(required = false) String eventType,
+            @RequestParam(defaultValue = "50") int size, HttpServletRequest httpRequest) {
+        return ApiResponse.ok(integrationService
+                .searchMessages(sourceSystem, status, eventType, size, actorResolver.resolve(httpRequest)).stream()
+                .map(mapper::toResponse)
+                .toList());
     }
 
     @GetMapping("/health")

@@ -17,6 +17,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.FleetWorkflowStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.FleetWorkflowType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowPriority;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowSeverity;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
@@ -79,6 +80,7 @@ class FleetWorkflowController {
             @RequestParam(required = false) FleetWorkflowStatus status,
             @RequestParam(required = false) FleetWorkflowType type,
             @RequestParam(required = false) WorkflowPriority priority,
+            @RequestParam(required = false) WorkflowSeverity severity,
             @RequestParam(required = false) OperatingMode operatingMode,
             @RequestParam(required = false) String assignee,
             @RequestParam(defaultValue = "false") boolean overdueOnly,
@@ -94,7 +96,8 @@ class FleetWorkflowController {
 
         FleetWorkflowRepository.WorkflowPage result = workflowQueries.search(
                 new FleetWorkflowRepository.WorkflowSearchCriteria(siteCode, status, type, priority,
-                        operatingMode, assignee, overdueOnly, escalatedOnly, from, to, page, size, sort),
+                        severity, operatingMode, assignee, overdueOnly, escalatedOnly, from, to, page,
+                        size, sort),
                 actor);
 
         return ApiResponse.ok(new PageResponse<>(

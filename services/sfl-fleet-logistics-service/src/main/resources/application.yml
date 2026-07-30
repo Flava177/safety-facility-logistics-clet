@@ -58,7 +58,7 @@ sfl:
     # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
     enabled: ${SFL_SECURITY_ENABLED:false}
   fleet:
-    # true opens Swagger and the operations console in a browser once the service is ready.
+    # true opens Swagger and the operations dashboard in a browser once the service is ready.
     # The local start script sets it; it stays false for servers and CI.
     open-browser: ${SFL_FLEET_OPEN_BROWSER:false}
     messaging:

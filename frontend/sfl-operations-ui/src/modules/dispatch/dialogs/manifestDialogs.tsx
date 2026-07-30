@@ -187,17 +187,23 @@ export const AddManifestItemDialog = ({
   const site = manifest.siteCode.value;
 
   const items = useApiQuery(
-    (signal) => courierItemsApi.search({ siteCode: site, direction: 'OUTBOUND' }, signal),
+    // The service filters by status now, so the picker asks for exactly the items that can be
+    // added rather than fetching a window and sieving it. `size` is generous because this is a
+    // select, not a register, and an operator scrolling a dropdown is already the wrong shape.
+    (signal) =>
+      courierItemsApi.search(
+        { siteCode: site, direction: 'OUTBOUND', status: 'RECEIVED', size: 200 },
+        signal,
+      ),
     [site],
   );
 
   const options = useMemo(
     () =>
-      (items.data ?? [])
-        .filter(
-          (item: CourierItem) =>
-            !existingItemIds.includes(item.id) && ['RECEIVED', 'STAGED'].includes(item.status),
-        )
+      (items.data?.content ?? [])
+        // Only the already-on-this-manifest test is left here: it is about this dialog's own state,
+        // not about the register, so the service has no way to answer it.
+        .filter((item: CourierItem) => !existingItemIds.includes(item.id))
         .map((item) => ({
           value: item.id,
           label: `${item.itemNumber} · ${item.destination} (${item.sensitivity.toLowerCase()})`,

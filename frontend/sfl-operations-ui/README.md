@@ -18,9 +18,9 @@ to the SFL palette:
 ## Running it
 
 There is no sign-in step in local development: `sfl.security.enabled` is `false`, so the service
-accepts the `X-SFL-*` actor headers this console sends.
+accepts the `X-SFL-*` actor headers this dashboard sends.
 
-### One command — service and console together (recommended)
+### One command — service and dashboard together (recommended)
 
 From the repository root:
 
@@ -29,24 +29,24 @@ cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
 .\start-fleet.ps1
 ```
 
-That loads the SFL environment, starts the service databases, builds this console if it has not been
+That loads the SFL environment, starts the service databases, builds this dashboard if it has not been
 built yet, runs the Fleet service, and opens two browser tabs when it is ready:
 
 | URL                                     | What                |
 | --------------------------------------- | ------------------- |
-| <http://localhost:8093/ui/>             | Operations console  |
+| <http://localhost:8093/ui/>             | Operations dashboard |
 | <http://localhost:8093/swagger-ui.html> | Swagger UI          |
 | <http://localhost:8093/v3/api-docs>     | OpenAPI JSON        |
 
-`http://localhost:8093/` redirects to the console. One process serves the API and the UI, so the
-console calls the API same-origin and CORS never comes into it.
+`http://localhost:8093/` redirects to the dashboard. One process serves the API and the UI, so the
+dashboard calls the API same-origin and CORS never comes into it.
 
 Useful switches:
 
 ```powershell
-.\start-fleet.ps1 -RebuildUi      # rebuild the console after front-end changes
+.\start-fleet.ps1 -RebuildUi      # rebuild the dashboard after front-end changes
 .\start-fleet.ps1 -SkipDb         # databases already running
-.\start-fleet.ps1 -SkipUiBuild    # API only, don't touch the console
+.\start-fleet.ps1 -SkipUiBuild    # API only, don't touch the dashboard
 .\start-fleet.ps1 -NoBrowser      # don't open browser tabs
 ```
 
@@ -56,7 +56,7 @@ Useful switches:
 .\scripts\dev\run-fleet-dev.ps1
 ```
 
-The service runs in its own window on 8093 and Vite serves the console on
+The service runs in its own window on 8093 and Vite serves the dashboard on
 <http://localhost:5005> with hot module replacement. The service already allows `localhost:5005`
 as a CORS origin.
 
@@ -72,9 +72,9 @@ mvn -pl sfl-fleet-logistics-service -am test          # optional
 mvn -pl sfl-fleet-logistics-service -Pui spring-boot:run
 ```
 
-`-Pui` builds this console with a project-local Node install before starting the service. Without
+`-Pui` builds this dashboard with a project-local Node install before starting the service. Without
 it, Maven copies whatever is already in `frontend/sfl-operations-ui/dist`; if nothing has been
-built, the service starts normally and logs how to build the console.
+built, the service starts normally and logs how to build the dashboard.
 
 Front-end only:
 
@@ -87,7 +87,22 @@ npm run build
 npm run dev
 ```
 
-### How the console is mounted
+### The actor switcher
+
+The account avatar in the top bar carries a **Change actor** entry in development builds. It sends
+different `X-SFL-*` headers, stores them for the session and reloads.
+
+Use it to check what ADR 0005 promises: pick the driver preset and the emergency section leaves the
+sidebar; pick the facilities manager and you land on the no-programme page, because IFIMP has no
+dashboard screens yet. The fleet service will also refuse a driver's dashboard read with
+`FLEET_UNAUTHORIZED_SCOPE` — navigation scoping is a usability control, and the service is the
+enforcement point.
+
+The avatar shows a badge while an override is in force, and **Clear and reload** returns to the
+`VITE_SFL_*` values in `.env`. A production build has none of this: the panel is behind
+`import.meta.env.DEV` on its dynamic import, so no chunk is emitted.
+
+### How the dashboard is mounted
 
 `npm run build` emits the bundle under the `/ui/` base (see `.env.production`) and Maven copies
 `dist/` into the service's `static/ui`. `FleetWebConfiguration` serves it with a single-page
@@ -102,7 +117,7 @@ Copy `.env.example` to `.env` and adjust. Vite reads these at build time.
 
 `.env.production` is loaded by `npm run build` only. It clears `VITE_FLEET_API_BASE_URL` so the
 embedded bundle calls the API on its own origin, and sets `VITE_BASE_PATH=/ui/`. Leave both alone
-unless you are deploying the console somewhere other than the Fleet service.
+unless you are deploying the dashboard somewhere other than the Fleet service.
 
 | Variable                  | Default                 | Purpose                                            |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
@@ -230,7 +245,7 @@ Taken from the controllers, not from the API inventory document — see
 
 ## Manual verification checklist
 
-1. Run `.\start-fleet.ps1` from the repository root. Swagger and the console open by themselves.
+1. Run `.\start-fleet.ps1` from the repository root. Swagger and the dashboard open by themselves.
 2. `http://localhost:8093/` redirects to `/ui/` and the dashboard renders indicators, charts and
    the snapshot freshness chip.
 3. Vehicle and driver registers load, filter and page against the server.

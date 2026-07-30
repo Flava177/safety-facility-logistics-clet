@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.dispatch.api;
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.CourierItemService;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CourierItem;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditEvent;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -39,15 +40,29 @@ public class DispatchItemController {
     }
 
     @GetMapping
-    public ApiResponse<List<CourierItem>> list(@RequestParam String siteCode,
+    public ApiResponse<DispatchPageResponse<CourierItem>> list(@RequestParam String siteCode,
             @RequestParam(required = false) CourierItem.Direction direction,
             @RequestParam(required = false) CourierItem.Status status,
             @RequestParam(required = false) CourierItem.Sensitivity sensitivity,
-            @RequestParam(required = false) String handler, @RequestParam(required = false) Instant from,
-            @RequestParam(required = false) Instant to, @RequestParam(defaultValue = "100") int size,
+            @RequestParam(required = false) CourierItem.Type itemType,
+            @RequestParam(required = false) String handler,
+            @RequestParam(required = false) String reference,
+            @RequestParam(required = false) UUID dispatchId,
+            @RequestParam(required = false) Boolean undelivered,
+            @RequestParam(required = false) Instant from,
+            @RequestParam(required = false) Instant to,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
             HttpServletRequest h) {
-        return ApiResponse.ok(service.items(siteCode, direction, status, sensitivity, handler, from, to, size,
-                actors.resolve(h)));
+        return ApiResponse.ok(DispatchPageResponse.of(service.items(siteCode, direction, status, sensitivity, itemType,
+                handler, reference, dispatchId, undelivered, from, to, DispatchPageResponse.paging(page, size, sort),
+                actors.resolve(h))));
+    }
+
+    /** The item's transition history: registration, every lifecycle move, misroute and closure. */
+    @GetMapping("/{id}/history")
+    public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
     @GetMapping("/{id}")

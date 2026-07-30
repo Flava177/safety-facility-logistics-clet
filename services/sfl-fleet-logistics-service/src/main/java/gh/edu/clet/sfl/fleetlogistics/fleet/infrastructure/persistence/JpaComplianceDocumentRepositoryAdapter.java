@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.persistence;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.ComplianceDocumentRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.SiteScopeFilter;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
 import java.time.LocalDate;
 import java.util.List;
@@ -67,6 +68,19 @@ class JpaComplianceDocumentRepositoryAdapter implements ComplianceDocumentReposi
     @Transactional(readOnly = true)
     public List<ComplianceDocument> findCurrentExpiringOnOrBefore(LocalDate threshold) {
         return complianceDocuments.findCurrentExpiringOnOrBefore(threshold).stream()
+                .map(ComplianceDocumentEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<ComplianceDocument> search(SiteScopeFilter scope, ComplianceDocumentType documentType,
+            ComplianceDocumentStatus status, java.time.LocalDate expiringBefore, int limit) {
+        return complianceDocuments.search(scope.allSites(),
+                        scope.allSites() ? List.of("*") : List.copyOf(scope.sites()), documentType, status,
+                        expiringBefore,
+                        org.springframework.data.domain.PageRequest.of(0, Math.max(1, Math.min(limit, 500))))
+                .stream()
                 .map(ComplianceDocumentEntity::toDomain)
                 .toList();
     }

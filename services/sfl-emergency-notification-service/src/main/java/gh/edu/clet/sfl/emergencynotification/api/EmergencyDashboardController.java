@@ -28,4 +28,17 @@ public class EmergencyDashboardController {
     public ApiResponse<Map<String, Object>> dashboard(@RequestParam String siteCode, HttpServletRequest h) {
         return ApiResponse.ok(service.dashboard(siteCode, actors.resolve(h)));
     }
+
+    /**
+     * The same population, split by status, priority, mode and channel.
+     *
+     * <p>Closes gap 12. The dashboard published seven totals and no breakdown at all, so every chart
+     * on the screen had to be bucketed in the browser from a page of fetched records — which is only
+     * ever the truth about that page.
+     */
+    @GetMapping("/breakdown")
+    public ApiResponse<Map<String, Map<String, Long>>> breakdown(@RequestParam String siteCode,
+            HttpServletRequest h) {
+        return ApiResponse.ok(service.breakdown(siteCode, actors.resolve(h)));
+    }
 }
