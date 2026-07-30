@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.facilities.masterdata.api;
 
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.masterdata.api.FacilitiesResponses.BuildingResponse;
 import gh.edu.clet.sfl.facilities.masterdata.api.FacilitiesResponses.DeviceReferenceResponse;
@@ -65,100 +66,100 @@ public class FacilitiesMasterDataController {
 
     @PostMapping("/sites")
     @Operation(summary = "Register a site", description = "SRS-SFL-S152-01. Accepts an Idempotency-Key.")
-    public ResponseEntity<SiteResponse> createSite(@Valid @RequestBody FacilitiesRequests.CreateSite request,
+    public ResponseEntity<ApiResponse<SiteResponse>> createSite(@Valid @RequestBody FacilitiesRequests.CreateSite request,
             HttpServletRequest http) {
         SiteResponse result = SiteResponse.from(service.createSite(new FacilitiesCommands.CreateSite(
                 request.siteCode(), request.name(), request.description(), actor(http), channel(http),
                 idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/sites/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/sites/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping("/sites")
     @Operation(summary = "List the sites the actor is scoped to")
-    public List<SiteResponse> sites(HttpServletRequest http) {
-        return service.sites(actor(http), channel(http)).stream().map(SiteResponse::from).toList();
+    public ApiResponse<List<SiteResponse>> sites(HttpServletRequest http) {
+        return ApiResponse.ok(service.sites(actor(http), channel(http)).stream().map(SiteResponse::from).toList());
     }
 
     @GetMapping("/sites/{siteId}")
     @Operation(summary = "Read one site")
-    public SiteResponse site(@PathVariable UUID siteId, HttpServletRequest http) {
-        return SiteResponse.from(service.site(siteId, actor(http), channel(http)));
+    public ApiResponse<SiteResponse> site(@PathVariable UUID siteId, HttpServletRequest http) {
+        return ApiResponse.ok(SiteResponse.from(service.site(siteId, actor(http), channel(http))));
     }
 
     @PatchMapping("/sites/{siteId}")
     @Operation(summary = "Update a site's operational attributes")
-    public SiteResponse updateSite(@PathVariable UUID siteId,
+    public ApiResponse<SiteResponse> updateSite(@PathVariable UUID siteId,
             @Valid @RequestBody FacilitiesRequests.UpdateSite request, HttpServletRequest http) {
-        return SiteResponse.from(service.updateSite(new FacilitiesCommands.UpdateSite(siteId, request.name(),
-                request.description(), request.expectedVersion(), actor(http), channel(http))));
+        return ApiResponse.ok(SiteResponse.from(service.updateSite(new FacilitiesCommands.UpdateSite(siteId, request.name(),
+                request.description(), request.expectedVersion(), actor(http), channel(http)))));
     }
 
     @PatchMapping("/sites/{siteId}/lifecycle")
     @Operation(summary = "Move a site through its lifecycle",
             description = "ACTIVE, INACTIVE, SUSPENDED or ARCHIVED. ARCHIVED is terminal.")
-    public SiteResponse changeSiteLifecycle(@PathVariable UUID siteId,
+    public ApiResponse<SiteResponse> changeSiteLifecycle(@PathVariable UUID siteId,
             @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
-        return SiteResponse.from(service.changeSiteLifecycle(new FacilitiesCommands.ChangeSiteLifecycle(siteId,
-                request.status(), request.expectedVersion(), actor(http), channel(http))));
+        return ApiResponse.ok(SiteResponse.from(service.changeSiteLifecycle(new FacilitiesCommands.ChangeSiteLifecycle(siteId,
+                request.status(), request.expectedVersion(), actor(http), channel(http)))));
     }
 
     @PatchMapping("/sites/{siteId}/operating-mode")
     @Operation(summary = "Declare or stand down examination mode",
             description = "NFR 23.3. Requires FACILITIES_OPERATING_MODE_CHANGE and is audited.")
-    public SiteResponse changeOperatingMode(@PathVariable UUID siteId,
+    public ApiResponse<SiteResponse> changeOperatingMode(@PathVariable UUID siteId,
             @Valid @RequestBody FacilitiesRequests.ChangeOperatingMode request, HttpServletRequest http) {
-        return SiteResponse.from(service.changeOperatingMode(new FacilitiesCommands.ChangeOperatingMode(siteId,
-                request.operatingMode(), request.reason(), actor(http), channel(http))));
+        return ApiResponse.ok(SiteResponse.from(service.changeOperatingMode(new FacilitiesCommands.ChangeOperatingMode(siteId,
+                request.operatingMode(), request.reason(), actor(http), channel(http)))));
     }
 
     // ---- buildings ----------------------------------------------------------------------------
 
     @PostMapping("/buildings")
     @Operation(summary = "Register a building")
-    public ResponseEntity<BuildingResponse> createBuilding(
+    public ResponseEntity<ApiResponse<BuildingResponse>> createBuilding(
             @Valid @RequestBody FacilitiesRequests.CreateBuilding request, HttpServletRequest http) {
         BuildingResponse result = BuildingResponse.from(service.createBuilding(
                 new FacilitiesCommands.CreateBuilding(request.siteId(), request.buildingCode(), request.name(),
                         request.description(), actor(http), channel(http), idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/buildings/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/buildings/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping("/buildings")
     @Operation(summary = "List buildings, optionally for one site")
-    public List<BuildingResponse> buildings(@RequestParam(required = false) String siteCode,
+    public ApiResponse<List<BuildingResponse>> buildings(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
-        return service.buildings(siteCode, actor(http), channel(http)).stream()
-                .map(BuildingResponse::from).toList();
+        return ApiResponse.ok(service.buildings(siteCode, actor(http), channel(http)).stream()
+                .map(BuildingResponse::from).toList());
     }
 
     @GetMapping("/buildings/{buildingId}")
     @Operation(summary = "Read one building")
-    public BuildingResponse building(@PathVariable UUID buildingId, HttpServletRequest http) {
-        return BuildingResponse.from(service.building(buildingId, actor(http), channel(http)));
+    public ApiResponse<BuildingResponse> building(@PathVariable UUID buildingId, HttpServletRequest http) {
+        return ApiResponse.ok(BuildingResponse.from(service.building(buildingId, actor(http), channel(http))));
     }
 
     // ---- floors -------------------------------------------------------------------------------
 
     @PostMapping("/floors")
     @Operation(summary = "Register a floor")
-    public ResponseEntity<FloorResponse> createFloor(@Valid @RequestBody FacilitiesRequests.CreateFloor request,
+    public ResponseEntity<ApiResponse<FloorResponse>> createFloor(@Valid @RequestBody FacilitiesRequests.CreateFloor request,
             HttpServletRequest http) {
         FloorResponse result = FloorResponse.from(service.createFloor(new FacilitiesCommands.CreateFloor(
                 request.buildingId(), request.floorCode(), request.name(), request.levelNumber(), actor(http),
                 channel(http), idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/floors/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/floors/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping("/buildings/{buildingId}/floors")
     @Operation(summary = "List a building's floors, lowest level first")
-    public List<FloorResponse> floors(@PathVariable UUID buildingId, HttpServletRequest http) {
-        return service.floors(buildingId, actor(http), channel(http)).stream().map(FloorResponse::from).toList();
+    public ApiResponse<List<FloorResponse>> floors(@PathVariable UUID buildingId, HttpServletRequest http) {
+        return ApiResponse.ok(service.floors(buildingId, actor(http), channel(http)).stream().map(FloorResponse::from).toList());
     }
 
     @GetMapping("/floors/{floorId}")
     @Operation(summary = "Read one floor")
-    public FloorResponse floor(@PathVariable UUID floorId, HttpServletRequest http) {
-        return FloorResponse.from(service.floor(floorId, actor(http), channel(http)));
+    public ApiResponse<FloorResponse> floor(@PathVariable UUID floorId, HttpServletRequest http) {
+        return ApiResponse.ok(FloorResponse.from(service.floor(floorId, actor(http), channel(http))));
     }
 
     // ---- spaces -------------------------------------------------------------------------------
@@ -167,13 +168,13 @@ public class FacilitiesMasterDataController {
     @Operation(summary = "Register a space",
             description = "Room, hall, moot courtroom or plant room. Bookable and examination-capable "
                     + "default from the space type unless stated.")
-    public ResponseEntity<RoomResponse> createRoom(@Valid @RequestBody FacilitiesRequests.CreateRoom request,
+    public ResponseEntity<ApiResponse<RoomResponse>> createRoom(@Valid @RequestBody FacilitiesRequests.CreateRoom request,
             HttpServletRequest http) {
         RoomResponse result = RoomResponse.from(service.createRoom(new FacilitiesCommands.CreateRoom(
                 request.floorId(), request.roomCode(), request.name(), request.spaceType(), request.capacity(),
                 request.areaSqm(), request.costCentre(), request.bookable(), request.examinationCapable(),
                 actor(http), channel(http), idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/rooms/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/rooms/" + result.id())).body(ApiResponse.ok(result));
     }
 
     /**
@@ -185,13 +186,13 @@ public class FacilitiesMasterDataController {
      */
     @GetMapping("/rooms")
     @Operation(summary = "List spaces for a site")
-    public List<RoomResponse> rooms(@RequestParam(required = false) String siteCode, HttpServletRequest http) {
-        return service.rooms(siteCode, actor(http), channel(http)).stream().map(RoomResponse::from).toList();
+    public ApiResponse<List<RoomResponse>> rooms(@RequestParam(required = false) String siteCode, HttpServletRequest http) {
+        return ApiResponse.ok(service.rooms(siteCode, actor(http), channel(http)).stream().map(RoomResponse::from).toList());
     }
 
     @GetMapping("/rooms/search")
     @Operation(summary = "Search spaces by site, building, floor, type, readiness and availability")
-    public PageResponse<RoomResponse> searchRooms(
+    public ApiResponse<PageResponse<RoomResponse>> searchRooms(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) UUID buildingId,
             @RequestParam(required = false) UUID floorId,
@@ -204,24 +205,24 @@ public class FacilitiesMasterDataController {
             HttpServletRequest http) {
         FacilitiesRepository.RoomQuery query = new FacilitiesRepository.RoomQuery(siteCode, buildingId, floorId,
                 spaceType, readinessStatus, bookable, examinationCapable, page, size);
-        return PageResponse.from(service.searchRooms(query, actor(http), channel(http)), RoomResponse::from);
+        return ApiResponse.ok(PageResponse.from(service.searchRooms(query, actor(http), channel(http)), RoomResponse::from));
     }
 
     @GetMapping("/rooms/{roomId}")
     @Operation(summary = "Read one space")
-    public RoomResponse room(@PathVariable UUID roomId, HttpServletRequest http) {
-        return RoomResponse.from(service.room(roomId, actor(http), channel(http)));
+    public ApiResponse<RoomResponse> room(@PathVariable UUID roomId, HttpServletRequest http) {
+        return ApiResponse.ok(RoomResponse.from(service.room(roomId, actor(http), channel(http))));
     }
 
     @PatchMapping("/rooms/{roomId}")
     @Operation(summary = "Update a space's attributes",
             description = "Refused while the space's readiness lock is engaged.")
-    public RoomResponse updateRoom(@PathVariable UUID roomId,
+    public ApiResponse<RoomResponse> updateRoom(@PathVariable UUID roomId,
             @Valid @RequestBody FacilitiesRequests.UpdateRoom request, HttpServletRequest http) {
-        return RoomResponse.from(service.updateRoom(new FacilitiesCommands.UpdateRoom(roomId, request.name(),
+        return ApiResponse.ok(RoomResponse.from(service.updateRoom(new FacilitiesCommands.UpdateRoom(roomId, request.name(),
                 request.spaceType(), request.capacity(), request.areaSqm(), request.costCentre(),
                 request.bookable(), request.examinationCapable(), request.expectedVersion(), actor(http),
-                channel(http))));
+                channel(http)))));
     }
 
     /**
@@ -234,62 +235,62 @@ public class FacilitiesMasterDataController {
     @Operation(summary = "Set a space's readiness directly",
             description = "SRS-SFL-S152-01. Refused with READINESS_BLOCKED when READY is requested and a "
                     + "critical blocker is open.")
-    public RoomResponse updateRoomReadiness(@PathVariable UUID roomId,
+    public ApiResponse<RoomResponse> updateRoomReadiness(@PathVariable UUID roomId,
             @Valid @RequestBody FacilitiesRequests.UpdateRoomReadiness request, HttpServletRequest http) {
-        return RoomResponse.from(readiness.setReadinessDirectly(new FacilitiesCommands.UpdateRoomReadiness(
-                roomId, request.status(), request.notes(), actor(http), channel(http))));
+        return ApiResponse.ok(RoomResponse.from(readiness.setReadinessDirectly(new FacilitiesCommands.UpdateRoomReadiness(
+                roomId, request.status(), request.notes(), actor(http), channel(http)))));
     }
 
     @PatchMapping("/rooms/{roomId}/lifecycle")
     @Operation(summary = "Move a space through its lifecycle")
-    public RoomResponse changeRoomLifecycle(@PathVariable UUID roomId,
+    public ApiResponse<RoomResponse> changeRoomLifecycle(@PathVariable UUID roomId,
             @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
-        return RoomResponse.from(service.changeRoomLifecycle(new FacilitiesCommands.ChangeRoomLifecycle(roomId,
-                request.status(), request.expectedVersion(), actor(http), channel(http))));
+        return ApiResponse.ok(RoomResponse.from(service.changeRoomLifecycle(new FacilitiesCommands.ChangeRoomLifecycle(roomId,
+                request.status(), request.expectedVersion(), actor(http), channel(http)))));
     }
 
     // ---- zones --------------------------------------------------------------------------------
 
     @PostMapping("/zones")
     @Operation(summary = "Register a zone")
-    public ResponseEntity<ZoneResponse> createZone(@Valid @RequestBody FacilitiesRequests.CreateZone request,
+    public ResponseEntity<ApiResponse<ZoneResponse>> createZone(@Valid @RequestBody FacilitiesRequests.CreateZone request,
             HttpServletRequest http) {
         ZoneResponse result = ZoneResponse.from(service.createZone(new FacilitiesCommands.CreateZone(
                 request.siteCode(), request.zoneCode(), request.name(), request.purpose(),
                 request.parentZoneId(), actor(http), channel(http), idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/zones/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/zones/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping("/zones")
     @Operation(summary = "List zones, optionally for one site")
-    public List<ZoneResponse> zones(@RequestParam(required = false) String siteCode, HttpServletRequest http) {
-        return service.zones(siteCode, actor(http), channel(http)).stream().map(ZoneResponse::from).toList();
+    public ApiResponse<List<ZoneResponse>> zones(@RequestParam(required = false) String siteCode, HttpServletRequest http) {
+        return ApiResponse.ok(service.zones(siteCode, actor(http), channel(http)).stream().map(ZoneResponse::from).toList());
     }
 
     @GetMapping("/zones/{zoneId}")
     @Operation(summary = "Read one zone")
-    public ZoneResponse zone(@PathVariable UUID zoneId, HttpServletRequest http) {
-        return ZoneResponse.from(service.zone(zoneId, actor(http), channel(http)));
+    public ApiResponse<ZoneResponse> zone(@PathVariable UUID zoneId, HttpServletRequest http) {
+        return ApiResponse.ok(ZoneResponse.from(service.zone(zoneId, actor(http), channel(http))));
     }
 
     @GetMapping("/zones/{zoneId}/members")
     @Operation(summary = "List what a zone covers",
             description = "Buildings, floors, spaces and devices. What S162a and S174 resolve against.")
-    public List<ZoneMemberResponse> zoneMembers(@PathVariable UUID zoneId, HttpServletRequest http) {
-        return service.zoneMembers(zoneId, actor(http), channel(http)).stream()
-                .map(ZoneMemberResponse::from).toList();
+    public ApiResponse<List<ZoneMemberResponse>> zoneMembers(@PathVariable UUID zoneId, HttpServletRequest http) {
+        return ApiResponse.ok(service.zoneMembers(zoneId, actor(http), channel(http)).stream()
+                .map(ZoneMemberResponse::from).toList());
     }
 
     @PostMapping("/zones/{zoneId}/members")
     @Operation(summary = "Add a record to a zone",
             description = "The member must belong to the zone's own site.")
-    public ResponseEntity<ZoneMemberResponse> addZoneMember(@PathVariable UUID zoneId,
+    public ResponseEntity<ApiResponse<ZoneMemberResponse>> addZoneMember(@PathVariable UUID zoneId,
             @Valid @RequestBody FacilitiesRequests.AddZoneMember request, HttpServletRequest http) {
         ZoneMemberResponse result = ZoneMemberResponse.from(service.addZoneMember(
                 new FacilitiesCommands.AddZoneMember(zoneId, request.memberType(), request.memberId(),
                         actor(http), channel(http))));
         return ResponseEntity.created(URI.create("/api/v1/facilities/zones/" + zoneId + "/members/"
-                + result.memberType() + "/" + result.memberId())).body(result);
+                + result.memberType() + "/" + result.memberId())).body(ApiResponse.ok(result));
     }
 
     @DeleteMapping("/zones/{zoneId}/members/{memberType}/{memberId}")
@@ -307,7 +308,7 @@ public class FacilitiesMasterDataController {
     @Operation(summary = "Register a device reference",
             description = "SRS-SFL-S152-04. SFL owns the device's identity and location; the vendor system "
                     + "operates the device.")
-    public ResponseEntity<DeviceReferenceResponse> registerDeviceReference(
+    public ResponseEntity<ApiResponse<DeviceReferenceResponse>> registerDeviceReference(
             @Valid @RequestBody FacilitiesRequests.RegisterDeviceReference request, HttpServletRequest http) {
         DeviceReferenceResponse result = DeviceReferenceResponse.from(service.registerDeviceReference(
                 new FacilitiesCommands.RegisterDeviceReference(request.siteCode(), request.deviceCode(),
@@ -315,22 +316,22 @@ public class FacilitiesMasterDataController {
                         request.vendor(), request.externalReference(), actor(http), channel(http),
                         idempotencyKey(http))));
         return ResponseEntity.created(URI.create("/api/v1/facilities/device-references/" + result.id()))
-                .body(result);
+                .body(ApiResponse.ok(result));
     }
 
     @GetMapping("/device-references")
     @Operation(summary = "List device references by site, type or space")
-    public List<DeviceReferenceResponse> deviceReferences(@RequestParam(required = false) String siteCode,
+    public ApiResponse<List<DeviceReferenceResponse>> deviceReferences(@RequestParam(required = false) String siteCode,
             @RequestParam(required = false) DeviceReferenceType type,
             @RequestParam(required = false) UUID roomId, HttpServletRequest http) {
-        return service.deviceReferences(siteCode, type, roomId, actor(http), channel(http)).stream()
-                .map(DeviceReferenceResponse::from).toList();
+        return ApiResponse.ok(service.deviceReferences(siteCode, type, roomId, actor(http), channel(http)).stream()
+                .map(DeviceReferenceResponse::from).toList());
     }
 
     @GetMapping("/device-references/{deviceId}")
     @Operation(summary = "Read one device reference")
-    public DeviceReferenceResponse deviceReference(@PathVariable UUID deviceId, HttpServletRequest http) {
-        return DeviceReferenceResponse.from(service.deviceReference(deviceId, actor(http), channel(http)));
+    public ApiResponse<DeviceReferenceResponse> deviceReference(@PathVariable UUID deviceId, HttpServletRequest http) {
+        return ApiResponse.ok(DeviceReferenceResponse.from(service.deviceReference(deviceId, actor(http), channel(http))));
     }
 
     private ActorContext actor(HttpServletRequest http) {

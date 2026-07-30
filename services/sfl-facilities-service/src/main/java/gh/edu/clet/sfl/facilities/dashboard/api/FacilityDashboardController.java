@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.facilities.dashboard.api;
 
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.dashboard.application.FacilityDashboardService;
 import gh.edu.clet.sfl.facilities.dashboard.domain.FacilityDashboard;
@@ -39,30 +40,30 @@ public class FacilityDashboardController {
     @Operation(summary = "Facility readiness dashboard",
             description = "SRS-SFL-S152-05. Computed live from the source records, with a stale-data "
                     + "warning when readiness is older than the configured freshness threshold.")
-    public FacilityDashboard dashboard(@RequestParam(required = false) String siteCode,
+    public ApiResponse<FacilityDashboard> dashboard(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
-        return service.dashboard(siteCode, actor(http), channel(http));
+        return ApiResponse.ok(service.dashboard(siteCode, actor(http), channel(http)));
     }
 
     @GetMapping("/blockers")
     @Operation(summary = "Open readiness blockers behind the dashboard counts, worst and oldest first")
-    public List<FacilityDashboard.ExceptionRow> blockers(@RequestParam(required = false) String siteCode,
+    public ApiResponse<List<FacilityDashboard.ExceptionRow>> blockers(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
-        return service.blockerRows(siteCode, actor(http), channel(http));
+        return ApiResponse.ok(service.blockerRows(siteCode, actor(http), channel(http)));
     }
 
     @GetMapping("/unavailable")
     @Operation(summary = "Bookable spaces that are not currently available")
-    public List<FacilityDashboard.ExceptionRow> unavailable(@RequestParam(required = false) String siteCode,
+    public ApiResponse<List<FacilityDashboard.ExceptionRow>> unavailable(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
-        return service.unavailableRows(siteCode, actor(http), channel(http));
+        return ApiResponse.ok(service.unavailableRows(siteCode, actor(http), channel(http)));
     }
 
     @GetMapping("/stale")
     @Operation(summary = "Spaces whose readiness is older than the configured threshold, or never assessed")
-    public List<FacilityDashboard.ExceptionRow> stale(@RequestParam(required = false) String siteCode,
+    public ApiResponse<List<FacilityDashboard.ExceptionRow>> stale(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
-        return service.staleRows(siteCode, actor(http), channel(http));
+        return ApiResponse.ok(service.staleRows(siteCode, actor(http), channel(http)));
     }
 
     private ActorContext actor(HttpServletRequest http) {

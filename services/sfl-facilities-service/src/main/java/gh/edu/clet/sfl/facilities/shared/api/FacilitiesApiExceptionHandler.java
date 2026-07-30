@@ -1,5 +1,7 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
+import gh.edu.clet.sfl.common.api.ApiError;
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.AuthorizationException;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesErrorCode;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
@@ -18,10 +20,18 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
 /**
- * Maps every failure to the uniform envelope and the status its SRS error state implies.
+ * Maps every failure to the platform envelope and the status its SRS error state implies.
  *
- * <p>The mapping is declared once here rather than at each throw site, so a rule added to the domain
- * cannot ship with an inconsistent status. The table it encodes:
+ * <p>The envelope is {@code ApiResponse<T>} — {@code {data, error}} — because that is what the other
+ * 35 controllers in this platform emit and what the dashboard's single API client parses. S152
+ * originally returned bare payloads with its own error shape; the client returns {@code envelope.data}
+ * and would have read every successful response as {@code undefined}. Thirty-five controllers set the
+ * convention, so the five here were changed rather than the shared client taught a per-service policy.
+ *
+ * <p>Field errors travel in {@code data}, which is where {@code FleetApiError.fromEnvelope} looks for
+ * them — an array there becomes the form's per-field messages.
+ *
+ * <p>The status table this encodes:
  *
  * <ul>
  *   <li>Unauthorised scope, restricted drilldown, no scope — <strong>403</strong></li>
@@ -35,9 +45,6 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * <p>422 rather than 400 for the domain-rule refusals is deliberate: the request was well-formed and
  * the server understood it — it is the estate's current state that forbids it. A client that retried a
  * 400 after fixing its payload would retry a 422 forever.
- *
- * <p>The pre-S152 handlers for {@link IllegalArgumentException} and {@link AuthorizationException} are
- * kept, mapped to the same codes, so the endpoints that already shipped do not change status.
  */
 @RestControllerAdvice
 class FacilitiesApiExceptionHandler {
@@ -61,15 +68,18 @@ class FacilitiesApiExceptionHandler {
             Map.entry(FacilitiesErrorCode.INVALID_PARENT_REFERENCE, HttpStatus.BAD_REQUEST),
             Map.entry(FacilitiesErrorCode.AUDIT_CHAIN_FAILURE, HttpStatus.INTERNAL_SERVER_ERROR));
 
+    /** One field's rejection, shaped as the dashboard's form binding expects. */
+    public record FieldErrorResponse(String field, String message, Object rejectedValue) {
+    }
+
     @ExceptionHandler(FacilitiesException.class)
-    ResponseEntity<ApiErrorResponse> facilitiesFailure(FacilitiesException exception, HttpServletRequest request) {
+    ResponseEntity<ApiResponse<Object>> facilitiesFailure(FacilitiesException exception,
+            HttpServletRequest request) {
         HttpStatus status = STATUSES.getOrDefault(exception.code(), HttpStatus.BAD_REQUEST);
         if (status.is5xxServerError()) {
             log.error("S152 failure {}: {}", exception.code(), exception.getMessage(), exception);
         }
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of(status.value(), exception.code(), exception.getMessage(),
-                        correlationId(request)));
+        return respond(status, exception.code(), exception.getMessage(), null, request);
     }
 
     /**
@@ -80,54 +90,44 @@ class FacilitiesApiExceptionHandler {
      * cannot tell which module refused it.
      */
     @ExceptionHandler(AuthorizationException.class)
-    ResponseEntity<ApiErrorResponse> forbidden(AuthorizationException exception, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.FORBIDDEN)
-                .body(ApiErrorResponse.of(HttpStatus.FORBIDDEN.value(), FacilitiesErrorCode.UNAUTHORIZED_SCOPE,
-                        exception.getMessage(), correlationId(request)));
+    ResponseEntity<ApiResponse<Object>> forbidden(AuthorizationException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.FORBIDDEN, FacilitiesErrorCode.UNAUTHORIZED_SCOPE, exception.getMessage(),
+                null, request);
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    ResponseEntity<ApiErrorResponse> validationFailure(MethodArgumentNotValidException exception,
+    ResponseEntity<ApiResponse<Object>> validationFailure(MethodArgumentNotValidException exception,
             HttpServletRequest request) {
-        List<ApiErrorResponse.FieldError> fieldErrors = exception.getBindingResult().getFieldErrors().stream()
-                .map(error -> new ApiErrorResponse.FieldError(error.getField(), error.getDefaultMessage()))
+        List<FieldErrorResponse> fieldErrors = exception.getBindingResult().getFieldErrors().stream()
+                .map(error -> new FieldErrorResponse(error.getField(), error.getDefaultMessage(),
+                        error.getRejectedValue()))
                 .toList();
         String message = fieldErrors.isEmpty()
                 ? FacilitiesErrorCode.VALIDATION_FAILED.defaultMessage()
                 : fieldErrors.get(0).field() + ": " + fieldErrors.get(0).message();
-        return ResponseEntity.badRequest().body(ApiErrorResponse.validation(HttpStatus.BAD_REQUEST.value(),
-                message, correlationId(request), fieldErrors));
+        return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED, message, fieldErrors,
+                request);
     }
 
     @ExceptionHandler(MethodArgumentTypeMismatchException.class)
-    ResponseEntity<ApiErrorResponse> typeMismatch(MethodArgumentTypeMismatchException exception,
+    ResponseEntity<ApiResponse<Object>> typeMismatch(MethodArgumentTypeMismatchException exception,
             HttpServletRequest request) {
-        return ResponseEntity.badRequest().body(ApiErrorResponse.of(HttpStatus.BAD_REQUEST.value(),
-                FacilitiesErrorCode.VALIDATION_FAILED,
-                exception.getName() + " is not a valid value", correlationId(request)));
+        return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED,
+                exception.getName() + " is not a valid value", null, request);
     }
 
     /**
      * A database constraint the application-level check did not catch first.
      *
      * <p>Two very different failures arrive as one exception type, and reporting them alike sends a
-     * caller down the wrong path entirely:
-     *
-     * <ul>
-     *   <li><strong>Unique violation</strong> — a duplicate that lost a race against a concurrent
-     *       write. The commands check first, but the constraint is the real guarantee, and losing that
-     *       race should still be {@code DUPLICATE_IDENTIFIER} rather than a 500.</li>
-     *   <li><strong>Foreign key violation</strong> — a reference to something that does not exist. That
-     *       is not a duplicate, and telling a client "this record already exists" when the truth is
-     *       "the record you pointed at does not" is worse than saying nothing. Reported as
-     *       {@code INVALID_PARENT_REFERENCE}.</li>
-     * </ul>
-     *
-     * <p>Discriminated on the SQL state rather than the message text, so it does not depend on a
-     * driver's wording: 23503 is a foreign-key violation, 23505 is unique.
+     * caller down the wrong path entirely. Discriminated on the SQL state rather than the message text,
+     * so it does not depend on a driver's wording: 23503 is a foreign-key violation — a reference to
+     * something that does not exist — and anything else here is a uniqueness race the pre-write check
+     * lost.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)
-    ResponseEntity<ApiErrorResponse> integrityViolation(DataIntegrityViolationException exception,
+    ResponseEntity<ApiResponse<Object>> integrityViolation(DataIntegrityViolationException exception,
             HttpServletRequest request) {
         Throwable cause = exception.getMostSpecificCause();
         log.warn("Database constraint rejected a write: {}", cause.getMessage());
@@ -136,18 +136,15 @@ class FacilitiesApiExceptionHandler {
         FacilitiesErrorCode code = "23503".equals(sqlState)
                 ? FacilitiesErrorCode.INVALID_PARENT_REFERENCE
                 : FacilitiesErrorCode.DUPLICATE_IDENTIFIER;
-        HttpStatus status = STATUSES.getOrDefault(code, HttpStatus.CONFLICT);
-
-        return ResponseEntity.status(status)
-                .body(ApiErrorResponse.of(status.value(), code, code.defaultMessage(), correlationId(request)));
+        return respond(STATUSES.getOrDefault(code, HttpStatus.CONFLICT), code, code.defaultMessage(), null,
+                request);
     }
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
-    ResponseEntity<ApiErrorResponse> optimisticLock(OptimisticLockingFailureException exception,
+    ResponseEntity<ApiResponse<Object>> optimisticLock(OptimisticLockingFailureException exception,
             HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.CONFLICT)
-                .body(ApiErrorResponse.of(HttpStatus.CONFLICT.value(), FacilitiesErrorCode.VERSION_CONFLICT,
-                        FacilitiesErrorCode.VERSION_CONFLICT.defaultMessage(), correlationId(request)));
+        return respond(HttpStatus.CONFLICT, FacilitiesErrorCode.VERSION_CONFLICT,
+                FacilitiesErrorCode.VERSION_CONFLICT.defaultMessage(), null, request);
     }
 
     /**
@@ -158,21 +155,26 @@ class FacilitiesApiExceptionHandler {
      * endpoint that already shipped.
      */
     @ExceptionHandler(IllegalArgumentException.class)
-    ResponseEntity<ApiErrorResponse> invalidRequest(IllegalArgumentException exception, HttpServletRequest request) {
-        return ResponseEntity.badRequest().body(ApiErrorResponse.of(HttpStatus.BAD_REQUEST.value(),
-                FacilitiesErrorCode.VALIDATION_FAILED, exception.getMessage(), correlationId(request)));
+    ResponseEntity<ApiResponse<Object>> invalidRequest(IllegalArgumentException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED, exception.getMessage(),
+                null, request);
     }
 
     /** Legacy state failures from {@code maintenance}, which predate the typed exceptions. */
     @ExceptionHandler(IllegalStateException.class)
-    ResponseEntity<ApiErrorResponse> invalidState(IllegalStateException exception, HttpServletRequest request) {
-        return ResponseEntity.status(HttpStatus.UNPROCESSABLE_ENTITY)
-                .body(ApiErrorResponse.of(HttpStatus.UNPROCESSABLE_ENTITY.value(),
-                        FacilitiesErrorCode.INVALID_STATE_TRANSITION, exception.getMessage(),
-                        correlationId(request)));
+    ResponseEntity<ApiResponse<Object>> invalidState(IllegalStateException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.UNPROCESSABLE_ENTITY, FacilitiesErrorCode.INVALID_STATE_TRANSITION,
+                exception.getMessage(), null, request);
     }
 
-    private static String correlationId(HttpServletRequest request) {
-        return CorrelationIdFilter.currentCorrelationId(request);
+    private ResponseEntity<ApiResponse<Object>> respond(HttpStatus status, FacilitiesErrorCode code,
+            String message, Object data, HttpServletRequest request) {
+        String correlationId = CorrelationIdFilter.currentCorrelationId(request);
+        ApiError error = ApiError.of(code.name(), message, correlationId);
+        return ResponseEntity.status(status)
+                .header(FacilitiesActorResolver.HEADER_CORRELATION_ID, correlationId)
+                .body(new ApiResponse<>(data, error));
     }
 }

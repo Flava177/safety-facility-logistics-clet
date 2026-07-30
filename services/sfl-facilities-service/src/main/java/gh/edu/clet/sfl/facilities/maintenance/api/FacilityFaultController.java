@@ -4,6 +4,7 @@ import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.facilities.maintenance.application.FacilityFaultService;
 import gh.edu.clet.sfl.facilities.maintenance.application.ReportFacilityFaultCommand;
 import gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFault;
@@ -32,24 +33,24 @@ public class FacilityFaultController {
     }
 
     @PostMapping
-    public ResponseEntity<FacilityFault> report(
+    public ResponseEntity<ApiResponse<FacilityFault>> report(
             @Valid @RequestBody ReportFacilityFaultRequest request,
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String actor,
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         FacilityFault result = service.report(new ReportFacilityFaultCommand(
                 request.siteCode(), request.locationCode(), request.title(), request.description(),
                 request.category(), request.priority(), actor, correlationId));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/faults/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/faults/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping
-    public List<FacilityFault> findAll() {
-        return service.findAll();
+    public ApiResponse<List<FacilityFault>> findAll() {
+        return ApiResponse.ok(service.findAll());
     }
 
     @GetMapping("/{id}")
-    public FacilityFault findById(@PathVariable UUID id) {
-        return service.findById(id);
+    public ApiResponse<FacilityFault> findById(@PathVariable UUID id) {
+        return ApiResponse.ok(service.findById(id));
     }
 
     public record ReportFacilityFaultRequest(

@@ -3,543 +3,76 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>SFL Facilities Dashboard</title>
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-  <link href="/assets/css/sfl-dashboard.css" rel="stylesheet">
+  <title>Facility management — moved to the SFL Operations dashboard</title>
+  <!--
+    This page was the only user interface SFL.IFIMP had, which is why ADR 0006 kept it when it retired
+    the other four — and kept it only until IFIMP had dashboard screens. S152 is those screens, so the
+    condition it was kept under has been met.
+
+    A redirect rather than a deletion, so every URL printed in a runbook still arrives somewhere. The
+    refresh waits two seconds on purpose: the notice below is the answer to "why did that move?", and
+    an instant jump would never let anyone read it. Requests to / are redirected by the service
+    immediately instead.
+
+    The target is absolute because this service does not package the dashboard bundle — only
+    sfl-fleet-logistics-service does. Behind a gateway `sfl.dashboard.base-url` makes it same-origin
+    and the redirect above is the one this page mirrors.
+
+    Not everything this page did has a replacement yet: fault reporting and work orders are S153
+    (CMMS) and have no dashboard screens. Their endpoints are unchanged and the gap is recorded in
+    docs/facilities/S152_UI_Gap_Report.md rather than papered over here.
+  -->
+  <meta http-equiv="refresh" content="2; url=http://localhost:8093/ui/facilities">
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2rem;
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f8fafc; color: #1e293b;
+    }
+    main { max-width: 34rem; }
+    p.eyebrow {
+      margin: 0 0 .5rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: #64748b;
+    }
+    h1 { margin: 0 0 1rem; font-size: 1.5rem; line-height: 1.3; }
+    a.cta {
+      display: inline-block; margin-top: 1.25rem; padding: .6rem 1.1rem; border-radius: .5rem;
+      background: #0f172a; color: #fff; text-decoration: none; font-weight: 600;
+    }
+    a.cta:hover { background: #1e293b; }
+    p.small { font-size: .8125rem; color: #64748b; }
+    code {
+      background: #e2e8f0; border-radius: .25rem; padding: .1rem .3rem; font-size: .9em;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f172a; color: #e2e8f0; }
+      p.eyebrow, p.small { color: #94a3b8; }
+      a.cta { background: #e2e8f0; color: #0f172a; }
+      a.cta:hover { background: #cbd5e1; }
+      code { background: #1e293b; }
+    }
+  </style>
 </head>
 <body>
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand-row">
-        <div class="brand-mark">SFL</div>
-        <div>
-          <div class="brand-title">Facilities Dashboard</div>
-          <div class="brand-subtitle">Cluster 9 Phase 1</div>
-        </div>
-      </div>
-
-      <nav class="nav nav-pills flex-column side-nav" id="dashboard-tabs" role="tablist">
-        <button class="nav-link active" data-bs-toggle="pill" data-bs-target="#dashboard" type="button" role="tab">
-          <i class="bi bi-speedometer2"></i><span>Command Center</span>
-        </button>
-        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#registry" type="button" role="tab">
-          <i class="bi bi-building"></i><span>Facilities Registry</span>
-        </button>
-        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#maintenance" type="button" role="tab">
-          <i class="bi bi-tools"></i><span>Maintenance</span>
-        </button>
-        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#assets" type="button" role="tab">
-          <i class="bi bi-upc-scan"></i><span>Asset Visibility</span>
-        </button>
-        <button class="nav-link" data-bs-toggle="pill" data-bs-target="#settings" type="button" role="tab">
-          <i class="bi bi-person-gear"></i><span>Actor & Services</span>
-        </button>
-      </nav>
-
-      <div class="sidebar-footer">
-        <div class="mini-label">Current Actor</div>
-        <div class="fw-semibold" data-bind="actorSummary">supervisor1</div>
-        <div class="small text-slate" data-bind="actorScope">MAIN</div>
-      </div>
-    </aside>
-
-    <main class="main">
-      <header class="topbar">
-        <div>
-          <div class="eyebrow">Safety Facilities and Logistics</div>
-          <h1>SFL Phase 1 Workspace</h1>
-        </div>
-        <div class="topbar-actions">
-          <button class="btn btn-outline-secondary" id="refresh-all" type="button">
-            <i class="bi bi-arrow-clockwise"></i><span>Refresh</span>
-          </button>
-          <a class="btn btn-primary" href="/actuator/health" target="_blank" rel="noreferrer">
-            <i class="bi bi-heart-pulse"></i><span>Health</span>
-          </a>
-        </div>
-      </header>
-
-      <div class="tab-content">
-        <section class="tab-pane fade show active" id="dashboard" role="tabpanel" tabindex="0">
-          <div class="row g-3 mb-3">
-            <div class="col-sm-6 col-xl-3">
-              <article class="metric-card">
-                <div class="metric-icon service"><i class="bi bi-hdd-network"></i></div>
-                <div>
-                  <div class="metric-label">Facilities Service</div>
-                  <div class="metric-value" data-bind="facilitiesHealth"><span class="status-dot"></span>Checking</div>
-                  <div class="metric-help">S152, S153, S159</div>
-                </div>
-              </article>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-              <article class="metric-card">
-                <div class="metric-icon asset"><i class="bi bi-box-seam"></i></div>
-                <div>
-                  <div class="metric-label">Asset Service</div>
-                  <div class="metric-value" data-bind="assetHealth"><span class="status-dot"></span>Checking</div>
-                  <div class="metric-help">AVAMP-Lite</div>
-                </div>
-              </article>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-              <article class="metric-card">
-                <div class="metric-icon work"><i class="bi bi-clipboard2-check"></i></div>
-                <div>
-                  <div class="metric-label">Open Work</div>
-                  <div class="metric-value" data-bind="openWorkOrders">0</div>
-                  <div class="metric-help">Visible work orders</div>
-                </div>
-              </article>
-            </div>
-            <div class="col-sm-6 col-xl-3">
-              <article class="metric-card">
-                <div class="metric-icon site"><i class="bi bi-diagram-3"></i></div>
-                <div>
-                  <div class="metric-label">Registry</div>
-                  <div class="metric-value" data-bind="registryCount">0</div>
-                  <div class="metric-help">Sites, buildings, rooms</div>
-                </div>
-              </article>
-            </div>
-          </div>
-
-          <div class="row g-3">
-            <div class="col-xl-8">
-              <section class="surface">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">Operational Queue</div>
-                    <h2>Recent Records</h2>
-                  </div>
-                  <span class="badge rounded-pill text-bg-light border">Live API data</span>
-                </div>
-                <div class="table-responsive">
-                  <table class="table align-middle table-hover">
-                    <thead>
-                      <tr>
-                        <th>Record</th>
-                        <th>Reference</th>
-                        <th>Status</th>
-                        <th>Site</th>
-                        <th>Updated</th>
-                      </tr>
-                    </thead>
-                    <tbody data-table="activity"></tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-            <div class="col-xl-4">
-              <section class="surface h-100">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">Role Simulation</div>
-                    <h2>Access Snapshot</h2>
-                  </div>
-                </div>
-                <dl class="snapshot-list">
-                  <dt>User</dt><dd data-bind="snapshotUser">supervisor1</dd>
-                  <dt>Roles</dt><dd data-bind="snapshotRoles">IFIMP_MAINTENANCE_SUPERVISOR</dd>
-                  <dt>Sites</dt><dd data-bind="snapshotSites">MAIN</dd>
-                  <dt>Facilities API</dt><dd data-bind="snapshotFacilitiesApi">same origin</dd>
-                  <dt>Asset API</dt><dd data-bind="snapshotAssetApi">http://localhost:8094</dd>
-                </dl>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-pane fade" id="registry" role="tabpanel" tabindex="0">
-          <div class="row g-3">
-            <div class="col-xl-4">
-              <section class="surface mb-3">
-                <div class="section-heading compact">
-                  <h2>Create Site</h2>
-                </div>
-                <form data-form="site" class="row g-3">
-                  <div class="col-md-5 col-xl-12">
-                    <label class="form-label" for="siteCode">Site Code</label>
-                    <input class="form-control" id="siteCode" value="MAIN" maxlength="40" required>
-                  </div>
-                  <div class="col-md-7 col-xl-12">
-                    <label class="form-label" for="siteName">Name</label>
-                    <input class="form-control" id="siteName" value="Main Campus" maxlength="160" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="siteDescription">Description</label>
-                    <textarea class="form-control" id="siteDescription" rows="2">Primary CLET campus site.</textarea>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-plus-circle"></i><span>Create Site</span></button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="surface mb-3">
-                <div class="section-heading compact">
-                  <h2>Create Building</h2>
-                </div>
-                <form data-form="building" class="row g-3">
-                  <div class="col-12">
-                    <label class="form-label" for="buildingSite">Site</label>
-                    <select class="form-select" id="buildingSite" required></select>
-                  </div>
-                  <div class="col-md-5">
-                    <label class="form-label" for="buildingCode">Code</label>
-                    <input class="form-control" id="buildingCode" value="BLDG-A" required>
-                  </div>
-                  <div class="col-md-7">
-                    <label class="form-label" for="buildingName">Name</label>
-                    <input class="form-control" id="buildingName" value="Academic Block A" required>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-building-add"></i><span>Create Building</span></button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="surface">
-                <div class="section-heading compact">
-                  <h2>Create Floor & Room</h2>
-                </div>
-                <form data-form="floor" class="row g-3 mb-3">
-                  <div class="col-12">
-                    <label class="form-label" for="floorBuilding">Building</label>
-                    <select class="form-select" id="floorBuilding" required></select>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label" for="floorCode">Code</label>
-                    <input class="form-control" id="floorCode" value="F1" required>
-                  </div>
-                  <div class="col-md-5">
-                    <label class="form-label" for="floorName">Name</label>
-                    <input class="form-control" id="floorName" value="First Floor" required>
-                  </div>
-                  <div class="col-md-3">
-                    <label class="form-label" for="floorLevel">Level</label>
-                    <input class="form-control" id="floorLevel" value="1" type="number">
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-layers"></i><span>Create Floor</span></button>
-                  </div>
-                </form>
-                <form data-form="room" class="row g-3">
-                  <div class="col-12">
-                    <label class="form-label" for="roomFloor">Floor</label>
-                    <select class="form-select" id="roomFloor" required></select>
-                  </div>
-                  <div class="col-md-4">
-                    <label class="form-label" for="roomCode">Room</label>
-                    <input class="form-control" id="roomCode" value="R101" required>
-                  </div>
-                  <div class="col-md-5">
-                    <label class="form-label" for="roomName">Name</label>
-                    <input class="form-control" id="roomName" value="Lecture Room 101" required>
-                  </div>
-                  <div class="col-md-3">
-                    <label class="form-label" for="roomCapacity">Cap.</label>
-                    <input class="form-control" id="roomCapacity" value="40" type="number" min="0">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="roomType">Type</label>
-                    <input class="form-control" id="roomType" value="Lecture">
-                  </div>
-                  <div class="col-md-6 d-grid align-items-end">
-                    <button class="btn btn-outline-secondary mt-md-4" type="submit"><i class="bi bi-door-open"></i><span>Create Room</span></button>
-                  </div>
-                </form>
-              </section>
-            </div>
-
-            <div class="col-xl-8">
-              <section class="surface mb-3">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">S152</div>
-                    <h2>Sites & Buildings</h2>
-                  </div>
-                  <button class="btn btn-sm btn-outline-secondary" type="button" data-refresh="registry"><i class="bi bi-arrow-clockwise"></i><span>Refresh</span></button>
-                </div>
-                <div class="row g-3">
-                  <div class="col-lg-6">
-                    <div class="table-responsive">
-                      <table class="table table-sm align-middle">
-                        <thead><tr><th>Site</th><th>Name</th><th>Status</th></tr></thead>
-                        <tbody data-table="sites"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                  <div class="col-lg-6">
-                    <div class="table-responsive">
-                      <table class="table table-sm align-middle">
-                        <thead><tr><th>Building</th><th>Name</th><th>Site</th></tr></thead>
-                        <tbody data-table="buildings"></tbody>
-                      </table>
-                    </div>
-                  </div>
-                </div>
-              </section>
-
-              <section class="surface">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">Facility Readiness</div>
-                    <h2>Rooms</h2>
-                  </div>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle table-hover">
-                    <thead>
-                      <tr>
-                        <th>Room</th>
-                        <th>Name</th>
-                        <th>Type</th>
-                        <th>Capacity</th>
-                        <th>Readiness</th>
-                      </tr>
-                    </thead>
-                    <tbody data-table="rooms"></tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-pane fade" id="maintenance" role="tabpanel" tabindex="0">
-          <div class="row g-3">
-            <div class="col-xl-4">
-              <section class="surface mb-3">
-                <div class="section-heading compact">
-                  <h2>Report Facility Fault</h2>
-                </div>
-                <form data-form="fault" class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" for="faultSite">Site</label>
-                    <input class="form-control" id="faultSite" value="MAIN" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="faultLocation">Location</label>
-                    <input class="form-control" id="faultLocation" value="BLDG-A-F1-R101" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="faultTitle">Title</label>
-                    <input class="form-control" id="faultTitle" value="AC not cooling" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="faultDescription">Description</label>
-                    <textarea class="form-control" id="faultDescription" rows="3" required>Room 101 AC is running but not cooling.</textarea>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="faultCategory">Category</label>
-                    <input class="form-control" id="faultCategory" value="HVAC">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="faultPriority">Priority</label>
-                    <select class="form-select" id="faultPriority">
-                      <option>LOW</option><option selected>MEDIUM</option><option>HIGH</option><option>CRITICAL</option>
-                    </select>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-exclamation-triangle"></i><span>Create Fault</span></button>
-                  </div>
-                </form>
-              </section>
-
-              <section class="surface">
-                <div class="section-heading compact">
-                  <h2>Work Order Controls</h2>
-                </div>
-                <form data-form="workOrder" class="row g-3 mb-3">
-                  <div class="col-12">
-                    <label class="form-label" for="faultId">Fault ID</label>
-                    <input class="form-control" id="faultId" required>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-clipboard-plus"></i><span>Create Work Order</span></button>
-                  </div>
-                </form>
-                <form data-form="assignment" class="row g-3 mb-3">
-                  <div class="col-12">
-                    <label class="form-label" for="workOrderId">Work Order ID</label>
-                    <input class="form-control" id="workOrderId" required>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="assignedTo">Assigned To</label>
-                    <input class="form-control" id="assignedTo" value="technician1" required>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-person-check"></i><span>Assign</span></button>
-                  </div>
-                </form>
-                <form data-form="closure" class="row g-3">
-                  <div class="col-12">
-                    <label class="form-label" for="closureNotes">Closure Notes</label>
-                    <textarea class="form-control" id="closureNotes" rows="2" required>Issue resolved and verified on site.</textarea>
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-outline-secondary" type="submit"><i class="bi bi-check2-circle"></i><span>Close</span></button>
-                  </div>
-                </form>
-              </section>
-            </div>
-
-            <div class="col-xl-8">
-              <section class="surface mb-3">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">S153</div>
-                    <h2>Fault Register</h2>
-                  </div>
-                  <button class="btn btn-sm btn-outline-secondary" type="button" data-refresh="faults"><i class="bi bi-arrow-clockwise"></i><span>Refresh</span></button>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle table-hover">
-                    <thead><tr><th>Fault</th><th>Priority</th><th>Status</th><th>Site</th><th>Work Order</th></tr></thead>
-                    <tbody data-table="faults"></tbody>
-                  </table>
-                </div>
-              </section>
-
-              <section class="surface">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">CMMS Foundation</div>
-                    <h2>Work Orders</h2>
-                  </div>
-                  <button class="btn btn-sm btn-outline-secondary" type="button" data-refresh="workOrders"><i class="bi bi-arrow-clockwise"></i><span>Refresh</span></button>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle table-hover">
-                    <thead><tr><th>WO No.</th><th>Title</th><th>Priority</th><th>Status</th><th>Assigned</th><th>Site</th></tr></thead>
-                    <tbody data-table="workOrders"></tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-pane fade" id="assets" role="tabpanel" tabindex="0">
-          <div class="row g-3">
-            <div class="col-xl-4">
-              <section class="surface">
-                <div class="section-heading compact">
-                  <h2>Register Asset Reference</h2>
-                </div>
-                <form data-form="asset" class="row g-3">
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetCode">Asset Code</label>
-                    <input class="form-control" id="assetCode" value="AC-ROOM-101" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetCategory">Category</label>
-                    <select class="form-select" id="assetCategory">
-                      <option>ROOM_DEVICE</option><option>CCTV_CAMERA</option><option>ACCESS_READER</option><option>FIRE_PANEL</option>
-                      <option>VEHICLE</option><option>DISPATCH_ITEM</option><option selected>EQUIPMENT</option><option>DOCUMENT_CONTAINER</option><option>OTHER</option>
-                    </select>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="assetName">Name</label>
-                    <input class="form-control" id="assetName" value="Room 101 Air Conditioner" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetSite">Site</label>
-                    <input class="form-control" id="assetSite" value="MAIN" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetLocationType">Location Type</label>
-                    <select class="form-select" id="assetLocationType">
-                      <option>SITE</option><option>BUILDING</option><option>FLOOR</option><option selected>ROOM</option><option>ZONE</option><option>VEHICLE</option><option>EXTERNAL</option>
-                    </select>
-                  </div>
-                  <div class="col-12">
-                    <label class="form-label" for="assetLocation">Location Reference</label>
-                    <input class="form-control" id="assetLocation" value="BLDG-A-F1-R101" required>
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetCustodian">Custodian</label>
-                    <input class="form-control" id="assetCustodian" value="facilities-team">
-                  </div>
-                  <div class="col-md-6">
-                    <label class="form-label" for="assetExternal">External Ref</label>
-                    <input class="form-control" id="assetExternal" value="legacy-ac-101">
-                  </div>
-                  <div class="col-12 d-grid">
-                    <button class="btn btn-primary" type="submit"><i class="bi bi-plus-square"></i><span>Register Asset</span></button>
-                  </div>
-                </form>
-              </section>
-            </div>
-            <div class="col-xl-8">
-              <section class="surface">
-                <div class="section-heading">
-                  <div>
-                    <div class="eyebrow">AVAMP-Lite</div>
-                    <h2>Asset Register</h2>
-                  </div>
-                  <button class="btn btn-sm btn-outline-secondary" type="button" data-refresh="assets"><i class="bi bi-arrow-clockwise"></i><span>Refresh</span></button>
-                </div>
-                <div class="table-responsive">
-                  <table class="table table-sm align-middle table-hover">
-                    <thead><tr><th>Asset</th><th>Category</th><th>Status</th><th>Location</th><th>Custodian</th></tr></thead>
-                    <tbody data-table="assets"></tbody>
-                  </table>
-                </div>
-              </section>
-            </div>
-          </div>
-        </section>
-
-        <section class="tab-pane fade" id="settings" role="tabpanel" tabindex="0">
-          <section class="surface">
-            <div class="section-heading">
-              <div>
-                <div class="eyebrow">Development Identity</div>
-                <h2>Actor and API Settings</h2>
-              </div>
-            </div>
-            <div class="row g-3">
-              <div class="col-md-6 col-xl-3">
-                <label class="form-label" for="actorUser">User</label>
-                <input class="form-control" id="actorUser" value="supervisor1">
-              </div>
-              <div class="col-md-6 col-xl-3">
-                <label class="form-label" for="actorDisplay">Display Name</label>
-                <input class="form-control" id="actorDisplay" value="Maintenance Supervisor">
-              </div>
-              <div class="col-md-6 col-xl-3">
-                <label class="form-label" for="actorRoles">Roles</label>
-                <input class="form-control" id="actorRoles" value="IFIMP_MAINTENANCE_SUPERVISOR">
-              </div>
-              <div class="col-md-6 col-xl-3">
-                <label class="form-label" for="actorSites">Sites</label>
-                <input class="form-control" id="actorSites" value="MAIN">
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="facilitiesBase">Facilities API Base</label>
-                <input class="form-control" id="facilitiesBase" value="">
-                <div class="form-text">Leave blank when opening this dashboard from the facilities service.</div>
-              </div>
-              <div class="col-md-6">
-                <label class="form-label" for="assetBase">Asset API Base</label>
-                <input class="form-control" id="assetBase" value="http://localhost:8094">
-              </div>
-              <div class="col-12">
-                <button class="btn btn-primary" type="button" id="applySettings"><i class="bi bi-check2"></i><span>Apply Settings</span></button>
-              </div>
-            </div>
-          </section>
-        </section>
-      </div>
-    </main>
-  </div>
-
-  <div class="toast-region" data-region="toasts"></div>
-
-  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
-  <script src="/assets/js/sfl-dashboard.js"></script>
+  <main>
+    <p class="eyebrow">CLET · SFL Phase 1 · IFIMP</p>
+    <h1>Facility management has moved to the SFL Operations dashboard</h1>
+    <p>
+      Sites, buildings, floors, spaces, zones, device references and facility assets are all in the
+      dashboard, together with the readiness assessments, blockers, examination locks, operating-mode
+      control and audit trail this page never had.
+    </p>
+    <p>Taking you there now.</p>
+    <a class="cta" href="http://localhost:8093/ui/facilities">Open the dashboard</a>
+    <p class="small">
+      This page was a second interface over the same API, and the only one IFIMP had until S152 — see
+      <code>docs/adr/0006</code>. Fault reporting and work orders are S153 and do not have dashboard
+      screens yet; their endpoints are unchanged. If nothing loads, the dashboard is not running:
+      build it with <code>npm run build</code> in <code>frontend/sfl-operations-ui</code> and start
+      <code>sfl-fleet-logistics-service</code>, or run <code>npm run dev</code> and open
+      <code>http://localhost:5005/facilities</code>.
+    </p>
+  </main>
 </body>
 </html>

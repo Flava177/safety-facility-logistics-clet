@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.facilities.masterdata.api;
 
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.masterdata.api.FacilitiesResponses.AssetResponse;
 import gh.edu.clet.sfl.facilities.masterdata.application.FacilitiesCommands;
@@ -49,7 +50,7 @@ public class FacilityAssetController {
 
     @PostMapping
     @Operation(summary = "Register a facility asset", description = "Accepts an Idempotency-Key.")
-    public ResponseEntity<AssetResponse> register(@Valid @RequestBody FacilitiesRequests.RegisterAsset request,
+    public ResponseEntity<ApiResponse<AssetResponse>> register(@Valid @RequestBody FacilitiesRequests.RegisterAsset request,
             HttpServletRequest http) {
         AssetResponse result = AssetResponse.from(service.register(new FacilitiesCommands.RegisterAsset(
                 request.siteCode(), request.assetCode(), request.name(), request.category(),
@@ -58,12 +59,12 @@ public class FacilityAssetController {
                 request.warrantyExpiresOn(), request.serviceIntervalDays(), request.custodian(),
                 request.deviceReferenceId(), request.assetReferenceId(), actor(http), channel(http),
                 idempotencyKey(http))));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/assets/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/assets/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @GetMapping
     @Operation(summary = "Search facility assets by site, space, category, criticality and status")
-    public PageResponse<AssetResponse> search(
+    public ApiResponse<PageResponse<AssetResponse>> search(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false) AssetCategory category,
@@ -74,44 +75,44 @@ public class FacilityAssetController {
             HttpServletRequest http) {
         FacilitiesRepository.AssetQuery query = new FacilitiesRepository.AssetQuery(siteCode, roomId, category,
                 criticality, operationalStatus, page, size);
-        return PageResponse.from(service.search(query, actor(http), channel(http)), AssetResponse::from);
+        return ApiResponse.ok(PageResponse.from(service.search(query, actor(http), channel(http)), AssetResponse::from));
     }
 
     @GetMapping("/{assetId}")
     @Operation(summary = "Read one facility asset")
-    public AssetResponse find(@PathVariable UUID assetId, HttpServletRequest http) {
-        return AssetResponse.from(service.find(assetId, actor(http), channel(http)));
+    public ApiResponse<AssetResponse> find(@PathVariable UUID assetId, HttpServletRequest http) {
+        return ApiResponse.ok(AssetResponse.from(service.find(assetId, actor(http), channel(http))));
     }
 
     @PatchMapping("/{assetId}")
     @Operation(summary = "Update a facility asset's attributes")
-    public AssetResponse update(@PathVariable UUID assetId,
+    public ApiResponse<AssetResponse> update(@PathVariable UUID assetId,
             @Valid @RequestBody FacilitiesRequests.UpdateAsset request, HttpServletRequest http) {
-        return AssetResponse.from(service.update(new FacilitiesCommands.UpdateAsset(assetId, request.name(),
+        return ApiResponse.ok(AssetResponse.from(service.update(new FacilitiesCommands.UpdateAsset(assetId, request.name(),
                 request.category(), request.criticality(), request.manufacturer(), request.modelNumber(),
                 request.serialNumber(), request.warrantyExpiresOn(), request.serviceIntervalDays(),
-                request.custodian(), request.expectedVersion(), actor(http), channel(http))));
+                request.custodian(), request.expectedVersion(), actor(http), channel(http)))));
     }
 
     @PatchMapping("/{assetId}/status")
     @Operation(summary = "Change a facility asset's operational status",
             description = "Recomputes the readiness of the space the asset sits in. An impaired asset raises "
                     + "a blocker at a severity derived from its criticality; a recovered one resolves it.")
-    public AssetResponse changeStatus(@PathVariable UUID assetId,
+    public ApiResponse<AssetResponse> changeStatus(@PathVariable UUID assetId,
             @Valid @RequestBody FacilitiesRequests.ChangeAssetStatus request, HttpServletRequest http) {
-        return AssetResponse.from(service.changeStatus(new FacilitiesCommands.ChangeAssetStatus(assetId,
+        return ApiResponse.ok(AssetResponse.from(service.changeStatus(new FacilitiesCommands.ChangeAssetStatus(assetId,
                 request.operationalStatus(), request.notes(), request.expectedVersion(), actor(http),
-                channel(http))));
+                channel(http)))));
     }
 
     @PatchMapping("/{assetId}/location")
     @Operation(summary = "Move a facility asset to another space",
             description = "Recomputes readiness for both the space it left and the space it joined.")
-    public AssetResponse relocate(@PathVariable UUID assetId,
+    public ApiResponse<AssetResponse> relocate(@PathVariable UUID assetId,
             @Valid @RequestBody FacilitiesRequests.RelocateAsset request, HttpServletRequest http) {
-        return AssetResponse.from(service.relocate(new FacilitiesCommands.RelocateAsset(assetId,
+        return ApiResponse.ok(AssetResponse.from(service.relocate(new FacilitiesCommands.RelocateAsset(assetId,
                 request.roomId(), request.locationCode(), request.expectedVersion(), actor(http),
-                channel(http))));
+                channel(http)))));
     }
 
     private ActorContext actor(HttpServletRequest http) {

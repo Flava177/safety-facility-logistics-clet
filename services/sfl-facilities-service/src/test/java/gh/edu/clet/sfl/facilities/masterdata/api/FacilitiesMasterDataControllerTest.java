@@ -77,10 +77,10 @@ class FacilitiesMasterDataControllerTest {
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(header().string("Location", "/api/v1/facilities/sites/" + site.id()))
-                .andExpect(jsonPath("$.siteCode").value("MAIN"))
-                .andExpect(jsonPath("$.active").value(true))
-                .andExpect(jsonPath("$.operatingMode").value("ROUTINE"))
-                .andExpect(jsonPath("$.metadata.version").value(0));
+                .andExpect(jsonPath("$.data.siteCode").value("MAIN"))
+                .andExpect(jsonPath("$.data.active").value(true))
+                .andExpect(jsonPath("$.data.operatingMode").value("ROUTINE"))
+                .andExpect(jsonPath("$.data.metadata.version").value(0));
     }
 
     @Test
@@ -91,9 +91,9 @@ class FacilitiesMasterDataControllerTest {
                                 {"name":"Main Campus"}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("siteCode"))
-                .andExpect(jsonPath("$.correlationId").exists());
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.data[0].field").value("siteCode"))
+                .andExpect(jsonPath("$.error.correlationId").exists());
     }
 
     @Test
@@ -105,8 +105,8 @@ class FacilitiesMasterDataControllerTest {
                                  "name":"Room","capacity":-1}
                                 """))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.code").value("VALIDATION_FAILED"))
-                .andExpect(jsonPath("$.fieldErrors[0].field").value("capacity"));
+                .andExpect(jsonPath("$.error.code").value("VALIDATION_FAILED"))
+                .andExpect(jsonPath("$.data[0].field").value("capacity"));
     }
 
     @Test
@@ -117,8 +117,8 @@ class FacilitiesMasterDataControllerTest {
 
         mockMvc.perform(get("/api/v1/facilities/sites").header("X-SFL-Sites", "KUMASI"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("UNAUTHORIZED_SCOPE"))
-                .andExpect(jsonPath("$.message")
+                .andExpect(jsonPath("$.error.code").value("UNAUTHORIZED_SCOPE"))
+                .andExpect(jsonPath("$.error.message")
                         .value("You are not authorised to access this site or record."));
     }
 
@@ -133,7 +133,7 @@ class FacilitiesMasterDataControllerTest {
                                 {"siteCode":"MAIN","name":"Main Campus"}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("DUPLICATE_IDENTIFIER"));
+                .andExpect(jsonPath("$.error.code").value("DUPLICATE_IDENTIFIER"));
     }
 
     @Test
@@ -144,7 +144,7 @@ class FacilitiesMasterDataControllerTest {
 
         mockMvc.perform(get("/api/v1/facilities/sites/" + id))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.code").value("RECORD_NOT_FOUND"));
+                .andExpect(jsonPath("$.error.code").value("RECORD_NOT_FOUND"));
     }
 
     @Test
@@ -159,7 +159,7 @@ class FacilitiesMasterDataControllerTest {
                                 {"name":"Renamed","expectedVersion":1}
                                 """))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.code").value("VERSION_CONFLICT"));
+                .andExpect(jsonPath("$.error.code").value("VERSION_CONFLICT"));
     }
 
     /** A domain-rule refusal is 422, not 400: the request was fine, the estate's state forbids it. */
@@ -175,8 +175,8 @@ class FacilitiesMasterDataControllerTest {
                                 {"status":"READY","notes":"Looks fine"}
                                 """))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("READINESS_BLOCKED"))
-                .andExpect(jsonPath("$.message").value(
+                .andExpect(jsonPath("$.error.code").value("READINESS_BLOCKED"))
+                .andExpect(jsonPath("$.error.message").value(
                         "This space cannot be marked ready while 2 critical blocker(s) remain open."));
     }
 
@@ -191,7 +191,7 @@ class FacilitiesMasterDataControllerTest {
                                 {"name":"Renamed mid-examination"}
                                 """))
                 .andExpect(status().isUnprocessableEntity())
-                .andExpect(jsonPath("$.code").value("READINESS_LOCKED"));
+                .andExpect(jsonPath("$.error.code").value("READINESS_LOCKED"));
     }
 
     @Test
@@ -200,8 +200,8 @@ class FacilitiesMasterDataControllerTest {
 
         mockMvc.perform(get("/api/v1/facilities/rooms"))
                 .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.code").value("NO_SCOPE"))
-                .andExpect(jsonPath("$.message").value("No site scope is assigned to your user profile."));
+                .andExpect(jsonPath("$.error.code").value("NO_SCOPE"))
+                .andExpect(jsonPath("$.error.message").value("No site scope is assigned to your user profile."));
     }
 
     @Test
@@ -210,7 +210,7 @@ class FacilitiesMasterDataControllerTest {
 
         mockMvc.perform(get("/api/v1/facilities/sites").header("X-Correlation-ID", "trace-42"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$").isArray());
+                .andExpect(jsonPath("$.data").isArray());
     }
 
     @Test
@@ -219,9 +219,9 @@ class FacilitiesMasterDataControllerTest {
 
         mockMvc.perform(get("/api/v1/facilities/rooms/" + UUID.randomUUID()))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.spaceType").value("EXAMINATION_HALL"))
-                .andExpect(jsonPath("$.availableForBooking").value(true))
-                .andExpect(jsonPath("$.availableForExamination").value(true));
+                .andExpect(jsonPath("$.data.spaceType").value("EXAMINATION_HALL"))
+                .andExpect(jsonPath("$.data.availableForBooking").value(true))
+                .andExpect(jsonPath("$.data.availableForExamination").value(true));
     }
 
     private static Site site() {

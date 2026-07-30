@@ -64,6 +64,24 @@ export const emergencyApiBaseUrl = readOptionalEnv(
 );
 
 /**
+ * Base URL of the Facilities service.
+ *
+ * S152 CAFM/IWMS is the third service the dashboard talks to — `sfl-facilities-service`, port 8091,
+ * the `facilities` schema and its own permission matrix. It is also the IFIMP host: S153 maintenance
+ * and S159 room booking will arrive in the same service behind this same origin, so this is one base
+ * URL for a whole programme rather than for one system.
+ *
+ * The facilities service allows `http://localhost:8093` (the bundled dashboard's origin) and
+ * `http://localhost:5005` (`npm run dev`) as CORS origins. Both had to be added: its default list was
+ * written before this dashboard existed and allowed neither, so every call would have failed in a
+ * browser while working perfectly in curl.
+ */
+export const facilitiesApiBaseUrl = readOptionalEnv(
+  'VITE_FACILITIES_API_BASE_URL',
+  'http://localhost:8091',
+);
+
+/**
  * The development actor's roles, when `VITE_SFL_ROLES` is not set.
  *
  * One header serves both services and each reads only the roles its own matrix knows — an
@@ -86,6 +104,14 @@ export const emergencyApiBaseUrl = readOptionalEnv(
  * `.env` is git-ignored, so an older local one must be corrected by hand.
  */
 const defaultRoles = [
+  // SFL.IFIMP — S152. The manager runs the estate, the supervisor overrides a readiness lock, and
+  // the technician assesses readiness in the field. A centre manager is what it takes to declare
+  // examination mode: the facilities matrix deliberately withholds that from FACILITIES_MANAGER,
+  // so without it the operating-mode control cannot be exercised locally at all.
+  'FACILITIES_MANAGER',
+  'IFIMP_MAINTENANCE_SUPERVISOR',
+  'IFIMP_TECHNICIAN',
+  'CENTRE_MANAGER',
   // SFL.FTLMP
   'FLEET_MANAGER',
   'DISPATCH_CONTROLLER',

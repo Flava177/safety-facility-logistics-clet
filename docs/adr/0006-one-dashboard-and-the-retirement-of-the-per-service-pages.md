@@ -1,8 +1,10 @@
 # ADR 0006 — One dashboard, and the retirement of the per-service pages
 
-- Status: **Accepted and implemented**, 30 July 2026. All three decisions are in effect. The four
-  superseded pages are redirects; the facilities page stays; the actor switcher that decision (2)
-  depended on is built.
+- Status: **Accepted and implemented**, 30 July 2026. All three decisions are in effect. **All five**
+  pages are now redirects — decision 3 kept the facilities page only until IFIMP had dashboard
+  screens, and S152 is those screens, so it retired on the same day under the condition it was kept
+  under (see [Decision 3, discharged](#3-keep-page-1-until-ifimp-has-dashboard-screens--discharged)).
+  The actor switcher that decision (2) depended on is built.
 - Date: 2026-07-30
 - Deciders: SFL platform / F&L directorate
 - Relates: [0005 programme-scoped portals](0005-programme-scoped-portals-and-navigation-entitlement.md);
@@ -96,7 +98,7 @@ scoping artefact — it prints the raw snapshot JSON into a `<pre>` block and le
 out. That is the drift the two-interface arrangement produces, and it produces it in the direction that
 matters: a screen that says nothing is wrong when it has not looked.
 
-### 3. Keep page 1 until IFIMP has dashboard screens — in effect
+### 3. Keep page 1 until IFIMP has dashboard screens — discharged
 
 `sfl-facilities-service`'s page is **not** superseded and must not be retired with the others. It is the
 only user interface for the whole of SFL.IFIMP:
@@ -117,6 +119,9 @@ module at all. Against ADR 0005's four programmes that leaves the coverage at:
 | **IFIMP** | **None.** Only the static page on 8091 |
 | **AVAMP** | **None** |
 
+(That table is the state this decision was written against. See the discharge note below for what it
+reads now.)
+
 Deleting page 1 would remove the only way to reach a programme module. Building IFIMP screens in the
 dashboard is the real fix, and it is a programme of work rather than a cleanup — so page 1 stays,
 renamed, and is written down as a known temporary interface rather than left to look like a peer of the
@@ -126,6 +131,25 @@ It has one defect worth recording while it stays: it loads Bootstrap 5.3.3 and B
 from `cdn.jsdelivr.net` at runtime. It therefore does not work on an isolated network and takes a
 third-party runtime dependency the dashboard does not have. That is an argument for replacing it,
 not for patching it.
+
+**Discharged, 30 July 2026 — S152 built the screens.** The dashboard now has a `facilities` module:
+fifteen screens across three navigation sections, covering the estate model this page covered and the
+readiness, blocker, examination-lock, operating-mode, audit and configuration work it never did. So
+`/` on 8091 redirects to `/ui/facilities` like the other four, its `index.html` becomes the same kind
+of notice page, and its 861 lines of stylesheet and script are deleted. The coverage table above now
+reads **IFIMP: S152 complete; S153 and S159 have no screens**.
+
+The redirect target is configured rather than local — `sfl.dashboard.base-url`, default
+`http://localhost:8093/ui` — for the same reason the emergency service's is: this service does not
+package the bundle. Behind a gateway it becomes a same-origin prefix.
+
+One thing was genuinely lost and is not hidden. The static page carried **fault reporting and work
+orders**, which are S153 and have no dashboard screens. Those endpoints are unchanged and still
+serve; the notice page says so and
+[`docs/facilities/S152_UI_Gap_Report.md`](../facilities/S152_UI_Gap_Report.md) §2.1 records it,
+along with the fact that `FacilityFaultController.findAll()` applies no site scoping and no
+permission check — which is a reason to build S153 properly rather than to keep a page in front of
+it.
 
 ## What retiring pages 2–5 cost
 

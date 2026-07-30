@@ -1,6 +1,6 @@
 import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
-import { emergencyApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
+import { emergencyApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
 
 /**
  * The single HTTP entry point for every SFL service call.
@@ -10,10 +10,11 @@ import { emergencyApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
  * development plus an `X-Correlation-ID`; state-creating POSTs carry an `Idempotency-Key`, which
  * the services require for replay-safe creates.
  *
- * Calls address one of two services. Fleet, fuel and dispatch are three modules of the one
- * `sfl-fleet-logistics-service`; emergency notification (S174) is a service of its own on another
- * port. The envelope, the actor headers and the error catalogue are identical across both — only
- * the origin differs — so the target is a per-call option rather than a second client.
+ * Calls address one of three services. Fleet, fuel and dispatch are three modules of the one
+ * `sfl-fleet-logistics-service`; emergency notification (S174) and facilities (S152, and in time
+ * S153 and S159) are services of their own on other ports. The envelope, the actor headers and the
+ * error catalogue are identical across all three — only the origin differs — so the target is a
+ * per-call option rather than three clients.
  */
 
 export const HEADER_USER = 'X-SFL-User';
@@ -55,24 +56,28 @@ export const buildQueryString = (params?: QueryParams): string => {
  * Which SFL service a call is addressed to.
  *
  * `fleet` covers the fleet, fuel and dispatch modules — one service, one origin. `emergency` is
- * the separate S174 notification service. Named rather than passed as a raw URL so a module cannot
+ * the separate S174 notification service. `facilities` is the IFIMP service: S152 today, S153 and
+ * S159 behind the same origin later. Named rather than passed as a raw URL so a module cannot
  * quietly point at something that is not an SFL service.
  */
-export type SflService = 'fleet' | 'emergency';
+export type SflService = 'fleet' | 'emergency' | 'facilities';
 
 const serviceOrigins: Record<SflService, string> = {
   fleet: fleetApiBaseUrl,
   emergency: emergencyApiBaseUrl,
+  facilities: facilitiesApiBaseUrl,
 };
 
 const serviceNames: Record<SflService, string> = {
   fleet: 'Fleet & Logistics service',
   emergency: 'Emergency Notification service',
+  facilities: 'Facilities service',
 };
 
 const servicePorts: Record<SflService, string> = {
   fleet: '8093',
   emergency: '8095',
+  facilities: '8091',
 };
 
 const unreachable = (service: SflService): FleetApiError =>
@@ -138,7 +143,7 @@ const parseEnvelope = async <T>(response: Response): Promise<ApiResponseEnvelope
 };
 
 async function request<T>(
-  method: 'GET' | 'POST' | 'PATCH' | 'PUT',
+  method: 'GET' | 'POST' | 'PATCH' | 'PUT' | 'DELETE',
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
@@ -272,4 +277,24 @@ export const apiClient = {
 
   patch: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
     request<T>('PATCH', path, { ...options, body }),
+
+  /**
+   * Replaces a value outright.
+   *
+   * Added for S152's runtime configuration, which supersedes a threshold rather than patching one —
+   * PUT is the honest verb for "this key now has this value". Carries no idempotency key: the key
+   * is in the path, so a repeat is the same write.
+   */
+  put: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
+    request<T>('PUT', path, { ...options, body }),
+
+  /**
+   * Removes a relationship.
+   *
+   * Added for S152's zone membership and readiness lock. Note what it is *not* used for: no S152
+   * record is ever deleted — archival is the lifecycle state that retires one, because §21.2 of the
+   * SRS protects examination-continuity records from deletion.
+   */
+  delete: <T>(path: string, options?: Omit<RequestOptions, 'body'>) =>
+    request<T>('DELETE', path, { ...options }),
 };

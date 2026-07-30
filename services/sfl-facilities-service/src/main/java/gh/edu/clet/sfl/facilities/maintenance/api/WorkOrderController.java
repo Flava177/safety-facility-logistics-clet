@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.UUID;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.facilities.maintenance.application.AssignWorkOrderCommand;
 import gh.edu.clet.sfl.facilities.maintenance.application.CloseWorkOrderCommand;
 import gh.edu.clet.sfl.facilities.maintenance.application.CreateWorkOrderFromFaultCommand;
@@ -38,7 +39,7 @@ public class WorkOrderController {
     }
 
     @PostMapping("/from-fault")
-    public ResponseEntity<WorkOrder> createFromFault(@Valid @RequestBody CreateWorkOrderFromFaultRequest request,
+    public ResponseEntity<ApiResponse<WorkOrder>> createFromFault(@Valid @RequestBody CreateWorkOrderFromFaultRequest request,
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String userId,
             @RequestHeader(name = "X-SFL-Display-Name", required = false) String displayName,
             @RequestHeader(name = "X-SFL-Roles", required = false) String roles,
@@ -46,51 +47,51 @@ public class WorkOrderController {
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         ActorContext actor = actorResolver.resolve(userId, displayName, roles, sites, correlationId);
         WorkOrder result = service.createFromFault(new CreateWorkOrderFromFaultCommand(request.facilityFaultId(), actor));
-        return ResponseEntity.created(URI.create("/api/v1/facilities/work-orders/" + result.id())).body(result);
+        return ResponseEntity.created(URI.create("/api/v1/facilities/work-orders/" + result.id())).body(ApiResponse.ok(result));
     }
 
     @PatchMapping("/{workOrderId}/assignment")
-    public WorkOrder assign(@PathVariable UUID workOrderId, @Valid @RequestBody AssignWorkOrderRequest request,
+    public ApiResponse<WorkOrder> assign(@PathVariable UUID workOrderId, @Valid @RequestBody AssignWorkOrderRequest request,
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String userId,
             @RequestHeader(name = "X-SFL-Display-Name", required = false) String displayName,
             @RequestHeader(name = "X-SFL-Roles", required = false) String roles,
             @RequestHeader(name = "X-SFL-Sites", required = false) String sites,
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         ActorContext actor = actorResolver.resolve(userId, displayName, roles, sites, correlationId);
-        return service.assign(new AssignWorkOrderCommand(workOrderId, request.assignedTo(), actor));
+        return ApiResponse.ok(service.assign(new AssignWorkOrderCommand(workOrderId, request.assignedTo(), actor)));
     }
 
     @PatchMapping("/{workOrderId}/closure")
-    public WorkOrder close(@PathVariable UUID workOrderId, @Valid @RequestBody CloseWorkOrderRequest request,
+    public ApiResponse<WorkOrder> close(@PathVariable UUID workOrderId, @Valid @RequestBody CloseWorkOrderRequest request,
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String userId,
             @RequestHeader(name = "X-SFL-Display-Name", required = false) String displayName,
             @RequestHeader(name = "X-SFL-Roles", required = false) String roles,
             @RequestHeader(name = "X-SFL-Sites", required = false) String sites,
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         ActorContext actor = actorResolver.resolve(userId, displayName, roles, sites, correlationId);
-        return service.close(new CloseWorkOrderCommand(workOrderId, request.closureNotes(), actor));
+        return ApiResponse.ok(service.close(new CloseWorkOrderCommand(workOrderId, request.closureNotes(), actor)));
     }
 
     @GetMapping
-    public List<WorkOrder> findAll(
+    public ApiResponse<List<WorkOrder>> findAll(
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String userId,
             @RequestHeader(name = "X-SFL-Display-Name", required = false) String displayName,
             @RequestHeader(name = "X-SFL-Roles", required = false) String roles,
             @RequestHeader(name = "X-SFL-Sites", required = false) String sites,
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         ActorContext actor = actorResolver.resolve(userId, displayName, roles, sites, correlationId);
-        return service.findAll(actor);
+        return ApiResponse.ok(service.findAll(actor));
     }
 
     @GetMapping("/{workOrderId}")
-    public WorkOrder findById(@PathVariable UUID workOrderId,
+    public ApiResponse<WorkOrder> findById(@PathVariable UUID workOrderId,
             @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String userId,
             @RequestHeader(name = "X-SFL-Display-Name", required = false) String displayName,
             @RequestHeader(name = "X-SFL-Roles", required = false) String roles,
             @RequestHeader(name = "X-SFL-Sites", required = false) String sites,
             @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
         ActorContext actor = actorResolver.resolve(userId, displayName, roles, sites, correlationId);
-        return service.findById(workOrderId, actor);
+        return ApiResponse.ok(service.findById(workOrderId, actor));
     }
 
     public record CreateWorkOrderFromFaultRequest(@NotNull UUID facilityFaultId) {
