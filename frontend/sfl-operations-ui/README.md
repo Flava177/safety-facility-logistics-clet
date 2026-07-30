@@ -87,6 +87,21 @@ npm run build
 npm run dev
 ```
 
+### The actor switcher
+
+The account avatar in the top bar carries a **Change actor** entry in development builds. It sends
+different `X-SFL-*` headers, stores them for the session and reloads.
+
+Use it to check what ADR 0005 promises: pick the driver preset and the emergency section leaves the
+sidebar; pick the facilities manager and you land on the no-programme page, because IFIMP has no
+dashboard screens yet. The fleet service will also refuse a driver's dashboard read with
+`FLEET_UNAUTHORIZED_SCOPE` — navigation scoping is a usability control, and the service is the
+enforcement point.
+
+The avatar shows a badge while an override is in force, and **Clear and reload** returns to the
+`VITE_SFL_*` values in `.env`. A production build has none of this: the panel is behind
+`import.meta.env.DEV` on its dynamic import, so no chunk is emitted.
+
 ### How the dashboard is mounted
 
 `npm run build` emits the bundle under the `/ui/` base (see `.env.production`) and Maven copies

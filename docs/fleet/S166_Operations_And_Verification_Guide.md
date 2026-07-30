@@ -113,7 +113,7 @@ After starting the Fleet service from IntelliJ or Maven, the local review entry 
 | `http://localhost:8093/swagger-ui.html` | Interactive Swagger API tester |
 | `http://localhost:8093/v3/api-docs` | OpenAPI JSON |
 | `http://localhost:8093/ui/fleet` | Fleet screens in the SFL Operations dashboard |
-| `http://localhost:8093/fleet/` | The service-served page this replaced. See ADR 0006 |
+| `http://localhost:8093/fleet/` | Redirects to the above. The page that used to be here was retired by ADR 0006 |
 
 In Swagger UI, use **Authorize** to set the development actor headers used when `SFL_SECURITY_ENABLED=false`:
 
@@ -179,7 +179,7 @@ Default service port:
 
 Open:
 
-- `http://localhost:8093/fleet/index.html`
+- `http://localhost:8093/fleet/index.html` — a notice page that redirects to `/ui/fleet`
 - `http://localhost:8093/actuator/health`
 - `http://localhost:8093/api/v1/system/info`
 

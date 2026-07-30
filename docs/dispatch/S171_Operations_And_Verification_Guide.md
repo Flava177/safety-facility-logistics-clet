@@ -35,7 +35,7 @@ OIDC/JWT resource server unchanged.
 | OpenAPI JSON | `GET http://localhost:8093/v3/api-docs` | OpenAPI document incl. the nine Dispatch tags |
 | Swagger UI | `http://localhost:8093/swagger-ui.html` | Dispatch Items, Inbound Mail, Dispatch Manifests, Chain of Custody, Dispatch Receipts, Return Reconciliation, Dispatch Exceptions, Dispatch Integrations, Dispatch Dashboards and Reports |
 | Dashboard | `http://localhost:8093/ui/dispatch` | Courier & dispatch screens in the SFL Operations dashboard |
-| Superseded page | `http://localhost:8093/dispatch/` | The service-served page this replaced. See ADR 0006 |
+| Retired route | `http://localhost:8093/dispatch/` | Redirects to the dashboard. The page that used to be here was retired by ADR 0006 |
 | PostgreSQL | `psql -h localhost -p 5443 -U sfl -d sfl__fleet_vehicle_service -c '\dt fleet_logistics.courier_items'` | table present |
 
 Dev headers for Swagger "Authorize" or the dashboard's actor configuration:

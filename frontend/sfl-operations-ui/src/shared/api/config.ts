@@ -1,3 +1,5 @@
+import { readActorOverride } from 'shared/dev/actorOverride';
+
 /**
  * Runtime configuration for the SFL API clients.
  *
@@ -6,6 +8,15 @@
  * principal instead and these headers are ignored. Everything is env-driven so no environment
  * detail is compiled into a component.
  */
+
+/**
+ * The development actor override, when one is set.
+ *
+ * Read once, at module scope, because everything derived from the actor is also computed once at
+ * module scope — see `shared/dev/actorOverride.ts` for why applying an override reloads the page.
+ * A blank field falls through to the environment default rather than sending an empty header.
+ */
+const actorOverride = readActorOverride();
 
 const readEnv = (key: string, fallback: string): string => {
   const value = import.meta.env[key as keyof ImportMetaEnv] as string | undefined;
@@ -88,10 +99,10 @@ const defaultRoles = [
 ].join(',');
 
 export const sflActor: SflActorConfig = {
-  user: readEnv('VITE_SFL_USER', 'fleet.operator'),
-  displayName: readEnv('VITE_SFL_DISPLAY_NAME', 'Fleet Operator'),
-  roles: readEnv('VITE_SFL_ROLES', defaultRoles),
-  sites: readEnv('VITE_SFL_SITES', 'CLET-HQ'),
+  user: actorOverride?.user || readEnv('VITE_SFL_USER', 'fleet.operator'),
+  displayName: actorOverride?.displayName || readEnv('VITE_SFL_DISPLAY_NAME', 'Fleet Operator'),
+  roles: actorOverride?.roles || readEnv('VITE_SFL_ROLES', defaultRoles),
+  sites: actorOverride?.sites || readEnv('VITE_SFL_SITES', 'CLET-HQ'),
   sourceChannel: 'WEB',
 };
 

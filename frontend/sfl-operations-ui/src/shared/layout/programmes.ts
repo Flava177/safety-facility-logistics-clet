@@ -1,4 +1,5 @@
 import { sflActor } from 'shared/api/config';
+import { readActorOverride } from 'shared/dev/actorOverride';
 import {
   ProgrammeCode,
   allProgrammes,
@@ -40,12 +41,16 @@ export const isCrossProgrammeActor: boolean = isCrossProgramme(actorRoles);
  *
  * Derived from roles, because that is what IAM will do — there is no separate entitlement list to
  * drift out of step with the roles the actor already sends. `VITE_SFL_PROGRAMMES` overrides it
- * outright, which is how to look at one programme's screens without rewriting a role list.
+ * outright, which is how to look at one programme's screens without rewriting a role list; the
+ * development actor switcher sets the same field, and takes precedence over the environment because
+ * it is the more recent instruction.
  */
 export const actorProgrammes: ProgrammeCode[] = (() => {
-  const override = parseList(
-    (import.meta.env.VITE_SFL_PROGRAMMES as string | undefined) ?? '',
-  ).filter((code): code is ProgrammeCode => allProgrammes.includes(code as ProgrammeCode));
+  const requested =
+    readActorOverride()?.programmes || (import.meta.env.VITE_SFL_PROGRAMMES as string | undefined) || '';
+  const override = parseList(requested).filter((code): code is ProgrammeCode =>
+    allProgrammes.includes(code as ProgrammeCode),
+  );
 
   return override.length > 0 ? override : programmesFor(actorRoles);
 })();

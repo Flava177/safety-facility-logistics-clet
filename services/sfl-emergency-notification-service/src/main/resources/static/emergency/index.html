@@ -1,25 +1,67 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Emergency Mass Notification</title><link rel="stylesheet" href="/emergency/emergency-console.css"></head>
-<body><header><div><span class="eyebrow">CLET · SFL Phase 1 · S174 · SSEMP</span><h1>Emergency Mass Notification</h1><p>Templates, scenarios, audiences, activation, break-glass, delivery, acknowledgements and all-clear.</p></div><div class="health"><i></i><span id="health">Checking service</span></div></header>
-<nav aria-label="Emergency sections"><button class="active" data-view="overview">Overview</button><button data-view="records">Records</button><button data-view="activations">Activations</button><button data-view="drills">Drills</button><button data-view="integrations">Integrations</button><a href="/swagger-ui.html">API Explorer ↗</a></nav>
-<main><section class="toolbar"><label>Site <input id="site" value="HQ" autocomplete="off"></label><label>Acting roles <input id="roles" value="EMERGENCY_COORDINATOR,SECURITY_DIRECTOR" autocomplete="off"></label><button id="refresh">Refresh</button><span id="message" role="status" aria-live="polite"></span></section>
-<p class="note">Dev actor context — comma-separated <code>SflRole</code> names sent as <code>X-SFL-Roles</code>. The API enforces authorization, break-glass eligibility and closure gating; SFL never actuates certified life-safety hardware.</p>
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>Emergency mass notification — moved to the SFL Operations dashboard</title>
+  <!--
+    This page used to be a separate interface over the same API as the SFL Operations dashboard. Two
+    interfaces over one service drift, and this one had drifted: it carried the client-side
+    aggregation the dashboard has had removed, and it defaulted to a different site scope, so the two
+    disagreed about how much was wrong. ADR 0006 retired it.
 
-<section id="overview" class="view active"><div class="cards"><article class="danger"><span>Active activations</span><strong id="c-active">—</strong></article><article class="danger"><span>Break-glass</span><strong id="c-bg">—</strong></article><article class="danger"><span>Failed recipients</span><strong id="c-failed">—</strong></article><article><span>Ack pending</span><strong id="c-ackp">—</strong></article></div><div class="cards"><article class="danger"><span>Escalated</span><strong id="c-esc">—</strong></article><article><span>All-clear pending</span><strong id="c-acp">—</strong></article><article><span>Drills</span><strong id="c-drill">—</strong></article><article><span>Freshness</span><strong id="c-fresh">—</strong></article></div><div class="panel"><h2>Operational posture</h2><p id="freshness">Load the dashboard to check data freshness.</p><div class="quick"><button data-jump="records">Manage records</button><button data-jump="activations">New activation</button><button class="warn" data-jump="activations">Break-glass</button><button data-jump="integrations">Integration health</button></div></div></section>
-
-<section id="records" class="view"><div class="split"><div class="panel"><h2>Templates &amp; scenarios</h2><form id="template-form" class="action-form"><h3>New template</h3><div class="grid"><label>Code<input name="templateCode" placeholder="auto"></label><label>Title<input name="title" required></label></div><label>Body<textarea name="body" required></textarea></label><label>Channels (comma)<input name="channels" value="SMS,EMAIL" required></label><label class="check"><input name="breakGlassEligible" type="checkbox" checked> Break-glass eligible</label><button type="submit">Create template</button></form><div id="template-list" class="list empty">No templates loaded.</div>
-<form id="scenario-form" class="action-form"><h3>New scenario</h3><div class="grid"><label>Code<input name="scenarioCode" placeholder="auto"></label><label>Name<input name="name" required></label><label>Priority<select name="priority"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label><label>Default template ID<input name="defaultTemplateId"></label></div><label class="check"><input name="breakGlassEligible" type="checkbox" checked> Break-glass eligible</label><button type="submit">Create scenario</button></form><div id="scenario-list" class="list empty">No scenarios loaded.</div></div>
-<div class="panel"><h2>Audiences &amp; zones</h2><form id="audience-form" class="action-form"><h3>New audience group</h3><div class="grid"><label>Code<input name="groupCode" placeholder="auto"></label><label>Name<input name="name" required></label><label>Directory ref<input name="directoryReference"></label><label>Recipient count<input name="recipientCount" type="number" value="100"></label></div><button type="submit">Create audience</button></form><div id="audience-list" class="list empty">No audiences loaded.</div>
-<form id="zone-form" class="action-form"><h3>New recipient zone</h3><div class="grid"><label>Code<input name="zoneCode" placeholder="auto"></label><label>Name<input name="name" required></label><label>Location ref<input name="locationReference"></label></div><button type="submit">Create zone</button></form><div id="zone-list" class="list empty">No zones loaded.</div></div></div></section>
-
-<section id="activations" class="view"><div class="split"><div class="panel"><h2>Activations</h2><div id="activation-list" class="list empty">No activations loaded.</div></div><form id="activation-form" class="panel"><h2>New activation</h2><div class="grid"><label>Scenario ID<input name="scenarioId"></label><label>Template ID<input name="templateId"></label><label>Audience group IDs (comma)<input name="audienceGroupIds"></label><label>Recipient zone IDs (comma)<input name="recipientZoneIds"></label><label>Channels (comma)<input name="channels" value="SMS,EMAIL"></label><label>Priority<select name="priority"><option>CRITICAL</option><option>HIGH</option><option>MEDIUM</option><option>LOW</option></select></label><label>Incident reference<input name="incidentReference"></label></div><div class="actions"><button type="submit">Create routine draft</button><button type="button" id="break-glass-btn" class="warn">Break-glass send</button></div><p class="note">Break-glass needs a break-glass-eligible template and an authorised role; it sends without pre-approval and requires after-the-fact approval before closure.</p></form></div></section>
-
-<section id="activation-detail" class="view"><button class="back" data-jump="activations">← Back to activations</button><div class="panel"><div class="heading"><div><h2 id="a-title">Activation</h2><p class="corr" id="a-corr"></p></div><span class="tag" id="a-status">—</span></div><dl class="detail" id="a-fields"></dl>
-<h3>Channels</h3><div id="a-channels" class="list empty">No channels.</div>
-<h3>Workflow actions</h3><div class="actions" id="a-actions"></div>
-<div class="action-form"><div class="grid"><label>Reason / justification<input id="a-reason" autocomplete="off"></label><label>Closure evidence storage ref<input id="a-evidence" autocomplete="off" placeholder="evidence://..."></label></div></div>
-<p class="note">Closure requires a reason, delivery/acknowledgement summary (computed) and an evidence reference; break-glass activations also require after-the-fact approval first.</p></div></section>
-
-<section id="drills" class="view"><div class="split"><div class="panel"><h2>Drill runs</h2><div id="drill-list" class="list empty">No drills loaded.</div></div><form id="drill-form" class="panel"><h2>New drill</h2><div class="grid"><label>Scenario ID<input name="scenarioId"></label><label>Target recipients<input name="targetRecipients" type="number" value="50"></label></div><label>Notes<textarea name="notes"></textarea></label><button type="submit">Start drill</button><div id="drill-complete" class="action-form" hidden><h3>Complete selected drill</h3><div class="grid"><label>Reached<input id="d-reached" type="number" value="48"></label><label>Acknowledged<input id="d-ack" type="number" value="40"></label><label>Activation millis<input id="d-millis" type="number" value="1500"></label></div><button type="button" id="drill-complete-btn" class="secondary">Complete drill</button></div></form></div></section>
-
-<section id="integrations" class="view"><div class="panel"><h2>Outbound integration health</h2><div id="int-state" class="empty">Loading integration health…</div><div id="int-body" hidden><div class="cards"><article><span>Pending</span><strong id="o-pending">—</strong></article><article><span>Published</span><strong id="o-pub">—</strong></article><article class="danger"><span>Dead-letter</span><strong id="o-dead">—</strong></article><article><span>&nbsp;</span><strong>&nbsp;</strong></article></div><p class="note">Dead-lettered messages can be replayed by an <code>EMERGENCY_INTEGRATION_REPLAY</code> role via <code>POST /integrations/outbox/{id}/replay</code>.</p></div><div class="actions"><button id="report-btn" class="secondary">Download activations CSV</button></div><div id="report-state" class="note"></div></div></section>
-</main><script src="/emergency/emergency-console.js"></script></body></html>
+    A redirect rather than a deletion, so every URL printed in a runbook still arrives somewhere.
+    The refresh waits two seconds on purpose: the notice below is the answer to "why did that move?",
+    and an instant jump would never let anyone read it. Requests to /emergency are redirected by the
+    service immediately instead.
+  -->
+  <meta http-equiv="refresh" content="2; url=/emergency">
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2rem;
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f8fafc; color: #1e293b;
+    }
+    main { max-width: 34rem; }
+    p.eyebrow {
+      margin: 0 0 .5rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: #64748b;
+    }
+    h1 { margin: 0 0 1rem; font-size: 1.5rem; line-height: 1.3; }
+    a.cta {
+      display: inline-block; margin-top: 1.25rem; padding: .6rem 1.1rem; border-radius: .5rem;
+      background: #0f172a; color: #fff; text-decoration: none; font-weight: 600;
+    }
+    a.cta:hover { background: #1e293b; }
+    p.small { font-size: .8125rem; color: #64748b; }
+    code {
+      background: #e2e8f0; border-radius: .25rem; padding: .1rem .3rem; font-size: .9em;
+    }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f172a; color: #e2e8f0; }
+      p.eyebrow, p.small { color: #94a3b8; }
+      a.cta { background: #e2e8f0; color: #0f172a; }
+      a.cta:hover { background: #cbd5e1; }
+      code { background: #1e293b; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">CLET · SFL Phase 1</p>
+    <h1>Emergency mass notification has moved to the SFL Operations dashboard</h1>
+    <p>
+      Templates, scenarios, audiences, zones, activation, break-glass, delivery, acknowledgements, drills and the all-clear are all in the dashboard. The emergency screens are served by the fleet service and call this one across origins, which is why the target is configured rather than a path on this port.
+    </p>
+    <p>Taking you there now.</p>
+    <a class="cta" href="/emergency">Open the dashboard</a>
+    <p class="small">
+      This page was a second interface over the same API. It is kept only as a redirect so existing
+      links resolve — see <code>docs/adr/0006</code>. If nothing loads, the dashboard bundle has not
+      been built: run <code>npm run build</code> in <code>frontend/sfl-operations-ui</code>, or start
+      the service with <code>-Pui</code>.
+    </p>
+  </main>
+</body>
+</html>
