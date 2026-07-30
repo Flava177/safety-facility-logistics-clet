@@ -550,7 +550,7 @@ export interface EvidenceResponse {
  * Both fields are required by the service — there is no "all evidence" read.
  *
  * That is a deliberate constraint rather than a missing feature: evidence is only ever meaningful
- * against the thing it evidences, and a console-wide evidence list would be a browsable index of
+ * against the thing it evidences, and a dashboard-wide evidence list would be a browsable index of
  * every incident at every site.
  */
 export interface EvidenceSearchParams {

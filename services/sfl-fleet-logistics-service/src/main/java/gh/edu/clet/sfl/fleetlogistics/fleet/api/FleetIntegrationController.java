@@ -73,7 +73,7 @@ class FleetIntegrationController {
       *
       * <p>Closes gap 8. Replay takes a message identifier and the health projection carried only a
       * handful of recent messages, so dead-letter replay was a documented capability that could not
-      * be reached from the console at all.
+      * be reached from the dashboard at all.
       */
     @GetMapping("/messages")
     public ApiResponse<List<InboxMessageResponse>> messages(

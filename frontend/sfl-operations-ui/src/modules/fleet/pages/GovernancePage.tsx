@@ -48,7 +48,7 @@ interface AuditRow {
  *
  * There is still no browsable list of all evidence, and there should not be. Every read names a
  * record or an identifier, which keeps this screen from becoming an index of every incident at every
- * site that anyone with the console open can page through.
+ * site that anyone with the dashboard open can page through.
  */
 const GovernancePage = () => {
   const { notifyError, notifySuccess } = useNotifier();

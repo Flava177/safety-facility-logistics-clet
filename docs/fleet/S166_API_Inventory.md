@@ -95,7 +95,7 @@ verbatim, plus `fieldErrors[]` for Bean Validation failures.
 |---|---|---|---|---|
 | I1 | `POST /api/v1/fleet/integrations/{sourceSystem}/messages` | Signed telematics ingestion (HMAC + allowlist + schema + inbox + idempotency) | `202` accepted · `200` duplicate ignored | 401 `FLEET_INTEGRATION_INVALID_SIGNATURE`, 403 `FLEET_INTEGRATION_SOURCE_NOT_ALLOWED`, 422 `FLEET_INTEGRATION_SCHEMA_INVALID` |
 | I2 | `GET /api/v1/fleet/integrations/health` | Integration health projection (per source: status, backlog, failures, dead letters, last success) | `200` | 403 |
-| I3 | `GET /api/v1/fleet/integrations/messages` | Inbox message search (`sourceSystem`, `status`, `eventType`, `size`). Implemented 29 July 2026 — without it, dead-letter replay could not be reached from the console | `200` | 403 |
+| I3 | `GET /api/v1/fleet/integrations/messages` | Inbox message search (`sourceSystem`, `status`, `eventType`, `size`). Implemented 29 July 2026 — without it, dead-letter replay could not be reached from the dashboard | `200` | 403 |
 | I4 | `POST /api/v1/fleet/integrations/messages/{messageId}/replay` | Replay a dead-lettered message (privileged, idempotent) | `202` | 403, 404, 409 |
 
 ## 7. Dashboards and reports — `SRS-SFL-S166-05`

@@ -7,10 +7,10 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 /**
  * Picks evidence already filed against a record.
  *
- * Every closure dialog in this console used to ask an operator to paste an evidence reference id.
+ * Every closure dialog in this dashboard used to ask an operator to paste an evidence reference id.
  * The identifier is a UUID that appears on no paperwork, so the real workflow was: open Evidence &
  * audit in another tab, find the record, copy the id, come back. The S166 gap register called that
- * the main usability cost in the whole console, and it was worst exactly where it mattered most —
+ * the main usability cost in the whole dashboard, and it was worst exactly where it mattered most —
  * closing a workflow item, where evidence is mandatory and the service refuses the close without it.
  *
  * `GET /evidence?relatedRecordType=&relatedRecordId=` is the whole fix. The record is the only thing

@@ -79,7 +79,7 @@ public class FleetEvidenceApplicationService {
     /**
      * Evidence attached to one record.
      *
-     * <p>Closes gap 5, which the register called the main usability cost in the whole console: with
+     * <p>Closes gap 5, which the register called the main usability cost in the whole dashboard: with
      * no search, every closure dialog asked an operator to paste an evidence reference id from
      * somewhere else. The repository has answered this question since the service was built and
      * nothing exposed it.

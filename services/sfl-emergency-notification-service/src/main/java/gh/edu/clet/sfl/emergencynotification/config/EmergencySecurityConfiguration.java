@@ -21,7 +21,7 @@ import org.springframework.security.web.SecurityFilterChain;
 /**
  * Development vs OIDC security, gated on {@code sfl.security.enabled}. Development mode uses the
  * {@code X-SFL-*} actor headers and permits all requests; production enables the JWT resource server.
- * Provider callbacks, Swagger, the console and health are permitted in production because they are
+ * Provider callbacks, Swagger, the dashboard and health are permitted in production because they are
  * authenticated at the application layer (HMAC/allowlist for callbacks) or are public operational surfaces.
  */
 @Configuration(proxyBeanMethods = false)

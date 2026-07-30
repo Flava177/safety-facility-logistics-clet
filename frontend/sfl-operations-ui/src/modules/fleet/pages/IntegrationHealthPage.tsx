@@ -25,7 +25,7 @@ const SEARCH_LIMIT = 100;
  *
  * The counters come from the health projection; the messages come from `GET /integrations/messages`.
  * That search is why this page changed: replay takes a message identifier, and the only messages the
- * console could see were the handful the health projection happened to carry — so replaying a dead
+ * dashboard could see were the handful the health projection happened to carry — so replaying a dead
  * letter meant knowing its id from somewhere else entirely. Dead-letter replay was a documented
  * capability that could not be reached from here at all.
  *

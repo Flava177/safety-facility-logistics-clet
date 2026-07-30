@@ -37,7 +37,7 @@ Runtime entry points:
 | `http://localhost:8095/actuator/health` | Health |
 | `http://localhost:8095/swagger-ui.html` | API explorer |
 | `http://localhost:8095/v3/api-docs` | OpenAPI JSON |
-| `http://localhost:8095/emergency/` | Emergency operations console |
+| `http://localhost:8095/emergency/` | Service-served page. The emergency screens in the SFL Operations dashboard supersede it — see ADR 0006 |
 
 Development actor headers:
 

@@ -22,7 +22,7 @@ S174 is implemented and ready for review as a separate deployable Spring Boot se
 | Artifact | Status | Notes |
 |---|---:|---|
 | ADR and planning docs | Done | ADR 0004 plus API inventory, domain model, event contracts, gap report, migration plan, test plan and RTM |
-| Service scaffold | Done | Boot 4.1, Java 17, OpenAPI, development actor headers, static console at `/emergency/` |
+| Service scaffold | Done | Boot 4.1, Java 17, OpenAPI, development actor headers, static page at `/emergency/` |
 | Persistence | Done | Flyway migrations V1-V8 for service foundation, records, activations, delivery, acknowledgements, evidence, audit, dashboard, runtime defaults and command idempotency |
 | Application workflow | Done | Activation lifecycle, provider callbacks, break-glass, after-action approval, all-clear, closure, dashboards, drills and sweeps |
 | Integration catalog | Done | S174 events added to `docs/integration/event-catalog.md` |

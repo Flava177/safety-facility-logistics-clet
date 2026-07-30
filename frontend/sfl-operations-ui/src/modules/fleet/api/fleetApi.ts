@@ -280,7 +280,7 @@ export const evidenceApi = {
   /**
    * Evidence filed against one record.
    *
-   * Closes the gap the S166 register called the main usability cost in the whole console: with no
+   * Closes the gap the S166 register called the main usability cost in the whole dashboard: with no
    * search, every closure dialog asked an operator to paste a reference id copied from another tab.
    */
   search: (params: EvidenceSearchParams, signal?: AbortSignal) =>
@@ -338,7 +338,7 @@ export const integrationsApi = {
    *
    * Replay takes a message identifier, and the health projection only ever carried a handful of
    * recent messages — so dead-letter replay was a documented capability that could not be reached
-   * from this console at all.
+   * from this dashboard at all.
    */
   messages: (params: InboxSearchParams = {}, signal?: AbortSignal) =>
     apiClient.get<InboxMessageResponse[]>(`${BASE}/integrations/messages`, asQuery(params), signal),

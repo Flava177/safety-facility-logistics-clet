@@ -361,7 +361,8 @@ against yet.
 
 The emergency service still serves its own standalone front end at
 `src/main/resources/static/emergency/` (`index.html`, `emergency-console.js`,
-`emergency-console.css`), reachable at `http://localhost:8095/emergency`. It predates these
+`emergency-console.css` — filenames unchanged because ADR 0006 proposes replacing the whole
+directory with a redirect), reachable at `http://localhost:8095/emergency`. It predates these
 dashboards and now duplicates them.
 
 It has been left in place — removing a working page is a decision for whoever owns that service, not

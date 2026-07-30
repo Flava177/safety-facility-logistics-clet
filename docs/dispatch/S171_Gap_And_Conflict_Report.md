@@ -58,5 +58,5 @@ None of these justify weakening validation, authorization, audit, evidence gover
 ## Deferred to Phase 2
 
 - Live GPS/telematics tracking and RFID seal/asset reads (seams + recorded adapters only in Phase 1).
-- Native mobile / true offline store-and-forward client (Phase 1 delivers a responsive console with an
+- Native mobile / true offline store-and-forward client (Phase 1 delivers a responsive dashboard with an
   idempotent offline-capture-then-reconcile API path and preserved partial entry).

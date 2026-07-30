@@ -7,7 +7,7 @@ import type { ActivationStatus } from './enums';
  *
  * The service is the authority: every transition here is also checked there, and a refusal comes
  * back as `EMERGENCY_INVALID_STATE_TRANSITION` with the domain's own wording. This exists so an
- * action an operator cannot take is not offered in the first place — an emergency console that
+ * action an operator cannot take is not offered in the first place — an emergency dashboard that
  * shows a live "Send" button which will be refused is worse than useless when it matters.
  *
  * Where a rule is stated twice — once here and once in the service — the service's text is what the
