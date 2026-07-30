@@ -428,7 +428,7 @@ exception is what makes the rule worth having.
 **How it works.** `shared/layout/programmeModel.ts` maps role → programme and imports nothing, so the
 decision can be checked directly. `programmes.ts` reads the actor's roles and exposes `entitledTo`.
 Every `NavSection` declares a `programme`; the sidebar renders only entitled sections,
-`RequireProgramme` refuses the routes of an unentitled one, and the landing route is the actor's
+`RequireEntitlement` refuses the routes of an unentitled programme **or system**, and the landing route is the actor's
 **first entitled destination** rather than the fleet dashboard.
 
 Entitlement is **derived from roles**, not from a second list, because that is what IAM will do — a
@@ -442,5 +442,5 @@ independently. **Build as though the nav filter does not exist and the service i
 point, because that is the truth.**
 
 **What to do when you add the next module.** Declare its programme on the section, and wrap its route
-subtree in `RequireProgramme`. Two lines, and they are the same two lines whether the portal is later
+subtree in `RequireEntitlement`. Two lines, and they are the same two lines whether the portal is later
 split per programme or left as one bundle.
