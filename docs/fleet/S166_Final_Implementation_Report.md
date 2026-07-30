@@ -22,7 +22,7 @@ S166 is ready for review and pull request. The implementation covers the five fo
 
 | Deliverable | Status | Notes |
 |---|---:|---|
-| Fleet operational console / UI | Done | Static console served from `/fleet/index.html`; it calls the live operations dashboard, drilldown, integration health, readiness report and workflow queue endpoints. |
+| Fleet dashboard / UI | Done | Static page served from `/fleet/index.html`; it calls the live operations dashboard, drilldown, integration health, readiness report and workflow queue endpoints. Superseded by the SFL Operations dashboard at `/ui/fleet` — see ADR 0006. |
 | Compliance/service scheduled sweeps | Done | Scheduler recalculates compliance expiry and service due/overdue status, writes audit entries, publishes fleet events and raises workflow items through the existing workflow raiser. |
 | PostgreSQL end-to-end verification | Done | Critical E2E suite runs 16 SRS scenarios against the Docker PostgreSQL E2E database via `SFL_FLEET_LOGISTICS_TEST_DB_URL`. A legacy Testcontainers auto-detection probe remains Docker-gated and may skip on Docker Desktop environments where the Java client cannot negotiate the Docker API. |
 | Local operations setup | Done | Added `compose.fleet-db.yml`, `use-sfl-env.ps1` and `S166_Operations_And_Verification_Guide.md` for Java 17, Docker PostgreSQL and IntelliJ/Spring Boot startup. |
@@ -31,7 +31,7 @@ S166 is ready for review and pull request. The implementation covers the five fo
 
 ### UI
 
-- `/fleet/index.html` - Fleet operational console.
+- `/fleet/index.html` - a notice page redirecting to `/ui/fleet`, since ADR 0006.
 
 ### Core API paths
 

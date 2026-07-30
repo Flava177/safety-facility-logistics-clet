@@ -11,10 +11,13 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import gh.edu.clet.sfl.fleetlogistics.fleet.api.mapper.FleetAssessmentMapper;
+import gh.edu.clet.sfl.fleetlogistics.fleet.api.mapper.FleetWorkflowMapper;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.mapper.VehicleResponseMapper;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RegisterVehicleCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.query.VehicleQueryService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetAuditService;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.TripApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.VehicleApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DuplicateActiveIdentifierException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
@@ -54,7 +57,12 @@ import org.springframework.test.web.servlet.MockMvc;
         OAuth2ResourceServerWebSecurityAutoConfiguration.class
 })
 @AutoConfigureMockMvc(addFilters = false)
-@Import({VehicleControllerTest.TestBeans.class, FleetActorResolver.class, VehicleResponseMapper.class})
+// The readiness, movement and standalone-inspection mappings brought three more collaborators onto
+// this controller, so the slice has to know about them. The two mappers are real (they are pure
+// translation); the trip service is mocked because a controller test has no business exercising the
+// inspection workflow.
+@Import({VehicleControllerTest.TestBeans.class, FleetActorResolver.class, VehicleResponseMapper.class,
+        FleetAssessmentMapper.class, FleetWorkflowMapper.class})
 class VehicleControllerTest {
 
     private static final UUID VEHICLE_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
@@ -70,6 +78,9 @@ class VehicleControllerTest {
 
     @MockitoBean
     private FleetAuditService auditService;
+
+    @MockitoBean
+    private TripApplicationService tripService;
 
     @TestConfiguration
     static class TestBeans {

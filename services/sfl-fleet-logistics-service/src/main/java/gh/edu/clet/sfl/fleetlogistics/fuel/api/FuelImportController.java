@@ -5,6 +5,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelImportService;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.UUID;
@@ -49,5 +50,22 @@ public class FuelImportController {
     /** One batch with every row outcome and its retained validation error. */
     @GetMapping("/{id}") public ApiResponse<FuelImportBatch> detail(@PathVariable UUID id,HttpServletRequest h){
         return ApiResponse.ok(service.importBatch(id,actors.resolve(h)));
+    }
+
+    /**
+     * The batch's rows, paged.
+     *
+     * <p>The detail read above carries every row, which a file of thousands makes unusable. This is
+     * the same rows with a page around them, and with the one filter that matters: {@code status}, so
+     * "show me what was rejected" is a query rather than a scroll.
+     */
+    @GetMapping("/{id}/rows") public ApiResponse<FuelPageResponse<FuelImportRow>> rows(@PathVariable UUID id,
+            @RequestParam(required=false)FuelImportRow.Status status,
+            @RequestParam(defaultValue="0")int page,
+            @RequestParam(defaultValue="50")int size,
+            @RequestParam(required=false)String sort,
+            HttpServletRequest h){
+        return ApiResponse.ok(FuelPageResponse.of(service.importRows(id,status,FuelPageResponse.paging(page,size,sort),
+                actors.resolve(h))));
     }
 }

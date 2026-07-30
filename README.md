@@ -17,8 +17,8 @@ The previous .NET implementation has been removed from this project. The older s
 
 ## Running Fleet & Vehicle Management locally
 
-One command starts the databases, builds the SFL Operations console and runs the Fleet service,
-which then serves the API, Swagger and the console together on port 8093:
+One command starts the databases, builds the SFL Operations dashboard and runs the Fleet service,
+which then serves the API, Swagger and the dashboard together on port 8093:
 
 ```powershell
 .\start-fleet.ps1
@@ -26,15 +26,15 @@ which then serves the API, Swagger and the console together on port 8093:
 
 | URL                                     | What               |
 | --------------------------------------- | ------------------ |
-| <http://localhost:8093/ui/>             | Operations console |
+| <http://localhost:8093/ui/>             | Operations dashboard |
 | <http://localhost:8093/swagger-ui.html> | Swagger UI         |
 | <http://localhost:8093/v3/api-docs>     | OpenAPI JSON       |
 
-`http://localhost:8093/` redirects to the console. There is no sign-in step locally
-(`sfl.security.enabled=false`); the console sends the `X-SFL-*` actor headers instead.
+`http://localhost:8093/` redirects to the dashboard. There is no sign-in step locally
+(`sfl.security.enabled=false`); the dashboard sends the `X-SFL-*` actor headers instead.
 
 For front-end work with hot reload, use `.\scripts\dev\run-fleet-dev.ps1`, which runs the service
-on 8093 and the console on 5005. Details are in `frontend/sfl-operations-ui/README.md`.
+on 8093 and the dashboard on 5005. Details are in `frontend/sfl-operations-ui/README.md`.
 
 ## Source Documents
 
@@ -79,7 +79,9 @@ Local S174 entry points:
 
 - Service: `services/sfl-emergency-notification-service`
 - Port: `8095`
-- Console: `http://localhost:8095/emergency/`
+- `http://localhost:8095/emergency/` redirects to the dashboard's emergency screens. Configure the
+  target with `sfl.dashboard.base-url` — only the fleet service packages the bundle. See
+  [ADR 0006](docs/adr/0006-one-dashboard-and-the-retirement-of-the-per-service-pages.md)
 - Swagger UI: `http://localhost:8095/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8095/v3/api-docs`
 - Health: `http://localhost:8095/actuator/health`

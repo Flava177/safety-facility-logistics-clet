@@ -21,7 +21,6 @@ import {
   manifestClosureBlockers,
   manifestReceivable,
   manifestReturnReconcilable,
-  parseCustodyGap,
 } from 'modules/dispatch/api/workflow';
 import {
   AddManifestItemDialog,
@@ -97,15 +96,22 @@ const ManifestDetailPage = () => {
    * Recorded as gap 2 — with more open cases than the window holds, a case against this manifest
    * could be missed, which is why the closure panel says where its count came from.
    */
+  /**
+   * The cases raised against **this** manifest.
+   *
+   * `dispatchId` reaches the service now, so this is no longer the site's whole exception window
+   * sieved down to one consignment — which quietly missed cases whenever the site had more than the
+   * window held.
+   */
   const exceptions = useApiQuery(
-    (signal) => (site ? dispatchExceptionsApi.search({ siteCode: site }, signal) : Promise.resolve(undefined)),
-    [site],
+    (signal) =>
+      site
+        ? dispatchExceptionsApi.search({ siteCode: site, dispatchId: manifestId, size: 100 }, signal)
+        : Promise.resolve(undefined),
+    [site, manifestId],
   );
 
-  const relatedCases = useMemo(
-    () => (exceptions.data ?? []).filter((c) => c.dispatchId === manifestId),
-    [exceptions.data, manifestId],
-  );
+  const relatedCases = useMemo(() => exceptions.data?.content ?? [], [exceptions.data]);
   const openCases = useMemo(() => relatedCases.filter(exceptionOpen), [relatedCases]);
 
   const closureBlockers = manifestClosureBlockers(gaps.data, openCases.length);
@@ -610,9 +616,8 @@ const ManifestDetailPage = () => {
                           <p className="text-theme-xs font-semibold text-gray-600">Recorded gaps</p>
                           <ul className="mt-1.5 space-y-1.5">
                             {gaps.data.gaps.map((gap) => {
-                              const parsed = parseCustodyGap(gap);
                               return (
-                                <li key={gap} className="flex items-start gap-2">
+                                <li key={gap.handoverId + gap.reason} className="flex items-start gap-2">
                                   <Icon
                                     name="alert-circle"
                                     size={14}
@@ -620,10 +625,13 @@ const ManifestDetailPage = () => {
                                   />
                                   <span className="text-theme-sm text-gray-700">
                                     <span className="font-medium text-gray-900">
-                                      {humanise(parsed.reason)}
+                                      {humanise(gap.reason)}
                                     </span>
-                                    {parsed.hop && ` at ${humanise(parsed.hop).toLowerCase()}`}
-                                    {parsed.detail && ` — ${parsed.detail}`}
+                                    {` at ${humanise(gap.hop).toLowerCase()}`}
+                                    {Object.keys(gap.detail).length > 0 &&
+                                      ` — ${Object.entries(gap.detail)
+                                        .map(([key, value]) => `${humanise(key).toLowerCase()} ${value}`)
+                                        .join(', ')}`}
                                   </span>
                                 </li>
                               );

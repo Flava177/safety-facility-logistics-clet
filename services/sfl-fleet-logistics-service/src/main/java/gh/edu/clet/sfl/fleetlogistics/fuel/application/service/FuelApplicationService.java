@@ -23,6 +23,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOver
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
@@ -221,6 +222,38 @@ public class FuelApplicationService {
             default->throw new IllegalArgumentException("Unknown fuel resource type");
         };
         return audit.search(new AuditPort.AuditQuery(List.of(site),resourceType,id.toString(),null,null,null,null,0,200));
+    }
+
+    /**
+     * One batch's rows, paged.
+     *
+     * <p>The detail read returns every row, which is fine for a hundred and not for a file with
+     * thousands.
+     */
+    public FuelRepository.FuelPage<FuelImportRow> importRows(UUID id,FuelImportRow.Status status,
+            FuelRepository.Paging paging,ActorContext actor){
+        // importBatch already authorises against the batch's own site, so the rows inherit that check
+        // rather than repeating it with a permission that does not exist.
+        importBatch(id,actor);
+        return repository.findImportRows(id,status,paging);
+    }
+
+    /**
+     * Fuel spend and volume by day, aggregated by the service.
+     *
+     * <p>The dashboard chart bucketed this in the browser from a page of fetched transactions, so it
+     * described that page rather than the site. Aggregated in SQL it describes the site, and the
+     * screen can stop captioning it as derived.
+     */
+    public List<FuelRepository.DailyFuelTotals> dailyTotals(String site,Instant from,Instant to,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_REPORT_READ,site,"FuelDashboard",null);
+        return repository.dailyTotals(List.of(SiteCode.of(site).value()),site,from,to);
+    }
+
+    /** Open anomaly counts by type, so a by-type chart stops reading a page of records. */
+    public Map<String,Long> anomalyCountsByType(String site,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_REPORT_READ,site,"FuelDashboard",null);
+        return repository.anomalyCountsByType(List.of(SiteCode.of(site).value()),site);
     }
 
     public Map<String,Object> dashboard(String site,ActorContext actor){

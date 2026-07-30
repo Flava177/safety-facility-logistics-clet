@@ -131,6 +131,20 @@ public class DispatchScanService {
         return row;
     }
 
+    /**
+     * The site's scan batches.
+     *
+     * <p>Closes gap 3. Both {@code /imports/{id}} and {@code /imports/{id}/rows} already existed, so
+     * a batch was a real record — but the only way back to one was an identifier returned once at
+     * upload and kept nowhere, which meant an import could not be revisited the next morning.
+     */
+    public DispatchRepository.DispatchPage<ScanImportBatch> batches(String site, String sourceSystem, UUID dispatchId,
+            ScanImportBatch.Status status, DispatchRepository.Paging paging, ActorContext actor) {
+        access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, site, "ScanImportBatch", null);
+        return repository.findScanBatches(new DispatchRepository.ScanBatchQuery(List.of(SiteCode.of(site).value()),
+                sourceSystem, dispatchId, status, paging));
+    }
+
     public ScanImportBatch batch(UUID id, ActorContext actor) {
         var batch = repository.findScanBatch(id).orElseThrow(() -> RecordNotFoundException.of("ScanImportBatch", id));
         access.require(actor, SflPermission.DISPATCH_MANIFEST_READ, batch.siteCode().value(), "ScanImportBatch",

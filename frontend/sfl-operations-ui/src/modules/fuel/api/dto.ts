@@ -504,3 +504,25 @@ export interface FuelDashboardSnapshot {
   importBatchesWithErrors: number;
   lastImportAt: string | null;
 }
+
+/**
+ * One day of fuel spend at a site, aggregated by the service.
+ *
+ * `day` is a UTC calendar date, which is how every timestamp in the fuel schema is stored. Only days
+ * that had at least one transaction are returned — the service reports what happened, and a day with
+ * no fuel has nothing to report.
+ */
+/** Filters for one batch's rows. `status` filters in SQL, not over the fetched page. */
+export interface ImportRowSearchParams {
+  status?: FuelImportRow['status'] | '';
+  page?: number;
+  size?: number;
+  sort?: string;
+}
+
+export interface DailyFuelTotals {
+  day: string;
+  totalCost: number;
+  quantity: number;
+  transactionCount: number;
+}

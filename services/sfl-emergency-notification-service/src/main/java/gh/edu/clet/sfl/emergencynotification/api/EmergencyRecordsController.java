@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.emergencynotification.domain.model.EmergencyScenario;
 import gh.edu.clet.sfl.emergencynotification.domain.model.NotificationTemplate;
 import gh.edu.clet.sfl.emergencynotification.domain.model.Priority;
 import gh.edu.clet.sfl.emergencynotification.domain.model.RecipientZone;
+import gh.edu.clet.sfl.emergencynotification.domain.model.RecordLifecycle;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -44,8 +45,15 @@ public class EmergencyRecordsController {
 
     @GetMapping("/templates")
     @Tag(name = "Emergency Templates")
-    public ApiResponse<List<NotificationTemplate>> templates(@RequestParam String siteCode, HttpServletRequest h) {
-        return ApiResponse.ok(service.templates(siteCode, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<NotificationTemplate>> templates(@RequestParam String siteCode,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) RecordLifecycle lifecycle,
+            @RequestParam(required = false) Boolean breakGlassEligible,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.templates(siteCode, search, lifecycle,
+                breakGlassEligible, EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
     @GetMapping("/templates/{id}")
@@ -66,8 +74,22 @@ public class EmergencyRecordsController {
 
     @GetMapping("/scenarios")
     @Tag(name = "Emergency Scenarios")
-    public ApiResponse<List<EmergencyScenario>> scenarios(@RequestParam String siteCode, HttpServletRequest h) {
-        return ApiResponse.ok(service.scenarios(siteCode, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<EmergencyScenario>> scenarios(@RequestParam String siteCode,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) RecordLifecycle lifecycle,
+            @RequestParam(required = false) Boolean breakGlassEligible,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.scenarios(siteCode, search, lifecycle,
+                breakGlassEligible, EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
+    }
+
+    /** Scenario detail. Closes half of gap 5 — only templates had a detail endpoint. */
+    @GetMapping("/scenarios/{id}")
+    @Tag(name = "Emergency Scenarios")
+    public ApiResponse<EmergencyScenario> scenario(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.scenario(id, actors.resolve(h)));
     }
 
     @PostMapping("/audience-groups")
@@ -82,8 +104,37 @@ public class EmergencyRecordsController {
 
     @GetMapping("/audience-groups")
     @Tag(name = "Audience Groups")
-    public ApiResponse<List<AudienceGroup>> audiences(@RequestParam String siteCode, HttpServletRequest h) {
-        return ApiResponse.ok(service.audienceGroups(siteCode, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<AudienceGroup>> audiences(@RequestParam String siteCode,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) RecordLifecycle lifecycle,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.audienceGroups(siteCode, search, lifecycle,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
+    }
+
+    @GetMapping("/audience-groups/{id}")
+    @Tag(name = "Audience Groups")
+    public ApiResponse<AudienceGroup> audience(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.audienceGroup(id, actors.resolve(h)));
+    }
+
+    /**
+     * Corrects an audience group's size and directory pointer.
+     *
+     * <p>The sharp edge in gap 6: {@code recipientCount} is what the service fans out to and the
+     * denominator every delivery percentage is read against, and it could not be corrected. A group
+     * sized at zero sent to nobody and reported a completely successful broadcast. The name is
+     * deliberately not editable — closed activations cite this group, and renaming it would rewrite
+     * what they say they were sent to.
+     */
+    @PatchMapping("/audience-groups/{id}")
+    @Tag(name = "Audience Groups")
+    public ApiResponse<AudienceGroup> updateAudience(@PathVariable UUID id,
+            @Valid @RequestBody UpdateAudienceRequest r, HttpServletRequest h) {
+        return ApiResponse.ok(service.updateAudienceGroup(id, r.directoryReference(), r.recipientCount(),
+                actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
     @PostMapping("/recipient-zones")
@@ -98,9 +149,46 @@ public class EmergencyRecordsController {
 
     @GetMapping("/recipient-zones")
     @Tag(name = "Recipient Zones")
-    public ApiResponse<List<RecipientZone>> zones(@RequestParam String siteCode, HttpServletRequest h) {
-        return ApiResponse.ok(service.recipientZones(siteCode, actors.resolve(h)));
+    public ApiResponse<EmergencyPageResponse<RecipientZone>> zones(@RequestParam String siteCode,
+            @RequestParam(required = false) String search,
+            @RequestParam(required = false) RecordLifecycle lifecycle,
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort,
+            HttpServletRequest h) {
+        return ApiResponse.ok(EmergencyPageResponse.of(service.recipientZones(siteCode, search, lifecycle,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
+
+    @GetMapping("/recipient-zones/{id}")
+    @Tag(name = "Recipient Zones")
+    public ApiResponse<RecipientZone> zone(@PathVariable UUID id, HttpServletRequest h) {
+        return ApiResponse.ok(service.recipientZone(id, actors.resolve(h)));
+    }
+
+    /**
+     * Retires or reinstates a master-data record.
+     *
+     * <p>The other half of gap 6. Every one of these records carries {@code withLifecycle} on its
+     * domain type and nothing called it, so an obsolete template stayed selectable forever.
+     * Archiving is not deletion: activations citing the record still resolve it.
+     */
+    @PatchMapping("/{resourceType}/{id}/lifecycle")
+    public ApiResponse<Object> setLifecycle(@PathVariable String resourceType, @PathVariable UUID id,
+            @Valid @RequestBody LifecycleRequest r, HttpServletRequest h) {
+        String type = switch (resourceType) {
+            case "templates" -> "NotificationTemplate";
+            case "scenarios" -> "EmergencyScenario";
+            case "audience-groups" -> "AudienceGroup";
+            case "recipient-zones" -> "RecipientZone";
+            default -> throw new IllegalArgumentException("Unknown emergency record type: " + resourceType);
+        };
+        return ApiResponse.ok(service.setLifecycle(type, id, r.lifecycle(), actors.resolve(h),
+                actors.resolveSourceChannel(h)));
+    }
+
+    public record UpdateAudienceRequest(String directoryReference, Integer recipientCount) {}
+
+    public record LifecycleRequest(@NotNull RecordLifecycle lifecycle) {}
 
     public record TemplateRequest(@NotBlank String siteCode, String templateCode, @NotBlank String title,
             @NotBlank String body, @NotNull List<ChannelType> channels, boolean breakGlassEligible) {}

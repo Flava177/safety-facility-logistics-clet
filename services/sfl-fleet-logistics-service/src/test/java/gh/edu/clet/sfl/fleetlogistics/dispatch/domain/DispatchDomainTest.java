@@ -105,12 +105,16 @@ class DispatchDomainTest {
     @Test
     void custody_policy_detects_broken_seal_count_mismatch_and_out_of_order_hops() {
         var broken = CustodyChainPolicy.detectGaps(List.of(hop(CustodyHop.DISPATCH, 1, SealState.BROKEN, 2)), 2);
-        assertThat(broken).anyMatch(g -> g.startsWith("BROKEN_SEAL"));
+        assertThat(broken).anyMatch(g -> g.reason() == CustodyChainPolicy.GapReason.BROKEN_SEAL
+                && g.hop() == CustodyHop.DISPATCH && "BROKEN".equals(g.detail().get("sealState")));
         var mismatch = CustodyChainPolicy.detectGaps(List.of(hop(CustodyHop.DISPATCH, 1, SealState.INTACT, 1)), 2);
-        assertThat(mismatch).anyMatch(g -> g.startsWith("COUNT_MISMATCH"));
+        assertThat(mismatch).anyMatch(g -> g.reason() == CustodyChainPolicy.GapReason.COUNT_MISMATCH
+                && Integer.valueOf(2).equals(g.detail().get("expected"))
+                && Integer.valueOf(1).equals(g.detail().get("verified")));
         var outOfOrder = CustodyChainPolicy.detectGaps(
                 List.of(hop(CustodyHop.CENTRE_RECEIPT, 1, SealState.INTACT, 2), hop(CustodyHop.DISPATCH, 2, SealState.INTACT, 2)), 2);
-        assertThat(outOfOrder).anyMatch(g -> g.startsWith("OUT_OF_ORDER"));
+        assertThat(outOfOrder).anyMatch(g -> g.reason() == CustodyChainPolicy.GapReason.OUT_OF_ORDER
+                && g.hop() == CustodyHop.DISPATCH);
     }
 
     @Test

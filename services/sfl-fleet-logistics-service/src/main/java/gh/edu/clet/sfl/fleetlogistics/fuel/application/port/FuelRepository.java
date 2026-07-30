@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fuel.application.port;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
@@ -194,6 +195,34 @@ public interface FuelRepository {
 
     /** Batch with its rows populated. */
     Optional<FuelImportBatch> findImportBatch(UUID id);
+
+    /**
+     * One batch's rows, paged.
+     *
+     * <p>The detail read returns every row, which is fine for a hundred and not for a file with
+     * thousands. Paged here so a large import can be reviewed a screen at a time.
+     *
+     * <p>{@code status} is nullable and filters in SQL. It has to: the only view of an import that
+     * matters is the rejected rows, and a status filter applied to a page would have found only the
+     * rejections that happened to land on the page being looked at.
+     */
+    FuelPage<FuelImportRow> findImportRows(UUID batchId, FuelImportRow.Status status, Paging paging);
+
+    /**
+     * Fuel spend and volume by day.
+     *
+     * <p>The dashboard bucketed this in the browser from a page of fetched transactions, which meant
+     * the chart described that page rather than the site. Aggregated in SQL, it describes the site.
+     */
+    List<DailyFuelTotals> dailyTotals(List<String> sites, String site, Instant from, Instant to);
+
+    /** Open anomaly counts by type, so a by-type chart stops reading a page of records. */
+    Map<String, Long> anomalyCountsByType(List<String> sites, String site);
+
+    /** One day's spend and volume. {@code day} is a date, not an instant: the bucket is a day. */
+    record DailyFuelTotals(java.time.LocalDate day, java.math.BigDecimal totalCost, java.math.BigDecimal quantity,
+            long transactionCount) {
+    }
 
     Optional<FuelImportBatch> findImportBatchByHash(String siteCode, String sourceSystem, String fileHash);
 

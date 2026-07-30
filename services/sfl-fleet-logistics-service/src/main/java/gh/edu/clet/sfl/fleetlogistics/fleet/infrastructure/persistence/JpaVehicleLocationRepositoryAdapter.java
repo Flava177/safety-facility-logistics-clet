@@ -35,6 +35,17 @@ class JpaVehicleLocationRepositoryAdapter implements VehicleLocationRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public List<VehicleLocationSnapshot> findByVehicle(UUID vehicleId, int limit) {
+        return locations
+                .findByVehicleIdOrderByRecordedAtDescIdDesc(vehicleId,
+                        PageRequest.of(0, Math.max(1, Math.min(limit, 500))))
+                .stream()
+                .map(VehicleLocationSnapshotEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public List<VehicleLocationSnapshot> findRecentInScope(SiteScopeFilter scope, int limit) {
         return locations.findRecentInScope(scope.allSites(), scope.allSites() ? List.of("*") : List.copyOf(scope.sites()),
                         PageRequest.of(0, Math.max(1, Math.min(limit, 500))))

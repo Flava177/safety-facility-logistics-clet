@@ -11,6 +11,7 @@ import {
   CloseTripRequest,
   CommentResponse,
   ComplianceDocumentResponse,
+  ComplianceSearchParams,
   CorrectOdometerRequest,
   CreateTripRequest,
   DashboardDrilldownRow,
@@ -18,7 +19,9 @@ import {
   DriverResponse,
   DriverSearchParams,
   EligibilityResponse,
+  InboxSearchParams,
   EvidenceResponse,
+  EvidenceSearchParams,
   ExportRequestResponse,
   GoLiveReadinessReport,
   HoldTripRequest,
@@ -29,6 +32,7 @@ import {
   RaiseWorkflowItemRequest,
   ReadinessResponse,
   RecordInspectionRequest,
+  RecordStandaloneInspectionRequest,
   RecordVehicleServiceRequest,
   RegisterComplianceDocumentRequest,
   RegisterDriverRequest,
@@ -41,6 +45,7 @@ import {
   TripSearchParams,
   UpdateDriverRequest,
   UpdateVehicleRequest,
+  VehicleLocationResponse,
   VehicleResponse,
   VehicleSearchParams,
   WorkflowHistoryResponse,
@@ -76,6 +81,51 @@ export const vehiclesApi = {
 
   changeLifecycle: (vehicleId: string, body: ChangeVehicleLifecycleRequest) =>
     apiClient.patch<VehicleResponse>(`${BASE}/vehicles/${vehicleId}/lifecycle`, body),
+
+  /**
+   * The vehicle's readiness, on its own terms.
+   *
+   * The vehicle detail screen used to answer this by calling `trips/assignment-preview` with only a
+   * `vehicleId` — the same policy, reached through a trip-shaped endpoint because nothing else
+   * existed. This is that policy with a vehicle-shaped door.
+   */
+  readiness: (vehicleId: string, signal?: AbortSignal) =>
+    apiClient.get<ReadinessResponse>(`${BASE}/vehicles/${vehicleId}/readiness`, undefined, signal),
+
+  /**
+   * The vehicle's movement history, newest first.
+   *
+   * A vendor projection: freshness is the reader's judgement to make from `recordedAt`, because how
+   * stale is too stale depends on what is being asked.
+   */
+  movement: (vehicleId: string, size = 25, signal?: AbortSignal) =>
+    apiClient.get<VehicleLocationResponse[]>(
+      `${BASE}/vehicles/${vehicleId}/movement`,
+      { size },
+      signal,
+    ),
+
+  /**
+   * Records a standalone periodic inspection — no trip involved.
+   *
+   * Before this endpoint existed, a vehicle with no open trip could not be inspected at all, which
+   * blocked the periodic-inspection half of SRS-SFL-S166-01.
+   */
+  recordInspection: (vehicleId: string, body: RecordStandaloneInspectionRequest) =>
+    apiClient.post<InspectionResponse>(`${BASE}/vehicles/${vehicleId}/inspections`, body),
+
+  /**
+   * Cross-fleet compliance search.
+   *
+   * The compliance screen used to fan out over the first fifty active vehicles in scope and say so
+   * on the page. One query now, and correct for a fleet of any size.
+   */
+  searchComplianceDocuments: (params: ComplianceSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<ComplianceDocumentResponse[]>(
+      `${BASE}/vehicles/compliance-documents`,
+      asQuery(params),
+      signal,
+    ),
 
   complianceDocuments: (vehicleId: string, signal?: AbortSignal) =>
     apiClient.get<ComplianceDocumentResponse[]>(
@@ -227,6 +277,15 @@ export const workflowApi = {
 };
 
 export const evidenceApi = {
+  /**
+   * Evidence filed against one record.
+   *
+   * Closes the gap the S166 register called the main usability cost in the whole dashboard: with no
+   * search, every closure dialog asked an operator to paste a reference id copied from another tab.
+   */
+  search: (params: EvidenceSearchParams, signal?: AbortSignal) =>
+    apiClient.get<EvidenceResponse[]>(`${BASE}/evidence`, asQuery(params), signal),
+
   findById: (evidenceId: string, signal?: AbortSignal) =>
     apiClient.get<EvidenceResponse>(`${BASE}/evidence/${evidenceId}`, undefined, signal),
 
@@ -273,6 +332,16 @@ export const auditApi = {
 export const integrationsApi = {
   health: (signal?: AbortSignal) =>
     apiClient.get<IntegrationHealthResponse>(`${BASE}/integrations/health`, undefined, signal),
+
+  /**
+   * Searches the inbound inbox.
+   *
+   * Replay takes a message identifier, and the health projection only ever carried a handful of
+   * recent messages — so dead-letter replay was a documented capability that could not be reached
+   * from this dashboard at all.
+   */
+  messages: (params: InboxSearchParams = {}, signal?: AbortSignal) =>
+    apiClient.get<InboxMessageResponse[]>(`${BASE}/integrations/messages`, asQuery(params), signal),
 
   replay: (messageId: string) =>
     apiClient.post<InboxMessageResponse>(

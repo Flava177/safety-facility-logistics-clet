@@ -136,7 +136,7 @@
                 <artifactId>spring-boot-maven-plugin</artifactId>
             </plugin>
             <!--
-              Wipes any previously copied console before the fresh one lands. Vite emits
+              Wipes any previously copied dashboard before the fresh one lands. Vite emits
               content-hashed asset names, so without this the directory accumulates every bundle
               ever built and a stale file that still resolves is far harder to notice than a
               missing one.
@@ -164,7 +164,7 @@
             </plugin>
             <!--
               Copies an already-built SFL Operations UI into the service's static resources so one
-              process serves the API, Swagger and the console. Harmless when the bundle is absent:
+              process serves the API, Swagger and the dashboard. Harmless when the bundle is absent:
               the directory is optional and the service simply starts without the /ui routes.
             -->
             <plugin>
@@ -195,7 +195,7 @@
 
     <profiles>
         <!--
-          -Pui also *builds* the console first, using a project-local Node install. Use it when the
+          -Pui also *builds* the dashboard first, using a project-local Node install. Use it when the
           front-end sources have changed; without it the copy above just reuses the existing dist.
         -->
         <profile>

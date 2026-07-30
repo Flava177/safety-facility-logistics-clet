@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
+import { emergencyRecordsApi } from 'modules/emergency/api/emergencyApi';
 import type { EmergencyScenario, NotificationTemplate } from 'modules/emergency/api/dto';
+import { RECORD_LIFECYCLES, type RecordLifecycle } from 'modules/emergency/api/enums';
 import { listChannels } from 'modules/emergency/components/EmergencyFields';
 import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
 import {
@@ -18,8 +20,10 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import Tabs from 'shared/components/Tabs';
-import { TextInput } from 'shared/components/fields';
+import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
+import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
 
 /**
@@ -30,8 +34,17 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * break-glass flag only matters against the scenarios that will carry it. Splitting them into two
  * sidebar entries would make an operator cross-reference by hand what belongs side by side.
  *
- * Neither register is filtered by the service beyond the site, and neither has a lifecycle
- * transition — a template cannot be retired through any endpoint. Both are recorded as gaps.
+ * Both registers are searched, filtered and paged by the service. They used to load two hundred
+ * records per site and filter them in the browser, with the search box captioned "filters the loaded
+ * records" — honest about what it did, and wrong about what an operator would assume. The service has
+ * accepted `search`, `lifecycle` and `breakGlassEligible` since these endpoints were written.
+ *
+ * The break-glass banner counts with its own filtered reads rather than by tallying a page. It is a
+ * statement about the site's exposure, so counting what happened to be on screen would have
+ * understated it every time the register ran past one page.
+ *
+ * Neither register has a lifecycle transition — a template cannot be retired through any endpoint.
+ * That is still a gap.
  */
 const EmergencyTemplatesPage = () => {
   const navigate = useNavigate();
@@ -40,38 +53,84 @@ const EmergencyTemplatesPage = () => {
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState('templates');
   const [search, setSearch] = useState('');
+  const [lifecycle, setLifecycle] = useState<RecordLifecycle | ''>('');
   const [creatingTemplate, setCreatingTemplate] = useState(false);
   const [creatingScenario, setCreatingScenario] = useState(false);
 
+  /**
+   * Still loaded, for two things the registers cannot answer themselves.
+   *
+   * A scenario row names its default template, and the template it names may be on any page of the
+   * template register — so the id has to be resolved from a list rather than from the page in front
+   * of the operator. The create-scenario dialog needs the same list to offer a default.
+   */
   const records = useSiteRecords(siteCode);
 
-  const needle = search.trim().toLowerCase();
+  const trimmed = search.trim();
+  const filterKey = `${siteCode}|${trimmed}|${lifecycle}`;
+  const paging = useServerPage(filterKey);
 
-  const templates = useMemo(
-    () =>
-      records.templates.filter(
-        (template) =>
-          !needle ||
-          template.title.toLowerCase().includes(needle) ||
-          template.templateCode.toLowerCase().includes(needle) ||
-          template.body.toLowerCase().includes(needle),
+  const templateQuery = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.templates(
+        {
+          siteCode,
+          search: trimmed || undefined,
+          lifecycle: lifecycle || undefined,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
       ),
-    [records.templates, needle],
+    [siteCode, trimmed, lifecycle, paging.page, paging.size],
   );
 
-  const scenarios = useMemo(
-    () =>
-      records.scenarios.filter(
-        (scenario) =>
-          !needle ||
-          scenario.name.toLowerCase().includes(needle) ||
-          scenario.scenarioCode.toLowerCase().includes(needle),
+  const scenarioQuery = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.scenarios(
+        {
+          siteCode,
+          search: trimmed || undefined,
+          lifecycle: lifecycle || undefined,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
       ),
-    [records.scenarios, needle],
+    [siteCode, trimmed, lifecycle, paging.page, paging.size],
   );
 
-  const breakGlassTemplates = records.templates.filter((template) => template.breakGlassEligible);
-  const breakGlassScenarios = records.scenarios.filter((scenario) => scenario.breakGlassEligible);
+  const active = tab === 'templates' ? templateQuery : scenarioQuery;
+  useClampPage(paging.page, active.data?.totalPages, paging.setPage);
+
+  /**
+   * The two break-glass counts, each its own filtered read.
+   *
+   * `size: 1` because only the total is wanted. Asking for a page and counting it would have
+   * described the page.
+   */
+  const breakGlassTemplates = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.templates({ siteCode, breakGlassEligible: true, size: 1 }, signal),
+    [siteCode],
+  );
+
+  const breakGlassScenarios = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.scenarios({ siteCode, breakGlassEligible: true, size: 1 }, signal),
+    [siteCode],
+  );
+
+  const breakGlassTemplateCount = breakGlassTemplates.data?.totalElements ?? 0;
+  const breakGlassScenarioCount = breakGlassScenarios.data?.totalElements ?? 0;
+
+  const refreshAll = () => {
+    templateQuery.refetch();
+    scenarioQuery.refetch();
+    breakGlassTemplates.refetch();
+    breakGlassScenarios.refetch();
+    records.refetch();
+  };
 
   const templateColumns = useMemo<Column<NotificationTemplate>[]>(
     () => [
@@ -191,7 +250,7 @@ const EmergencyTemplatesPage = () => {
             <Button variant="outline" startIcon="plus" onClick={() => setCreatingScenario(true)}>
               Create scenario
             </Button>
-            <Button variant="outline" startIcon="refresh" onClick={records.refetch}>
+            <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>
           </>
@@ -200,23 +259,30 @@ const EmergencyTemplatesPage = () => {
 
       <div className="mb-5">
         <SectionCard>
-          <div className="grid gap-4 sm:grid-cols-2 lg:max-w-2xl">
+          <div className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
             <SiteSelect value={siteCode} onChange={setSiteCode} required />
             <TextInput
               label="Search"
               value={search}
               onChange={setSearch}
               placeholder="Code, title or message text"
-              helperText="Filters the loaded records."
+              helperText="Searched by the service across both registers."
+            />
+            <EnumSelect
+              label="Lifecycle"
+              value={lifecycle}
+              options={RECORD_LIFECYCLES}
+              onChange={(value) => setLifecycle(value)}
+              allowEmpty
             />
           </div>
         </SectionCard>
       </div>
 
-      {(breakGlassTemplates.length > 0 || breakGlassScenarios.length > 0) && (
+      {(breakGlassTemplateCount > 0 || breakGlassScenarioCount > 0) && (
         <Alert
           variant="warning"
-          title={`${breakGlassTemplates.length} template${breakGlassTemplates.length === 1 ? '' : 's'} and ${breakGlassScenarios.length} scenario${breakGlassScenarios.length === 1 ? '' : 's'} can bypass approval`}
+          title={`${breakGlassTemplateCount} template${breakGlassTemplateCount === 1 ? '' : 's'} and ${breakGlassScenarioCount} scenario${breakGlassScenarioCount === 1 ? '' : 's'} can bypass approval`}
           className="mb-5"
         >
           A break-glass send is allowed when the template <strong>or</strong> the scenario is
@@ -231,31 +297,54 @@ const EmergencyTemplatesPage = () => {
             value={tab}
             onChange={setTab}
             items={[
-              { value: 'templates', label: 'Templates', count: records.templates.length },
-              { value: 'scenarios', label: 'Scenarios', count: records.scenarios.length },
+              {
+                value: 'templates',
+                label: 'Templates',
+                count: templateQuery.data?.totalElements,
+              },
+              {
+                value: 'scenarios',
+                label: 'Scenarios',
+                count: scenarioQuery.data?.totalElements,
+              },
             ]}
           />
         </div>
 
-        <DataState loading={records.initialising} minHeight={300}>
+        <DataState
+          loading={active.initialising}
+          error={active.error}
+          onRetry={active.refetch}
+          minHeight={300}
+        >
           {tab === 'templates' ? (
             <DataTable
-              rows={templates}
+              rows={templateQuery.data?.content ?? []}
               columns={templateColumns}
               getRowId={(row) => row.id}
-              loading={records.loading}
+              loading={templateQuery.loading}
               onRowClick={(row) => navigate(emergencyPaths.templateDetail(row.id))}
               caption="Notification templates at this site, with their channels, break-glass eligibility, lifecycle and creation time."
               emptyMessage="No template matches this search."
+              page={templateQuery.data?.page ?? paging.page}
+              pageSize={templateQuery.data?.size ?? paging.size}
+              totalElements={templateQuery.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           ) : (
             <DataTable
-              rows={scenarios}
+              rows={scenarioQuery.data?.content ?? []}
               columns={scenarioColumns}
               getRowId={(row) => row.id}
-              loading={records.loading}
+              loading={scenarioQuery.loading}
               caption="Emergency scenarios at this site, with their default template, priority, break-glass eligibility, lifecycle and creation time."
               emptyMessage="No scenario matches this search."
+              page={scenarioQuery.data?.page ?? paging.page}
+              pageSize={scenarioQuery.data?.size ?? paging.size}
+              totalElements={scenarioQuery.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           )}
         </DataState>
@@ -277,7 +366,7 @@ const EmergencyTemplatesPage = () => {
           onClose={() => setCreatingTemplate(false)}
           onSaved={(template) => {
             notifySuccess(`${template.templateCode} created.`);
-            records.refetch();
+            refreshAll();
           }}
         />
       )}
@@ -290,7 +379,7 @@ const EmergencyTemplatesPage = () => {
           onClose={() => setCreatingScenario(false)}
           onSaved={(scenario) => {
             notifySuccess(`${scenario.scenarioCode} created.`);
-            records.refetch();
+            refreshAll();
           }}
         />
       )}

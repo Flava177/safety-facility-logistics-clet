@@ -178,28 +178,6 @@ export const manifestClosureBlockers = (
   return blockers;
 };
 
-/**
- * A custody gap code, split into its parts for display.
- *
- * `CustodyChainPolicy` encodes them as `REASON@HOP(detail)` — `BROKEN_SEAL@DISPATCH(BROKEN)`,
- * `COUNT_MISMATCH@TRANSIT(expected=12,verified=11)`, `OUT_OF_ORDER@COLLECTION`. Parsing them here
- * keeps the wire format in one place; anything unrecognised is shown whole rather than mangled.
- */
-export interface ParsedGap {
-  reason: string;
-  hop: string | null;
-  detail: string | null;
-  raw: string;
-}
-
-export const parseCustodyGap = (raw: string): ParsedGap => {
-  const match = /^([A-Z_]+)@([A-Z_]+)(?:\((.*)\))?$/.exec(raw);
-  if (!match) {
-    return { reason: raw, hop: null, detail: null, raw };
-  }
-  return { reason: match[1], hop: match[2], detail: match[3] ?? null, raw };
-};
-
 /* --------------------------------------------------------------- exception */
 
 export const EXCEPTION_RULES: Record<ExceptionAction, TransitionRule> = {

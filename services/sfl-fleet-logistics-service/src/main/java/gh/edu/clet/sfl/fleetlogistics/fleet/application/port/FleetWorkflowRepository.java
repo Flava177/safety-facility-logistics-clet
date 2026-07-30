@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowComment;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowPriority;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowTransition;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowSeverity;
 import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +51,7 @@ public interface FleetWorkflowRepository {
             FleetWorkflowStatus status,
             FleetWorkflowType workflowType,
             WorkflowPriority priority,
+            WorkflowSeverity severity,
             OperatingMode operatingMode,
             String assignee,
             boolean overdueOnly,

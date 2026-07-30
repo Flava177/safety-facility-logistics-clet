@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.emergencynotification.api;
 
 import gh.edu.clet.sfl.common.api.ApiResponse;
+import gh.edu.clet.sfl.emergencynotification.application.port.InboxAdminPort;
 import gh.edu.clet.sfl.emergencynotification.application.port.OutboxAdminPort;
 import gh.edu.clet.sfl.emergencynotification.application.service.EmergencyIntegrationService;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +22,20 @@ public class EmergencyIntegrationController {
     public EmergencyIntegrationController(EmergencyIntegrationService service, EmergencyActorResolver actors) {
         this.service = service;
         this.actors = actors;
+    }
+
+    /**
+     * The inbound provider feed — processed, rejected and dead-lettered counts plus recent envelopes.
+     *
+     * <p>Closes gap 3, the most consequential gap on this service: this feed is the only thing that
+     * ever writes {@code delivered}, {@code failed} and {@code acknowledged}, and none of it was
+     * readable. A screen showing 480 sent and 0 delivered could not tell "no provider configured"
+     * from "every callback rejected for a bad signature".
+     */
+    @GetMapping("/inbox")
+    public ApiResponse<InboxAdminPort.InboxHealth> inbox(
+            @RequestParam(defaultValue = "20") int recentLimit, HttpServletRequest h) {
+        return ApiResponse.ok(service.inboxHealth(recentLimit, actors.resolve(h)));
     }
 
     @GetMapping("/health")

@@ -1,6 +1,8 @@
 package gh.edu.clet.sfl.fleetlogistics.dispatch.infrastructure.persistence;
 
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository.DispatchPage;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository.Paging;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CourierItem;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CustodyHandover;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CustodyHop;
@@ -15,6 +17,8 @@ import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.SealState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.time.Instant;
@@ -51,6 +55,101 @@ public class JdbcDispatchRepository implements DispatchRepository {
     public JdbcDispatchRepository(JdbcTemplate jdbc, ObjectMapper json) {
         this.jdbc = jdbc;
         this.json = json;
+    }
+
+
+    /* ------------------------------------------------------------------ paging and filtering */
+
+    /**
+     * A WHERE clause and its bind values, minus the leading site-scope array.
+     *
+     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * disagree about which records they are describing.
+     */
+    private record Where(StringBuilder sql, List<Object> args) {
+        static Where scoped() { return new Where(new StringBuilder("site_code = ANY (?)"), new ArrayList<>()); }
+        Where and(String fragment, Object value) {
+            if (value != null) { sql.append(" AND ").append(fragment); args.add(value); }
+            return this;
+        }
+        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
+    }
+
+    /**
+     * A validated ORDER BY.
+     *
+     * <p>The requested key is looked up in a per-resource allow-list rather than interpolated, so a
+     * sort parameter can never reach SQL as text. Every ordering ends in {@code id}: rows that share
+     * a sort value would otherwise be free to swap places between two requests, and a page boundary
+     * falling inside such a group silently skips or repeats records.
+     */
+    private record Order(String sql, String describedAs) {}
+
+    private static Order order(String requested, Map<String, String> allowed, String defaultKey,
+            boolean defaultDescending) {
+        String key = defaultKey;
+        boolean descending = defaultDescending;
+        if (requested != null && !requested.isBlank()) {
+            String[] parts = requested.split(",");
+            String candidate = parts[0].trim();
+            if (allowed.containsKey(candidate)) {
+                key = candidate;
+                descending = parts.length > 1 && parts[1].trim().equalsIgnoreCase("desc");
+            }
+        }
+        String direction = descending ? "DESC" : "ASC";
+        return new Order(allowed.get(key) + " " + direction + ", id " + direction, key + ": " + direction);
+    }
+
+    private static final Map<String, String> ITEM_SORTS = Map.of(
+            "createdAt", "created_at", "itemNumber", "item_number", "status", "status",
+            "sensitivity", "sensitivity", "direction", "direction", "acknowledgedAt", "acknowledged_at");
+    private static final Map<String, String> DISPATCH_SORTS = Map.of(
+            "createdAt", "created_at", "manifestNumber", "manifest_number", "status", "status",
+            "dispatchedAt", "dispatched_at", "itemCount", "item_count", "destinationCentre", "destination_centre");
+    private static final Map<String, String> EXCEPTION_SORTS = Map.of(
+            "slaDueAt", "sla_due_at", "severity", "severity", "status", "status",
+            "createdAt", "created_at", "exceptionNumber", "exception_number");
+    private static final Map<String, String> SCAN_BATCH_SORTS = Map.of(
+            "createdAt", "created_at", "batchReference", "batch_reference", "status", "status",
+            "totalRows", "total_rows", "mismatchRows", "mismatch_rows");
+    private static final Map<String, String> CUSTODY_SORTS = Map.of(
+            "occurredAt", "occurred_at", "hop", "hop", "sequenceNo", "sequence_no", "sealState", "seal_state");
+    private static final Map<String, String> RECEIPT_SORTS = Map.of(
+            "capturedAt", "captured_at", "outcome", "outcome", "verifiedCount", "verified_count");
+
+    /** Binds the site array at index 1, then the clause's own values. Returns the next free index. */
+    private static int bindScoped(PreparedStatement ps, Connection con, List<String> sites, List<Object> args)
+            throws SQLException {
+        int i = 1;
+        ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
+        for (Object arg : args) {
+            ps.setObject(i++, arg);
+        }
+        return i;
+    }
+
+    private <T> DispatchPage<T> page(String table, List<String> sites, Where where, Order order, Paging paging,
+            RowMapper<T> mapper) {
+        Long total = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + where.sql());
+            bindScoped(ps, con, sites, where.args());
+            return ps;
+        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        long totalElements = total == null ? 0L : total;
+        if (totalElements == 0L) {
+            return DispatchPage.empty(paging.page(), paging.size(), order.describedAs());
+        }
+        List<T> content = jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT * FROM " + table + " WHERE " + where.sql()
+                    + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?");
+            int i = bindScoped(ps, con, sites, where.args());
+            ps.setInt(i++, paging.size());
+            ps.setInt(i, paging.offset());
+            return ps;
+        }, mapper);
+        return DispatchPage.of(content, paging.page(), paging.size(), totalElements, order.describedAs());
     }
 
     // ---- Courier items ---------------------------------------------------------------------------
@@ -99,20 +198,50 @@ public class JdbcDispatchRepository implements DispatchRepository {
     }
 
     @Override
-    public List<CourierItem> findItems(List<String> sites, CourierItem.Direction direction, CourierItem.Status status,
-            CourierItem.Sensitivity sensitivity, String handler, Instant from, Instant to, int limit) {
-        if (sites.isEmpty()) return List.of();
-        StringBuilder sql = new StringBuilder("SELECT * FROM fleet_logistics.courier_items WHERE site_code = ANY (?)");
-        List<Object> args = new ArrayList<>();
-        if (direction != null) { sql.append(" AND direction=?"); args.add(direction.name()); }
-        if (status != null) { sql.append(" AND status=?"); args.add(status.name()); }
-        if (sensitivity != null) { sql.append(" AND sensitivity=?"); args.add(sensitivity.name()); }
-        if (handler != null && !handler.isBlank()) { sql.append(" AND assigned_handler=?"); args.add(handler.strip()); }
-        if (from != null) { sql.append(" AND created_at>=?"); args.add(ts(from)); }
-        if (to != null) { sql.append(" AND created_at<?"); args.add(ts(to)); }
-        sql.append(" ORDER BY created_at DESC LIMIT ?");
-        args.add(bound(limit));
-        return query(sql.toString(), sites, args, this::item);
+    public DispatchPage<CourierItem> findItems(ItemQuery q) {
+        Order order = order(q.paging().sort(), ITEM_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("direction=?", q.direction() == null ? null : q.direction().name())
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("sensitivity=?", q.sensitivity() == null ? null : q.sensitivity().name())
+                .and("item_type=?", q.itemType() == null ? null : q.itemType().name())
+                // Handler is a contains-match: an operator searches for a surname, not the full name
+                // exactly as it was typed on registration.
+                .and("assigned_handler ILIKE ?", q.handler() == null || q.handler().isBlank()
+                        ? null : "%" + q.handler().strip() + "%")
+                .and("created_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("created_at<?", q.to() == null ? null : ts(q.to()));
+        if (q.reference() != null && !q.reference().isBlank()) {
+            // One control over the three identifiers an operator actually has to hand. There is no
+            // external_reference column on this table; sender and recipient are what a mailroom
+            // search is really made against.
+            where.sql().append(" AND (item_number ILIKE ? OR sender ILIKE ? OR recipient ILIKE ?)");
+            String needle = "%" + q.reference().strip() + "%";
+            where.args().add(needle);
+            where.args().add(needle);
+            where.args().add(needle);
+        }
+        if (q.dispatchId() != null) {
+            // A courier item carries no dispatch_id; it reaches a manifest through the join table,
+            // so "items on this manifest" is a subquery rather than a column test.
+            where.sql().append(" AND id IN (SELECT courier_item_id FROM fleet_logistics.dispatch_manifest_items"
+                    + " WHERE dispatch_id=?)");
+            where.args().add(q.dispatchId());
+        }
+        where.when(Boolean.TRUE.equals(q.undelivered()), "undelivered=true AND status<>'CLOSED'");
+        where.when(Boolean.FALSE.equals(q.undelivered()), "undelivered=false");
+        return page("fleet_logistics.courier_items", q.sites(), where, order, q.paging(), this::item);
+    }
+
+    @Override
+    public List<CourierItem> findItemsByIds(List<UUID> ids) {
+        if (ids == null || ids.isEmpty()) return List.of();
+        return jdbc.query(con -> {
+            var ps = con.prepareStatement("SELECT * FROM fleet_logistics.courier_items WHERE id = ANY (?)");
+            ps.setArray(1, con.createArrayOf("uuid", ids.toArray()));
+            return ps;
+        }, this::item);
     }
 
     // ---- Dispatch manifests ----------------------------------------------------------------------
@@ -161,21 +290,21 @@ public class JdbcDispatchRepository implements DispatchRepository {
     }
 
     @Override
-    public List<Dispatch> findDispatches(List<String> sites, Dispatch.Status status, String destinationCentre,
-            UUID tripId, Instant from, Instant to, int limit) {
-        if (sites.isEmpty()) return List.of();
-        StringBuilder sql = new StringBuilder("SELECT * FROM fleet_logistics.dispatches WHERE site_code = ANY (?)");
-        List<Object> args = new ArrayList<>();
-        if (status != null) { sql.append(" AND status=?"); args.add(status.name()); }
-        if (destinationCentre != null && !destinationCentre.isBlank()) {
-            sql.append(" AND destination_centre=?"); args.add(destinationCentre.strip());
-        }
-        if (tripId != null) { sql.append(" AND trip_id=?"); args.add(tripId); }
-        if (from != null) { sql.append(" AND created_at>=?"); args.add(ts(from)); }
-        if (to != null) { sql.append(" AND created_at<?"); args.add(ts(to)); }
-        sql.append(" ORDER BY created_at DESC LIMIT ?");
-        args.add(bound(limit));
-        return query(sql.toString(), sites, args, this::dispatch);
+    public DispatchPage<Dispatch> findDispatches(DispatchQuery q) {
+        Order order = order(q.paging().sort(), DISPATCH_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("status=?", q.status() == null ? null : q.status().name())
+                // Contains-match, for the same reason the fuel vendor filter is: an operator types
+                // "Kumasi", not the centre's full registered name.
+                .and("destination_centre ILIKE ?", q.destinationCentre() == null || q.destinationCentre().isBlank()
+                        ? null : "%" + q.destinationCentre().strip() + "%")
+                .and("trip_id=?", q.tripId())
+                .and("assigned_handler ILIKE ?", q.handler() == null || q.handler().isBlank()
+                        ? null : "%" + q.handler().strip() + "%")
+                .and("created_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("created_at<?", q.to() == null ? null : ts(q.to()));
+        return page("fleet_logistics.dispatches", q.sites(), where, order, q.paging(), this::dispatch);
     }
 
     // ---- Manifest items --------------------------------------------------------------------------
@@ -369,21 +498,29 @@ public class JdbcDispatchRepository implements DispatchRepository {
     }
 
     @Override
-    public List<DispatchExceptionCase> findExceptions(List<String> sites, DispatchExceptionCase.Type type,
-            DispatchExceptionCase.Status status, Instant dueBefore, int limit) {
-        if (sites.isEmpty()) return List.of();
-        StringBuilder sql = new StringBuilder(
-                "SELECT * FROM fleet_logistics.dispatch_exception_cases WHERE site_code = ANY (?)");
-        List<Object> args = new ArrayList<>();
-        if (type != null) { sql.append(" AND exception_type=?"); args.add(type.name()); }
-        if (status != null) { sql.append(" AND status=?"); args.add(status.name()); }
-        if (dueBefore != null) {
-            sql.append(" AND sla_due_at<? AND status NOT IN ('CLOSED','CANCELLED')");
-            args.add(ts(dueBefore));
-        }
-        sql.append(" ORDER BY sla_due_at LIMIT ?");
-        args.add(bound(limit));
-        return query(sql.toString(), sites, args, this::exceptionCase);
+    public DispatchPage<DispatchExceptionCase> findExceptions(ExceptionQuery q) {
+        Order order = order(q.paging().sort(), EXCEPTION_SORTS, "slaDueAt", false);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("exception_type=?", q.type() == null ? null : q.type().name())
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("severity=?", q.severity() == null ? null : q.severity().name())
+                .and("assignee ILIKE ?", q.assignee() == null || q.assignee().isBlank()
+                        ? null : "%" + q.assignee().strip() + "%")
+                .and("dispatch_id=?", q.dispatchId())
+                .and("courier_item_id=?", q.courierItemId())
+                .and("sla_due_at<?", q.dueBefore() == null ? null : ts(q.dueBefore()));
+        where.when(Boolean.TRUE.equals(q.unassigned()), "(assignee IS NULL OR assignee='')");
+        where.when(Boolean.FALSE.equals(q.unassigned()), "assignee IS NOT NULL AND assignee<>''");
+        where.when(Boolean.TRUE.equals(q.securityRelevant()), "security_relevant=true");
+        where.when(Boolean.FALSE.equals(q.securityRelevant()), "security_relevant=false");
+        // An SLA question is only ever asked about open cases, and the sweep relied on that pairing
+        // before this filter existed. Keeping them together means "breaching SLA" cannot silently
+        // start counting cases that were closed late.
+        where.when(Boolean.TRUE.equals(q.openOnly()) || q.dueBefore() != null,
+                "status NOT IN ('CLOSED','CANCELLED')");
+        return page("fleet_logistics.dispatch_exception_cases", q.sites(), where, order, q.paging(),
+                this::exceptionCase);
     }
 
     @Override
@@ -448,6 +585,52 @@ public class JdbcDispatchRepository implements DispatchRepository {
     }
 
     @Override
+    public DispatchPage<ScanImportBatch> findScanBatches(ScanBatchQuery q) {
+        Order order = order(q.paging().sort(), SCAN_BATCH_SORTS, "createdAt", true);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("source_system=?", q.sourceSystem() == null || q.sourceSystem().isBlank()
+                        ? null : q.sourceSystem().strip())
+                .and("dispatch_id=?", q.dispatchId())
+                .and("status=?", q.status() == null ? null : q.status().name());
+        return page("fleet_logistics.scan_import_batches", q.sites(), where, order, q.paging(), this::scanBatch);
+    }
+
+    @Override
+    public DispatchPage<CustodyHandover> findHandovers(CustodyQuery q) {
+        Order order = order(q.paging().sort(), CUSTODY_SORTS, "occurredAt", true);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("dispatch_id=?", q.dispatchId())
+                .and("hop=?", q.hop() == null ? null : q.hop().name())
+                .and("seal_state=?", q.sealState() == null ? null : q.sealState().name())
+                .and("occurred_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("occurred_at<?", q.to() == null ? null : ts(q.to()));
+        if (q.custodian() != null && !q.custodian().isBlank()) {
+            // Either side of the handover: an operator asking "what did this person touch" means both.
+            where.sql().append(" AND (transferring_custodian ILIKE ? OR receiving_custodian ILIKE ?)");
+            where.args().add("%" + q.custodian().strip() + "%");
+            where.args().add("%" + q.custodian().strip() + "%");
+        }
+        return page("fleet_logistics.custody_handovers", q.sites(), where, order, q.paging(), this::handover);
+    }
+
+    @Override
+    public DispatchPage<DispatchReceipt> findReceipts(ReceiptQuery q) {
+        Order order = order(q.paging().sort(), RECEIPT_SORTS, "capturedAt", true);
+        if (q.sites().isEmpty()) return DispatchPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("dispatch_id=?", q.dispatchId())
+                .and("outcome=?", q.outcome() == null ? null : q.outcome().name())
+                .and("variance_type=?", q.varianceType() == null ? null : q.varianceType().name())
+                .and("recipient_name ILIKE ?", q.recipient() == null || q.recipient().isBlank()
+                        ? null : "%" + q.recipient().strip() + "%")
+                .and("captured_at>=?", q.from() == null ? null : ts(q.from()))
+                .and("captured_at<?", q.to() == null ? null : ts(q.to()));
+        return page("fleet_logistics.dispatch_receipts", q.sites(), where, order, q.paging(), this::receipt);
+    }
+
+    @Override
     public ScanImportRow saveScanRow(ScanImportRow r) {
         jdbc.update("""
                 INSERT INTO fleet_logistics.scan_import_rows (id,batch_id,site_code,row_reference,scanned_code,
@@ -484,6 +667,17 @@ public class JdbcDispatchRepository implements DispatchRepository {
                 "SELECT COUNT(*) FROM fleet_logistics.dispatch_manifest_items WHERE %s AND return_status='OUTSTANDING'"));
         counts.put("undeliveredCount", count(sites, scope,
                 "SELECT COUNT(*) FROM fleet_logistics.courier_items WHERE %s AND undelivered=true AND status<>'CLOSED'"));
+        // Volume, not just exception. The dashboard published eight exception counts and no measure
+        // of throughput at all, so a quiet day and a broken intake looked identical. A rolling
+        // 30-day window is the shortest span that survives a weekend without reading as a collapse.
+        counts.put("itemsRegistered30d", count(sites, scope,
+                "SELECT COUNT(*) FROM fleet_logistics.courier_items WHERE %s AND created_at > now() - interval '30 days'"));
+        counts.put("manifestsDispatched30d", count(sites, scope,
+                "SELECT COUNT(*) FROM fleet_logistics.dispatches WHERE %s AND dispatched_at > now() - interval '30 days'"));
+        counts.put("manifestsClosed30d", count(sites, scope,
+                "SELECT COUNT(*) FROM fleet_logistics.dispatches WHERE %s AND status='CLOSED' AND last_modified_at > now() - interval '30 days'"));
+        counts.put("itemsDelivered30d", count(sites, scope,
+                "SELECT COUNT(*) FROM fleet_logistics.courier_items WHERE %s AND status='DELIVERED' AND last_modified_at > now() - interval '30 days'"));
         counts.put("overdueReceiptCount", count(sites, scope,
                 "SELECT COUNT(*) FROM fleet_logistics.dispatches WHERE %s AND status IN ('DISPATCHED','IN_TRANSIT') AND dispatched_at < now() - interval '2 days'"));
         counts.put("slaBreachCount", count(sites, scope,

@@ -122,9 +122,12 @@ public class EmergencyRecordsService {
 
     // ---- queries ---------------------------------------------------------------------------------
 
-    public List<NotificationTemplate> templates(String site, ActorContext actor) {
+    public EmergencyRepository.EmergencyPage<NotificationTemplate> templates(String site, String search,
+            RecordLifecycle lifecycle, Boolean breakGlassEligible, EmergencyRepository.Paging paging,
+            ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_TEMPLATE_READ, site, "NotificationTemplate", null);
-        return repository.findTemplates(List.of(SiteCode.of(site).value()), 200);
+        return repository.findTemplates(new EmergencyRepository.RecordQuery(List.of(SiteCode.of(site).value()),
+                search, lifecycle, breakGlassEligible, paging));
     }
 
     public NotificationTemplate template(UUID id, ActorContext actor) {
@@ -134,19 +137,137 @@ public class EmergencyRecordsService {
         return t;
     }
 
-    public List<EmergencyScenario> scenarios(String site, ActorContext actor) {
+    public EmergencyRepository.EmergencyPage<EmergencyScenario> scenarios(String site, String search,
+            RecordLifecycle lifecycle, Boolean breakGlassEligible, EmergencyRepository.Paging paging,
+            ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_SCENARIO_READ, site, "EmergencyScenario", null);
-        return repository.findScenarios(List.of(SiteCode.of(site).value()), 200);
+        return repository.findScenarios(new EmergencyRepository.RecordQuery(List.of(SiteCode.of(site).value()),
+                search, lifecycle, breakGlassEligible, paging));
     }
 
-    public List<AudienceGroup> audienceGroups(String site, ActorContext actor) {
+    public EmergencyScenario scenario(UUID id, ActorContext actor) {
+        var s = repository.findScenario(id).orElseThrow(() -> EmergencyException.notFound("EmergencyScenario", id));
+        access.require(actor, SflPermission.EMERGENCY_SCENARIO_READ, s.siteCode().value(), "EmergencyScenario",
+                id.toString());
+        return s;
+    }
+
+    public EmergencyRepository.EmergencyPage<AudienceGroup> audienceGroups(String site, String search,
+            RecordLifecycle lifecycle, EmergencyRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_AUDIENCE_READ, site, "AudienceGroup", null);
-        return repository.findAudienceGroups(List.of(SiteCode.of(site).value()), 200);
+        return repository.findAudienceGroups(new EmergencyRepository.RecordQuery(List.of(SiteCode.of(site).value()),
+                search, lifecycle, null, paging));
     }
 
-    public List<RecipientZone> recipientZones(String site, ActorContext actor) {
+    public AudienceGroup audienceGroup(UUID id, ActorContext actor) {
+        var a = repository.findAudienceGroup(id).orElseThrow(() -> EmergencyException.notFound("AudienceGroup", id));
+        access.require(actor, SflPermission.EMERGENCY_AUDIENCE_READ, a.siteCode().value(), "AudienceGroup",
+                id.toString());
+        return a;
+    }
+
+    /**
+     * Corrects an audience group's size and directory pointer.
+     *
+     * <p>Closes the sharp edge in gap 6. {@code recipientCount} is what the service fans out to and
+     * the denominator every delivery and acknowledgement percentage is read against — and it could
+     * not be corrected through any endpoint. A group sized at zero sent to nobody and reported a
+     * completely successful broadcast. The name is deliberately **not** editable: activations already
+     * closed cite this group, and renaming it would rewrite what they say they were sent to.
+     */
+    @Transactional
+    public AudienceGroup updateAudienceGroup(UUID id, String directoryReference, Integer recipientCount,
+            ActorContext actor, SourceChannel channel) {
+        var before = repository.findAudienceGroup(id)
+                .orElseThrow(() -> EmergencyException.notFound("AudienceGroup", id));
+        access.require(actor, SflPermission.EMERGENCY_AUDIENCE_MANAGE, before.siteCode().value(), "AudienceGroup",
+                id.toString());
+        if (recipientCount != null && recipientCount < 0) {
+            throw new IllegalArgumentException("recipientCount cannot be negative");
+        }
+        var after = new AudienceGroup(before.id(), before.groupCode(), before.siteCode(), before.name(),
+                directoryReference == null ? before.directoryReference() : directoryReference,
+                recipientCount == null ? before.recipientCount() : recipientCount, before.lifecycle(),
+                before.metadata().modifiedBy(actor.actorId(), clock.instant(), channel, actor.correlationId()));
+        var saved = repository.saveAudienceGroup(after);
+        audit.record(actor, channel, saved.siteCode().value(), "UPDATE", "AudienceGroup", id.toString(), before,
+                saved, null);
+        return saved;
+    }
+
+    /**
+     * Retires or reinstates a master-data record.
+     *
+     * <p>The other half of gap 6. Every one of these records carries {@code withLifecycle} on the
+     * domain type and nothing called it, so an obsolete template stayed selectable forever. Archiving
+     * is not deletion: activations that cite the record still resolve it, which is the whole reason
+     * the lifecycle exists rather than a delete.
+     */
+    @Transactional
+    public Object setLifecycle(String resourceType, UUID id, RecordLifecycle lifecycle, ActorContext actor,
+            SourceChannel channel) {
+        Instant now = clock.instant();
+        return switch (resourceType) {
+            case "NotificationTemplate" -> {
+                var before = repository.findTemplate(id)
+                        .orElseThrow(() -> EmergencyException.notFound("NotificationTemplate", id));
+                access.require(actor, SflPermission.EMERGENCY_TEMPLATE_MANAGE, before.siteCode().value(),
+                        "NotificationTemplate", id.toString());
+                var saved = repository.saveTemplate(before.withLifecycle(lifecycle,
+                        before.metadata().modifiedBy(actor.actorId(), now, channel, actor.correlationId())));
+                audit.record(actor, channel, saved.siteCode().value(), "UPDATE", "NotificationTemplate",
+                        id.toString(), before, saved, null);
+                yield saved;
+            }
+            case "EmergencyScenario" -> {
+                var before = repository.findScenario(id)
+                        .orElseThrow(() -> EmergencyException.notFound("EmergencyScenario", id));
+                access.require(actor, SflPermission.EMERGENCY_SCENARIO_MANAGE, before.siteCode().value(),
+                        "EmergencyScenario", id.toString());
+                var saved = repository.saveScenario(before.withLifecycle(lifecycle,
+                        before.metadata().modifiedBy(actor.actorId(), now, channel, actor.correlationId())));
+                audit.record(actor, channel, saved.siteCode().value(), "UPDATE", "EmergencyScenario", id.toString(),
+                        before, saved, null);
+                yield saved;
+            }
+            case "AudienceGroup" -> {
+                var before = repository.findAudienceGroup(id)
+                        .orElseThrow(() -> EmergencyException.notFound("AudienceGroup", id));
+                access.require(actor, SflPermission.EMERGENCY_AUDIENCE_MANAGE, before.siteCode().value(),
+                        "AudienceGroup", id.toString());
+                var saved = repository.saveAudienceGroup(before.withLifecycle(lifecycle,
+                        before.metadata().modifiedBy(actor.actorId(), now, channel, actor.correlationId())));
+                audit.record(actor, channel, saved.siteCode().value(), "UPDATE", "AudienceGroup", id.toString(),
+                        before, saved, null);
+                yield saved;
+            }
+            case "RecipientZone" -> {
+                var before = repository.findZone(id)
+                        .orElseThrow(() -> EmergencyException.notFound("RecipientZone", id));
+                access.require(actor, SflPermission.EMERGENCY_AUDIENCE_MANAGE, before.siteCode().value(),
+                        "RecipientZone", id.toString());
+                var saved = repository.saveRecipientZone(before.withLifecycle(lifecycle,
+                        before.metadata().modifiedBy(actor.actorId(), now, channel, actor.correlationId())));
+                audit.record(actor, channel, saved.siteCode().value(), "UPDATE", "RecipientZone", id.toString(),
+                        before, saved, null);
+                yield saved;
+            }
+            default -> throw new IllegalArgumentException("Unknown emergency record type: " + resourceType);
+        };
+    }
+
+    public EmergencyRepository.EmergencyPage<RecipientZone> recipientZones(String site, String search,
+            RecordLifecycle lifecycle, EmergencyRepository.Paging paging, ActorContext actor) {
         access.require(actor, SflPermission.EMERGENCY_AUDIENCE_READ, site, "RecipientZone", null);
-        return repository.findRecipientZones(List.of(SiteCode.of(site).value()), 200);
+        return repository.findRecipientZones(new EmergencyRepository.RecordQuery(List.of(SiteCode.of(site).value()),
+                search, lifecycle, null, paging));
+    }
+
+    public RecipientZone recipientZone(UUID id, ActorContext actor) {
+        var z = repository.findZone(id).orElseThrow(() -> EmergencyException.notFound("RecipientZone", id));
+        access.require(actor, SflPermission.EMERGENCY_AUDIENCE_READ, z.siteCode().value(), "RecipientZone",
+                id.toString());
+        return z;
     }
 
     // ---- helpers ---------------------------------------------------------------------------------

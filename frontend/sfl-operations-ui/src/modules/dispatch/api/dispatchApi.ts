@@ -17,10 +17,16 @@ import {
   DispatchReceipt,
   DistributeInboundRequest,
   ExceptionActionRequest,
+  CustodySearchParams,
+  DispatchAuditEvent,
+  DispatchPageResponse,
   ExceptionSearchParams,
   InboundSearchParams,
   ItemSearchParams,
+  ManifestLine,
   ManifestSearchParams,
+  ReceiptSearchParams,
+  ScanBatchSearchParams,
   MisrouteRequest,
   ReconcileReturnRequest,
   RecordHandoverRequest,
@@ -38,16 +44,16 @@ import {
  * Paths were taken from the controllers and confirmed against the running service's
  * `/v3/api-docs` — forty endpoints, all of them wired here, none invented.
  *
- * **There is no pagination.** Every dispatch collection returns a bare `List<T>` capped by a `size`
- * limit, exactly as the fuel collections did before S168's gap closure. `DEFAULT_WINDOW` is what
- * this module asks for, and the registers say out loud when a window comes back full. Recorded as
- * gap 1 in `docs/dispatch/S171_Dispatch_Frontend_Gap_Register.md`.
+ * **Every collection is paged.** Each returns `DispatchPageResponse<T>` with `page`, `size`,
+ * `totalElements` and the ordering it actually applied. That closed gap 1; the client-side window
+ * and its truncation banner are gone, and so is the guesswork about whether a register was showing
+ * everything.
  */
 
 const BASE = '/api/v1/dispatch';
 
-/** How many records a register asks for. The service caps at 500. */
-export const DEFAULT_WINDOW = 200;
+/** Default page size. The service clamps anything above 200. */
+export const DEFAULT_PAGE_SIZE = 25;
 
 const asQuery = (params: object | undefined): QueryParams | undefined =>
   params as QueryParams | undefined;
@@ -65,14 +71,18 @@ export type ItemAction = (typeof ITEM_ACTIONS)[number];
 
 export const courierItemsApi = {
   search: (params: ItemSearchParams, signal?: AbortSignal) =>
-    apiClient.get<CourierItem[]>(
+    apiClient.get<DispatchPageResponse<CourierItem>>(
       `${BASE}/items`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
   findById: (itemId: string, signal?: AbortSignal) =>
     apiClient.get<CourierItem>(`${BASE}/items/${itemId}`, undefined, signal),
+
+  /** The item's transition history, read off the audit log. */
+  history: (itemId: string, signal?: AbortSignal) =>
+    apiClient.get<DispatchAuditEvent[]>(`${BASE}/items/${itemId}/history`, undefined, signal),
 
   register: (body: RegisterItemRequest) => apiClient.post<CourierItem>(`${BASE}/items`, body),
 
@@ -92,9 +102,9 @@ export const courierItemsApi = {
 
 export const inboundMailApi = {
   search: (params: InboundSearchParams, signal?: AbortSignal) =>
-    apiClient.get<CourierItem[]>(
+    apiClient.get<DispatchPageResponse<CourierItem>>(
       `${BASE}/inbound`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
@@ -115,9 +125,9 @@ export const inboundMailApi = {
 
 export const manifestsApi = {
   search: (params: ManifestSearchParams, signal?: AbortSignal) =>
-    apiClient.get<DispatchManifest[]>(
+    apiClient.get<DispatchPageResponse<DispatchManifest>>(
       `${BASE}/manifests`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
@@ -133,6 +143,24 @@ export const manifestsApi = {
       undefined,
       signal,
     ),
+
+  /**
+   * The manifest's lines with each courier item resolved.
+   *
+   * Closed gap 8. A line carries only a `courierItemId`, so a readable manifest used to mean either
+   * a fetch per line or showing an operator a bare identifier. The service resolves them in one
+   * query.
+   */
+  lines: (manifestId: string, signal?: AbortSignal) =>
+    apiClient.get<ManifestLine[]>(
+      `${BASE}/manifests/${manifestId}/items`,
+      { expand: 'item' },
+      signal,
+    ),
+
+  /** The manifest's transition history: draft, seal, trip assignment, dispatch, transit, closure. */
+  history: (manifestId: string, signal?: AbortSignal) =>
+    apiClient.get<DispatchAuditEvent[]>(`${BASE}/manifests/${manifestId}/history`, undefined, signal),
 
   /** Adding an item is legal only while the manifest is a draft — sealing freezes the contents. */
   addItem: (manifestId: string, body: AddManifestItemRequest) =>
@@ -180,6 +208,20 @@ export const custodyApi = {
   gaps: (dispatchId: string, signal?: AbortSignal) =>
     apiClient.get<CustodyGaps>(`${BASE}/custody/${dispatchId}/gaps`, undefined, signal),
 
+  /**
+   * Custody across a site's consignments.
+   *
+   * Closed gap 7. Custody was readable per consignment only, so "everything this custodian handled
+   * last week" needed the manifests known first — the wrong way round when the custodian is the
+   * reason for asking.
+   */
+  search: (params: CustodySearchParams, signal?: AbortSignal) =>
+    apiClient.get<DispatchPageResponse<CustodyHandover>>(
+      `${BASE}/custody`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
+
   record: (body: RecordHandoverRequest) =>
     apiClient.post<CustodyHandover>(`${BASE}/custody`, body, { idempotent: false }),
 };
@@ -190,6 +232,14 @@ export const receiptsApi = {
 
   findById: (receiptId: string, signal?: AbortSignal) =>
     apiClient.get<DispatchReceipt>(`${BASE}/receipts/${receiptId}`, undefined, signal),
+
+  /** Receipts across a site's consignments. Closed gap 7. */
+  search: (params: ReceiptSearchParams, signal?: AbortSignal) =>
+    apiClient.get<DispatchPageResponse<DispatchReceipt>>(
+      `${BASE}/receipts`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
 
   /**
    * Confirms receipt at the destination.
@@ -235,14 +285,18 @@ export type ExceptionAction = (typeof EXCEPTION_ACTIONS)[number];
 
 export const dispatchExceptionsApi = {
   search: (params: ExceptionSearchParams, signal?: AbortSignal) =>
-    apiClient.get<DispatchExceptionCase[]>(
+    apiClient.get<DispatchPageResponse<DispatchExceptionCase>>(
       `${BASE}/exceptions`,
-      asQuery({ size: DEFAULT_WINDOW, ...params }),
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
       signal,
     ),
 
   findById: (caseId: string, signal?: AbortSignal) =>
     apiClient.get<DispatchExceptionCase>(`${BASE}/exceptions/${caseId}`, undefined, signal),
+
+  /** The case's transition history: assignment, review, explanation, decision, escalation, closure. */
+  history: (caseId: string, signal?: AbortSignal) =>
+    apiClient.get<DispatchAuditEvent[]>(`${BASE}/exceptions/${caseId}/history`, undefined, signal),
 
   transition: (caseId: string, action: ExceptionAction, body: ExceptionActionRequest) =>
     apiClient.post<DispatchExceptionCase>(`${BASE}/exceptions/${caseId}/${action}`, body, {
@@ -270,6 +324,14 @@ export const scanImportsApi = {
       query: { siteCode, sourceSystem, ...options },
     });
   },
+
+  /** The site's scan batches. Closed gap 3 — a batch used to be reachable only by a kept id. */
+  search: (params: ScanBatchSearchParams, signal?: AbortSignal) =>
+    apiClient.get<DispatchPageResponse<ScanImportBatch>>(
+      `${BASE}/scans/imports`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
 
   batch: (batchId: string, signal?: AbortSignal) =>
     apiClient.get<ScanImportBatch>(`${BASE}/scans/imports/${batchId}`, undefined, signal),

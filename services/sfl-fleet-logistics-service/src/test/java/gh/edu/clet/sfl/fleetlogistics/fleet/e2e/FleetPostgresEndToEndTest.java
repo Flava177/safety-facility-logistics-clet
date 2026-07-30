@@ -49,7 +49,7 @@ class FleetPostgresEndToEndTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("Flyway, static console and live dashboard endpoint work against Postgres")
+    @DisplayName("Flyway, the retired /fleet route and the live dashboard endpoint work against Postgres")
     void fleet_module_runs_end_to_end_on_postgres() throws Exception {
         Integer migratedTables = jdbc.queryForObject("""
                 select count(*)
@@ -65,12 +65,18 @@ class FleetPostgresEndToEndTest {
         assertThat(migratedTables).isEqualTo(4);
 
         HttpClient client = HttpClient.newHttpClient();
-        String console = client.send(HttpRequest.newBuilder()
+
+        // `/fleet` used to serve a page of its own; ADR 0006 retired it. The notice page is asserted
+        // on rather than the redirect, because the redirect is registered only when the dashboard
+        // bundle has been copied in and this test must pass either way. What matters both ways is
+        // that the route names where the screens went instead of dead-ending.
+        String page = client.send(HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port + "/fleet/index.html"))
                         .GET()
                         .build(), HttpResponse.BodyHandlers.ofString())
                 .body();
-        assertThat(console).contains("Fleet operational console");
+        assertThat(page).contains("/ui/fleet");
+        assertThat(page).contains("has moved to the SFL Operations dashboard");
 
         String dashboard = client.send(HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port

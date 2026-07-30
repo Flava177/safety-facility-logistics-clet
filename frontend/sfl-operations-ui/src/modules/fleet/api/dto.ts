@@ -510,6 +510,7 @@ export interface WorkflowSearchParams {
   status?: FleetWorkflowStatus;
   type?: FleetWorkflowType;
   priority?: WorkflowPriority;
+  severity?: WorkflowSeverity;
   operatingMode?: OperatingMode;
   assignee?: string;
   overdueOnly?: boolean;
@@ -543,6 +544,18 @@ export interface EvidenceResponse {
   version: number;
   sourceChannel: string | null;
   auditCorrelationId: string | null;
+}
+
+/**
+ * Both fields are required by the service — there is no "all evidence" read.
+ *
+ * That is a deliberate constraint rather than a missing feature: evidence is only ever meaningful
+ * against the thing it evidences, and a dashboard-wide evidence list would be a browsable index of
+ * every incident at every site.
+ */
+export interface EvidenceSearchParams {
+  relatedRecordType: string;
+  relatedRecordId: string;
 }
 
 export interface RegisterEvidenceRequest {
@@ -697,4 +710,57 @@ export interface DashboardParams {
   from?: string;
   to?: string;
   requireFresh?: boolean;
+}
+
+/* ------------------------------------------------- endpoints added in the gap-closure round */
+
+/**
+ * `VehicleLocationResponse` — one movement snapshot from a telematics provider.
+ *
+ * A projection, not a source of truth: SFL records what a vendor reported and when. `recordedAt` is
+ * what freshness is judged from, and the screen shows it rather than deciding on the reader's behalf
+ * how stale is too stale.
+ */
+export interface VehicleLocationResponse {
+  id: string;
+  vehicleId: string;
+  siteCode: string;
+  latitude: number | null;
+  longitude: number | null;
+  odometerValue: number | null;
+  recordedAt: string;
+  sourceSystem: string | null;
+  integrationMessageId: string | null;
+  correlationId: string | null;
+}
+
+/**
+ * A standalone periodic inspection — the same shape as the trip one, minus the trip.
+ *
+ * `findings` is required and non-empty on the service side: an inspection with nothing recorded is
+ * an assertion nobody can audit.
+ */
+export interface RecordStandaloneInspectionRequest {
+  inspectionType: InspectionType;
+  odometerReading: number;
+  evidenceId?: string | null;
+  findings: FindingRequest[];
+  notes?: string | null;
+}
+
+/** Filters the cross-fleet compliance search accepts. */
+export interface ComplianceSearchParams {
+  documentType?: ComplianceDocumentType | '';
+  status?: ComplianceDocumentStatus | '';
+  /** Documents expiring on or before this date. An ISO date, not an instant. */
+  expiringBefore?: string;
+  size?: number;
+}
+
+/** Filters the inbound inbox search accepts. */
+export interface InboxSearchParams {
+  sourceSystem?: string;
+  status?: IntegrationMessageStatus | '';
+  eventType?: string;
+  size?: number;
 }

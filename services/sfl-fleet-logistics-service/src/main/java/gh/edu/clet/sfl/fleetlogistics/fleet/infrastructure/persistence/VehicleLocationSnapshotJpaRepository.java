@@ -12,6 +12,11 @@ interface VehicleLocationSnapshotJpaRepository extends JpaRepository<VehicleLoca
 
     Optional<VehicleLocationSnapshotEntity> findFirstByVehicleIdOrderByRecordedAtDescIdDesc(UUID vehicleId);
 
+    // Ordered by id as well as time so two snapshots recorded in the same instant cannot swap
+    // places between requests — the same tiebreak rule the paged collections use.
+    List<VehicleLocationSnapshotEntity> findByVehicleIdOrderByRecordedAtDescIdDesc(UUID vehicleId,
+            Pageable pageable);
+
     @Query("""
             select location from VehicleLocationSnapshotEntity location
              where (:allSites = true or location.siteCode in :siteScopes)

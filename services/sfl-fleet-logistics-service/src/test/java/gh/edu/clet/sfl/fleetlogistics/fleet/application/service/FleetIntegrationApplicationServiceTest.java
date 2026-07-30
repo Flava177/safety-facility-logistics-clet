@@ -238,6 +238,18 @@ class FleetIntegrationApplicationServiceTest {
         }
 
         @Override
+        public List<IntegrationInboxMessage> search(String sourceSystem, IntegrationMessageStatus status,
+                String eventType, int limit) {
+            return store.values().stream()
+                    .filter(message -> sourceSystem == null || message.sourceSystem().equals(sourceSystem))
+                    .filter(message -> status == null || message.status() == status)
+                    .filter(message -> eventType == null || message.eventType().equals(eventType))
+                    .sorted(Comparator.comparing(IntegrationInboxMessage::receivedAt).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
         public long countByStatus(IntegrationMessageStatus status) {
             return store.values().stream().filter(message -> message.status() == status).count();
         }
@@ -264,6 +276,15 @@ class FleetIntegrationApplicationServiceTest {
         public List<VehicleLocationSnapshot> findRecentInScope(SiteScopeFilter scope, int limit) {
             return store.values().stream()
                     .filter(snapshot -> scope.permits(snapshot.siteCode().value()))
+                    .sorted(Comparator.comparing(VehicleLocationSnapshot::recordedAt).reversed())
+                    .limit(limit)
+                    .toList();
+        }
+
+        @Override
+        public List<VehicleLocationSnapshot> findByVehicle(UUID vehicleId, int limit) {
+            return store.values().stream()
+                    .filter(snapshot -> snapshot.vehicleId().equals(vehicleId))
                     .sorted(Comparator.comparing(VehicleLocationSnapshot::recordedAt).reversed())
                     .limit(limit)
                     .toList();

@@ -1,9 +1,29 @@
-import { useEffect, useRef, useState } from 'react';
+import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import { fleetApiBaseUrl, sflActor } from 'shared/api/config';
+import { actorOverridden, devToolsEnabled } from 'shared/dev/actorOverride';
+import Button from 'shared/components/Button';
 import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
+import { directorate } from './navigation';
+import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
+
+/**
+ * The development actor switcher, loaded on demand — and only in a development build.
+ *
+ * `import.meta.env.DEV` is written out here rather than the `devToolsEnabled` re-export on purpose.
+ * Vite substitutes that expression with a literal `false` before Rollup runs, so the whole ternary
+ * folds and the dynamic import disappears with it: no chunk is emitted and the panel never reaches a
+ * production bundle.
+ *
+ * Guarding the *render* is not enough, and the first attempt at this proved it. `lazy(() => import(…))`
+ * at module scope is a real edge in the module graph whatever the JSX below does with the result, and
+ * the build duly emitted a 4.57 kB `ActorSwitcher` chunk. The guard has to sit on the import.
+ */
+const ActorSwitcher = import.meta.env.DEV
+  ? lazy(() => import('shared/dev/ActorSwitcher'))
+  : null;
 
 const initials = (name: string): string =>
   name
@@ -36,6 +56,7 @@ const roles = sflActor.roles
 const TopBar = () => {
   const { openMobile } = useSidebar();
   const [profileOpen, setProfileOpen] = useState(false);
+  const [switcherOpen, setSwitcherOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -69,8 +90,10 @@ const TopBar = () => {
           </span>
 
           <p className="min-w-0 truncate text-theme-md font-bold tracking-tight text-white">
-            SFL Operations
-            <span className="ml-2 font-normal text-white/60">— Fleet &amp; Logistics</span>
+            {directorate.shortName}
+            {/* Whichever programme the actor is entitled to, not a fixed "Fleet & Logistics" — that
+                label was only ever true for a fleet user, and this bundle now carries SSEMP too. */}
+            <span className="ml-2 font-normal text-white/60">— {portalLabel()}</span>
           </p>
         </div>
 
@@ -94,6 +117,15 @@ const TopBar = () => {
             >
               {initials(sflActor.displayName)}
             </button>
+
+            {/* An override that looked like the default would eventually be mistaken for one. */}
+            {devToolsEnabled && actorOverridden && (
+              <span
+                aria-hidden="true"
+                title="A development actor override is in force"
+                className="pointer-events-none absolute -top-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-brand-800 bg-warning-500"
+              />
+            )}
 
             {profileOpen && (
               <div
@@ -157,11 +189,34 @@ const TopBar = () => {
                   <code className="mx-1 rounded bg-gray-100 px-1">X-SFL-*</code>
                   headers on every request.
                 </p>
+
+                {devToolsEnabled && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    startIcon="user"
+                    className="mt-3 w-full"
+                    onClick={() => {
+                      setProfileOpen(false);
+                      setSwitcherOpen(true);
+                    }}
+                  >
+                    Change actor
+                  </Button>
+                )}
               </div>
             )}
           </div>
         </div>
       </div>
+
+      {ActorSwitcher && switcherOpen && (
+        // No fallback surface: the chunk is local and the panel is modal, so a spinner behind a
+        // backdrop that has not rendered yet would be the only thing on screen.
+        <Suspense fallback={null}>
+          <ActorSwitcher open onClose={() => setSwitcherOpen(false)} />
+        </Suspense>
+      )}
     </header>
   );
 };

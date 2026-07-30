@@ -126,12 +126,18 @@ const Picker = ({
   useEffect(() => {
     const altInput = instanceRef.current?.altInput;
     if (altInput) {
+      // flatpickr owns this input: it creates the visible `altInput` itself and React never renders
+      // it, so configuring it means writing to a DOM node React does not manage. The rule is right
+      // that this mutates through a ref and wrong that it is avoidable — the alternative is not
+      // using the picker.
+      /* eslint-disable react-hooks/immutability */
       altInput.disabled = Boolean(disabled);
       altInput.placeholder = placeholder ?? (withTime ? 'Select date and time' : 'Select date');
       altInput.id = id;
       if (onBlur) {
         altInput.onblur = () => onBlur();
       }
+      /* eslint-enable react-hooks/immutability */
     }
   }, [disabled, placeholder, withTime, id, onBlur]);
 

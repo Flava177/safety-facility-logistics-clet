@@ -1,5 +1,7 @@
 import { useMemo, useState } from 'react';
+import { emergencyRecordsApi } from 'modules/emergency/api/emergencyApi';
 import type { AudienceGroup, RecipientZone } from 'modules/emergency/api/dto';
+import { RECORD_LIFECYCLES, type RecordLifecycle } from 'modules/emergency/api/enums';
 import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
 import { CreateAudienceDialog, CreateZoneDialog } from 'modules/emergency/dialogs/recordDialogs';
 import { humanise } from 'modules/fleet/api/enums';
@@ -15,8 +17,10 @@ import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
 import Tabs from 'shared/components/Tabs';
-import { TextInput } from 'shared/components/fields';
+import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
+import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
 
 /**
@@ -30,6 +34,15 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * and the denominator every delivery and acknowledgement percentage is read against, and no
  * endpoint can correct one once it is created — so a group sized wrongly quietly distorts every
  * activation that ever uses it.
+ *
+ * Both tables are searched, filtered and paged by the service now. The search box used to be
+ * captioned "filters the loaded records", which was true and useless: it narrowed the first two
+ * hundred groups the site happened to return.
+ *
+ * The two figures above the tables still come from that two-hundred-record read, because the service
+ * has no aggregate for either. Total reach is a sum and the zero-sized warning names every offending
+ * group, and neither can be assembled from a page — so they say what they cover rather than implying
+ * the whole site.
  */
 const EmergencyAudiencesPage = () => {
   const { notifySuccess } = useNotifier();
@@ -37,33 +50,55 @@ const EmergencyAudiencesPage = () => {
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState('audiences');
   const [search, setSearch] = useState('');
+  const [lifecycle, setLifecycle] = useState<RecordLifecycle | ''>('');
   const [creatingAudience, setCreatingAudience] = useState(false);
   const [creatingZone, setCreatingZone] = useState(false);
 
+  /** Kept for the reach total and the zero-sized warning, which no endpoint aggregates. */
   const records = useSiteRecords(siteCode);
-  const needle = search.trim().toLowerCase();
 
-  const audiences = useMemo(
-    () =>
-      records.audiences.filter(
-        (audience) =>
-          !needle ||
-          audience.name.toLowerCase().includes(needle) ||
-          audience.groupCode.toLowerCase().includes(needle),
+  const trimmed = search.trim();
+  const filterKey = `${siteCode}|${trimmed}|${lifecycle}`;
+  const paging = useServerPage(filterKey);
+
+  const audienceQuery = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.audienceGroups(
+        {
+          siteCode,
+          search: trimmed || undefined,
+          lifecycle: lifecycle || undefined,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
       ),
-    [records.audiences, needle],
+    [siteCode, trimmed, lifecycle, paging.page, paging.size],
   );
 
-  const zones = useMemo(
-    () =>
-      records.zones.filter(
-        (zone) =>
-          !needle ||
-          zone.name.toLowerCase().includes(needle) ||
-          zone.zoneCode.toLowerCase().includes(needle),
+  const zoneQuery = useApiQuery(
+    (signal) =>
+      emergencyRecordsApi.recipientZones(
+        {
+          siteCode,
+          search: trimmed || undefined,
+          lifecycle: lifecycle || undefined,
+          page: paging.page,
+          size: paging.size,
+        },
+        signal,
       ),
-    [records.zones, needle],
+    [siteCode, trimmed, lifecycle, paging.page, paging.size],
   );
+
+  const active = tab === 'audiences' ? audienceQuery : zoneQuery;
+  useClampPage(paging.page, active.data?.totalPages, paging.setPage);
+
+  const refreshAll = () => {
+    audienceQuery.refetch();
+    zoneQuery.refetch();
+    records.refetch();
+  };
 
   const totalReach = records.audiences.reduce(
     (total, audience) => total + audience.recipientCount,
@@ -179,7 +214,7 @@ const EmergencyAudiencesPage = () => {
             <Button variant="outline" startIcon="plus" onClick={() => setCreatingZone(true)}>
               Create zone
             </Button>
-            <Button variant="outline" startIcon="refresh" onClick={records.refetch}>
+            <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>
           </>
@@ -191,11 +226,11 @@ const EmergencyAudiencesPage = () => {
           label="Recipients across all groups"
           value={formatNumber(totalReach)}
           icon="users"
-          caption="What a broadcast to every group would reach"
+          caption="Summed here across up to 200 groups"
         />
         <StatCard
           label="Audience groups"
-          value={formatNumber(records.audiences.length)}
+          value={formatNumber(audienceQuery.data?.totalElements ?? 0)}
           icon="clipboard"
           tone={emptyGroups.length > 0 ? 'caution' : 'neutral'}
           caption={
@@ -206,7 +241,7 @@ const EmergencyAudiencesPage = () => {
         />
         <StatCard
           label="Recipient zones"
-          value={formatNumber(records.zones.length)}
+          value={formatNumber(zoneQuery.data?.totalElements ?? 0)}
           icon="map-pin"
           caption="Places a broadcast can be narrowed to"
         />
@@ -222,20 +257,28 @@ const EmergencyAudiencesPage = () => {
           channel record shows a target of zero, which is not the same as a failure and reads
           exactly like a clean send.{' '}
           {emptyGroups.map((group) => group.name).join(', ')}. The count cannot be corrected through
-          any endpoint; create a replacement group with the right size.
+          any endpoint; create a replacement group with the right size. Checked across up to 200
+          groups at this site.
         </Alert>
       )}
 
       <div className="mb-5">
         <SectionCard>
-          <div className="grid gap-4 sm:grid-cols-2 lg:max-w-2xl">
+          <div className="grid gap-4 sm:grid-cols-2 lg:max-w-3xl lg:grid-cols-3">
             <SiteSelect value={siteCode} onChange={setSiteCode} required />
             <TextInput
               label="Search"
               value={search}
               onChange={setSearch}
               placeholder="Code or name"
-              helperText="Filters the loaded records."
+              helperText="Searched by the service across both registers."
+            />
+            <EnumSelect
+              label="Lifecycle"
+              value={lifecycle}
+              options={RECORD_LIFECYCLES}
+              onChange={(value) => setLifecycle(value)}
+              allowEmpty
             />
           </div>
         </SectionCard>
@@ -247,30 +290,53 @@ const EmergencyAudiencesPage = () => {
             value={tab}
             onChange={setTab}
             items={[
-              { value: 'audiences', label: 'Audience groups', count: records.audiences.length },
-              { value: 'zones', label: 'Recipient zones', count: records.zones.length },
+              {
+                value: 'audiences',
+                label: 'Audience groups',
+                count: audienceQuery.data?.totalElements,
+              },
+              {
+                value: 'zones',
+                label: 'Recipient zones',
+                count: zoneQuery.data?.totalElements,
+              },
             ]}
           />
         </div>
 
-        <DataState loading={records.initialising} minHeight={300}>
+        <DataState
+          loading={active.initialising}
+          error={active.error}
+          onRetry={active.refetch}
+          minHeight={300}
+        >
           {tab === 'audiences' ? (
             <DataTable
-              rows={audiences}
+              rows={audienceQuery.data?.content ?? []}
               columns={audienceColumns}
               getRowId={(row) => row.id}
-              loading={records.loading}
+              loading={audienceQuery.loading}
               caption="Audience groups at this site, with their recipient count, share of the site total, lifecycle and creation time."
               emptyMessage="No audience group matches this search."
+              page={audienceQuery.data?.page ?? paging.page}
+              pageSize={audienceQuery.data?.size ?? paging.size}
+              totalElements={audienceQuery.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           ) : (
             <DataTable
-              rows={zones}
+              rows={zoneQuery.data?.content ?? []}
               columns={zoneColumns}
               getRowId={(row) => row.id}
-              loading={records.loading}
+              loading={zoneQuery.loading}
               caption="Recipient zones at this site, with their facilities location reference, lifecycle, creator and creation time."
               emptyMessage="No zone matches this search."
+              page={zoneQuery.data?.page ?? paging.page}
+              pageSize={zoneQuery.data?.size ?? paging.size}
+              totalElements={zoneQuery.data?.totalElements ?? 0}
+              onPageChange={paging.setPage}
+              onPageSizeChange={paging.setSize}
             />
           )}
         </DataState>
@@ -295,7 +361,7 @@ const EmergencyAudiencesPage = () => {
               `${audience.groupCode} created.`,
               `${formatNumber(audience.recipientCount)} recipients. The count cannot be changed later.`,
             );
-            records.refetch();
+            refreshAll();
           }}
         />
       )}
@@ -307,7 +373,7 @@ const EmergencyAudiencesPage = () => {
           onClose={() => setCreatingZone(false)}
           onSaved={(zone) => {
             notifySuccess(`${zone.zoneCode} created.`);
-            records.refetch();
+            refreshAll();
           }}
         />
       )}
