@@ -41,6 +41,62 @@ vocabulary survives decides how long already-filed evidence is kept. That is not
 a gap register. `RetentionClass`'s own Javadoc already flags its periods as an unconfirmed assumption
 (gap report C-08); it should be settled with compliance before go-live.
 
+## A compliance defect found by exercising a role, and fixed
+
+Found on 30 July 2026 by signing in as a mailroom officer to check the new system-level navigation
+scoping. It had nothing to do with navigation.
+
+**Authorisation denials on a resource with no identifier were not audited at all.**
+
+The chain, each step confirmed by reproducing it against the running service:
+
+1. A mailroom officer opens the dispatch dashboard. `DispatchDashboardService` requires
+   `DISPATCH_REPORT_READ`, which the role does not hold, so it is refused — correctly, with a 403.
+2. `DispatchAccessPolicy` builds the denial details with `Map.of`, which rejects nulls, so it
+   substituted `""` for the absent resource identifier.
+3. `JpaAuditAdapter` guarded `resourceId == null ? "-" : resourceId`. **An empty string is not null**,
+   so it passed through untouched.
+4. `AuditEvent`'s constructor calls `requireText`, which rejects blank, and threw.
+5. `FleetAuditService` caught it, logged an ERROR, and swallowed it.
+
+So the refusal was enforced and the record an auditor would look for was thrown away. Nothing looked
+wrong from outside: the caller got the right status and the right error code.
+
+**Scope, measured rather than estimated.** The two policies that use `Map.of` blank the id; the fleet
+policy omits null keys and was therefore unaffected.
+
+| Policy | Null handling | `require` call sites with no id | Denials audited |
+| --- | --- | --- | --- |
+| `FuelAccessPolicy` | `Map.of`, blanks to `""` | 14 | **lost** |
+| `DispatchAccessPolicy` | `Map.of`, blanks to `""` | 13 | **lost** |
+| `FleetAccessPolicy` | omits null keys | 6 | fine |
+
+Verified all three ways before the fix: fuel dashboard lost, dispatch dashboard lost, fleet vehicles
+audited. An earlier note in this session said 33 call sites; the correct figure is **27**, because
+fleet's six were never affected.
+
+This is the class of denial an auditor most wants. Dashboards, reports and collection reads name no
+single record, and they are the first thing an unentitled actor hits.
+
+**Fixed in three places.** The guard now tests blankness, not just null — and it is in the audit writer
+rather than in each policy, because that is where the invariant is enforced and therefore the one place
+a policy written later cannot forget. Both policies also stopped blanking: an absent id is now omitted
+from the denial details, as fleet's has always been, so `"resourceId": ""` no longer appears in a stored
+audit payload claiming there was an id and it was empty.
+
+**Regression test:** `FuelGapClosureEndToEndTest.a_denial_with_no_resource_id_is_still_audited`, against
+real Postgres. It drives the port with both a null and the blank the policies used to produce, and
+asserts both records persist with the `-` placeholder. It deliberately does **not** assert
+`verifyChain().intact()` — that is a property of the whole accumulated chain in a shared database, it
+already reads false for rows written before a canonicaliser change, and asserting it here would make
+the test fail for a reason it is not about.
+
+Confirmed live after the fix: the same three denials produce zero audit-write failures, and
+`GET /fleet/audit/records?action=AUTHORIZATION_DENIED` returns the `DispatchDashboard` and
+`FuelDashboard` denials with `resourceId` `-`, while denials that do name a record still carry its id.
+
+---
+
 ## One defect found while verifying, and fixed
 
 `GET /vehicles/compliance-documents?expiringBefore=…` returned **500** —
