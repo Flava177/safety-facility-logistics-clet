@@ -61,7 +61,8 @@ they will be refused if they click it.
   default list.
 - `shared/layout/programmes.ts` is the thin part: read the actor's roles, apply an optional
   `VITE_SFL_PROGRAMMES` override, expose `entitledTo` and `portalLabel`.
-- `NavSection` gains `programme`. The sidebar renders only entitled sections; `RequireProgramme`
+- `NavSection` gains `programme`, and later `system` too — see the amendment. The sidebar renders
+  only entitled sections; the route guard (`RequireEntitlement`)
   refuses the routes of an unentitled programme, so a bookmark or a typed address is answered properly
   instead of producing a screen full of `403`s.
 - The landing route is the actor's **first entitled destination**, not the fleet dashboard — which was
@@ -111,7 +112,7 @@ identity.
   security control — and it would remain one even with IAM, because a hidden link protects nothing.
   The services already authorise every call independently: S174 refuses an unentitled actor with
   `EMERGENCY_UNAUTHORIZED_SCOPE` whether or not the nav entry was shown. **Navigation entitlement must
-  never be relied on as the enforcement point.** `RequireProgramme` says so in its own docblock, where
+  never be relied on as the enforcement point.** `RequireEntitlement` says so in its own docblock, where
   somebody will be reading it at the moment they are tempted to.
 - Two role names in the shipped configuration were **not real** `SflRole` constants —
   `FLEET_DISPATCHER` and `FLEET_AUDITOR`. Every service silently dropped them, so they had been
@@ -119,3 +120,90 @@ identity.
   that an unrecognised role fails quietly, in the services and here alike.
 - When IAM lands, programme entitlement should come from the token, alongside the site scopes the
   services already read from `site_scopes`.
+
+---
+
+## Amendment, 30 July 2026 — entitlement has two grains
+
+- Status: **Accepted and implemented.** Extends this record; supersedes nothing in it.
+
+### Why programme alone was not enough
+
+The rule above scopes navigation by **programme**, and that is the right coarse answer: a head of fleet
+should not open their portal onto CCTV access management. But FTLMP is *three systems in one
+deployable*, and programme scoping cannot see inside it. So:
+
+- a **mailroom officer** signed in and got the whole fleet register, the driver register, trips,
+  compliance, evidence, fuel transactions and driver logbooks — every one of which the dispatch
+  permission matrix gives them nothing for;
+- a **driver** got the courier manifests, chain of custody and scan imports, likewise;
+- and both were told, on every call behind those screens, that they were not authorised.
+
+That is the same failure this ADR was written to fix, one level down. "Why should a driver see CCTV" and
+"why should a driver see courier manifests" are the same question.
+
+### The finer grain
+
+`NavSection` now carries a `system` as well as a `programme`, and the filter tests both:
+
+```ts
+navSections.filter((s) => entitledTo(s.programme) && entitledToSystem(s.system))
+```
+
+`SystemCode` covers the four systems that have screens — `S166`, `S168`, `S171`, `S174`. The other nine
+are deliberately absent: a code with nothing behind it is a promise the sidebar cannot keep.
+
+**`roleSystems` is transcribed from the four permission matrices, not from judgement.**
+`FleetPermissionMatrix`, `FuelPermissionMatrix`, `DispatchPermissionMatrix` and
+`EmergencyPermissionMatrix` each grant permissions per role; a role is entitled to a system exactly
+when that system's matrix grants it something. The sidebar therefore offers what the service will
+answer, and the two cannot disagree about a role by accident.
+
+| Role | Systems | Sidebar |
+| --- | --- | --- |
+| `FLEET_MANAGER` | S166, S168, S171 | all five FTLMP groups |
+| `FLEET_DRIVER` | S166, S168 | fleet and fuel — **no courier and dispatch** |
+| `MAILROOM_OFFICER` | S171 | **courier and dispatch only** |
+| `DISPATCH_CONTROLLER` | S171 | courier and dispatch only |
+| `EMERGENCY_COORDINATOR` | S174 | emergency notifications only |
+| `SECURITY_OFFICER` | S171, S174 | courier and dispatch, emergency |
+| `SFL_ADMIN`, `AUDITOR` | all four | everything |
+
+### Two gaps this exposed, both now closed by construction
+
+Adding the finer grain made a disagreement visible that had been sitting between the role map and the
+matrices:
+
+- **`COMMAND_ROLE`** holds permissions in the fleet, fuel *and* dispatch matrices, and `roleProgrammes`
+  listed only IFIMP and SSEMP. The entire FTLMP side of the dashboard was hidden from a role that can
+  operate it.
+- **`SECURITY_OFFICER`** can read dispatch items and manifests and **escalate a dispatch exception** —
+  a security-relevant consignment — and was listed as SSEMP alone. It could never see the thing it was
+  meant to escalate.
+
+Neither was fixed by hand-editing a second list, because that is how they arose. `programmesFor` now
+**unions in the programme of every system a role declares**, so adding a system entitles the role to its
+programme automatically and the two maps cannot drift apart again.
+
+### Defaults point in opposite directions, deliberately
+
+- **Programme: fail closed.** A role absent from `roleProgrammes` gets nothing. The question there is
+  "should this person be in safety at all", and silence should mean no.
+- **System: fail open, within the programme.** A role absent from `roleSystems` is *not* narrowed. A new
+  FTLMP role added to one map and forgotten in the other would otherwise produce a dashboard entitled to
+  a programme and showing none of it — an empty sidebar with no explanation, which reads as a broken
+  build rather than as a permission. Widening keeps the failure legible, and the services refuse
+  anything the role cannot do regardless.
+
+### Consequences
+
+- `RequireProgramme` became `RequireEntitlement` and takes the **system**; the programme follows from
+  the model, so a route cannot claim dispatch belongs to SSEMP. It names the grain that actually failed,
+  because telling a driver that "Fleet, Transport & Logistics is not part of your work" would be false —
+  they are looking at it.
+- `VITE_SFL_SYSTEMS` overrides the finer grain the way `VITE_SFL_PROGRAMMES` overrides the coarser one.
+- The development actor switcher gained *mailroom officer* and *security officer* presets, which is what
+  makes the distinction checkable in seconds rather than describable in a document.
+- **Still not the enforcement point.** Nothing here changes that: every service authorises every call
+  from the headers it receives, and hiding a navigation entry protects nothing.
+
