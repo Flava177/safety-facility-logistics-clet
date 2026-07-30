@@ -195,6 +195,31 @@ programme automatically and the two maps cannot drift apart again.
   build rather than as a permission. Widening keeps the failure legible, and the services refuse
   anything the role cannot do regardless.
 
+### A third grain — nav items, 30 July 2026
+
+System scoping put the mailroom officer in the right section and then offered them the one screen in it
+they cannot read: the dispatch dashboard requires `DISPATCH_REPORT_READ`, which `MAILROOM_OFFICER` does
+not hold, and it was their landing page. So `NavItem` gained an optional `permission`.
+
+**The front end asks; it does not derive.** Programme and system are transcribed from roles because
+those mappings are small enough to check. Permissions are not — 103 of them across 26 roles in four
+matrices — so each service exposes `GET /actor/permissions` and answers from the same matrices the
+enforcement path uses. Two routes, because S174 is a separate deployable (ADR 0004) and the fleet
+service cannot answer for it.
+
+Resolved once in `main.tsx` before the first render, because the navigation, the route guard and the
+landing destination are all synchronous and a sidebar that renders wide then narrows reads as a bug
+rather than a permission.
+
+**Fail-open again, for the third time and the same reason.** If neither service can be asked, nothing is
+narrowed — the dashboard behaves exactly as it did before item gating existed. A screen hidden because a
+request timed out is indistinguishable from a broken build, and the services refuse anything the actor
+cannot do regardless.
+
+Five items carry a permission today, each read off the service that enforces it rather than inferred:
+the four programme dashboards and integration health. An item without one is offered whenever its
+section is, which is true of most screens.
+
 ### Consequences
 
 - `RequireProgramme` became `RequireEntitlement` and takes the **system**; the programme follows from
