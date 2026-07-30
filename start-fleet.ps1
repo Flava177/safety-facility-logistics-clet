@@ -1,14 +1,14 @@
 <#
 .SYNOPSIS
-    Starts the SFL Fleet & Logistics service with the operations console built in.
+    Starts the SFL Fleet & Logistics service with the operations dashboard built in.
 
 .DESCRIPTION
     One command for local work. It loads the SFL environment, brings the service databases up,
     builds the SFL Operations UI if needed, then runs the Spring Boot service. The service serves
-    the API, Swagger and the console from the same origin on port 8093, and opens Swagger and the
-    console in your browser once it is ready.
+    the API, Swagger and the dashboard from the same origin on port 8093, and opens Swagger and the
+    dashboard in your browser once it is ready.
 
-        http://localhost:8093/ui/             operations console
+        http://localhost:8093/ui/             operations dashboard
         http://localhost:8093/swagger-ui.html Swagger UI
         http://localhost:8093/v3/api-docs     OpenAPI JSON
 
@@ -19,10 +19,10 @@
     Do not run docker compose - use when the databases are already up.
 
 .PARAMETER SkipUiBuild
-    Do not build the console. Only safe when you have just built it yourself.
+    Do not build the dashboard. Only safe when you have just built it yourself.
 
 .PARAMETER RebuildUi
-    Kept for compatibility. The console is now always rebuilt unless -SkipUiBuild is given.
+    Kept for compatibility. The dashboard is now always rebuilt unless -SkipUiBuild is given.
 
 .PARAMETER NoBrowser
     Start the service without opening browser tabs.
@@ -67,13 +67,13 @@ if (-not $SkipDb) {
     Write-Step "Skipping the databases (-SkipDb)"
 }
 
-# --- 3. Operations console ------------------------------------------------------------------
+# --- 3. Operations dashboard ----------------------------------------------------------------
 # Always rebuild unless explicitly skipped. Presence of a dist/ says nothing about whether it
 # matches the current sources, and a stale bundle served silently is the worst outcome.
 $needsUiBuild = $true
 
 if ($SkipUiBuild) {
-    Write-Step "Skipping the console build (-SkipUiBuild)"
+    Write-Step "Skipping the dashboard build (-SkipUiBuild)"
 } elseif ($needsUiBuild) {
     Write-Step "Building the SFL Operations UI"
     if (-not (Get-Command npm -ErrorAction SilentlyContinue)) {
@@ -96,20 +96,20 @@ if ($SkipUiBuild) {
         Pop-Location
     }
 } else {
-    Write-Step "Reusing the existing console build (-SkipUiBuild was not given, so this should not happen)"
+    Write-Step "Reusing the existing dashboard build (-SkipUiBuild was not given, so this should not happen)"
 }
 
-# Say out loud which bundle is about to be served. A console that looks unchanged after a rebuild is
+# Say out loud which bundle is about to be served. A dashboard that looks unchanged after a rebuild is
 # almost always a stale bundle, and that is invisible unless someone prints the file name.
 $indexHtml = Join-Path $uiDist "index.html"
 if (Test-Path $indexHtml) {
     $bundle = (Select-String -Path $indexHtml -Pattern 'assets/index-[^"]+\.js' -AllMatches |
         Select-Object -First 1).Matches.Value
     $builtAt = (Get-Item $indexHtml).LastWriteTime
-    Write-Host "  console bundle : $bundle"
-    Write-Host "  built at       : $builtAt"
+    Write-Host "  dashboard bundle : $bundle"
+    Write-Host "  built at         : $builtAt"
 } else {
-    Write-Host "  console bundle : none - the service will start without the /ui routes" -ForegroundColor Yellow
+    Write-Host "  dashboard bundle : none - the service will start without the /ui routes" -ForegroundColor Yellow
 }
 
 # --- 4. Service -----------------------------------------------------------------------------
@@ -117,9 +117,9 @@ $env:SFL_SECURITY_ENABLED   = "false"
 $env:SFL_FLEET_OPEN_BROWSER = if ($NoBrowser) { "false" } else { "true" }
 
 Write-Step "Starting the Fleet & Logistics service on http://localhost:8093"
-Write-Host "  console : http://localhost:8093/ui/"
-Write-Host "  swagger : http://localhost:8093/swagger-ui.html"
-Write-Host "  stop    : Ctrl+C"
+Write-Host "  dashboard : http://localhost:8093/ui/"
+Write-Host "  swagger   : http://localhost:8093/swagger-ui.html"
+Write-Host "  stop      : Ctrl+C"
 
 Push-Location (Join-Path $repoRoot "services")
 try {
