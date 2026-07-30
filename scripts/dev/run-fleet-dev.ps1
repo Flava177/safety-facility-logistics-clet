@@ -4,10 +4,10 @@
 
 .DESCRIPTION
     Use this while working on the front end. The Spring Boot service runs in its own window on 8093
-    and Vite serves the console on 5005 with hot module replacement, so a save is reflected in the
+    and Vite serves the dashboard on 5005 with hot module replacement, so a save is reflected in the
     browser immediately - no rebuild, no restart.
 
-        http://localhost:5005                 console (hot reload)
+        http://localhost:5005                 dashboard (hot reload)
         http://localhost:8093/swagger-ui.html Swagger UI
 
     The service already allows http://localhost:5005 as a CORS origin. For the bundled
@@ -64,7 +64,7 @@ if (-not $NoBrowser) {
     Start-Process "http://localhost:5005"
 }
 
-Write-Host "==> Starting the console dev server on http://localhost:5005 (Ctrl+C to stop)" -ForegroundColor Cyan
+Write-Host "==> Starting the dashboard dev server on http://localhost:5005 (Ctrl+C to stop)" -ForegroundColor Cyan
 Push-Location $uiDir
 try {
     npm run dev
