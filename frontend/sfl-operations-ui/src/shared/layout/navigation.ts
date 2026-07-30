@@ -1,5 +1,6 @@
 import { IconName } from 'shared/components/Icon';
 import { ProgrammeCode, SystemCode, entitledTo, entitledToSystem } from './programmes';
+import { permits } from './actorPermissions';
 
 /**
  * Dashboard navigation.
@@ -26,6 +27,18 @@ export interface NavItem {
   /** Matches child routes too — `/fleet/vehicles/42` still highlights "Vehicle register". */
   matchPrefix?: string;
   description?: string;
+  /**
+   * The permission this screen's first read requires, when it is more than the section's system.
+   *
+   * **Absent means the system entitlement is the whole requirement**, which is true of most screens —
+   * a role entitled to S171 can read courier items, manifests and exception cases.
+   *
+   * It is not true of dashboards. A mailroom officer is entitled to S171 and holds no
+   * `DISPATCH_REPORT_READ`, so before this existed they were offered the dispatch dashboard as their
+   * landing page and met a 403 on arrival. Every code below was read off the service that enforces it,
+   * not inferred from the name.
+   */
+  permission?: string;
 }
 
 export interface NavSection {
@@ -133,6 +146,8 @@ export const navSections: NavSection[] = [
         to: fleetPaths.dashboard,
         icon: 'dashboard',
         description: 'Readiness, activity and exceptions',
+        // Enforced by FleetDashboardApplicationService.
+        permission: 'FLEET_DASHBOARD_READ',
       },
       {
         label: 'Trips & assignments',
@@ -193,6 +208,8 @@ export const navSections: NavSection[] = [
         to: fleetPaths.integrations,
         icon: 'cloud',
         description: 'Inbound and outbound message flow',
+        // Enforced by FleetIntegrationApplicationService.
+        permission: 'FLEET_INTEGRATION_HEALTH_READ',
       },
     ],
   },
@@ -206,6 +223,8 @@ export const navSections: NavSection[] = [
         to: fuelPaths.dashboard,
         icon: 'fuel',
         description: 'Spend, volume and reconciliation standing',
+        // Enforced by FuelApplicationService.dashboard.
+        permission: 'FUEL_REPORT_READ',
       },
       {
         label: 'Fuel transactions',
@@ -265,6 +284,8 @@ export const navSections: NavSection[] = [
         to: dispatchPaths.dashboard,
         icon: 'dashboard',
         description: 'Consignments in transit and open exceptions',
+        // Enforced by DispatchDashboardService.
+        permission: 'DISPATCH_REPORT_READ',
       },
       {
         label: 'Courier items',
@@ -320,6 +341,8 @@ export const navSections: NavSection[] = [
         to: emergencyPaths.dashboard,
         icon: 'siren',
         description: 'Live broadcasts and outstanding obligations',
+        // Enforced by EmergencyDashboardService.
+        permission: 'EMERGENCY_REPORT_READ',
       },
       {
         label: 'Activations',
@@ -378,9 +401,13 @@ export const directorate = {
 
 /** The navigation sections this actor is entitled to, in declared order. */
 export const entitledSections = (): NavSection[] =>
-  navSections.filter(
-    (section) => entitledTo(section.programme) && entitledToSystem(section.system),
-  );
+  navSections
+    .filter((section) => entitledTo(section.programme) && entitledToSystem(section.system))
+    // Then drop the items the actor cannot read, and any section left with none — an empty heading is
+    // worse than no heading. `permits` returns true for everything when the services could not be
+    // asked, so a failed lookup never hides a screen.
+    .map((section) => ({ ...section, items: section.items.filter((item) => permits(item.permission)) }))
+    .filter((section) => section.items.length > 0);
 
 /**
  * Where an actor lands when they open the application.

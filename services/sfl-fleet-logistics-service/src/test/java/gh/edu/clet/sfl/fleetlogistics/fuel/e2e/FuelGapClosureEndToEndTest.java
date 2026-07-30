@@ -1,5 +1,9 @@
 package gh.edu.clet.sfl.fleetlogistics.fuel.e2e;
 
+import java.util.List;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
+import gh.edu.clet.sfl.common.security.SflPermission;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
@@ -156,6 +160,56 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
         assertThat(accepted.totalElements()).isEqualTo(1);
         assertThat(accepted.content()).singleElement()
                 .satisfies(row -> assertThat(row.accepted()).isTrue());
+    }
+
+    /**
+     * A refusal with no resource identifier is still audited.
+     *
+     * <p>It was not. {@code FuelAccessPolicy} and {@code DispatchAccessPolicy} build their denial
+     * details with {@code Map.of}, which rejects nulls, so both substituted {@code ""} for an absent
+     * id — and the audit writer guarded only {@code == null}, so the empty string reached
+     * {@code AuditEvent}, failed its non-blank check, and the record was thrown away with nothing but
+     * an ERROR line to show for it. The 403 was returned correctly throughout, so nothing looked
+     * wrong from outside.
+     *
+     * <p>That is the whole class of denial an auditor most wants: dashboards, reports and collection
+     * reads have no single record to name, and they are what an unentitled actor hits first. Twenty-
+     * seven call sites across fuel and dispatch were affected.
+     *
+     * <p>Asserted through {@link AuditPort} against real Postgres rather than with a mock, because the
+     * constraint that broke lives in the domain constructor and the substitution lives in the JDBC
+     * adapter — a double that stood in for either would have kept passing.
+     */
+    @Test void a_denial_with_no_resource_id_is_still_audited() {
+        Fixture f = newFixture(false);
+        ActorContext outsider = new ActorContext(new SiteScopedPrincipal("nobody.useful","No One",
+                Set.of(SflRole.MAILROOM_OFFICER), Set.of(f.site()), false), "denial-audit-e2e");
+
+        // A mailroom officer holds no fuel permission at all, and a dashboard read names no record.
+        assertThatThrownBy(() -> fuel.dashboard(f.site(), outsider))
+                .isInstanceOf(FleetAuthorizationException.class);
+
+        // The details carry no resourceId at all now, rather than an empty one.
+        assertThatThrownBy(() -> fuel.dashboard(f.site(), outsider))
+                .isInstanceOf(FleetAuthorizationException.class)
+                .satisfies(e -> assertThat(((FleetAuthorizationException) e).details())
+                        .doesNotContainKey("resourceId"));
+
+        // The API exception handler is what records the denial, so drive the port the way it does.
+        audit.recordAuthorizationDenied(outsider, f.site(), "FuelDashboard", null,
+                SflPermission.FUEL_REPORT_READ.name(), "FLEET_UNAUTHORIZED_SCOPE");
+        // And again with the blank the policies used to produce, which is what actually broke.
+        audit.recordAuthorizationDenied(outsider, f.site(), "FuelDashboard", "",
+                SflPermission.FUEL_REPORT_READ.name(), "FLEET_UNAUTHORIZED_SCOPE");
+
+        var denials = audit.search(new AuditPort.AuditQuery(List.of(f.site()), "FuelDashboard", null,
+                "nobody.useful", AuditAction.AUTHORIZATION_DENIED, null, null, 0, 50));
+        assertThat(denials).hasSize(2);
+        // Both persisted, and both carry the placeholder rather than the blank that used to be fatal.
+        // Deliberately not asserting `verifyChain().intact()` here: that is a property of the whole
+        // accumulated chain in a shared e2e database, it is already known to read false on rows written
+        // before a canonicaliser change, and it would make this test fail for a reason it is not about.
+        assertThat(denials).allSatisfy(event -> assertThat(event.resourceId()).isEqualTo("-"));
     }
 
     /** Gap 12: a re-uploaded file was refused by the constraint and escaped as an unmapped 500. */
