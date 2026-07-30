@@ -12,6 +12,33 @@ public enum SflPermission {
     AUDIT_READ,
     INTEGRATION_HEALTH_READ,
 
+    // Computer-Aided Facility Management / IWMS permissions (SRS S152). Additive only.
+    // The role -> permission mapping lives in the facilities service
+    // (gh.edu.clet.sfl.facilities.shared.domain.policy.FacilitiesPermissionMatrix), so no IFIMP
+    // business rule enters this shared library. S152 hosts S153 and S159, so these are the
+    // permissions those modules will inherit rather than redeclare.
+    FACILITIES_SITE_READ,
+    FACILITIES_SITE_MANAGE,
+    FACILITIES_SPACE_READ,
+    FACILITIES_SPACE_MANAGE,
+    FACILITIES_ZONE_READ,
+    FACILITIES_ZONE_MANAGE,
+    FACILITIES_DEVICE_REFERENCE_READ,
+    FACILITIES_DEVICE_REFERENCE_REGISTER,
+    FACILITIES_ASSET_READ,
+    FACILITIES_ASSET_MANAGE,
+    FACILITIES_READINESS_READ,
+    FACILITIES_READINESS_ASSESS,
+    FACILITIES_READINESS_OVERRIDE,
+    FACILITIES_READINESS_CHECKLIST_MANAGE,
+    FACILITIES_OPERATING_MODE_CHANGE,
+    FACILITIES_DASHBOARD_READ,
+    FACILITIES_DASHBOARD_DRILLDOWN,
+    FACILITIES_AUDIT_READ,
+    FACILITIES_AUDIT_INTEGRITY_CHECK,
+    FACILITIES_CONFIG_READ,
+    FACILITIES_CONFIG_MANAGE,
+
     // Fleet and vehicle management permissions (SRS S166). Additive only.
     // The role -> permission mapping lives in the fleet feature package
     // (gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.FleetPermissionMatrix),

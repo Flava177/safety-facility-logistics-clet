@@ -1,17 +1,21 @@
 package gh.edu.clet.sfl.facilities.masterdata.infrastructure.persistence;
 
-import java.time.Instant;
-import java.util.UUID;
-
 import gh.edu.clet.sfl.facilities.masterdata.domain.Building;
+import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
 import jakarta.persistence.Column;
+import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import java.util.UUID;
 
 @Entity
 @Table(name = "buildings", schema = "facilities")
 public class BuildingRecord {
+
     @Id
     private UUID id;
     @Column(name = "site_id", nullable = false)
@@ -24,8 +28,11 @@ public class BuildingRecord {
     private String name;
     @Column(length = 1000)
     private String description;
-    @Column(name = "created_at", nullable = false)
-    private Instant createdAt;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "lifecycle_status", nullable = false, length = 20)
+    private RecordLifecycleStatus lifecycleStatus;
+    @Embedded
+    private RecordMetadataEmbeddable metadata;
 
     protected BuildingRecord() {
     }
@@ -37,7 +44,8 @@ public class BuildingRecord {
         buildingCode = building.buildingCode();
         name = building.name();
         description = building.description();
-        createdAt = building.createdAt();
+        lifecycleStatus = building.lifecycleStatus();
+        metadata = RecordMetadataEmbeddable.from(building.metadata());
     }
 
     public static BuildingRecord from(Building building) {
@@ -45,6 +53,7 @@ public class BuildingRecord {
     }
 
     public Building toDomain() {
-        return new Building(id, siteId, siteCode, buildingCode, name, description, createdAt);
+        return new Building(id, siteId, siteCode, buildingCode, name, description, lifecycleStatus,
+                metadata.toDomain());
     }
 }
