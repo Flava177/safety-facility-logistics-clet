@@ -4,7 +4,7 @@ import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import FormDialog from 'shared/components/FormDialog';
 import { TextInput } from 'shared/components/fields';
-import { allProgrammes, programmes } from 'shared/layout/programmeModel';
+import { allProgrammes, allSystems, programmes, systems } from 'shared/layout/programmeModel';
 import {
   ActorOverride,
   clearActorOverride,
@@ -20,12 +20,23 @@ import {
  * production build drops it.
  *
  * The presets are the point. Typing seven role names to check one navigation rule is how a check
- * stops getting run, and every preset below is a real bundle of real `SflRole` names taken from
- * `roleProgrammes` — nothing here grants a role the services would silently ignore.
+ * stops getting run, and every preset below is a real `SflRole` — each appears in the permission matrix
+ * of every system it is expected to reach, so nothing here grants a role the services would ignore.
  *
- * Two of the presets are expected to land on the no-programme page, and that is deliberate: IFIMP
- * and AVAMP have no dashboard screens yet (ADR 0006), so a facilities manager signing in should see
- * that stated rather than see a fleet dashboard.
+ * They are chosen to demonstrate **both grains** of ADR 0005:
+ *
+ * - *Fleet manager* and *emergency coordinator* show programme scoping — one sees FTLMP, the other
+ *   SSEMP, and neither sees the other's sidebar.
+ * - *Driver* and *mailroom officer* show system scoping **inside one programme**. Both are FTLMP: the
+ *   driver sees fleet and fuel and no courier manifests, the mailroom officer sees courier and dispatch
+ *   and no fleet register. Programme scoping alone could not tell them apart.
+ * - *Security officer* spans both grains, and is the one this work fixed — it can escalate a dispatch
+ *   exception, and the sidebar used to hide dispatch from it entirely.
+ * - *Facilities manager* is expected to land on the no-programme page, deliberately: IFIMP has no
+ *   dashboard screens yet (ADR 0006), so it should be stated rather than papered over.
+ *
+ * Every preset leaves `systems` blank. Narrowing by role is what a real sign-in does; typing system
+ * codes is the escape hatch for looking at one system without a role that justifies it.
  */
 interface Preset {
   label: string;
@@ -33,61 +44,59 @@ interface Preset {
   actor: ActorOverride;
 }
 
+/** Site, programmes and systems are the same for every preset; only the role is the point. */
+const base = { sites: 'CLET-HQ', programmes: '', systems: '' };
+
 const PRESETS: Preset[] = [
   {
     label: 'Fleet manager',
-    detail: 'FTLMP — fleet, fuel and dispatch. No emergency section.',
-    actor: {
-      user: 'fleet.manager',
-      displayName: 'Fleet Manager',
-      roles: 'FLEET_MANAGER,DISPATCH_CONTROLLER,FLEET_REPORTING_VIEWER',
-      sites: 'CLET-HQ',
-      programmes: '',
-    },
+    detail: 'All three FTLMP systems. No emergency section.',
+    actor: { ...base, user: 'fleet.manager', displayName: 'Fleet Manager', roles: 'FLEET_MANAGER' },
   },
   {
     label: 'Driver',
-    detail: 'FTLMP with a driver’s roles — the case ADR 0005 was written for.',
-    actor: {
-      user: 'kwame.driver',
-      displayName: 'Kwame Driver',
-      roles: 'FLEET_DRIVER',
-      sites: 'CLET-HQ',
-      programmes: '',
-    },
+    detail: 'S166 and S168 only. Courier and dispatch disappears — a driver does not run the mailroom.',
+    actor: { ...base, user: 'kwame.driver', displayName: 'Kwame Driver', roles: 'FLEET_DRIVER' },
+  },
+  {
+    label: 'Mailroom officer',
+    detail: 'S171 only. Same programme as the driver, the opposite half of it.',
+    actor: { ...base, user: 'ama.mailroom', displayName: 'Ama Mailroom', roles: 'MAILROOM_OFFICER' },
   },
   {
     label: 'Emergency coordinator',
-    detail: 'SSEMP only. The fleet, fuel and dispatch sections disappear.',
+    detail: 'S174 only. Every FTLMP section disappears.',
     actor: {
+      ...base,
       user: 'emergency.coordinator',
       displayName: 'Emergency Coordinator',
-      roles: 'EMERGENCY_COORDINATOR,COMMAND_ROLE',
-      sites: 'CLET-HQ',
-      programmes: '',
+      roles: 'EMERGENCY_COORDINATOR',
+    },
+  },
+  {
+    label: 'Security officer',
+    detail: 'S174 and S171 — it escalates dispatch exceptions, which the sidebar used to hide.',
+    actor: {
+      ...base,
+      user: 'security.officer',
+      displayName: 'Security Officer',
+      roles: 'SECURITY_OFFICER',
     },
   },
   {
     label: 'Facilities manager',
     detail: 'IFIMP, which has no dashboard screens yet — expect the no-programme page.',
     actor: {
+      ...base,
       user: 'facilities.manager',
       displayName: 'Facilities Manager',
       roles: 'FACILITIES_MANAGER',
-      sites: 'CLET-HQ',
-      programmes: '',
     },
   },
   {
     label: 'SFL administrator',
-    detail: 'Every programme, which is what a superadmin is for.',
-    actor: {
-      user: 'sfl.admin',
-      displayName: 'SFL Administrator',
-      roles: 'SFL_ADMIN',
-      sites: 'CLET-HQ',
-      programmes: '',
-    },
+    detail: 'Every programme and every system, which is what a superadmin is for.',
+    actor: { ...base, user: 'sfl.admin', displayName: 'SFL Administrator', roles: 'SFL_ADMIN' },
   },
 ];
 
@@ -104,10 +113,16 @@ export const ActorSwitcher = ({ open, onClose }: ActorSwitcherProps) => {
     roles: stored?.roles ?? sflActor.roles,
     sites: stored?.sites ?? sflActor.sites,
     programmes: stored?.programmes ?? '',
+    systems: stored?.systems ?? '',
   });
 
   const set = <K extends keyof ActorOverride>(key: K, value: ActorOverride[K]) =>
     setDraft((current) => ({ ...current, [key]: value }));
+
+  const systemsHint =
+    'Optional override of ' +
+    allSystems.map((code) => code + ' ' + systems[code].label).join(', ') +
+    '. Blank derives them from the roles.';
 
   const apply = () => {
     writeActorOverride(draft);
@@ -186,6 +201,13 @@ export const ActorSwitcher = ({ open, onClose }: ActorSwitcherProps) => {
         />
       </div>
 
+      <TextInput
+        label="Systems"
+        value={draft.systems}
+        onChange={(value) => set('systems', value)}
+        helperText={systemsHint}
+      />
+
       <Alert variant="info">
         This changes what the dashboard <strong>asks for</strong>, not what it is allowed to have. Every
         service authorises each call from the headers it receives, so an actor without the permission
@@ -206,9 +228,10 @@ export const ActorSwitcher = ({ open, onClose }: ActorSwitcherProps) => {
       )}
 
       <p className="text-theme-xs text-gray-500">
-        Entitlement is recomputed on reload. The four programmes are{' '}
-        {allProgrammes.map((code) => `${code} (${programmes[code].label})`).join(', ')} — and only
-        those with screens built can be opened.
+        Entitlement is recomputed on reload, at both grains. The four programmes are{' '}
+        {allProgrammes.map((code) => code + ' (' + programmes[code].label + ')').join(', ')}; only{' '}
+        {allSystems.join(', ')} have screens, so a role entitled to anything else lands on the
+        no-programme page.
       </p>
     </FormDialog>
   );

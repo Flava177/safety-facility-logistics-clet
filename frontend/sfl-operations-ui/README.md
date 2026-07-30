@@ -92,9 +92,19 @@ npm run dev
 The account avatar in the top bar carries a **Change actor** entry in development builds. It sends
 different `X-SFL-*` headers, stores them for the session and reloads.
 
-Use it to check what ADR 0005 promises: pick the driver preset and the emergency section leaves the
-sidebar; pick the facilities manager and you land on the no-programme page, because IFIMP has no
-dashboard screens yet. The fleet service will also refuse a driver's dashboard read with
+Use it to check what ADR 0005 promises, at both grains:
+
+| Preset | What should happen |
+| --- | --- |
+| Fleet manager | All five FTLMP groups. No emergency. |
+| **Driver** | Fleet and fuel. **Courier & dispatch disappears** — a driver does not run the mailroom. |
+| **Mailroom officer** | **Courier & dispatch only.** Same programme as the driver, the opposite half of it. |
+| Emergency coordinator | Emergency notifications only. |
+| Security officer | Courier & dispatch *and* emergency — it escalates dispatch exceptions. |
+| Facilities manager | The no-programme page, because IFIMP has no screens yet. |
+
+The driver and mailroom officer are the pair worth trying: both are FTLMP, and programme scoping alone
+could not tell them apart. The fleet service will also refuse a driver's dashboard read with
 `FLEET_UNAUTHORIZED_SCOPE` — navigation scoping is a usability control, and the service is the
 enforcement point.
 

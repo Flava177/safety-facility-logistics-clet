@@ -3,7 +3,8 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
 import { Spinner } from 'shared/components/DataState';
 import { NotifierProvider } from 'shared/components/Notifier';
 import AppShell from 'shared/layout/AppShell';
-import RequireProgramme, { NoProgrammePage } from 'shared/layout/RequireProgramme';
+import RequireEntitlement, { NoProgrammePage } from 'shared/layout/RequireEntitlement';
+import type { SystemCode } from 'shared/layout/programmes';
 import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
@@ -84,16 +85,20 @@ const PageFallback = () => (
 );
 
 /**
- * A programme's routes, refused when the actor is not entitled to it.
+ * A system's routes, refused when the actor is not entitled to it.
  *
  * The wrapper sits on the parent route so every child inherits it — there is no way to add a screen
- * under `fleet` or `emergency` and forget the check. It is a usability control, not the enforcement
- * point: the services authorise every call regardless. See `RequireProgramme` and ADR 0005.
+ * under `fleet` or `emergency` and forget the check.
+ *
+ * It takes the **system**, not the programme, because the system is the more specific fact and the
+ * programme follows from it. Passing both would let a route claim `dispatch` belongs to SSEMP; the
+ * model owns that mapping instead. It is a usability control, not the enforcement point: the services
+ * authorise every call regardless. See `RequireEntitlement` and ADR 0005.
  */
-const ProgrammeRoutes = ({ programme }: { programme: 'IFIMP' | 'SSEMP' | 'FTLMP' | 'AVAMP' }) => (
-  <RequireProgramme programme={programme}>
+const SystemRoutes = ({ system }: { system: SystemCode }) => (
+  <RequireEntitlement system={system}>
     <Outlet />
-  </RequireProgramme>
+  </RequireEntitlement>
 );
 
 const App = () => {
@@ -112,7 +117,7 @@ const App = () => {
               index
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
             />
-            <Route path="fleet" element={<ProgrammeRoutes programme="FTLMP" />}>
+            <Route path="fleet" element={<SystemRoutes system="S166" />}>
               <Route index element={<FleetDashboardPage />} />
               <Route path="vehicles">
                 <Route index element={<VehicleRegisterPage />} />
@@ -134,7 +139,7 @@ const App = () => {
               <Route path="governance" element={<GovernancePage />} />
               <Route path="integrations" element={<IntegrationHealthPage />} />
             </Route>
-            <Route path="fuel" element={<ProgrammeRoutes programme="FTLMP" />}>
+            <Route path="fuel" element={<SystemRoutes system="S168" />}>
               <Route index element={<FuelDashboardPage />} />
               <Route path="transactions">
                 <Route index element={<FuelTransactionsPage />} />
@@ -156,7 +161,7 @@ const App = () => {
               </Route>
               <Route path="integrations" element={<FuelIntegrationPage />} />
             </Route>
-            <Route path="dispatch" element={<ProgrammeRoutes programme="FTLMP" />}>
+            <Route path="dispatch" element={<SystemRoutes system="S171" />}>
               <Route index element={<DispatchDashboardPage />} />
               <Route path="items">
                 <Route index element={<CourierItemsPage />} />
@@ -174,7 +179,7 @@ const App = () => {
               <Route path="scans" element={<ScanImportsPage />} />
               <Route path="integrations" element={<DispatchIntegrationPage />} />
             </Route>
-            <Route path="emergency" element={<ProgrammeRoutes programme="SSEMP" />}>
+            <Route path="emergency" element={<SystemRoutes system="S174" />}>
               <Route index element={<EmergencyDashboardPage />} />
               <Route path="activations">
                 <Route index element={<ActivationsPage />} />
