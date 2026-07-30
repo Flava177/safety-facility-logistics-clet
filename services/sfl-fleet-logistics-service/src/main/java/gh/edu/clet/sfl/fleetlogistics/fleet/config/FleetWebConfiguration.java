@@ -13,7 +13,14 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
- * Web wiring for the fleet dashboards: CORS, the legacy static dashboards, and the React operations UI.
+ * Web wiring for the fleet dashboards: CORS, the retired per-service pages, and the operations UI.
+ *
+ * <p>{@code /fleet}, {@code /fuel} and {@code /dispatch} used to serve pages of their own. ADR 0006
+ * retired them: two interfaces over one service drift, and these had, so each now redirects to the
+ * dashboard route that replaced it. The redirect is registered only when the bundle is present —
+ * sending somebody to a route that is not being served would replace a working page with a bare 404 —
+ * and without it the request falls through to a notice page that says where the screens went and how
+ * to build them.
  *
  * <p>The SFL Operations dashboards is built with a {@code /ui/} base and copied into {@code static/ui} by the
  * service build, so a single {@code spring-boot:run} serves the API, Swagger and the dashboard from one
@@ -58,12 +65,10 @@ class FleetWebConfiguration {
 
             @Override
             public void addViewControllers(ViewControllerRegistry registry) {
-                registry.addViewController("/fleet").setViewName("forward:/fleet/index.html");
-                registry.addViewController("/fleet/").setViewName("forward:/fleet/index.html");
-                registry.addViewController("/fuel").setViewName("forward:/fuel/index.html");
-                registry.addViewController("/fuel/").setViewName("forward:/fuel/index.html");
-                registry.addViewController("/dispatch").setViewName("forward:/dispatch/index.html");
-                registry.addViewController("/dispatch/").setViewName("forward:/dispatch/index.html");
+                // Retired by ADR 0006. Both spellings of each, because a bookmark may carry either.
+                retire(registry, "/fleet", "/ui/fleet", uiBundled);
+                retire(registry, "/fuel", "/ui/fuel", uiBundled);
+                retire(registry, "/dispatch", "/ui/dispatch", uiBundled);
 
                 if (uiBundled) {
                     // Landing on the service root opens the operations dashboards.
@@ -103,6 +108,20 @@ class FleetWebConfiguration {
                         });
             }
         };
+    }
+
+    /**
+     * Points a retired route at the dashboard route that replaced it.
+     *
+     * <p>A redirect rather than a forward, so the address bar ends up on the route that is really
+     * being served and a refresh does not land back here. When the bundle is absent there is nothing
+     * to redirect to, so the request falls through to the directory's notice page instead — which
+     * explains the move and says how to build the dashboard.
+     */
+    private static void retire(ViewControllerRegistry registry, String from, String to, boolean uiBundled) {
+        String view = uiBundled ? "redirect:" + to : "forward:" + from + "/index.html";
+        registry.addViewController(from).setViewName(view);
+        registry.addViewController(from + "/").setViewName(view);
     }
 
     /** A request for a file (it has an extension in its last segment) rather than a client route. */

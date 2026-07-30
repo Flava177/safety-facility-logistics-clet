@@ -361,8 +361,9 @@ against yet.
 
 The emergency service still serves its own standalone front end at
 `src/main/resources/static/emergency/` (`index.html`, `emergency-console.js`,
-`emergency-console.css` — filenames unchanged because ADR 0006 proposes replacing the whole
-directory with a redirect), reachable at `http://localhost:8095/emergency`. It predates these
+`emergency-console.css`), reachable at `http://localhost:8095/emergency`. **Retired on 30 July 2026 by
+ADR 0006**: the two asset files are deleted and `index.html` is a notice page that redirects to the
+dashboard's emergency screens. It predated these
 dashboards and now duplicates them.
 
 It has been left in place — removing a working page is a decision for whoever owns that service, not

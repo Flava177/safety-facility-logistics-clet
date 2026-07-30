@@ -79,8 +79,9 @@ Local S174 entry points:
 
 - Service: `services/sfl-emergency-notification-service`
 - Port: `8095`
-- Service-served page: `http://localhost:8095/emergency/` — superseded by the dashboard's
-  emergency screens, see [ADR 0006](docs/adr/0006-one-dashboard-and-the-retirement-of-the-per-service-pages.md)
+- `http://localhost:8095/emergency/` redirects to the dashboard's emergency screens. Configure the
+  target with `sfl.dashboard.base-url` — only the fleet service packages the bundle. See
+  [ADR 0006](docs/adr/0006-one-dashboard-and-the-retirement-of-the-per-service-pages.md)
 - Swagger UI: `http://localhost:8095/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8095/v3/api-docs`
 - Health: `http://localhost:8095/actuator/health`

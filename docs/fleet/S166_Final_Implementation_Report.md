@@ -31,7 +31,7 @@ S166 is ready for review and pull request. The implementation covers the five fo
 
 ### UI
 
-- `/fleet/index.html` - Fleet dashboard page served by the service.
+- `/fleet/index.html` - a notice page redirecting to `/ui/fleet`, since ADR 0006.
 
 ### Core API paths
 

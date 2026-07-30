@@ -10,7 +10,7 @@ package `gh.edu.clet.sfl.fleetlogistics.dispatch` inside this deployable (schema
 
 ## S171 review entry points
 
-- Service-served page: `http://localhost:8093/dispatch/` — superseded by the dashboard at `/ui/dispatch`, see ADR 0006
+- `http://localhost:8093/dispatch/` redirects to `/ui/dispatch` (ADR 0006)
 - Swagger UI: `http://localhost:8093/swagger-ui.html` — Dispatch Items, Inbound Mail, Dispatch Manifests,
   Chain of Custody, Dispatch Receipts, Return Reconciliation, Dispatch Exceptions, Dispatch Integrations,
   Dispatch Dashboards and Reports
@@ -23,7 +23,7 @@ package `gh.edu.clet.sfl.fleetlogistics.dispatch` inside this deployable (schema
 
 ## S168_fuel review entry points
 
-- Service-served page: `http://localhost:8093/fuel/` — superseded by the dashboard at `/ui/fuel`, see ADR 0006
+- `http://localhost:8093/fuel/` redirects to `/ui/fuel` (ADR 0006)
 - Swagger: `http://localhost:8093/swagger-ui.html`
 - OpenAPI JSON: `http://localhost:8093/v3/api-docs`
 - Requirements and final report: `docs/fuel/`
@@ -42,7 +42,7 @@ Boundary rules:
 - API inventory: `docs/fleet/S166_API_Inventory.md`
 - Test plan: `docs/fleet/S166_Test_Plan.md`
 - Operations and verification guide: `docs/fleet/S166_Operations_And_Verification_Guide.md`
-- Service-served page: `/fleet/index.html` — superseded by the dashboard at `/ui/fleet`, see ADR 0006
+- `/fleet/` redirects to `/ui/fleet` (ADR 0006)
 - Swagger UI: `/swagger-ui.html`
 - OpenAPI JSON: `/v3/api-docs`
 
