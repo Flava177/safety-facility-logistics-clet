@@ -16,7 +16,7 @@ import org.springframework.stereotype.Service;
 
 /**
  * S171 operational dashboards and CSV reports. Totals are computed from the source operational tables and
- * carry a stale-data flag derived from the configurable dashboard-freshness threshold, so the console can
+ * carry a stale-data flag derived from the configurable dashboard-freshness threshold, so the dashboard can
  * warn when a snapshot is stale. Dashboard totals reconcile to source records.
  */
 @Service

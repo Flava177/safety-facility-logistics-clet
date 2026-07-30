@@ -8,7 +8,7 @@ import org.springframework.web.servlet.config.annotation.CorsRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 
-/** CORS for the emergency console and the SFL front ends, and the console view routes. */
+/** CORS for the emergency dashboard and the SFL front ends, and its view routes. */
 @Configuration(proxyBeanMethods = false)
 class EmergencyWebConfiguration {
 

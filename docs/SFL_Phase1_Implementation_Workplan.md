@@ -163,7 +163,7 @@ For each service: **current state → target packages → aggregates → API-fir
 
 ### 4.1 `sfl-facilities-service` — IFIMP (S152, S153, S159, readiness)
 
-**Current state:** S152 master data (`masterdata`) and S153 faults + work orders (`maintenance`) implemented with domain + application + api + persistence and tests (`FacilitiesMasterDataTest`, `FacilityFaultTest`, `WorkOrderTest`, `WorkOrderServiceTest`); migrations `V1..V4`; Bootstrap ops console. Build **on** this.
+**Current state:** S152 master data (`masterdata`) and S153 faults + work orders (`maintenance`) implemented with domain + application + api + persistence and tests (`FacilitiesMasterDataTest`, `FacilityFaultTest`, `WorkOrderTest`, `WorkOrderServiceTest`); migrations `V1..V4`; Bootstrap facilities dashboard page. Build **on** this.
 
 **Target feature packages:** `masterdata` (S152), `spaces` (S152-05/06), `maintenance` (S153), `preventive` (S153-04), `materials` (S153-05/06), `booking` (S159), `readiness` (hall-readiness saga sink).
 

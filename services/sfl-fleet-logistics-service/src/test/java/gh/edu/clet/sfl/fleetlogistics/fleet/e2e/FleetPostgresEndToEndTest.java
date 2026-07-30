@@ -49,7 +49,7 @@ class FleetPostgresEndToEndTest {
     private JdbcTemplate jdbc;
 
     @Test
-    @DisplayName("Flyway, static console and live dashboard endpoint work against Postgres")
+    @DisplayName("Flyway, the served dashboard page and the live dashboard endpoint work against Postgres")
     void fleet_module_runs_end_to_end_on_postgres() throws Exception {
         Integer migratedTables = jdbc.queryForObject("""
                 select count(*)
@@ -65,12 +65,12 @@ class FleetPostgresEndToEndTest {
         assertThat(migratedTables).isEqualTo(4);
 
         HttpClient client = HttpClient.newHttpClient();
-        String console = client.send(HttpRequest.newBuilder()
+        String page = client.send(HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port + "/fleet/index.html"))
                         .GET()
                         .build(), HttpResponse.BodyHandlers.ofString())
                 .body();
-        assertThat(console).contains("Fleet operational console");
+        assertThat(page).contains("Fleet dashboard");
 
         String dashboard = client.send(HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port

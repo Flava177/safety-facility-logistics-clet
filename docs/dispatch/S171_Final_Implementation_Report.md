@@ -82,7 +82,7 @@ before domain). 18 `sfl.ftlmp.*.v1` events registered in `FleetEventType` and do
 
 ## 7. UI deliverables
 
-Responsive console at `/dispatch/` following the Fleet/Fuel visual language: overview/dashboard, item
+Responsive page at `/dispatch/` following the Fleet/Fuel visual language: overview/dashboard, item
 register, inbound registration + distribution, manifest builder (items, seals, trip link, seal, dispatch),
 chain-of-custody record/view with live gap chips, destination receipt confirmation, return reconciliation,
 exception queue + full manager action set, and integration health + CSV exports. The API is authoritative
@@ -99,7 +99,7 @@ S166 + S168 regression suites remain green in the same run.
 ## 9. Docker/PostgreSQL & Swagger URLs
 
 See `S171_Operations_And_Verification_Guide.md`. Swagger UI `http://localhost:8093/swagger-ui.html`;
-OpenAPI `http://localhost:8093/v3/api-docs`; console `http://localhost:8093/dispatch/`.
+OpenAPI `http://localhost:8093/v3/api-docs`; dashboard `http://localhost:8093/ui/dispatch`.
 
 ## 10. Known limitations & deferred Phase-2 work
 

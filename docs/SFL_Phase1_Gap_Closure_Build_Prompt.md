@@ -187,3 +187,20 @@ deliberate open items and three enhancements — real work, but none of it block
 
 Round 6 last only because it is independent, not because it is optional. The lint config in
 particular has never run in this repository.
+
+---
+
+## Outcome — corrections to the prompt itself
+
+The prompt above is kept verbatim, including where it turned out to be wrong.
+
+- **Round 6.2 said four legacy consoles. There are five**, and the one it missed is the one that
+  matters: `sfl-facilities-service` serves the only user interface for the whole of SFL.IFIMP at
+  `http://localhost:8091/`. It cannot be retired with the other four, because nothing replaces it.
+- **They are not consoles.** Everything a user opens is a dashboard. The word has been retired from
+  page titles, headings, READMEs, code comments and documents.
+
+Both are recorded in
+[ADR 0006 — One dashboard, and the retirement of the per-service pages](adr/0006-one-dashboard-and-the-retirement-of-the-per-service-pages.md),
+which carries the recommendation round 6.2 asked for. Nothing has been deleted.
+

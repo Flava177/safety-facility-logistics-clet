@@ -56,7 +56,7 @@ class FleetEvidenceController {
     /**
       * Evidence attached to one record.
       *
-      * <p>Closes gap 5, which the register called the main usability cost in the whole console: with
+      * <p>Closes gap 5, which the register called the main usability cost in the whole dashboard: with
       * no search, every closure dialog asked an operator to paste a reference id from somewhere else.
       * A trip or workflow closure can offer a picker now.
       */

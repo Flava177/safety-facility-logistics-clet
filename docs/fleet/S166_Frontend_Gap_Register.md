@@ -102,7 +102,7 @@ Built and walked through against the running service on 29 July 2026.
   independently on the same screen.
 - **Evidence picker** — `GET /evidence?relatedRecordType=&relatedRecordId=`, wired into the
   workflow-closure dialog as `EvidenceSelect`. This is the gap this register called the main usability
-  cost in the whole console. A workflow item already carries the record it is about, so the picker
+  cost in the whole dashboard. A workflow item already carries the record it is about, so the picker
   needs no new convention: it lists what is filed against that record, and keeps a text field for a
   reference held elsewhere, because a site-wide certificate closes a dozen items and belongs to none of
   them. Confirmed live — two evidence records offered by file name and type, and the close attempt
@@ -198,7 +198,7 @@ search.
 
 **UI position:** Evidence & audit is built around lookup by reference ID, with the limitation stated
 on the page. Closure dialogs therefore ask the operator to paste an evidence reference ID rather
-than pick from a list, which is the main usability cost in the whole console.
+than pick from a list, which is the main usability cost in the whole dashboard.
 
 **Ask:** add `GET /evidence` with at least `relatedRecordType` + `relatedRecordId` filters. That
 alone would let trip and workflow closure dialogs offer a picker.
@@ -241,7 +241,7 @@ Inventory I1 lists `POST /api/v1/integrations/webhooks/telematics`; the implemen
 projection and says so. Replay works, but the operator must already hold the message identifier —
 there is no way to find a dead-lettered message from the UI.
 
-**Ask:** implement I3. Without it, dead-letter replay is not operable from the console.
+**Ask:** implement I3. Without it, dead-letter replay is not operable from the dashboard.
 
 ---
 
