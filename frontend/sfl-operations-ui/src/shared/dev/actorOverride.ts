@@ -54,6 +54,13 @@ export interface ActorOverride {
    * one programme's screens without inventing a role list to justify it.
    */
   programmes: string;
+  /**
+   * System codes, mirroring `VITE_SFL_SYSTEMS`.
+   *
+   * The finer grain. Empty derives from the roles, which is what a real sign-in does — the presets
+   * leave it blank for that reason and narrow by role instead.
+   */
+  systems: string;
 }
 
 const isRecord = (value: unknown): value is Record<string, unknown> =>
@@ -86,6 +93,7 @@ export const readActorOverride = (): ActorOverride | undefined => {
       roles: text(parsed.roles),
       sites: text(parsed.sites),
       programmes: text(parsed.programmes),
+      systems: text(parsed.systems),
     };
   } catch {
     // Storage can be unavailable (private mode, a blocked origin) and the entry can be malformed.

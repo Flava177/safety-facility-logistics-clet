@@ -1,5 +1,5 @@
 import { IconName } from 'shared/components/Icon';
-import { ProgrammeCode, entitledTo } from './programmes';
+import { ProgrammeCode, SystemCode, entitledTo, entitledToSystem } from './programmes';
 
 /**
  * Dashboard navigation.
@@ -32,6 +32,13 @@ export interface NavSection {
   heading: string;
   /** Which of the four SFL programmes this section belongs to. Drives what a user sees. */
   programme: ProgrammeCode;
+  /**
+   * Which system it belongs to — the finer half of the same decision.
+   *
+   * Programme alone is not enough inside FTLMP, where three systems share one deployable: without
+   * this, a mailroom officer sees the fleet register and a driver sees the courier manifests.
+   */
+  system: SystemCode;
   items: NavItem[];
 }
 
@@ -119,6 +126,7 @@ export const navSections: NavSection[] = [
   {
     heading: 'Operations',
     programme: 'FTLMP',
+    system: 'S166',
     items: [
       {
         label: 'Dashboard',
@@ -145,6 +153,7 @@ export const navSections: NavSection[] = [
   {
     heading: 'Registers',
     programme: 'FTLMP',
+    system: 'S166',
     items: [
       {
         label: 'Vehicle register',
@@ -165,6 +174,7 @@ export const navSections: NavSection[] = [
   {
     heading: 'Assurance',
     programme: 'FTLMP',
+    system: 'S166',
     items: [
       {
         label: 'Compliance & service',
@@ -189,6 +199,7 @@ export const navSections: NavSection[] = [
   {
     heading: 'Fuel & driver logbooks',
     programme: 'FTLMP',
+    system: 'S168',
     items: [
       {
         label: 'Fuel dashboard',
@@ -247,6 +258,7 @@ export const navSections: NavSection[] = [
   {
     heading: 'Courier & dispatch',
     programme: 'FTLMP',
+    system: 'S171',
     items: [
       {
         label: 'Dispatch dashboard',
@@ -301,6 +313,7 @@ export const navSections: NavSection[] = [
     // operator or emergency coordinator does. ADR 0005.
     heading: 'Emergency notifications',
     programme: 'SSEMP',
+    system: 'S174',
     items: [
       {
         label: 'Emergency dashboard',
@@ -365,7 +378,9 @@ export const directorate = {
 
 /** The navigation sections this actor is entitled to, in declared order. */
 export const entitledSections = (): NavSection[] =>
-  navSections.filter((section) => entitledTo(section.programme));
+  navSections.filter(
+    (section) => entitledTo(section.programme) && entitledToSystem(section.system),
+  );
 
 /**
  * Where an actor lands when they open the application.

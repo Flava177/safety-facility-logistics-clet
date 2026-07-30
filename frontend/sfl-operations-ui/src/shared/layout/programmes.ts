@@ -2,11 +2,15 @@ import { sflActor } from 'shared/api/config';
 import { readActorOverride } from 'shared/dev/actorOverride';
 import {
   ProgrammeCode,
+  SystemCode,
   allProgrammes,
+  allSystems,
   isCrossProgramme,
   parseList,
   portalLabelFor,
   programmesFor,
+  systems,
+  systemsFor,
 } from './programmeModel';
 
 /**
@@ -28,8 +32,8 @@ import {
  * the enforcement point.
  */
 
-export type { ProgrammeCode };
-export { allProgrammes, programmes } from './programmeModel';
+export type { ProgrammeCode, SystemCode };
+export { allProgrammes, allSystems, programmes, systems } from './programmeModel';
 
 export const actorRoles: string[] = parseList(sflActor.roles);
 
@@ -56,5 +60,30 @@ export const actorProgrammes: ProgrammeCode[] = (() => {
 })();
 
 export const entitledTo = (code: ProgrammeCode): boolean => actorProgrammes.includes(code);
+
+/**
+ * The systems this actor may see, within the programmes they are entitled to.
+ *
+ * The finer half of the rule. FTLMP is three systems in one deployable, so programme entitlement
+ * alone shows a mailroom officer the whole fleet register and a driver the courier manifests — screens
+ * they can open and cannot use, because the service refuses every call behind them.
+ *
+ * `VITE_SFL_SYSTEMS` overrides it outright, the same way `VITE_SFL_PROGRAMMES` overrides the coarser
+ * grain: it is how to look at one system's screens without inventing a role list to justify it.
+ */
+export const actorSystems: SystemCode[] = (() => {
+  const requested =
+    readActorOverride()?.systems || (import.meta.env.VITE_SFL_SYSTEMS as string | undefined) || '';
+  const override = parseList(requested).filter((code): code is SystemCode =>
+    allSystems.includes(code as SystemCode),
+  );
+  if (override.length > 0) {
+    return override;
+  }
+  // Never wider than the programme entitlement, whatever the roles claim about systems.
+  return systemsFor(actorRoles).filter((code) => actorProgrammes.includes(systems[code].programme));
+})();
+
+export const entitledToSystem = (code: SystemCode): boolean => actorSystems.includes(code);
 
 export const portalLabel = (): string => portalLabelFor(actorProgrammes);
