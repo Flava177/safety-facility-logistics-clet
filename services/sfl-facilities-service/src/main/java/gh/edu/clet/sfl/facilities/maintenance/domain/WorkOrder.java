@@ -63,6 +63,8 @@ public record WorkOrder(
         Instant heldAt,
         long totalHeldSeconds,
         Instant slaDueAt,
+        Instant responseDueAt,
+        Instant responseEscalatedAt,
         int escalationLevel,
         Instant escalatedAt,
         int evidenceRequired,
@@ -116,12 +118,12 @@ public record WorkOrder(
 
     /** A corrective order raised against a reported fault. */
     public static WorkOrder fromFault(UUID id, String workOrderNumber, FacilityFault fault, Instant slaDue,
-            int evidenceRequired, String actorId, Instant at, SourceChannel channel, String correlationId) {
+            Instant responseDue, int evidenceRequired, String actorId, Instant at, SourceChannel channel, String correlationId) {
         Objects.requireNonNull(fault, "fault is required");
         return new WorkOrder(id, workOrderNumber, WorkOrderType.CORRECTIVE, fault.id(), fault.faultNumber(), null,
                 fault.siteCode(), fault.roomId(), fault.locationCode(), fault.assetId(), fault.title(),
                 fault.description(), fault.priority(), WorkOrderStatus.OPEN, null, null, null, null, null, null,
-                0L, slaDue, 0, null, evidenceRequired, null, null, null, null, null, null,
+                0L, slaDue, responseDue, null, 0, null, evidenceRequired, null, null, null, null, null, null,
                 RecordLifecycleStatus.ACTIVE,
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
@@ -129,11 +131,11 @@ public record WorkOrder(
     /** A planned order generated from a preventive schedule. */
     public static WorkOrder planned(UUID id, String workOrderNumber, WorkOrderType type, UUID scheduleId,
             String siteCode, UUID roomId, String locationCode, UUID assetId, String title, String description,
-            FaultPriority priority, Instant slaDue, int evidenceRequired, String actorId, Instant at,
+            FaultPriority priority, Instant slaDue, Instant responseDue, int evidenceRequired, String actorId, Instant at,
             SourceChannel channel, String correlationId) {
         return new WorkOrder(id, workOrderNumber, type, null, null, scheduleId, siteCode, roomId, locationCode,
                 assetId, title, description, priority, WorkOrderStatus.OPEN, null, null, null, null, null, null,
-                0L, slaDue, 0, null, evidenceRequired, null, null, null, null, null, null,
+                0L, slaDue, responseDue, null, 0, null, evidenceRequired, null, null, null, null, null, null,
                 RecordLifecycleStatus.ACTIVE,
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
@@ -248,7 +250,8 @@ public record WorkOrder(
         RecordLifecycleStatus next = lifecycleStatus.transitionTo(target, "Work order");
         return new WorkOrder(id, workOrderNumber, workOrderType, facilityFaultId, faultNumber, scheduleId,
                 siteCode, roomId, locationCode, assetId, title, description, priority, status, assignedTo,
-                vendorId, assignedAt, startedAt, holdReason, heldAt, totalHeldSeconds, slaDueAt, escalationLevel,
+                vendorId, assignedAt, startedAt, holdReason, heldAt, totalHeldSeconds, slaDueAt,
+                responseDueAt, responseEscalatedAt, escalationLevel,
                 escalatedAt, evidenceRequired, completedAt, completionNotes, closureNotes, closedBy, closedAt,
                 cancellationReason, next, metadata.modifiedBy(actorId, at, channel, correlationId));
     }
@@ -273,9 +276,47 @@ public record WorkOrder(
     }
 
     /**
+     * Whether nobody has picked this up in time.
+     *
+     * <p>Started is the signal, not assigned. Assigning work to a technician who never opens it is
+     * exactly the failure a response deadline exists to catch, so an assignment that is never acted on
+     * still breaches — otherwise the ladder could be silenced by handing the job to somebody.
+     *
+     * <p>A completed, closed or cancelled order is past caring, and one already raised is not raised
+     * again: the sweep is at-least-once, and the fastest way to make an escalation ignored is to send
+     * it every fifteen minutes.
+     */
+    public boolean responseBreached(Instant now) {
+        return responseDueAt != null
+                && responseEscalatedAt == null
+                && startedAt == null
+                && status.isOpen()
+                && now.isAfter(responseDueAt);
+    }
+
+    /**
+     * Records that the response breach was raised. Deliberately not a status change.
+     *
+     * <p>The order is still OPEN or ASSIGNED and still needs exactly the same work; what changed is
+     * that somebody has now been told nobody started it. Moving it to a state would make the ladder's
+     * bookkeeping look like a fact about the job, and the resolution deadline — a different clock,
+     * with a different recipient — still has to run its own course.
+     */
+    public WorkOrder withResponseEscalated(String actorId, Instant at, SourceChannel channel,
+            String correlationId) {
+        return new WorkOrder(id, workOrderNumber, workOrderType, facilityFaultId, faultNumber, scheduleId,
+                siteCode, roomId, locationCode, assetId, title, description, priority, status, assignedTo,
+                vendorId, assignedAt, startedAt, holdReason, heldAt, totalHeldSeconds, slaDueAt,
+                responseDueAt, at, escalationLevel, escalatedAt, evidenceRequired, completedAt, completionNotes,
+                closureNotes, closedBy, closedAt, cancellationReason, lifecycleStatus,
+                metadata.modifiedBy(actorId, at, channel, correlationId));
+    }
+
+    /**
      * One place the two dozen unchanged components are carried, so each transition above reads as the
      * rule it enforces rather than as a wall of positional arguments. {@code slaDueAt} is deliberately
-     * not a parameter: nothing may move a deadline once it is set.
+     * not a parameter: nothing may move a deadline once it is set. {@code responseDueAt} is carried for
+     * the same reason, and {@code responseEscalatedAt} because it has its own transition above.
      */
     private WorkOrder copy(WorkOrderStatus newStatus, String newAssignee, UUID newVendor, Instant newAssignedAt,
             Instant newStartedAt, String newHoldReason, Instant newHeldAt, long newHeldSeconds,
@@ -285,7 +326,7 @@ public record WorkOrder(
         return new WorkOrder(id, workOrderNumber, workOrderType, facilityFaultId, faultNumber, scheduleId,
                 siteCode, roomId, locationCode, assetId, title, description, priority, newStatus, newAssignee,
                 newVendor, newAssignedAt, newStartedAt, newHoldReason, newHeldAt, newHeldSeconds, slaDueAt,
-                newEscalationLevel, newEscalatedAt, evidenceRequired, newCompletedAt, newCompletionNotes,
+                responseDueAt, responseEscalatedAt, newEscalationLevel, newEscalatedAt, evidenceRequired, newCompletedAt, newCompletionNotes,
                 newClosureNotes, newClosedBy, newClosedAt, newCancellationReason, lifecycleStatus,
                 metadata.modifiedBy(actorId, at, channel, correlationId));
     }

@@ -415,12 +415,65 @@ class S153MandatoryScenariosTest {
             // configured role" — the level moving is the first half, and for three passes the
             // assertions stopped there while the event went to an outbox nothing drained.
             WorkOrder escalated = maintenance.findWorkOrder(order.id()).orElseThrow();
-            assertThat(notifications.about(escalated.workOrderNumber()))
+            assertThat(notifications.about(escalated.workOrderNumber(),
+                    NotificationPort.NotificationKind.WORK_ESCALATED))
+                    .singleElement()
+                    .satisfies(sent -> assertThat(sent.context()).containsEntry("escalationLevel", "1"));
+
+            // Work nobody ever started, now past both deadlines, breaches both — and they are two
+            // different facts about it, so they are two notifications rather than one merged one.
+            assertThat(notifications.about(escalated.workOrderNumber(),
+                    NotificationPort.NotificationKind.RESPONSE_OVERDUE)).hasSize(1);
+        }
+
+        @Test
+        void nobody_picking_the_work_up_is_its_own_breach_with_its_own_recipient() {
+            // maintenance.sla.response.* has been read, stored and exposed since S153 shipped and
+            // nothing used it: only the resolution deadline escalated, so "nobody has started this"
+            // and "nobody has finished this" were the same event. They are not the same event.
+            configuration.set("maintenance.sla.response.high", "PT30M");
+            configuration.set("maintenance.sla.resolution.high", "PT8H");
+            WorkOrder order = createWorkOrder(triage(report(FaultPriority.HIGH), FaultPriority.HIGH));
+
+            clock.advance(Duration.ofHours(1));
+            MaintenanceEscalationService.EscalationSweep sweep = escalation.sweep(system);
+
+            // Past the response deadline, nowhere near the resolution one.
+            assertThat(sweep.responseBreaches()).isEqualTo(1);
+            assertThat(sweep.workOrdersEscalated()).isZero();
+            assertThat(notifications.about(order.workOrderNumber()))
                     .singleElement()
                     .satisfies(sent -> {
-                        assertThat(sent.kind()).isEqualTo(NotificationPort.NotificationKind.WORK_ESCALATED);
-                        assertThat(sent.context()).containsEntry("escalationLevel", "1");
+                        assertThat(sent.kind()).isEqualTo(NotificationPort.NotificationKind.RESPONSE_OVERDUE);
+                        assertThat(sent.recipient()).isEqualTo(SflRole.IFIMP_MAINTENANCE_SUPERVISOR.name());
                     });
+
+            // Idempotent: the sweep is at-least-once, and re-raising every fifteen minutes for as long
+            // as a job sits untouched is exactly how an escalation gets muted.
+            notifications.clear();
+            clock.advance(Duration.ofHours(1));
+            assertThat(escalation.sweep(system).responseBreaches()).isZero();
+            assertThat(notifications.sent()).isEmpty();
+        }
+
+        @Test
+        void starting_the_work_answers_the_response_deadline() {
+            configuration.set("maintenance.sla.response.high", "PT30M");
+            configuration.set("maintenance.sla.resolution.high", "PT8H");
+            WorkOrder order = createWorkOrder(triage(report(FaultPriority.HIGH), FaultPriority.HIGH));
+            // A work order has to be assigned before it can start; that is the state machine, and the
+            // point of the response deadline is that assigning alone does not answer it.
+            workOrders.assign(new MaintenanceCommands.AssignWorkOrder(order.id(), "technician", null, null,
+                    supervisor, SourceChannel.WEB));
+            workOrders.transition(new MaintenanceCommands.TransitionWorkOrder(order.id(),
+                    MaintenanceCommands.TransitionWorkOrder.Transition.START, null, null, technician,
+                    SourceChannel.WEB));
+
+            clock.advance(Duration.ofHours(1));
+
+            // Someone picked it up, so there is nothing to chase — even though the deadline has passed.
+            assertThat(escalation.sweep(system).responseBreaches()).isZero();
+            assertThat(notifications.sent()).isEmpty();
         }
 
         @Test
@@ -435,7 +488,8 @@ class S153MandatoryScenariosTest {
             escalation.sweep(system);
 
             WorkOrder escalated = maintenance.findWorkOrder(order.id()).orElseThrow();
-            assertThat(notifications.about(escalated.workOrderNumber()))
+            assertThat(notifications.about(escalated.workOrderNumber(),
+                    NotificationPort.NotificationKind.WORK_ESCALATED))
                     .singleElement()
                     .satisfies(sent -> {
                         assertThat(sent.recipientType()).isEqualTo("ROLE");

@@ -12,14 +12,17 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
+import org.junit.jupiter.api.condition.EnabledIf;
 
-/** Postgres-backed end-to-end verification for the fleet S166 module. */
-@Testcontainers(disabledWithoutDocker = true)
+/**
+ * Postgres-backed end-to-end verification for the fleet S166 module.
+ *
+ * <p>Gated on {@link FleetPostgresSupport#databaseAvailable()} like every other suite in this package.
+ * It was the last class still gated on {@code @Testcontainers(disabledWithoutDocker = true)}, which
+ * asks whether the <em>Java</em> Docker client can reach the daemon — a question that answers "no" on
+ * Windows even while the daemon runs and {@code docker ps} works. So this test skipped on every run
+ * here, and a skip reads as a pass in a summary line.
+ */
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT, properties = {
         "sfl.security.enabled=false",
         "sfl.fleet.scheduling.sla.enabled=false",
@@ -27,20 +30,9 @@ import org.testcontainers.junit.jupiter.Testcontainers;
         "sfl.fleet.scheduling.compliance.enabled=false",
         "sfl.fleet.messaging.transport=local"
 })
-class FleetPostgresEndToEndTest {
-
-    @Container
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("sfl__fleet_vehicle_service_e2e")
-            .withUsername("sfl")
-            .withPassword("sfl");
-
-    @DynamicPropertySource
-    static void databaseProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
-    }
+@EnabledIf(value = "gh.edu.clet.sfl.fleetlogistics.fleet.e2e.FleetPostgresSupport#databaseAvailable",
+        disabledReason = "No PostgreSQL available; see FleetPostgresSupport.unavailableReason()")
+class FleetPostgresEndToEndTest extends FleetPostgresSupport {
 
     @LocalServerPort
     private int port;

@@ -119,7 +119,40 @@ public class MaintenanceEscalationService {
             }
         }
 
-        return new EscalationSweep(now, faultsEscalated, workOrdersEscalated);
+        int responseBreaches = sweepResponseBreaches(systemActor, now);
+        return new EscalationSweep(now, faultsEscalated, workOrdersEscalated, responseBreaches);
+    }
+
+    /**
+     * The second track: work nobody has picked up.
+     *
+     * <p>{@code maintenance.sla.response.*} has been read, stored and exposed since S153 shipped, and
+     * nothing used it — only the resolution deadline escalated. So "nobody has started this" and
+     * "nobody has finished this" produced the same event, to the same person, which is precisely the
+     * distinction an SLA ladder exists to draw. A job untouched for three hours needs the supervisor
+     * who can reassign it; a job being worked on that is running late needs a different conversation.
+     *
+     * <p>A separate track rather than a second condition inside the resolution loop, and the gap report
+     * asked for it that way for a reason: the two have different deadlines, different recipients and
+     * different idempotence markers, and folding them together would make one of the two impossible to
+     * tune without disturbing the other.
+     */
+    private int sweepResponseBreaches(ActorContext systemActor, Instant now) {
+        int raised = 0;
+        for (WorkOrder order : maintenance.findResponseBreaches(now, SWEEP_LIMIT)) {
+            WorkOrder marked = maintenance.saveWorkOrder(order.withResponseEscalated(systemActor.actorId(), now,
+                    SourceChannel.SCHEDULER, systemActor.correlationId()));
+            Map<String, String> context = Map.of(
+                    "workOrderNumber", marked.workOrderNumber(),
+                    "priority", String.valueOf(marked.priority()),
+                    "assigned", Boolean.toString(marked.assignedTo() != null));
+            // Always the supervisor's desk, never the assignee. The assignee is by definition the person
+            // who has not acted; telling them again is what they have already not responded to.
+            notifications.notifyRole(marked.siteCode(), SflRole.IFIMP_MAINTENANCE_SUPERVISOR,
+                    NotificationKind.RESPONSE_OVERDUE, marked.workOrderNumber(), context);
+            raised++;
+        }
+        return raised;
     }
 
     /**
@@ -144,10 +177,11 @@ public class MaintenanceEscalationService {
     }
 
     /** What one sweep did. */
-    public record EscalationSweep(Instant evaluatedAt, int faultsEscalated, int workOrdersEscalated) {
+    public record EscalationSweep(Instant evaluatedAt, int faultsEscalated, int workOrdersEscalated,
+            int responseBreaches) {
 
         public int total() {
-            return faultsEscalated + workOrdersEscalated;
+            return faultsEscalated + workOrdersEscalated + responseBreaches;
         }
     }
 

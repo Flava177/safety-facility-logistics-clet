@@ -125,6 +125,11 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
     }
 
     @Override
+    public List<WorkOrder> findResponseBreaches(Instant asOf, int limit) {
+        return workOrders.findResponseBreaches(asOf, page(limit)).stream().map(WorkOrderRecord::toDomain).toList();
+    }
+
+    @Override
     public String nextWorkOrderNumber(String siteCode) {
         return "WO-" + normalize(siteCode) + "-" + String.format("%06d", workOrders.nextWorkOrderSequence());
     }
