@@ -32,8 +32,15 @@ import {
  *   and no fleet register. Programme scoping alone could not tell them apart.
  * - *Security officer* spans both grains, and is the one this work fixed — it can escalate a dispatch
  *   exception, and the sidebar used to hide dispatch from it entirely.
- * - *Facilities manager* is expected to land on the no-programme page, deliberately: IFIMP has no
- *   dashboard screens yet (ADR 0006), so it should be stated rather than papered over.
+ * - *Facilities manager* lands on the facilities dashboard. That line used to say "expect the
+ *   no-programme page, IFIMP has no dashboard screens yet"; S152 and S153 shipped fifteen and nine
+ *   screens respectively, so the note was corrected rather than left to mislead the next reader.
+ *
+ * The second group are **personal landings**, added with the role portals. Each one exists to answer
+ * a question a permission cannot: `FLEET_DRIVER` holds eight permissions and every one is also held
+ * by `FLEET_MANAGER`, so the only way to see a driver's landing is to be a driver and nothing else.
+ * Every persona preset therefore carries exactly one role — adding a broader one is precisely what
+ * `personas.ts` tests for, and doing it here by accident would silently show the operator view.
  *
  * Every preset leaves `systems` blank. Narrowing by role is what a real sign-in does; typing system
  * codes is the escape hatch for looking at one system without a role that justifies it.
@@ -85,12 +92,70 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Facilities manager',
-    detail: 'IFIMP, which has no dashboard screens yet — expect the no-programme page.',
+    detail: 'IFIMP. Lands on the facilities dashboard; the operator view, not a personal one.',
     actor: {
       ...base,
       user: 'facilities.manager',
       displayName: 'Facilities Manager',
       roles: 'FACILITIES_MANAGER',
+    },
+  },
+  // ── Personal landings ─────────────────────────────────────────────────────────────────────────
+  // One role each, deliberately. A second role that outranks it flips the actor back to the operator
+  // view — which is the rule `personas.ts` encodes and the thing these presets exist to demonstrate.
+  {
+    label: 'Requester (room / host)',
+    detail: 'Lands on "My requests". Sees only the faults they reported — narrowed by the service.',
+    actor: {
+      ...base,
+      user: 'akosua.requester',
+      displayName: 'Akosua Requester',
+      roles: 'IFIMP_REQUESTER',
+    },
+  },
+  {
+    label: 'Technician (in-house)',
+    detail: 'Lands on "My work queue". Only jobs assigned to them, refused by id otherwise.',
+    actor: {
+      ...base,
+      user: 'yaw.technician',
+      displayName: 'Yaw Technician',
+      roles: 'IFIMP_TECHNICIAN',
+    },
+  },
+  {
+    label: 'Vendor technician',
+    detail: 'Same queue, contractor scope. Two vendors see two disjoint queues — S153 narrows per person.',
+    actor: {
+      ...base,
+      user: 'kofi.vendor',
+      displayName: 'Kofi (Contract)',
+      roles: 'VENDOR_TECHNICIAN',
+    },
+  },
+  {
+    label: 'Centre manager',
+    detail: 'Lands on "Centre receipts" — which states on the page that it cannot narrow to a centre.',
+    actor: {
+      ...base,
+      user: 'adjoa.centre',
+      displayName: 'Adjoa Centre Manager',
+      roles: 'CENTRE_MANAGER',
+    },
+  },
+  {
+    label: 'Auditor',
+    detail: 'Cross-programme by design. Lands on assurance — four chains, deliberately not merged.',
+    actor: { ...base, user: 'nana.auditor', displayName: 'Nana Auditor', roles: 'AUDITOR' },
+  },
+  {
+    label: 'Compliance officer',
+    detail: 'Assurance too, plus the integrity check a facilities director deliberately does not hold.',
+    actor: {
+      ...base,
+      user: 'esi.compliance',
+      displayName: 'Esi Compliance',
+      roles: 'COMPLIANCE_OFFICER',
     },
   },
   {
