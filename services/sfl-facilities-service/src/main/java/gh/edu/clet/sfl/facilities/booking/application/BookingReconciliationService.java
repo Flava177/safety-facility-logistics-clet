@@ -111,12 +111,12 @@ public class BookingReconciliationService {
                 cleared++;
                 audit.record(actor, SourceChannel.SCHEDULER, AuditAction.BOOKING_READINESS_HOLD_CLEARED,
                         "Booking", updated.id().toString(), updated.siteCode(), candidate, updated);
-                publish("ifimp.booking.readiness-hold-cleared", updated, actor);
+                publish("sfl.ifimp.booking-readiness-hold-cleared.v1", updated, actor);
             } else {
                 placed++;
                 audit.record(actor, SourceChannel.SCHEDULER, AuditAction.BOOKING_READINESS_HOLD_PLACED,
                         "Booking", updated.id().toString(), updated.siteCode(), candidate, updated);
-                publish("ifimp.booking.readiness-hold-placed", updated, actor);
+                publish("sfl.ifimp.booking-readiness-hold-placed.v1", updated, actor);
             }
         }
         return new ReadinessSweep(placed, cleared, live.size(), at);
@@ -178,7 +178,7 @@ public class BookingReconciliationService {
 
             audit.record(actor, SourceChannel.SCHEDULER, AuditAction.BOOKING_NO_SHOW_RECORDED, "Booking",
                     marked.id().toString(), marked.siteCode(), candidate, record);
-            publish("ifimp.booking.no-show", marked, actor);
+            publish("sfl.ifimp.booking-no-show.v1", marked, actor);
             recorded++;
         }
         return new NoShowSweep(recorded, candidates.size(), at);

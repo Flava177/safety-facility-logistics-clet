@@ -45,3 +45,19 @@ sfl:
     owns: "Facilities service for S152, S153 and S159"
   security:
     enabled: ${SFL_SECURITY_ENABLED:false}
+  facilities:
+    messaging:
+      # `local` records delivery without a broker and is the single-node default. Any environment with a
+      # consumer must set `rabbitmq` deliberately — selecting it without a RabbitTemplate fails at
+      # startup rather than dropping events quietly, which is the failure this drainer exists to end.
+      transport: ${SFL_FACILITIES_EVENT_TRANSPORT:local}
+      exchange: ${SFL_FACILITIES_EVENT_EXCHANGE:sfl.events}
+      drainer-enabled: ${SFL_FACILITIES_DRAINER_ENABLED:true}
+      drain-delay: PT10S
+      drain-initial-delay: PT15S
+      batch-size: 100
+      max-attempts: 5
+      # Exponential from the base, capped: a broker outage must not turn into a second incident caused
+      # by retrying through it, and must not schedule the next attempt beyond the end of the week.
+      retry-base: PT10S
+      retry-cap: PT1H

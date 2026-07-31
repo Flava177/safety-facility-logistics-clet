@@ -128,7 +128,7 @@ public class FacilityFaultService {
         FacilityFault saved = reconcileReadiness(maintenance.saveFault(fault), actor, command.channel());
         audit.record(actor, command.channel(), AuditAction.FAULT_REPORTED, "FacilityFault",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.facility-fault.reported", saved, actor);
+        publish("sfl.ifimp.facility-fault-reported.v1", saved, actor);
         idempotency.recordResult("report-facility-fault", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), saved.id(), saved.siteCode(),
                 actor.actorId());
@@ -161,7 +161,7 @@ public class FacilityFaultService {
         triaged = reconcileReadiness(triaged, actor, command.channel());
         audit.record(actor, command.channel(), AuditAction.FAULT_TRIAGED, "FacilityFault",
                 triaged.id().toString(), triaged.siteCode(), fault, triaged);
-        publish("ifimp.facility-fault.triaged", triaged, actor);
+        publish("sfl.ifimp.facility-fault-triaged.v1", triaged, actor);
         return triaged;
     }
 
@@ -183,7 +183,7 @@ public class FacilityFaultService {
         dismissed = reconcileReadiness(dismissed, actor, command.channel());
         audit.record(actor, command.channel(), AuditAction.FAULT_DISMISSED, "FacilityFault",
                 dismissed.id().toString(), dismissed.siteCode(), fault, dismissed);
-        publish("ifimp.facility-fault.dismissed", dismissed, actor);
+        publish("sfl.ifimp.facility-fault-dismissed.v1", dismissed, actor);
         return dismissed;
     }
 
@@ -217,7 +217,7 @@ public class FacilityFaultService {
         FacilityFault reconciled = reconcileReadiness(resolved, actor, channel);
         audit.record(actor, channel, AuditAction.FAULT_RESOLVED, "FacilityFault", reconciled.id().toString(),
                 reconciled.siteCode(), fault, reconciled);
-        publish("ifimp.facility-fault.resolved", reconciled, actor);
+        publish("sfl.ifimp.facility-fault-resolved.v1", reconciled, actor);
         return reconciled;
     }
 
@@ -232,7 +232,7 @@ public class FacilityFaultService {
         FacilityFault saved = maintenance.saveFault(escalated);
         audit.record(actor, channel, AuditAction.FAULT_ESCALATED, "FacilityFault", saved.id().toString(),
                 saved.siteCode(), fault, saved);
-        publish("ifimp.facility-fault.escalated", saved, actor);
+        publish("sfl.ifimp.facility-fault-escalated.v1", saved, actor);
         return saved;
     }
 

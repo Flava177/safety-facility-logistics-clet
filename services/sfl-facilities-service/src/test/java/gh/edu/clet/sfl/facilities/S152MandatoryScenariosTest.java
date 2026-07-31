@@ -206,7 +206,7 @@ class S152MandatoryScenariosTest {
 
             assertThat(camera.roomId()).isEqualTo(room.id());
             assertThat(camera.externalReference()).isEqualTo("EXT-1");
-            assertThat(outbox.published("ifimp.device-reference.registered")).isTrue();
+            assertThat(outbox.published("sfl.ifimp.device-reference-registered.v1")).isTrue();
         }
 
         @Test
@@ -550,8 +550,8 @@ class S152MandatoryScenariosTest {
 
             assertThat(audit.actions()).containsExactly(AuditAction.SITE_CREATED, AuditAction.BUILDING_CREATED,
                     AuditAction.FLOOR_CREATED, AuditAction.ROOM_CREATED);
-            assertThat(outbox.eventTypes()).containsExactly("ifimp.site.created", "ifimp.building.created",
-                    "ifimp.floor.created", "ifimp.room.created");
+            assertThat(outbox.eventTypes()).containsExactly("sfl.ifimp.site-created.v1", "sfl.ifimp.building-created.v1",
+                    "sfl.ifimp.floor-created.v1", "sfl.ifimp.room-created.v1");
         }
 
         @Test
@@ -577,7 +577,7 @@ class S152MandatoryScenariosTest {
                     OperatingMode.EXAMINATION, "Bar finals", centreManager, SourceChannel.WEB));
 
             assertThat(audit.recorded(AuditAction.SITE_OPERATING_MODE_CHANGED)).isTrue();
-            assertThat(outbox.published("ifimp.site.operating-mode-changed")).isTrue();
+            assertThat(outbox.published("sfl.ifimp.site-operating-mode-changed.v1")).isTrue();
         }
 
         @Test

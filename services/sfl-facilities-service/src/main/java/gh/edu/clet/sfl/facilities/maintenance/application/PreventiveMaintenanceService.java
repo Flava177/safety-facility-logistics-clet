@@ -111,7 +111,7 @@ public class PreventiveMaintenanceService {
 
         audit.record(actor, command.channel(), AuditAction.PREVENTIVE_SCHEDULE_CREATED,
                 "PreventiveMaintenanceSchedule", schedule.id().toString(), schedule.siteCode(), null, schedule);
-        outbox.record("ifimp.preventive-schedule.created", 1, "PreventiveMaintenanceSchedule", schedule.id(),
+        outbox.record("sfl.ifimp.preventive-schedule-created.v1", 1, "PreventiveMaintenanceSchedule", schedule.id(),
                 schedule.siteCode(), actor.correlationId(), actor.actorId(), schedule);
         idempotency.recordResult("create-preventive-schedule", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), schedule.id(), schedule.siteCode(),
@@ -225,7 +225,7 @@ public class PreventiveMaintenanceService {
 
             audit.record(systemActor, SourceChannel.SCHEDULER, AuditAction.PREVENTIVE_WORK_ORDER_GENERATED,
                     "WorkOrder", order.id().toString(), order.siteCode(), null, order);
-            outbox.record("ifimp.work-order.created", 1, "WorkOrder", order.id(), order.siteCode(),
+            outbox.record("sfl.ifimp.work-order-created.v1", 1, "WorkOrder", order.id(), order.siteCode(),
                     systemActor.correlationId(), systemActor.actorId(), order);
             generated.add(order);
         }

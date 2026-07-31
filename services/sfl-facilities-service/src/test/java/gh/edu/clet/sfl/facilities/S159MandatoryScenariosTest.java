@@ -179,7 +179,7 @@ class S159MandatoryScenariosTest {
             assertThat(booking.metadata().createdBy()).isEqualTo("lecturer");
             assertThat(booking.metadata().sourceChannel()).isEqualTo(SourceChannel.WEB);
             assertThat(audit.actions()).contains(AuditAction.BOOKING_REQUESTED, AuditAction.BOOKING_CONFIRMED);
-            assertThat(outbox.published("ifimp.booking.requested")).isTrue();
+            assertThat(outbox.published("sfl.ifimp.booking-requested.v1")).isTrue();
         }
 
         @Test

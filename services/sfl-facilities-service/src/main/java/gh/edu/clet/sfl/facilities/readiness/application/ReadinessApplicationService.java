@@ -115,7 +115,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         ReadinessChecklist saved = readiness.saveChecklist(checklist);
         audit.record(actor, command.channel(), AuditAction.READINESS_CHECKLIST_CREATED, "ReadinessChecklist",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.readiness-checklist.created", "ReadinessChecklist", saved.id(), saved.siteCode(), actor,
+        publish("sfl.ifimp.readiness-checklist-created.v1", "ReadinessChecklist", saved.id(), saved.siteCode(), actor,
                 saved);
         idempotency.recordResult("create-readiness-checklist", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), saved.id(), saved.siteCode(),
@@ -141,7 +141,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         ReadinessChecklist saved = readiness.saveChecklist(updated);
         audit.record(actor, command.channel(), AuditAction.READINESS_CHECKLIST_UPDATED, "ReadinessChecklist",
                 saved.id().toString(), saved.siteCode(), checklist, saved);
-        publish("ifimp.readiness-checklist.updated", "ReadinessChecklist", saved.id(), saved.siteCode(), actor,
+        publish("sfl.ifimp.readiness-checklist-updated.v1", "ReadinessChecklist", saved.id(), saved.siteCode(), actor,
                 saved);
         return saved;
     }
@@ -252,9 +252,9 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.READINESS_ASSESSMENT_SUBMITTED, "ReadinessAssessment",
                 assessment.id().toString(), room.siteCode(), null, assessment);
-        publish("ifimp.readiness-assessment.submitted", "ReadinessAssessment", assessment.id(),
+        publish("sfl.ifimp.readiness-assessment-submitted.v1", "ReadinessAssessment", assessment.id(),
                 room.siteCode(), actor, assessment);
-        raised.forEach(blocker -> publish("ifimp.readiness-blocker.created", "ReadinessBlocker", blocker.id(),
+        raised.forEach(blocker -> publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(),
                 room.siteCode(), actor, blocker));
 
         idempotency.recordResult("submit-readiness-assessment", command.idempotencyKey(),
@@ -301,7 +301,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
                 blocker.id().toString(), room.siteCode(), null, blocker);
-        publish("ifimp.readiness-blocker.created", "ReadinessBlocker", blocker.id(), room.siteCode(), actor,
+        publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(), room.siteCode(), actor,
                 blocker);
         return blocker;
     }
@@ -330,7 +330,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
                 resolved.id().toString(), resolved.siteCode(), blocker, resolved);
-        publish("ifimp.readiness-blocker.resolved", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
+        publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
                 actor, resolved);
         return resolved;
     }
@@ -372,7 +372,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.ROOM_READINESS_CHANGED, "FacilityRoom",
                 saved.id().toString(), saved.siteCode(), room.readinessStatus(), saved.readinessStatus());
-        publish("ifimp.room-readiness.changed", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.room-readiness-changed.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -389,7 +389,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.READINESS_LOCK_ENGAGED, "FacilityRoom",
                 saved.id().toString(), saved.siteCode(), null, command.reason());
-        publish("ifimp.readiness-lock.engaged", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.readiness-lock-engaged.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -406,7 +406,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         audit.record(actor, command.channel(), AuditAction.READINESS_LOCK_RELEASED, "FacilityRoom",
                 saved.id().toString(), saved.siteCode(), room.readinessLockedBy(), command.reason());
-        publish("ifimp.readiness-lock.released", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.readiness-lock-released.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -452,7 +452,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                         actor.actorId(), at));
                 audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
                         blocker.id().toString(), room.siteCode(), null, blocker);
-                publish("ifimp.readiness-blocker.created", "ReadinessBlocker", blocker.id(), room.siteCode(),
+                publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(), room.siteCode(),
                         actor, blocker);
             }
         } else {
@@ -462,7 +462,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                         actor.actorId(), at));
                 audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
                         resolved.id().toString(), room.siteCode(), blocker, resolved);
-                publish("ifimp.readiness-blocker.resolved", "ReadinessBlocker", resolved.id(), room.siteCode(),
+                publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), room.siteCode(),
                         actor, resolved);
             });
         }
@@ -517,7 +517,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                     null, source, sourceReference, severity, description, actor.actorId(), at));
             audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
                     raised.id().toString(), room.siteCode(), null, raised);
-            publish("ifimp.readiness-blocker.created", "ReadinessBlocker", raised.id(), room.siteCode(), actor,
+            publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", raised.id(), room.siteCode(), actor,
                     raised);
             blockerId = raised.id();
         }
@@ -544,7 +544,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                     blocker.resolve(resolutionNotes, actor.actorId(), at));
             audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
                     resolved.id().toString(), resolved.siteCode(), blocker, resolved);
-            publish("ifimp.readiness-blocker.resolved", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
+            publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
                     actor, resolved);
             touched.add(blocker.roomId());
         }
@@ -597,7 +597,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         if (previous != outcome.status()) {
             audit.record(actor, channel, AuditAction.ROOM_READINESS_CHANGED, "FacilityRoom",
                     saved.id().toString(), saved.siteCode(), previous, outcome.status());
-            publish("ifimp.room-readiness.changed", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+            publish("sfl.ifimp.room-readiness-changed.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         }
     }
 

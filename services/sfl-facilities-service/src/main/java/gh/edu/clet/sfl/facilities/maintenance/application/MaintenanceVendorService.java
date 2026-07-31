@@ -82,7 +82,7 @@ public class MaintenanceVendorService {
 
         audit.record(actor, command.channel(), AuditAction.MAINTENANCE_VENDOR_REGISTERED, "MaintenanceVendor",
                 vendor.id().toString(), vendor.siteCode(), null, vendor);
-        outbox.record("ifimp.maintenance-vendor.registered", 1, "MaintenanceVendor", vendor.id(),
+        outbox.record("sfl.ifimp.maintenance-vendor-registered.v1", 1, "MaintenanceVendor", vendor.id(),
                 vendor.siteCode(), actor.correlationId(), actor.actorId(), vendor);
         idempotency.recordResult("register-maintenance-vendor", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), vendor.id(), vendor.siteCode(),
