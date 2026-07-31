@@ -9,6 +9,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditHashChain;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import java.time.Clock;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -110,6 +112,31 @@ public class JpaAuditAdapter implements AuditPort {
         return value == null || value.isBlank() ? fallback : value;
     }
 
+    /**
+     * The instant at the precision PostgreSQL will actually store, because that is the one the chain has
+     * to be able to reproduce.
+     *
+     * <p>{@link AuditHashChain} hashes {@code occurredAt.toString()}. The JVM clock hands out
+     * nanoseconds and {@code timestamptz} keeps microseconds, so the value hashed on the way in was not
+     * the value read back on replay, and **every record written by a real clock broke the chain**.
+     * Verification against a live database found it diverging at sequence 8 — the first record written
+     * outside a test.
+     *
+     * <p>It survived four build passes because it is invisible to the entire unit suite: those tests
+     * use a fixed clock at whole seconds, which truncates to itself. `S152_Gap_And_Conflict_Report.md`
+     * §8a hit the identical defect (D-05) and warned in writing that this service was likely to carry
+     * it; `FleetAuditChainPostgresTest` is the check that was missing, and truncating here is the same
+     * fix facilities applied.
+     *
+     * <p>Records written before this fix cannot be repaired. A hash chain has no mechanism for
+     * amending history — that is the property it exists to provide — so a database carrying pre-fix
+     * records will keep reporting tampered at the first of them. See the S166 gap report for what to do
+     * about an existing environment.
+     */
+    private Instant storedPrecision() {
+        return clock.instant().truncatedTo(ChronoUnit.MICROS);
+    }
+
     private AuditEvent append(String actorId, String actorDisplayName, SiteCode siteScope, AuditAction action,
             String resourceType, String resourceId, String beforeJson, String afterJson, String correlationId,
             SourceChannel channel) {
@@ -118,11 +145,11 @@ public class JpaAuditAdapter implements AuditPort {
                         "Audit chain head row is missing; V2__fleet_platform_foundation.sql did not run"));
 
         AuditEvent unsealed = AuditEvent.unsealed(UUID.randomUUID(), siteScope, actorId, actorDisplayName, action,
-                resourceType, resourceId, beforeJson, afterJson, correlationId, channel, clock.instant());
+                resourceType, resourceId, beforeJson, afterJson, correlationId, channel, storedPrecision());
         AuditEvent sealed = AuditHashChain.seal(unsealed, head.nextSequence(), head.headHash());
 
         auditRecords.save(AuditRecordEntity.from(sealed));
-        head.advance(sealed.recordHash(), clock.instant());
+        head.advance(sealed.recordHash(), storedPrecision());
         chainState.save(head);
         return sealed;
     }
