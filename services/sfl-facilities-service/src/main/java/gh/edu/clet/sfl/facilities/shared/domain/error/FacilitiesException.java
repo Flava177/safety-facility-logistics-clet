@@ -173,4 +173,35 @@ public class FacilitiesException extends RuntimeException {
             super(FacilitiesErrorCode.EXPORT_NOT_APPROVED, detail);
         }
     }
+
+    /**
+     * The space or a resource is already held for part of the requested window. SRS-SFL-S159-02.
+     *
+     * <p>Carries the clash in words rather than only the code, because "the hall is taken" is useless
+     * and "BK-CLET-HQ-000412 has it from 09:00 to 11:30" is a requester's next action. The same
+     * exception is raised by the domain check and by the translation of the database's exclusion
+     * constraint, so losing a race and asking late produce one error state.
+     */
+    public static class BookingConflictException extends FacilitiesException {
+        public BookingConflictException(String detail) {
+            super(FacilitiesErrorCode.BOOKING_CONFLICT,
+                    detail == null || detail.isBlank()
+                            ? FacilitiesErrorCode.BOOKING_CONFLICT.defaultMessage()
+                            : detail);
+        }
+    }
+
+    /** The space is not bookable, not ready enough, or not for this purpose. SRS-SFL-S159-02. */
+    public static class SpaceNotBookableException extends FacilitiesException {
+        public SpaceNotBookableException(String detail) {
+            super(FacilitiesErrorCode.SPACE_NOT_BOOKABLE, detail);
+        }
+    }
+
+    /** A resource that does not exist at the site, is retired, or is short for this window. */
+    public static class ResourceUnavailableException extends FacilitiesException {
+        public ResourceUnavailableException(String detail) {
+            super(FacilitiesErrorCode.RESOURCE_UNAVAILABLE, detail);
+        }
+    }
 }

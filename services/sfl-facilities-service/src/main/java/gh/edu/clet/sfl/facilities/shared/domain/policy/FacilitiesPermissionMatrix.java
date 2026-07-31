@@ -18,8 +18,8 @@ import java.util.Set;
  * {@code DispatchPermissionMatrix} and {@code EmergencyPermissionMatrix}.
  *
  * <p>It lives in {@code shared} rather than in {@code masterdata} because S152 is the host platform:
- * {@code readiness}, {@code dashboard} and — when they arrive — S153 maintenance and S159 booking all
- * authorise against this one matrix. A per-module matrix is how four modules end up disagreeing about
+ * {@code readiness}, {@code dashboard}, S153 {@code maintenance} and S159 {@code booking} all
+ * authorise against this one matrix. A per-module matrix is how five modules end up disagreeing about
  * what a facilities manager may do.
  *
  * <p>The interesting grants, none of them incidental:
@@ -61,7 +61,13 @@ public final class FacilitiesPermissionMatrix {
             SflPermission.FACILITIES_READINESS_READ,
             SflPermission.FACILITIES_DASHBOARD_READ,
             SflPermission.FACILITIES_FAULT_READ,
-            SflPermission.FACILITIES_WORK_ORDER_READ);
+            SflPermission.FACILITIES_WORK_ORDER_READ,
+            // S159. A room diary is the least sensitive thing in this service — knowing that Hall A is
+            // taken on Tuesday is what stops two people planning for it — so every staff-facing role
+            // that reads the estate reads its bookings. The narrow roles below, which do not take
+            // READ_ONLY, are granted or refused it individually.
+            SflPermission.FACILITIES_BOOKING_READ,
+            SflPermission.FACILITIES_RESOURCE_READ);
 
     private static final Map<SflRole, Set<SflPermission>> MATRIX = buildMatrix();
 
@@ -128,7 +134,13 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_VENDOR_MANAGE,
                 SflPermission.FACILITIES_EVIDENCE_READ,
                 SflPermission.FACILITIES_EVIDENCE_ATTACH,
-                SflPermission.FACILITIES_EVIDENCE_EXPORT));
+                SflPermission.FACILITIES_EVIDENCE_EXPORT,
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_BOOKING_APPROVE,
+                SflPermission.FACILITIES_BOOKING_CANCEL,
+                SflPermission.FACILITIES_BOOKING_OVERRIDE,
+                SflPermission.FACILITIES_RESOURCE_MANAGE,
+                SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
         // Facilities manager — day-to-day estate management. No mode change: declaring an examination
         // is a centre-level decision, not an estate-maintenance one.
@@ -154,7 +166,15 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_VENDOR_READ,
                 SflPermission.FACILITIES_VENDOR_MANAGE,
                 SflPermission.FACILITIES_EVIDENCE_READ,
-                SflPermission.FACILITIES_EVIDENCE_ATTACH));
+                SflPermission.FACILITIES_EVIDENCE_ATTACH,
+                // No BOOKING_OVERRIDE, matching the absence of READINESS_OVERRIDE above. Booking into
+                // a space readiness has refused is the same class of decision as declaring it ready
+                // anyway, and this role holds neither.
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_BOOKING_APPROVE,
+                SflPermission.FACILITIES_BOOKING_CANCEL,
+                SflPermission.FACILITIES_RESOURCE_MANAGE,
+                SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
         // Maintenance supervisor — owns readiness and the asset register it depends on, and can
         // override a lock because a supervisor is who a blocked examination hall escalates to.
@@ -177,7 +197,18 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_PM_SCHEDULE_MANAGE,
                 SflPermission.FACILITIES_VENDOR_READ,
                 SflPermission.FACILITIES_EVIDENCE_READ,
-                SflPermission.FACILITIES_EVIDENCE_ATTACH));
+                SflPermission.FACILITIES_EVIDENCE_ATTACH,
+                // Books spaces for maintenance access — the RESERVED purpose — and runs the setups.
+                //
+                // Deliberately no BOOKING_OVERRIDE, even though this role holds READINESS_OVERRIDE.
+                // The two would be redundant and the redundancy is harmful: a supervisor who needs a
+                // blocked hall used should clear or downgrade the blocker, which leaves a readiness
+                // record somebody can review, rather than book past it and leave the hall still
+                // reading BLOCKED to everyone else.
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_BOOKING_CANCEL,
+                SflPermission.FACILITIES_RESOURCE_MANAGE,
+                SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
         // In-house technician — field work. Assesses readiness, changes asset status, works the jobs
         // assigned to them.
@@ -195,7 +226,10 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_WORK_ORDER_UPDATE,
                 SflPermission.FACILITIES_PM_SCHEDULE_READ,
                 SflPermission.FACILITIES_EVIDENCE_READ,
-                SflPermission.FACILITIES_EVIDENCE_ATTACH));
+                SflPermission.FACILITIES_EVIDENCE_ATTACH,
+                // Turns rooms around before bookings. Not a booker: a technician who could reserve a
+                // hall would be scheduling the estate from the shop floor.
+                SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
         // Vendor technician — a contractor, and therefore NOT a technician with a different badge.
         //
@@ -225,11 +259,22 @@ public final class FacilitiesPermissionMatrix {
         // FACILITIES_FAULT_READ is granted, and narrowed per record to the faults they reported: a
         // requester who could read the site's whole fault register would learn which halls are
         // unusable and which security equipment is broken, which is not what reporting a leak earns.
+        //
+        // S159 makes this the busiest role in the module rather than the narrowest: a requester is
+        // exactly the person who books a room. BOOKING_READ is granted and narrowed per record to
+        // their own bookings, the same treatment FACILITIES_FAULT_READ gets and for the same reason —
+        // a full room diary would tell somebody which halls are empty and when.
+        //
+        // No BOOKING_CANCEL: cancelling one's own booking is allowed by the per-record rule in
+        // BookingApplicationService, and the permission is what it takes to cancel somebody else's.
         matrix.put(SflRole.IFIMP_REQUESTER, EnumSet.of(
                 SflPermission.FACILITIES_SITE_READ,
                 SflPermission.FACILITIES_SPACE_READ,
                 SflPermission.FACILITIES_FAULT_REPORT,
-                SflPermission.FACILITIES_FAULT_READ));
+                SflPermission.FACILITIES_FAULT_READ,
+                SflPermission.FACILITIES_BOOKING_READ,
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_RESOURCE_READ));
 
         // Command — oversight across facilities and emergency; declares examination mode.
         matrix.put(SflRole.COMMAND_ROLE, union(READ_ONLY,
@@ -238,13 +283,24 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
                 SflPermission.FACILITIES_AUDIT_READ,
                 SflPermission.FACILITIES_PM_SCHEDULE_READ,
-                SflPermission.FACILITIES_EVIDENCE_READ));
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                SflPermission.FACILITIES_BOOKING_APPROVE,
+                SflPermission.FACILITIES_BOOKING_CANCEL,
+                SflPermission.FACILITIES_BOOKING_OVERRIDE));
 
-        // Centre manager — runs a centre, so declares its mode and reads its readiness.
+        // Centre manager — runs a centre, so declares its mode, reads its readiness, and owns its
+        // diary. The role S159 expects to hold BOOKING_OVERRIDE in practice: deciding that an
+        // examination will go ahead in a degraded hall is a centre-level operational call, made with
+        // a recorded reason, and it is the same authority NFR 23.3 already gives this role over mode.
         matrix.put(SflRole.CENTRE_MANAGER, union(READ_ONLY,
                 SflPermission.FACILITIES_OPERATING_MODE_CHANGE,
                 SflPermission.FACILITIES_READINESS_ASSESS,
-                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN));
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_BOOKING_APPROVE,
+                SflPermission.FACILITIES_BOOKING_CANCEL,
+                SflPermission.FACILITIES_BOOKING_OVERRIDE,
+                SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
         // Read-and-prove roles. Breadth is cheap because they change nothing.
         Set<SflPermission> assurance = union(READ_ONLY,

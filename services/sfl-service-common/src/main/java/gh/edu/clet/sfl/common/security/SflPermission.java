@@ -56,6 +56,24 @@ public enum SflPermission {
     FACILITIES_CONFIG_READ,
     FACILITIES_CONFIG_MANAGE,
 
+    // Room and Resource Booking permissions (SRS S159). Additive only, and hosted on S152 like S153.
+    //
+    // REQUEST and APPROVE are separate because SRS-SFL-S159-02 makes approval a distinct authorised
+    // act; CANCEL is separate again because cancelling one's own booking is not the same authority as
+    // cancelling somebody else's, and the per-record narrowing for the former lives in
+    // BookingApplicationService rather than here.
+    //
+    // OVERRIDE is the interesting one: it books into a space readiness says is unavailable. Held by
+    // very few roles, always recorded with a reason, and never implied by any other permission.
+    FACILITIES_BOOKING_READ,
+    FACILITIES_BOOKING_REQUEST,
+    FACILITIES_BOOKING_APPROVE,
+    FACILITIES_BOOKING_CANCEL,
+    FACILITIES_BOOKING_OVERRIDE,
+    FACILITIES_RESOURCE_READ,
+    FACILITIES_RESOURCE_MANAGE,
+    FACILITIES_SETUP_TASK_MANAGE,
+
     // Fleet and vehicle management permissions (SRS S166). Additive only.
     // The role -> permission mapping lives in the fleet feature package
     // (gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.FleetPermissionMatrix),

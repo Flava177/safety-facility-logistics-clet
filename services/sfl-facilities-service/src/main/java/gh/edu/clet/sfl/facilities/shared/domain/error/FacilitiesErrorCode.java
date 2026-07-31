@@ -41,6 +41,13 @@ public enum FacilitiesErrorCode {
     NO_SCOPE("No site scope is assigned to your user profile."),
     RESTRICTED_DRILLDOWN("You do not have permission to view the underlying record."),
 
+    // SRS-SFL-S159-02 — booking. BOOKING_CONFLICT is the code the exclusion constraint's violation is
+    // translated into as well as the one the domain check raises, so a caller cannot tell whether they
+    // lost a race or simply asked late — and does not need to.
+    BOOKING_CONFLICT("This space or resource is already booked for part of the requested window."),
+    SPACE_NOT_BOOKABLE("This space cannot be booked for the requested purpose."),
+    RESOURCE_UNAVAILABLE("The requested resource is not available for this window."),
+
     // Cross-cutting
     RECORD_NOT_FOUND("The requested record does not exist."),
     INVALID_PARENT_REFERENCE("The parent record referenced by this request does not exist."),

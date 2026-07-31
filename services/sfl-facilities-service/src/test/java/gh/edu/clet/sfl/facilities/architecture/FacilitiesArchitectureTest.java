@@ -87,6 +87,45 @@ class FacilitiesArchitectureTest {
         rule.check(classes);
     }
 
+    /**
+     * Booking knows nothing about maintenance.
+     *
+     * <p>They are siblings, both hosted by S152, and the temptation runs one way: a setup task looks
+     * like a small work order, so somebody will eventually route it through the CMMS to get the queue,
+     * the SLA and the closure evidence for free.
+     *
+     * <p>That is the wrong move and the reason is what would end up in the maintenance queue. A setup
+     * task is a twenty-minute room turnaround; giving it an escalation ladder and an evidence gate
+     * would fill the queue with chair-arranging and put the failed standby generator on page four.
+     * The decision is recorded on {@code SetupTask}; this rule is what stops it being quietly undone.
+     *
+     * <p>The reverse is not forbidden. Maintenance may legitimately want to know what a hall is booked
+     * for before scheduling work in it, and that dependency points the safe way.
+     */
+    @Test
+    void booking_does_not_depend_on_maintenance() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(ROOT + ".booking..")
+                .should().dependOnClassesThat().resideInAPackage(ROOT + ".maintenance..")
+                .because("a room turnaround is not a work order, and the queue is the reason");
+
+        rule.check(classes);
+    }
+
+    @Test
+    void booking_does_not_reach_into_another_modules_persistence() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(ROOT + ".booking..")
+                .should().dependOnClassesThat().resideInAnyPackage(
+                        ROOT + ".masterdata.infrastructure..",
+                        ROOT + ".readiness.infrastructure..",
+                        ROOT + ".maintenance.infrastructure..",
+                        ROOT + ".dashboard.infrastructure..")
+                .because("modules reference each other's contracts, never each other's tables");
+
+        rule.check(classes);
+    }
+
     @Test
     void the_domain_does_not_depend_on_the_application_or_api_layers() {
         ArchRule rule = noClasses()
