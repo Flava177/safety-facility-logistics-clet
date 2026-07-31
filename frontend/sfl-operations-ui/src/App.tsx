@@ -9,6 +9,28 @@ import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
 
+const FacilitiesDashboardPage = lazy(() => import('modules/facilities/pages/FacilitiesDashboardPage'));
+const SiteRegisterPage = lazy(() => import('modules/facilities/pages/SiteRegisterPage'));
+const SiteDetailPage = lazy(() => import('modules/facilities/pages/SiteDetailPage'));
+const SpaceRegisterPage = lazy(() => import('modules/facilities/pages/SpaceRegisterPage'));
+const SpaceDetailPage = lazy(() => import('modules/facilities/pages/SpaceDetailPage'));
+const AssetRegisterPage = lazy(() => import('modules/facilities/pages/AssetRegisterPage'));
+const AssetDetailPage = lazy(() => import('modules/facilities/pages/AssetDetailPage'));
+const ZonesPage = lazy(() => import('modules/facilities/pages/ZonesPage'));
+const DeviceReferencesPage = lazy(() => import('modules/facilities/pages/DeviceReferencesPage'));
+const ReadinessAssessmentsPage = lazy(() => import('modules/facilities/pages/ReadinessAssessmentsPage'));
+const ReadinessAssessmentDetailPage = lazy(
+  () => import('modules/facilities/pages/ReadinessAssessmentDetailPage'),
+);
+const ReadinessChecklistsPage = lazy(() => import('modules/facilities/pages/ReadinessChecklistsPage'));
+const ReadinessChecklistDetailPage = lazy(
+  () => import('modules/facilities/pages/ReadinessChecklistDetailPage'),
+);
+const FacilitiesAuditPage = lazy(() => import('modules/facilities/pages/FacilitiesAuditPage'));
+const FacilitiesConfigurationPage = lazy(
+  () => import('modules/facilities/pages/FacilitiesConfigurationPage'),
+);
+
 const FleetDashboardPage = lazy(() => import('modules/fleet/pages/FleetDashboardPage'));
 const VehicleRegisterPage = lazy(() => import('modules/fleet/pages/VehicleRegisterPage'));
 const VehicleDetailPage = lazy(() => import('modules/fleet/pages/VehicleDetailPage'));
@@ -117,6 +139,33 @@ const App = () => {
               index
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
             />
+            <Route path="facilities" element={<SystemRoutes system="S152" />}>
+              <Route index element={<FacilitiesDashboardPage />} />
+              <Route path="sites">
+                <Route index element={<SiteRegisterPage />} />
+                <Route path=":siteId" element={<SiteDetailPage />} />
+              </Route>
+              <Route path="spaces">
+                <Route index element={<SpaceRegisterPage />} />
+                <Route path=":roomId" element={<SpaceDetailPage />} />
+              </Route>
+              <Route path="assets">
+                <Route index element={<AssetRegisterPage />} />
+                <Route path=":assetId" element={<AssetDetailPage />} />
+              </Route>
+              <Route path="zones" element={<ZonesPage />} />
+              <Route path="devices" element={<DeviceReferencesPage />} />
+              <Route path="assessments">
+                <Route index element={<ReadinessAssessmentsPage />} />
+                <Route path=":assessmentId" element={<ReadinessAssessmentDetailPage />} />
+              </Route>
+              <Route path="checklists">
+                <Route index element={<ReadinessChecklistsPage />} />
+                <Route path=":checklistId" element={<ReadinessChecklistDetailPage />} />
+              </Route>
+              <Route path="audit" element={<FacilitiesAuditPage />} />
+              <Route path="configuration" element={<FacilitiesConfigurationPage />} />
+            </Route>
             <Route path="fleet" element={<SystemRoutes system="S166" />}>
               <Route index element={<FleetDashboardPage />} />
               <Route path="vehicles">

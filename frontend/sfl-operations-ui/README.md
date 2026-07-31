@@ -1,8 +1,18 @@
 # SFL Operations UI
 
-The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). The first
-module implemented is **S166 — Fleet and Vehicle Management**, built against
-`sfl-fleet-logistics-service` on port `8093`.
+The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). Five
+systems have screens, across three services:
+
+| System | Module | Service | Port |
+| --- | --- | --- | --- |
+| S152 — Facility management (CAFM/IWMS) | `modules/facilities` | `sfl-facilities-service` | `8091` |
+| S166 — Fleet and vehicle management | `modules/fleet` | `sfl-fleet-logistics-service` | `8093` |
+| S168 — Fuel and driver logbooks | `modules/fuel` | `sfl-fleet-logistics-service` | `8093` |
+| S171 — Courier and dispatch | `modules/dispatch` | `sfl-fleet-logistics-service` | `8093` |
+| S174 — Emergency mass notification | `modules/emergency` | `sfl-emergency-notification-service` | `8095` |
+
+S166 was first and is the reference module. As of ADR 0006 this dashboard is the **only** interface —
+all five per-service static pages are now redirects into it.
 
 Built on the Aurora React template (MUI v7, Vite, TypeScript, MUI X Data Grid, ECharts), rebranded
 to the SFL palette:
@@ -132,6 +142,8 @@ unless you are deploying the dashboard somewhere other than the Fleet service.
 | Variable                  | Default                 | Purpose                                            |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
 | `VITE_FLEET_API_BASE_URL` | `http://localhost:8093` | Base URL of the Fleet & Logistics service          |
+| `VITE_EMERGENCY_API_BASE_URL` | `http://localhost:8095` | Base URL of the Emergency Notification service (S174) |
+| `VITE_FACILITIES_API_BASE_URL` | `http://localhost:8091` | Base URL of the Facilities service (S152)       |
 | `VITE_SFL_USER`           | `fleet.operator`        | Sent as `X-SFL-User`                               |
 | `VITE_SFL_DISPLAY_NAME`   | `Fleet Operator`        | Sent as `X-SFL-Display-Name`                       |
 | `VITE_SFL_ROLES`          | `FLEET_MANAGER,…`       | Sent as `X-SFL-Roles` (comma-separated)            |
@@ -154,10 +166,30 @@ Idempotency-Key: <uuid v4>   # state-creating POSTs only
 In production the same `ActorContext` is derived from the OIDC/JWT principal and the `X-SFL-*`
 headers are ignored — no change is needed on this side.
 
+### If the facilities sections are missing
+
+`VITE_SFL_ROLES` **overrides** the built-in default role list rather than adding to it. The default
+includes `FACILITIES_MANAGER` and `CENTRE_MANAGER`; an `.env` that sets `VITE_SFL_ROLES` without a
+facilities role gets no facilities sections at all. That is the entitlement working, not a broken
+build — but it looks identical to one, so it is worth checking first. `.env` is gitignored, so this
+is per-machine.
+
+The roles worth switching between (the account panel has presets for all of them):
+
+| Role | What it shows |
+| --- | --- |
+| `FACILITIES_MANAGER` | The estate and readiness. No audit, no configuration, no operating-mode control — the matrix withholds mode from this role deliberately. |
+| `CENTRE_MANAGER` | Adds the operating-mode control: declaring and standing down examination mode. |
+| `IFIMP_TECHNICIAN` | Assess readiness and change asset condition. No lock, no mode, no configuration. |
+| `FACILITIES_DIRECTOR` | Adds audit and integrity verification. |
+
 ### CORS
 
-The Fleet service must allow the dev origin. If requests fail with a CORS error, add
-`http://localhost:5005` to the allowed origins in `FleetWebConfiguration`.
+Each service must allow the dev origin. If requests fail with a CORS error, add
+`http://localhost:5005` to the allowed origins in `FleetWebConfiguration`,
+`EmergencyWebConfiguration` or `FacilitiesWebConfiguration`. Each must also **expose**
+`X-Correlation-ID`, or the client reads `null` cross-origin and every error message loses the one
+identifier that ties it to a service log.
 
 ---
 
@@ -179,12 +211,34 @@ src/
       components/         # IndicatorTile, DrilldownDrawer
       dialogs/            # vehicle / driver / trip / workflow action dialogs
       pages/              # dashboard, registers, details, queues, governance
+    facilities/           # S152
+      api/                # enums.ts, dto.ts, facilitiesApi.ts, workflow.ts
+      components/         # ReadinessBlockerList, facilitiesFormat
+      dialogs/            # assessment / readiness / blocker / asset / operating-mode dialogs
+      pages/              # dashboard, estate registers, readiness, audit, configuration
   theme/                  # Aurora theme with the SFL palette (sflNavy / sflGold)
 ```
 
-Adding the next SFL module (Facilities, Safety & Security, Asset Visibility, Emergency
-Notification) means adding `src/modules/<module>` and a navigation section — the API client, error
-envelope handling, validation and layout are already shared.
+Adding the next SFL module (S153 CMMS, S159 booking, Safety & Security, Asset Visibility) means
+adding `src/modules/<module>` and a navigation section — the API client, error envelope handling,
+validation and layout are already shared.
+
+**One thing is not optional when you do.** If the module is served by a new service, add its
+`/actor/permissions` endpoint to `SOURCES` in `shared/layout/actorPermissions.ts`. The fail-open
+there is per-*set*, not per-service: once any service answers, anything absent from the merged set is
+treated as **denied**, not unknown. A module missing from that list renders with every gated control
+silently hidden and no error anywhere. This is documented at the call site and cost an afternoon
+during S152.
+
+### Tests
+
+```bash
+npm run test          # vitest run
+npm run test:watch
+```
+
+44 tests today, covering system entitlement per role, the S152 readiness rules, the formatting
+helpers, and the facilities dashboard's loading / error / stale / restricted-drilldown states.
 
 ### Data-fetching contract
 

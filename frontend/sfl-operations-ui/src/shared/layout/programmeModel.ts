@@ -59,11 +59,15 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
 /**
  * The systems that have screens.
  *
- * Four of the thirteen. The others arrive with their own screens rather than being declared ahead of
+ * Five of the thirteen. The others arrive with their own screens rather than being declared ahead of
  * them — a code here with nothing behind it would be a promise the sidebar cannot keep, and
  * {@link systemsFor} would happily entitle somebody to it.
+ *
+ * S152 is the first IFIMP system to arrive. Until it did, the programme was declared in
+ * {@link programmes} and had no systems at all, so a facilities manager was entitled to a programme
+ * that showed them nothing — an empty sidebar with no explanation.
  */
-export type SystemCode = 'S166' | 'S168' | 'S171' | 'S174';
+export type SystemCode = 'S152' | 'S166' | 'S168' | 'S171' | 'S174';
 
 export interface SflSystem {
   code: SystemCode;
@@ -74,6 +78,7 @@ export interface SflSystem {
 }
 
 export const systems: Record<SystemCode, SflSystem> = {
+  S152: { code: 'S152', label: 'Facility management', programme: 'IFIMP' },
   S166: { code: 'S166', label: 'Fleet & vehicle management', programme: 'FTLMP' },
   S168: { code: 'S168', label: 'Fuel & driver logbooks', programme: 'FTLMP' },
   S171: { code: 'S171', label: 'Courier & dispatch', programme: 'FTLMP' },
@@ -165,6 +170,18 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
  * default rather than the fail-closed one used for programmes.
  */
 export const roleSystems: Record<string, SystemCode[]> = {
+  // SFL.IFIMP — S152 is the facilities platform; S153 and S159 will join it in the same service.
+  // Transcribed from `FacilitiesPermissionMatrix`: a role appears here exactly when that matrix
+  // grants it something. `IFIMP_REQUESTER` is in the matrix for two read permissions and no more —
+  // a requester needs to name the room their fault is in, not browse the asset register — so it is
+  // entitled to the system and the sidebar drops the screens it cannot read.
+  FACILITIES_DIRECTOR: ['S152'],
+  FACILITIES_MANAGER: ['S152'],
+  IFIMP_MAINTENANCE_SUPERVISOR: ['S152'],
+  IFIMP_TECHNICIAN: ['S152'],
+  IFIMP_REQUESTER: ['S152'],
+  VENDOR_TECHNICIAN: ['S152'],
+
   // SFL.FTLMP — all three systems live in `sfl-fleet-logistics-service`
   FLEET_MANAGER: ['S166', 'S168', 'S171'],
   FLEET_LOGISTICS_OFFICER: ['S166', 'S168', 'S171'],
@@ -173,19 +190,22 @@ export const roleSystems: Record<string, SystemCode[]> = {
   DISPATCH_CONTROLLER: ['S171'],
   MAILROOM_OFFICER: ['S171'],
   LOGISTICS_COORDINATOR: ['S171'],
-  CENTRE_MANAGER: ['S171'],
+  // A centre manager receives consignments and declares their centre's operating mode, which is an
+  // S152 permission the facilities matrix grants them.
+  CENTRE_MANAGER: ['S152', 'S171'],
 
   // SFL.SSEMP — S174 is its own deployable, split by ADR 0004
   EMERGENCY_COORDINATOR: ['S174'],
   SECURITY_DIRECTOR: ['S174'],
   SOC_OPERATOR: ['S174'],
-  HSE_MANAGER: ['S174'],
+  // An HSE manager reads the estate to place an incident and judge a location's standing.
+  HSE_MANAGER: ['S152', 'S174'],
 
   // Roles that span programmes at the system grain too
   SECURITY_OFFICER: ['S171', 'S174'],
-  COMMAND_ROLE: ['S166', 'S168', 'S171', 'S174'],
-  INTEGRATION_ENGINEER: ['S166', 'S168', 'S171', 'S174'],
-  SERVICE_INTEGRATION: ['S166', 'S168', 'S171'],
+  COMMAND_ROLE: ['S152', 'S166', 'S168', 'S171', 'S174'],
+  INTEGRATION_ENGINEER: ['S152', 'S166', 'S168', 'S171', 'S174'],
+  SERVICE_INTEGRATION: ['S152', 'S166', 'S168', 'S171'],
 };
 
 /** Splits a comma-separated header or env value into normalised role names. */

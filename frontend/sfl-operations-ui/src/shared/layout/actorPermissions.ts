@@ -29,6 +29,18 @@ import { apiClient } from 'shared/api/client';
  *
  * The emergency service being down is the ordinary case of this, since only the fleet service is
  * usually running. Its permissions simply go unknown and S174 items stay visible.
+ *
+ * ## Why every service must be listed here
+ *
+ * The fail-open above is per-*set*, not per-service: as soon as **one** source answers, `granted` is
+ * non-null and anything absent from it is treated as denied. So a service missing from `SOURCES`
+ * does not go "unknown" — it goes **denied**, and every one of its gated controls silently
+ * disappears while the dashboard looks perfectly healthy.
+ *
+ * That is exactly what happened when S152 arrived: fleet answered, facilities was not asked, and so
+ * every facilities permission evaluated false — the dashboard drilldowns stopped navigating and the
+ * lock and mode controls vanished, with no error anywhere. **Adding a module means adding its source
+ * here.**
  */
 
 /** Long enough for a local service, short enough that a dead one does not hold up the first paint. */
@@ -38,7 +50,7 @@ let granted: Set<string> | null = null;
 
 interface Source {
   path: string;
-  service?: 'emergency';
+  service?: 'emergency' | 'facilities';
 }
 
 const SOURCES: Source[] = [
@@ -46,6 +58,8 @@ const SOURCES: Source[] = [
   { path: '/api/v1/fleet/actor/permissions' },
   // S174 is its own deployable with its own matrix (ADR 0004), so it answers separately.
   { path: '/api/v1/emergency/actor/permissions', service: 'emergency' },
+  // S152, and in time S153 and S159 — the IFIMP deployable, one matrix in `shared`.
+  { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
 ];
 
 const fetchOne = async (source: Source): Promise<string[]> => {

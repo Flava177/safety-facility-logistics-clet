@@ -11,6 +11,8 @@ import { ReactElement, SVGProps } from 'react';
 
 export type IconName =
   | 'dashboard'
+  | 'building'
+  | 'layers'
   | 'truck'
   | 'driver'
   | 'route'
@@ -69,6 +71,23 @@ export type IconName =
   | 'target';
 
 const glyphs: Record<IconName, ReactElement> = {
+  /** A block with windows — the estate hierarchy's buildings and spaces. */
+  building: (
+    <>
+      <path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21" />
+      <path d="M14 10h4.5A1.5 1.5 0 0 1 20 11.5V21" />
+      <path d="M2.5 21h19" />
+      <path d="M7 8h4M7 12h4M7 16h4M17 14h1M17 17.5h1" />
+    </>
+  ),
+  /** Stacked planes — a zone, which groups buildings, floors, spaces and devices. */
+  layers: (
+    <>
+      <path d="M12 3 3 7.5l9 4.5 9-4.5L12 3z" />
+      <path d="m3 12.5 9 4.5 9-4.5" />
+      <path d="m3 17 9 4.5 9-4.5" />
+    </>
+  ),
   dashboard: (
     <>
       <rect x="3" y="3" width="7" height="8" rx="1.5" />

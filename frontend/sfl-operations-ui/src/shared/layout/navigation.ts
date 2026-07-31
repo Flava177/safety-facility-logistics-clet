@@ -55,6 +55,36 @@ export interface NavSection {
   items: NavItem[];
 }
 
+/**
+ * S152 CAFM/IWMS routes.
+ *
+ * The first IFIMP module in this dashboard, and the platform S153 and S159 will attach to — so these
+ * paths are `/facilities/...` rather than `/cafm/...`: a user is looking at facilities, and which
+ * system inside IFIMP serves a screen is not their problem.
+ *
+ * Readiness assessments have a register and a detail, because an assessment is a signed record an
+ * auditor comes back to. Blockers do not: a blocker is only meaningful beside the space it blocks,
+ * so it lives on the space detail screen and on the dashboard drilldown rather than as a third list
+ * to cross-reference by hand.
+ */
+export const facilitiesPaths = {
+  dashboard: '/facilities',
+  sites: '/facilities/sites',
+  siteDetail: (siteId: string) => `/facilities/sites/${siteId}`,
+  spaces: '/facilities/spaces',
+  spaceDetail: (roomId: string) => `/facilities/spaces/${roomId}`,
+  assets: '/facilities/assets',
+  assetDetail: (assetId: string) => `/facilities/assets/${assetId}`,
+  zones: '/facilities/zones',
+  devices: '/facilities/devices',
+  assessments: '/facilities/assessments',
+  assessmentDetail: (assessmentId: string) => `/facilities/assessments/${assessmentId}`,
+  checklists: '/facilities/checklists',
+  checklistDetail: (checklistId: string) => `/facilities/checklists/${checklistId}`,
+  audit: '/facilities/audit',
+  configuration: '/facilities/configuration',
+};
+
 export const fleetPaths = {
   dashboard: '/fleet',
   vehicles: '/fleet/vehicles',
@@ -136,6 +166,107 @@ export const emergencyPaths = {
 };
 
 export const navSections: NavSection[] = [
+  {
+    // S152 leads the list because IFIMP is the first programme in `allProgrammes`, and an actor
+    // entitled to both lands on their facilities dashboard rather than on fleet's.
+    heading: 'Facility operations',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Facilities dashboard',
+        to: facilitiesPaths.dashboard,
+        icon: 'dashboard',
+        description: 'Readiness, blockers and examination risk',
+        // Enforced by FacilityDashboardService.
+        permission: 'FACILITIES_DASHBOARD_READ',
+      },
+      {
+        label: 'Readiness assessments',
+        to: facilitiesPaths.assessments,
+        icon: 'clipboard',
+        matchPrefix: facilitiesPaths.assessments,
+        description: 'Inspect a space against its checklist',
+        // Enforced by ReadinessApplicationService.assessments.
+        permission: 'FACILITIES_READINESS_READ',
+      },
+    ],
+  },
+  {
+    heading: 'Estate registers',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Sites',
+        to: facilitiesPaths.sites,
+        icon: 'map-pin',
+        matchPrefix: facilitiesPaths.sites,
+        description: 'Centres, and the operating mode each is in',
+        permission: 'FACILITIES_SITE_READ',
+      },
+      {
+        label: 'Spaces',
+        to: facilitiesPaths.spaces,
+        icon: 'building',
+        matchPrefix: facilitiesPaths.spaces,
+        description: 'Rooms, halls and courtrooms with their readiness',
+        permission: 'FACILITIES_SPACE_READ',
+      },
+      {
+        label: 'Facility assets',
+        to: facilitiesPaths.assets,
+        icon: 'wrench',
+        matchPrefix: facilitiesPaths.assets,
+        description: 'Fixed plant, its condition and what it serves',
+        permission: 'FACILITIES_ASSET_READ',
+      },
+      {
+        label: 'Zones',
+        to: facilitiesPaths.zones,
+        icon: 'layers',
+        description: 'What each zone covers, for safety and emergency',
+        permission: 'FACILITIES_ZONE_READ',
+      },
+      {
+        label: 'Device references',
+        to: facilitiesPaths.devices,
+        icon: 'activity',
+        description: 'Cameras, readers and panels, and where they sit',
+        permission: 'FACILITIES_DEVICE_REFERENCE_READ',
+      },
+    ],
+  },
+  {
+    heading: 'Facility assurance',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Readiness checklists',
+        to: facilitiesPaths.checklists,
+        icon: 'clipboard-list',
+        matchPrefix: facilitiesPaths.checklists,
+        description: 'The questions an assessment asks, and what a failure costs',
+        permission: 'FACILITIES_READINESS_READ',
+      },
+      {
+        label: 'Audit & integrity',
+        to: facilitiesPaths.audit,
+        icon: 'shield-lock',
+        description: 'Every state change, and the chain replay that proves it',
+        // Enforced by FacilitiesGovernanceService.search.
+        permission: 'FACILITIES_AUDIT_READ',
+      },
+      {
+        label: 'Configuration',
+        to: facilitiesPaths.configuration,
+        icon: 'gauge',
+        description: 'Thresholds the rules are read from, and their versions',
+        permission: 'FACILITIES_CONFIG_READ',
+      },
+    ],
+  },
   {
     heading: 'Operations',
     programme: 'FTLMP',

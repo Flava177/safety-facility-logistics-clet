@@ -7,10 +7,54 @@ public enum SflPermission {
     FACILITIES_WORK_ORDER_READ,
     FACILITIES_READINESS_MANAGE,
     FACILITIES_MASTER_DATA_MANAGE,
+    // The four work-order permissions above predate S152 and are kept, because they already name the
+    // right things. S153 adds the rest of what SRS-SFL-S153-01..03 needs: the fault side of the
+    // workflow, the transitions the old three-state model had nowhere for, preventive scheduling,
+    // vendors, and evidence — which is separated into read and export because S153-03 makes export a
+    // distinct authorised act with a recorded reason, not simply a stronger form of reading.
+    FACILITIES_FAULT_REPORT,
+    FACILITIES_FAULT_READ,
+    FACILITIES_FAULT_TRIAGE,
+    FACILITIES_WORK_ORDER_UPDATE,
+    FACILITIES_WORK_ORDER_CANCEL,
+    FACILITIES_PM_SCHEDULE_READ,
+    FACILITIES_PM_SCHEDULE_MANAGE,
+    FACILITIES_VENDOR_READ,
+    FACILITIES_VENDOR_MANAGE,
+    FACILITIES_EVIDENCE_READ,
+    FACILITIES_EVIDENCE_ATTACH,
+    FACILITIES_EVIDENCE_EXPORT,
     ASSET_REFERENCE_MANAGE,
     ASSET_REFERENCE_READ,
     AUDIT_READ,
     INTEGRATION_HEALTH_READ,
+
+    // Computer-Aided Facility Management / IWMS permissions (SRS S152). Additive only.
+    // The role -> permission mapping lives in the facilities service
+    // (gh.edu.clet.sfl.facilities.shared.domain.policy.FacilitiesPermissionMatrix), so no IFIMP
+    // business rule enters this shared library. S152 hosts S153 and S159, so these are the
+    // permissions those modules will inherit rather than redeclare.
+    FACILITIES_SITE_READ,
+    FACILITIES_SITE_MANAGE,
+    FACILITIES_SPACE_READ,
+    FACILITIES_SPACE_MANAGE,
+    FACILITIES_ZONE_READ,
+    FACILITIES_ZONE_MANAGE,
+    FACILITIES_DEVICE_REFERENCE_READ,
+    FACILITIES_DEVICE_REFERENCE_REGISTER,
+    FACILITIES_ASSET_READ,
+    FACILITIES_ASSET_MANAGE,
+    FACILITIES_READINESS_READ,
+    FACILITIES_READINESS_ASSESS,
+    FACILITIES_READINESS_OVERRIDE,
+    FACILITIES_READINESS_CHECKLIST_MANAGE,
+    FACILITIES_OPERATING_MODE_CHANGE,
+    FACILITIES_DASHBOARD_READ,
+    FACILITIES_DASHBOARD_DRILLDOWN,
+    FACILITIES_AUDIT_READ,
+    FACILITIES_AUDIT_INTEGRITY_CHECK,
+    FACILITIES_CONFIG_READ,
+    FACILITIES_CONFIG_MANAGE,
 
     // Fleet and vehicle management permissions (SRS S166). Additive only.
     // The role -> permission mapping lives in the fleet feature package
