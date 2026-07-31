@@ -48,7 +48,9 @@ import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import gh.edu.clet.sfl.facilities.support.InMemoryFacilitiesRepository;
 import gh.edu.clet.sfl.facilities.support.InMemoryMaintenanceRepository;
+import gh.edu.clet.sfl.facilities.maintenance.application.ports.NotificationPort;
 import gh.edu.clet.sfl.facilities.support.InMemoryReadinessRepository;
+import gh.edu.clet.sfl.facilities.support.RecordingNotifications;
 import gh.edu.clet.sfl.facilities.support.RecordingAuditPort;
 import gh.edu.clet.sfl.facilities.support.TestDoubles;
 import java.time.Clock;
@@ -81,6 +83,7 @@ class S153MandatoryScenariosTest {
     private static final LocalDate TODAY = LocalDate.of(2026, 7, 31);
 
     private MutableClock clock;
+    private RecordingNotifications notifications;
     private InMemoryFacilitiesRepository facilities;
     private InMemoryMaintenanceRepository maintenance;
     private InMemoryReadinessRepository readinessStore;
@@ -137,8 +140,9 @@ class S153MandatoryScenariosTest {
         vendors = new MaintenanceVendorService(maintenance, authorization, audit, idempotency, outbox, clock);
         preventive = new PreventiveMaintenanceService(maintenance, facilities, maintenanceConfiguration,
                 authorization, audit, idempotency, outbox, clock);
+        notifications = new RecordingNotifications();
         escalation = new MaintenanceEscalationService(maintenance, maintenanceConfiguration, faults,
-                workOrders, clock);
+                workOrders, notifications, clock);
 
         manager = TestDoubles.actor("manager", Set.of(SflRole.FACILITIES_MANAGER), "MAIN");
         supervisor = TestDoubles.actor("supervisor", Set.of(SflRole.IFIMP_MAINTENANCE_SUPERVISOR), "MAIN");
@@ -406,6 +410,37 @@ class S153MandatoryScenariosTest {
             assertThat(maintenance.findWorkOrder(order.id()).orElseThrow().escalationLevel()).isEqualTo(1);
             assertThat(outbox.published("sfl.ifimp.work-order-escalated.v1")).isTrue();
             assertThat(audit.actions()).contains(AuditAction.WORK_ORDER_ESCALATED);
+
+            // The half of SRS-SFL-S153-02 that was missing. "Escalates the item AND notifies the
+            // configured role" — the level moving is the first half, and for three passes the
+            // assertions stopped there while the event went to an outbox nothing drained.
+            WorkOrder escalated = maintenance.findWorkOrder(order.id()).orElseThrow();
+            assertThat(notifications.about(escalated.workOrderNumber()))
+                    .singleElement()
+                    .satisfies(sent -> {
+                        assertThat(sent.kind()).isEqualTo(NotificationPort.NotificationKind.WORK_ESCALATED);
+                        assertThat(sent.context()).containsEntry("escalationLevel", "1");
+                    });
+        }
+
+        @Test
+        void an_escalation_on_unassigned_work_goes_to_the_supervisor_rather_than_nowhere() {
+            // The case most likely to be overdue is the one nobody has picked up, so it is the one that
+            // must not silently have no recipient.
+            configuration.set("maintenance.sla.resolution.high", "PT4H");
+            WorkOrder order = createWorkOrder(triage(report(FaultPriority.HIGH), FaultPriority.HIGH));
+            assertThat(order.assignedTo()).isNull();
+
+            clock.advance(Duration.ofHours(5));
+            escalation.sweep(system);
+
+            WorkOrder escalated = maintenance.findWorkOrder(order.id()).orElseThrow();
+            assertThat(notifications.about(escalated.workOrderNumber()))
+                    .singleElement()
+                    .satisfies(sent -> {
+                        assertThat(sent.recipientType()).isEqualTo("ROLE");
+                        assertThat(sent.recipient()).isEqualTo(SflRole.IFIMP_MAINTENANCE_SUPERVISOR.name());
+                    });
         }
 
         @Test

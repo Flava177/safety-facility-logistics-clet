@@ -1,7 +1,10 @@
 package gh.edu.clet.sfl.facilities.maintenance.application;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.facilities.maintenance.application.ports.MaintenanceRepository;
+import gh.edu.clet.sfl.facilities.maintenance.application.ports.NotificationPort;
+import gh.edu.clet.sfl.facilities.maintenance.application.ports.NotificationPort.NotificationKind;
 import gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFault;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder;
 import gh.edu.clet.sfl.facilities.maintenance.domain.policy.SlaPolicy;
@@ -35,10 +38,17 @@ import org.springframework.transaction.annotation.Transactional;
  * and because each escalation publishes a notification: a non-idempotent sweep would page the same
  * manager every time it ran.
  *
- * <p><strong>It does not notify.</strong> It publishes {@code ifimp.work-order.escalated} and
- * {@code ifimp.facility-fault.escalated} to the outbox and stops. Delivering to a person is the
- * notification service's job, and building a second notifier here would be a second place for
- * CLET's escalation contact list to be wrong.
+ * <p><strong>It notifies through a port, and the port records rather than pretends.</strong> This class
+ * used to publish {@code sfl.ifimp.work-order-escalated.v1} to the outbox and stop, on the reasoning
+ * that delivery belongs to a notification service and a second notifier here would be a second place
+ * for CLET's escalation contact list to be wrong. The reasoning holds — the contact list still lives in
+ * one place, behind {@link NotificationPort}, and a real provider replaces the adapter by
+ * configuration. The consequence did not: nothing consumed those events, so for three passes the
+ * requirement's own words — "notifies the configured role" — were simply not true, and the gap report
+ * said so. An escalation nobody is told about is a database row, not an escalation.
+ *
+ * <p>An escalated work order tells its assignee; one with no assignee tells the supervisor's desk,
+ * because unassigned overdue work is exactly the case where nobody is already watching.
  */
 @Service
 public class MaintenanceEscalationService {
@@ -50,15 +60,17 @@ public class MaintenanceEscalationService {
     private final MaintenanceConfiguration configuration;
     private final FacilityFaultService faults;
     private final WorkOrderApplicationService workOrders;
+    private final NotificationPort notifications;
     private final Clock clock;
 
     public MaintenanceEscalationService(MaintenanceRepository maintenance,
             MaintenanceConfiguration configuration, FacilityFaultService faults,
-            WorkOrderApplicationService workOrders, Clock clock) {
+            WorkOrderApplicationService workOrders, NotificationPort notifications, Clock clock) {
         this.maintenance = maintenance;
         this.configuration = configuration;
         this.faults = faults;
         this.workOrders = workOrders;
+        this.notifications = notifications;
         this.clock = clock;
     }
 
@@ -88,6 +100,11 @@ public class MaintenanceEscalationService {
             int level = policy.escalationLevelFor(fault.slaDueAt(), now);
             if (level > fault.escalationLevel()) {
                 faults.applyEscalation(fault, level, systemActor, SourceChannel.SCHEDULER);
+                notifications.notifyRole(fault.siteCode(), SflRole.IFIMP_MAINTENANCE_SUPERVISOR,
+                        NotificationKind.FAULT_ESCALATED, fault.faultNumber(),
+                        Map.of("faultNumber", fault.faultNumber(),
+                                "escalationLevel", Integer.toString(level),
+                                "priority", String.valueOf(fault.priority())));
                 faultsEscalated++;
             }
         }
@@ -97,11 +114,33 @@ public class MaintenanceEscalationService {
             int level = policy.escalationLevelFor(order.slaDueAt(), now);
             if (level > order.escalationLevel()) {
                 workOrders.applyEscalation(order, level, systemActor, SourceChannel.SCHEDULER);
+                notifyEscalatedWorkOrder(order, level);
                 workOrdersEscalated++;
             }
         }
 
         return new EscalationSweep(now, faultsEscalated, workOrdersEscalated);
+    }
+
+    /**
+     * Tells the assignee, and the supervisor's desk when there is no assignee.
+     *
+     * <p>An escalation on unassigned work is precisely the case where nobody is watching, so it must
+     * not be the case that goes unsent. Routing it to the role rather than dropping it is what makes
+     * "notify when work is overdue" true for the work most likely to be overdue.
+     */
+    private void notifyEscalatedWorkOrder(WorkOrder order, int level) {
+        Map<String, String> context = Map.of(
+                "workOrderNumber", order.workOrderNumber(),
+                "escalationLevel", Integer.toString(level),
+                "priority", String.valueOf(order.priority()));
+        if (order.assignedTo() != null && !order.assignedTo().isBlank()) {
+            notifications.notifyRecipient(order.siteCode(), order.assignedTo(), NotificationKind.WORK_ESCALATED,
+                    order.workOrderNumber(), context);
+        } else {
+            notifications.notifyRole(order.siteCode(), SflRole.IFIMP_MAINTENANCE_SUPERVISOR,
+                    NotificationKind.WORK_ESCALATED, order.workOrderNumber(), context);
+        }
     }
 
     /** What one sweep did. */
