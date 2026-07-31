@@ -249,6 +249,22 @@ S152's other defect, D-04, does **not** apply here: fleet neutralises jsonb's ke
 
 Backend: **760 tests, 0 failures, 1 skipped**, where before this sequence it ran 641 with 102 skipped.
 
+### Pass — Role-based portals for the stakeholders the SRS names
+
+`SFL_SRS.docx` §2.3 User Classes, `CLET_Comprehensive_Digital_System_Mapping_v2.docx` §30A.6.9. Five modules existed and every one was built for the operator — Facilities Manager, Fleet/Logistics Officer, Emergency Coordinator. Eight roles held real permissions with no view designed for them, landed on somebody else's dashboard, and saw mostly-hidden controls, which reads as a broken build rather than as a role boundary.
+
+**The trace matrix came before the code**, all 26 roles with one row each, and the permission counts were read from the four matrices by asking them rather than by transcribing: counting 145 permissions by hand is how a matrix and a portal drift apart. Eleven roles trace cleanly to a §2.3 class, six derive from one within a single system, and **three are Deviations that are recorded rather than invented** — including `SERVICE_INTEGRATION`, which is a machine principal and is listed precisely so nobody later reads its absence as an oversight.
+
+**The problem a permission cannot solve.** `FLEET_DRIVER` holds eight permissions and **every one of them is also held by `FLEET_MANAGER`**. So no permission distinguishes a driver from the fleet office, and gating "My driving day" on `FUEL_LOGBOOK_CREATE` would have offered it to the manager as their landing page. What makes somebody a driver is not what they can do — it is what they cannot. `shared/layout/personas.ts` encodes that, and it transcribes rather than invents: the narrowest-role rule is exactly the one `FuelAccessPolicy.isDriverOnly` and `FacilityFaultService.requesterFilter` already enforce, down to S153's stated reason that "treating the union of roles as its narrowest member would make adding a role to somebody take capability away". It is **not** an authorisation check and the file says so — nothing there hides data, the services do that per record, and a wrong answer costs a click rather than a disclosure.
+
+**Placement is the whole mechanism.** `landingPath()` returns the first item of the first entitled section, so putting the personal sections first in `navSections` is what makes a driver open on their own day rather than on a fleet dashboard — with no change to the router, the shell or the route guards, and no effect on operators, because every personal item is persona-gated.
+
+**Two portals could not be built honestly, and say so on the page.** `CENTRE_MANAGER` has no way to know which consignments are its own: `destinationCentre` and `assignedHandler` are free text with no principal binding, and a rule built on them would hold whenever somebody happened to type an actor id and fail silently otherwise — worse than no rule, because it looks like enforcement. The screen lists consignments *at this site*, says so twice, and names the owner of the schema decision. And the driver's fuel panel is labelled "recorded at this site" rather than "mine", because `FUEL_TRANSACTION_READ` is not narrowed per record; calling it mine over a list containing a colleague's fill would be a lie the screen tells on the service's behalf.
+
+**Recorded rather than built:** dispatch controller and logistics coordinator get no new portal, because both hold the full controller set and the dispatch module already is their view — duplicating fifteen screens to change a title buys nothing. Command, reporting-viewer and administrator landings are honest today and not designed, which is the next slice rather than a claim. And verification under authentication is owed: A1 was deferred, so the actor still arrives in a header, and the persona rule reads roles from it exactly as it will read them from a JWT claim.
+
+Frontend: **84 tests**, up from 73, with eleven pinning the persona rule including every case where a persona must *not* apply. Docs: `docs/frontend/SFL_Role_Portal_Trace_Matrix.md`, `SFL_Role_Portal_Gap_Report.md`, and the portal pattern added to the module playbook.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*
