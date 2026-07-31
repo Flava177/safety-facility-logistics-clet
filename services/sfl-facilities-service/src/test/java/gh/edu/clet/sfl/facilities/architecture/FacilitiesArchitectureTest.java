@@ -49,19 +49,40 @@ class FacilitiesArchitectureTest {
     /**
      * Nothing points into infrastructure.
      *
-     * <p>{@code maintenance} is excluded, and the exclusion is a recorded debt rather than an opinion:
-     * {@code WorkOrderService} and {@code FacilityFaultService} inject their Spring Data repositories
-     * directly, so S153's application layer names its own JPA types. That predates S152 and is out of
-     * scope for this pass; the S153 build introduces a repository port and this exclusion goes with it.
-     * See the S152 gap report, C-05.
+     * <p>{@code maintenance} used to be excluded here, as a recorded debt: its services injected their
+     * Spring Data repositories directly, so S153's application layer named its own JPA types. The S153
+     * build introduced {@code MaintenanceRepository} and the exclusion went with it. The rule now holds
+     * across every module, which is the point at which it starts being a rule.
      */
     @Test
     void nothing_points_into_infrastructure() {
         ArchRule rule = noClasses()
                 .that().resideInAnyPackage("..api..", "..application..", "..domain..")
-                .and().resideOutsideOfPackage(ROOT + ".maintenance..")
                 .should().dependOnClassesThat().resideInAPackage("..infrastructure..")
                 .because("adapters implement ports; the inside of a module never names one");
+
+        rule.check(classes);
+    }
+
+    /**
+     * Readiness knows nothing about maintenance.
+     *
+     * <p>The direction matters and it is not arbitrary. Whether a hall can be used is a fact about the
+     * estate, true whether or not anybody has raised a work order about it; maintenance is one of
+     * several things that can change that fact, alongside assessments and asset failures. So
+     * maintenance depends on readiness, through {@code ExternalBlockerPort} — which readiness declares
+     * itself, precisely so implementing it does not drag a fault or a work order back across the line.
+     *
+     * <p>This is the rule that would break first if somebody added a "which work order is fixing this
+     * blocker?" field to readiness. It is a reasonable thing to want and it belongs on the maintenance
+     * side, looked up by {@code sourceReference}.
+     */
+    @Test
+    void readiness_does_not_depend_on_maintenance() {
+        ArchRule rule = noClasses()
+                .that().resideInAPackage(ROOT + ".readiness..")
+                .should().dependOnClassesThat().resideInAPackage(ROOT + ".maintenance..")
+                .because("readiness is the deeper module: maintenance changes readiness, never the reverse");
 
         rule.check(classes);
     }

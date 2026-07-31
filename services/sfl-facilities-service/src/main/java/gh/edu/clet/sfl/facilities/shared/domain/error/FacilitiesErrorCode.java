@@ -1,7 +1,7 @@
 package gh.edu.clet.sfl.facilities.shared.domain.error;
 
 /**
- * The machine-readable error codes for S152, one per *Error State* named in the SRS.
+ * The machine-readable error codes for S152 and S153, one per *Error State* named in the SRS.
  *
  * <p>The SRS states its error conditions as prose — "Duplicate Identifier - 'An active record with
  * this identifier already exists for this site.'" — which is testable only if the wire carries
@@ -22,8 +22,15 @@ public enum FacilitiesErrorCode {
     UNAUTHORIZED_APPROVAL("You do not have permission to approve this workflow transition."),
     INVALID_STATE_TRANSITION("This record cannot move to the requested state from its current state."),
 
-    // SRS-SFL-S152-03 — evidence and audit
+    // SRS-SFL-S152-03 and S153-03 — evidence and audit
     AUDIT_CHAIN_FAILURE("Audit integrity check failed. Escalate to compliance and security."),
+    RETENTION_CLASS_MISSING("Select a retention class before saving this evidence."),
+    EXPORT_NOT_APPROVED("Evidence export requires approval and a recorded reason."),
+
+    // SRS-SFL-S153-02 — CMMS workflow. SLA_BREACH is not a refusal: it is the state an item is put
+    // into by the scheduled evaluator, and it is here so the escalation event and any UI carry the
+    // SRS's wording rather than each inventing their own.
+    SLA_BREACH("This item has breached its configured SLA and has been escalated."),
 
     // SRS-SFL-S152-04 — integration
     DUPLICATE_MESSAGE("Duplicate integration message received and safely ignored."),

@@ -9,6 +9,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityAsset;
 import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityRoom;
 import gh.edu.clet.sfl.facilities.masterdata.domain.LocationReadinessStatus;
 import gh.edu.clet.sfl.facilities.masterdata.domain.Site;
+import gh.edu.clet.sfl.facilities.readiness.application.ports.ExternalBlockerPort;
 import gh.edu.clet.sfl.facilities.readiness.application.ports.ReadinessRepository;
 import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSeverity;
 import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSource;
@@ -51,7 +52,7 @@ import org.springframework.transaction.annotation.Transactional;
  * changed without depending on this package. See the port for why the arrow points that way.
  */
 @Service
-public class ReadinessApplicationService implements SpaceReadinessPort {
+public class ReadinessApplicationService implements SpaceReadinessPort, ExternalBlockerPort {
 
     private final ReadinessRepository readiness;
     private final FacilitiesRepository facilities;
@@ -467,6 +468,89 @@ public class ReadinessApplicationService implements SpaceReadinessPort {
         }
 
         applyOutcome(room, evaluate(room.id()), actor, channel, at);
+    }
+
+    // =========================================================================================
+    // ExternalBlockerPort — what another module may do to a space's readiness
+    // =========================================================================================
+
+    /**
+     * {@inheritDoc}
+     *
+     * <p>The body is the asset reconciliation above with the asset taken out of it: find what this
+     * source already has open, leave it alone if it is already at the right severity, close it if the
+     * severity has moved, raise one if there is none. Written out rather than shared with
+     * {@code reconcileAssetBlockers} because that method also decides *whether* an asset is impaired,
+     * which is a judgement only it can make; this one is told the severity and applies it.
+     */
+    @Override
+    @Transactional
+    public UUID raiseExternalBlocker(UUID roomId, BlockerSource source, String sourceReference,
+            BlockerSeverity severity, String description, ActorContext actor, SourceChannel channel) {
+        if (roomId == null || severity == null) {
+            return null;
+        }
+        Optional<FacilityRoom> maybeRoom = facilities.findRoom(roomId);
+        if (maybeRoom.isEmpty()) {
+            // A caller may legitimately reference a location the estate has no room for — a corridor,
+            // a car park. Silently doing nothing is correct: there is no space whose readiness could
+            // change, and refusing would make the caller's own write fail for a reason it cannot fix.
+            return null;
+        }
+        FacilityRoom room = maybeRoom.get();
+        Instant at = now();
+        List<ReadinessBlocker> existing = readiness.findOpenBlockersBySource(source, sourceReference);
+
+        Optional<ReadinessBlocker> alreadyRight = existing.stream()
+                .filter(blocker -> blocker.severity() == severity)
+                .findFirst();
+        existing.stream()
+                .filter(blocker -> blocker.severity() != severity)
+                .forEach(blocker -> readiness.saveBlocker(blocker.resolve(
+                        "Superseded: severity is now " + severity, actor.actorId(), at)));
+
+        UUID blockerId;
+        if (alreadyRight.isPresent()) {
+            blockerId = alreadyRight.get().id();
+        } else {
+            ReadinessBlocker raised = readiness.saveBlocker(ReadinessBlocker.raise(room.id(), room.siteCode(),
+                    null, source, sourceReference, severity, description, actor.actorId(), at));
+            audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
+                    raised.id().toString(), room.siteCode(), null, raised);
+            publish("ifimp.readiness-blocker.created", "ReadinessBlocker", raised.id(), room.siteCode(), actor,
+                    raised);
+            blockerId = raised.id();
+        }
+
+        applyOutcome(room, evaluate(room.id()), actor, channel, at);
+        return blockerId;
+    }
+
+    @Override
+    @Transactional
+    public int resolveExternalBlockers(BlockerSource source, String sourceReference, String resolutionNotes,
+            ActorContext actor, SourceChannel channel) {
+        List<ReadinessBlocker> open = readiness.findOpenBlockersBySource(source, sourceReference);
+        if (open.isEmpty()) {
+            return 0;
+        }
+        Instant at = now();
+        // One source can hold blockers on more than one space only if the caller reuses a reference
+        // across rooms, which nothing does today — but re-deriving per distinct room rather than per
+        // blocker costs nothing and does not assume it.
+        java.util.Set<UUID> touched = new java.util.LinkedHashSet<>();
+        for (ReadinessBlocker blocker : open) {
+            ReadinessBlocker resolved = readiness.saveBlocker(
+                    blocker.resolve(resolutionNotes, actor.actorId(), at));
+            audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
+                    resolved.id().toString(), resolved.siteCode(), blocker, resolved);
+            publish("ifimp.readiness-blocker.resolved", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
+                    actor, resolved);
+            touched.add(blocker.roomId());
+        }
+        touched.forEach(roomId -> facilities.findRoom(roomId)
+                .ifPresent(room -> applyOutcome(room, evaluate(room.id()), actor, channel, at)));
+        return open.size();
     }
 
     /**

@@ -8,7 +8,7 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Role to facilities-permission mapping for the SRS S152 user classes.
+ * Role to facilities-permission mapping for the SRS S152 and S153 user classes.
  *
  * <p>{@code SiteScopedPrincipal} carries roles and site scopes but no permissions, so permissions are
  * derived here rather than read from a token claim. Keeping the derivation in the facilities service
@@ -24,11 +24,22 @@ import java.util.Set;
  *
  * <p>The interesting grants, none of them incidental:
  * <ul>
- *   <li>{@link SflRole#IFIMP_TECHNICIAN} and {@link SflRole#VENDOR_TECHNICIAN} can <em>assess</em>
- *       readiness and change an asset's operational status — that is the field work — but cannot
- *       manage the estate, override a lock or change the operating mode.</li>
- *   <li>{@link SflRole#IFIMP_REQUESTER} reads spaces and nothing else. A requester needs to name the
- *       room their fault is in; they do not need the asset register.</li>
+ *   <li>{@link SflRole#IFIMP_TECHNICIAN} assesses readiness, changes an asset's operational status
+ *       and works the jobs assigned to them — but cannot manage the estate, override a lock, change
+ *       the operating mode, or <em>close</em> a work order. A technician marks work complete; a
+ *       supervisor accepts it.</li>
+ *   <li>{@link SflRole#VENDOR_TECHNICIAN} was the same set as the technician until S153 and is now
+ *       much narrower: a contractor is not staff, and site scope is the wrong boundary for one. The
+ *       real boundary is <strong>assignment</strong>, enforced per record in
+ *       {@code WorkOrderApplicationService} because "the ones assigned to me" is a property of the
+ *       record and not something a matrix can say.</li>
+ *   <li>{@link SflRole#IFIMP_REQUESTER} reports a fault and follows their own, and reads nothing
+ *       else — the fault read is narrowed per record the same way. A requester who could read the
+ *       site's fault register would learn which halls are unusable and which security equipment is
+ *       broken, which is not what reporting a leak earns.</li>
+ *   <li>{@link SflPermission#FACILITIES_EVIDENCE_EXPORT} is held only by reviewers and
+ *       administrators. SRS-SFL-S153-03 makes export a distinct authorised act with a recorded
+ *       reason, not a stronger form of reading.</li>
  *   <li>{@link SflRole#COMMAND_ROLE} and {@link SflRole#CENTRE_MANAGER} hold
  *       {@link SflPermission#FACILITIES_OPERATING_MODE_CHANGE}. Declaring examination mode is a
  *       centre-level operational decision, and NFR 23.3 requires it to be role-restricted.</li>
@@ -48,7 +59,9 @@ public final class FacilitiesPermissionMatrix {
             SflPermission.FACILITIES_DEVICE_REFERENCE_READ,
             SflPermission.FACILITIES_ASSET_READ,
             SflPermission.FACILITIES_READINESS_READ,
-            SflPermission.FACILITIES_DASHBOARD_READ);
+            SflPermission.FACILITIES_DASHBOARD_READ,
+            SflPermission.FACILITIES_FAULT_READ,
+            SflPermission.FACILITIES_WORK_ORDER_READ);
 
     private static final Map<SflRole, Set<SflPermission>> MATRIX = buildMatrix();
 
@@ -101,7 +114,21 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_OPERATING_MODE_CHANGE,
                 SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
                 SflPermission.FACILITIES_AUDIT_READ,
-                SflPermission.FACILITIES_CONFIG_READ));
+                SflPermission.FACILITIES_CONFIG_READ,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_FAULT_TRIAGE,
+                SflPermission.FACILITIES_WORK_ORDER_CREATE,
+                SflPermission.FACILITIES_WORK_ORDER_ASSIGN,
+                SflPermission.FACILITIES_WORK_ORDER_UPDATE,
+                SflPermission.FACILITIES_WORK_ORDER_CLOSE,
+                SflPermission.FACILITIES_WORK_ORDER_CANCEL,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_PM_SCHEDULE_MANAGE,
+                SflPermission.FACILITIES_VENDOR_READ,
+                SflPermission.FACILITIES_VENDOR_MANAGE,
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                SflPermission.FACILITIES_EVIDENCE_ATTACH,
+                SflPermission.FACILITIES_EVIDENCE_EXPORT));
 
         // Facilities manager — day-to-day estate management. No mode change: declaring an examination
         // is a centre-level decision, not an estate-maintenance one.
@@ -114,7 +141,20 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_READINESS_ASSESS,
                 SflPermission.FACILITIES_READINESS_CHECKLIST_MANAGE,
                 SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
-                SflPermission.FACILITIES_CONFIG_READ));
+                SflPermission.FACILITIES_CONFIG_READ,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_FAULT_TRIAGE,
+                SflPermission.FACILITIES_WORK_ORDER_CREATE,
+                SflPermission.FACILITIES_WORK_ORDER_ASSIGN,
+                SflPermission.FACILITIES_WORK_ORDER_UPDATE,
+                SflPermission.FACILITIES_WORK_ORDER_CLOSE,
+                SflPermission.FACILITIES_WORK_ORDER_CANCEL,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_PM_SCHEDULE_MANAGE,
+                SflPermission.FACILITIES_VENDOR_READ,
+                SflPermission.FACILITIES_VENDOR_MANAGE,
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                SflPermission.FACILITIES_EVIDENCE_ATTACH));
 
         // Maintenance supervisor — owns readiness and the asset register it depends on, and can
         // override a lock because a supervisor is who a blocked examination hall escalates to.
@@ -125,26 +165,80 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_READINESS_ASSESS,
                 SflPermission.FACILITIES_READINESS_OVERRIDE,
                 SflPermission.FACILITIES_READINESS_CHECKLIST_MANAGE,
-                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN));
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_FAULT_TRIAGE,
+                SflPermission.FACILITIES_WORK_ORDER_CREATE,
+                SflPermission.FACILITIES_WORK_ORDER_ASSIGN,
+                SflPermission.FACILITIES_WORK_ORDER_UPDATE,
+                SflPermission.FACILITIES_WORK_ORDER_CLOSE,
+                SflPermission.FACILITIES_WORK_ORDER_CANCEL,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_PM_SCHEDULE_MANAGE,
+                SflPermission.FACILITIES_VENDOR_READ,
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                SflPermission.FACILITIES_EVIDENCE_ATTACH));
 
-        // Technicians — field work. Assess readiness, change asset status, nothing structural.
-        Set<SflPermission> technician = union(READ_ONLY,
+        // In-house technician — field work. Assesses readiness, changes asset status, works the jobs
+        // assigned to them.
+        //
+        // No CREATE and no ASSIGN: a technician who could raise and self-assign work would be outside
+        // the queue the supervisor is accountable for. And no CLOSE, which is the more interesting
+        // omission: a technician marks work COMPLETED and a supervisor accepts it. Giving them both
+        // would collapse the two states the SRS separates ("Authorised user closes or verifies
+        // closure") into one, and would let the person who did the job be the only person who ever
+        // saw it — which is exactly what closure evidence exists to prevent.
+        matrix.put(SflRole.IFIMP_TECHNICIAN, union(READ_ONLY,
                 SflPermission.FACILITIES_READINESS_ASSESS,
-                SflPermission.FACILITIES_ASSET_MANAGE);
-        matrix.put(SflRole.IFIMP_TECHNICIAN, technician);
-        matrix.put(SflRole.VENDOR_TECHNICIAN, technician);
+                SflPermission.FACILITIES_ASSET_MANAGE,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_WORK_ORDER_UPDATE,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                SflPermission.FACILITIES_EVIDENCE_ATTACH));
 
-        // Requester — names the room a fault is in. Nothing more.
+        // Vendor technician — a contractor, and therefore NOT a technician with a different badge.
+        //
+        // This is the narrowest role in the matrix and the split from IFIMP_TECHNICIAN is deliberate:
+        // the two shared a permission set before S153, which meant a contractor could read the whole
+        // estate register, every fault at the site and every asset's condition. Site scope is the
+        // wrong boundary for somebody who is not CLET staff.
+        //
+        // The permissions below are the outer bound; the real boundary is **assignment**, enforced
+        // per record in WorkOrderApplicationService rather than here, because "the ones assigned to
+        // me" is not a fact a role-to-permission table can express. A vendor sees the work orders
+        // assigned to them and nothing else, and reads only the spaces and assets those touch.
+        //
+        // No FACILITIES_ASSET_MANAGE: a contractor reporting that a generator is now out of service
+        // does it by completing the work order, which is reviewed, rather than by editing the asset
+        // register directly and changing a hall's readiness on their own authority.
+        matrix.put(SflRole.VENDOR_TECHNICIAN, EnumSet.of(
+                SflPermission.FACILITIES_SITE_READ,
+                SflPermission.FACILITIES_SPACE_READ,
+                SflPermission.FACILITIES_ASSET_READ,
+                SflPermission.FACILITIES_WORK_ORDER_READ,
+                SflPermission.FACILITIES_WORK_ORDER_UPDATE,
+                SflPermission.FACILITIES_EVIDENCE_ATTACH,
+                SflPermission.FACILITIES_EVIDENCE_READ));
+
+        // Requester — reports what they can see is wrong, and follows their own report. Nothing more.
+        // FACILITIES_FAULT_READ is granted, and narrowed per record to the faults they reported: a
+        // requester who could read the site's whole fault register would learn which halls are
+        // unusable and which security equipment is broken, which is not what reporting a leak earns.
         matrix.put(SflRole.IFIMP_REQUESTER, EnumSet.of(
                 SflPermission.FACILITIES_SITE_READ,
-                SflPermission.FACILITIES_SPACE_READ));
+                SflPermission.FACILITIES_SPACE_READ,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_FAULT_READ));
 
         // Command — oversight across facilities and emergency; declares examination mode.
         matrix.put(SflRole.COMMAND_ROLE, union(READ_ONLY,
                 SflPermission.FACILITIES_OPERATING_MODE_CHANGE,
                 SflPermission.FACILITIES_READINESS_OVERRIDE,
                 SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
-                SflPermission.FACILITIES_AUDIT_READ));
+                SflPermission.FACILITIES_AUDIT_READ,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_EVIDENCE_READ));
 
         // Centre manager — runs a centre, so declares its mode and reads its readiness.
         matrix.put(SflRole.CENTRE_MANAGER, union(READ_ONLY,
@@ -157,7 +251,14 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_DASHBOARD_DRILLDOWN,
                 SflPermission.FACILITIES_AUDIT_READ,
                 SflPermission.FACILITIES_AUDIT_INTEGRITY_CHECK,
-                SflPermission.FACILITIES_CONFIG_READ);
+                SflPermission.FACILITIES_CONFIG_READ,
+                SflPermission.FACILITIES_PM_SCHEDULE_READ,
+                SflPermission.FACILITIES_VENDOR_READ,
+                SflPermission.FACILITIES_EVIDENCE_READ,
+                // Export is the assurance function, not a stronger form of reading. SRS-SFL-S153-03
+                // requires an approved reason with every export and audits the act itself, which is
+                // why no operational role holds this and every holder of it is a reviewer.
+                SflPermission.FACILITIES_EVIDENCE_EXPORT);
         matrix.put(SflRole.AUDITOR, assurance);
         matrix.put(SflRole.COMPLIANCE_OFFICER, assurance);
 

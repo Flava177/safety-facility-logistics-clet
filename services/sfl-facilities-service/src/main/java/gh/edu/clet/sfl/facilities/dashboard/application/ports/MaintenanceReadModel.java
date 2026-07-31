@@ -22,10 +22,11 @@ public interface MaintenanceReadModel {
     /**
      * The location codes in a site that have open maintenance against them.
      *
-     * <p>Returns codes rather than space ids because that is what the S153 records actually carry
-     * today: a fault names a {@code locationCode}, which is a room code. V6 added a nullable
-     * {@code room_id} to both tables for S153 to populate later; until it does, matching on the code is
-     * the link that exists rather than the one that is planned.
+     * <p>Still codes rather than space ids, and now for a different reason than when it was written.
+     * The original note said S153 would populate {@code room_id} and this could then match on it; S153
+     * does populate it. But a fault may also be reported against a corridor or a car park, which the
+     * estate model has no room for, so the code remains the only identifier every maintenance record
+     * has. The adapter reads {@code room_id} where there is one and falls back to the code.
      */
     Set<String> locationCodesWithOpenWork(String siteCode);
 }

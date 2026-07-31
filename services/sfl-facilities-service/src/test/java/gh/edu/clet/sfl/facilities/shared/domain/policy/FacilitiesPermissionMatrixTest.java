@@ -63,11 +63,17 @@ class FacilitiesPermissionMatrixTest {
     }
 
     @Test
-    void a_requester_reads_spaces_and_nothing_else() {
+    void a_requester_reports_a_fault_and_follows_it_and_does_nothing_else() {
         Set<SflPermission> granted = FacilitiesPermissionMatrix.permissionsFor(SflRole.IFIMP_REQUESTER);
 
-        assertThat(granted).containsExactlyInAnyOrder(SflPermission.FACILITIES_SITE_READ,
-                SflPermission.FACILITIES_SPACE_READ);
+        // S153 gave the requester the two permissions reporting a fault actually needs. The read is
+        // narrowed per record to their own reports, in FacilityFaultService — a matrix cannot express
+        // "mine", so the set here is the outer bound rather than the whole rule.
+        assertThat(granted).containsExactlyInAnyOrder(
+                SflPermission.FACILITIES_SITE_READ,
+                SflPermission.FACILITIES_SPACE_READ,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_FAULT_READ);
     }
 
     @Test

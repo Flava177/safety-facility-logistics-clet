@@ -138,4 +138,39 @@ public class FacilitiesException extends RuntimeException {
             super(FacilitiesErrorCode.VALIDATION_FAILED, detail);
         }
     }
+
+    /**
+     * Closure attempted without the evidence the configuration requires. SRS-SFL-S153-02.
+     *
+     * <p>Names the count rather than only refusing, because "attach evidence" without saying how much
+     * leaves the assignee guessing at a threshold they cannot see.
+     */
+    public static class ClosureEvidenceMissingException extends FacilitiesException {
+        public ClosureEvidenceMissingException(int required, int attached) {
+            super(FacilitiesErrorCode.CLOSURE_EVIDENCE_MISSING,
+                    "Required evidence must be attached before closure: " + required
+                            + " item(s) required, " + attached + " attached.");
+        }
+    }
+
+    /** A workflow transition the actor's role does not permit. SRS-SFL-S153-02. */
+    public static class UnauthorizedApprovalException extends FacilitiesException {
+        public UnauthorizedApprovalException(String detail) {
+            super(FacilitiesErrorCode.UNAUTHORIZED_APPROVAL, detail);
+        }
+    }
+
+    /** Evidence saved without a retention class. SRS-SFL-S153-03. */
+    public static class RetentionClassMissingException extends FacilitiesException {
+        public RetentionClassMissingException() {
+            super(FacilitiesErrorCode.RETENTION_CLASS_MISSING);
+        }
+    }
+
+    /** An export without an approved reason, or by an actor who may not export. SRS-SFL-S153-03. */
+    public static class ExportNotApprovedException extends FacilitiesException {
+        public ExportNotApprovedException(String detail) {
+            super(FacilitiesErrorCode.EXPORT_NOT_APPROVED, detail);
+        }
+    }
 }

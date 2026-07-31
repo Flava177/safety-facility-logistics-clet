@@ -29,21 +29,28 @@ while the service could not start. Running the thing is what finds these.
 
 ### 2.1 Fault reporting and work orders have no screens — S153
 
+> **Update, 31 July 2026.** The backend half of this is now built: S153 replaced the two controllers
+> named below, gave them the authorisation they did not have, and added preventive maintenance, SLA
+> escalation, vendors, parts and closure evidence. See
+> [S153_CMMS_Design.md](S153_CMMS_Design.md). **The screens still do not exist** — this section stays
+> open until they do, and the endpoints they need are now stable and enveloped.
+
 The static page this module retires carried a fault register and work-order controls.
-`FacilityFaultController` and `WorkOrderController` still serve them and are untouched, but nothing
-in the dashboard reaches them. That is a **real reduction in what a user can do through a screen**,
-and it is stated here rather than glossed in the retirement notice.
+`FacilityFaultController` and `WorkOrderController` serve them, but nothing in the dashboard reaches
+them. That is a **real reduction in what a user can do through a screen**, and it is stated here
+rather than glossed in the retirement notice.
 
 It was left out because faults and work orders are S153 (CMMS), not S152, and building them here
 would have meant designing a maintenance workflow inside a prompt scoped to the estate model and
-readiness. The endpoints are stable and the next round can take them.
+readiness.
 
-Two things about those two controllers are worth knowing before that round starts:
+Two things about those two controllers were worth knowing before that round started, and both have
+since been dealt with:
 
-- They use the **pre-S152 actor model** — `X-SFL-User` rather than the resolved `ActorContext`, and
-  `FacilityFaultController.findAll()` applies **no site scoping and no permission check at all**. A
-  caller with any role gets every fault at every site. S152's controllers do not work this way. This
-  predates this round and is not something the UI can fix.
+- They used the **pre-S152 actor model** — `X-SFL-User` rather than the resolved `ActorContext` — and
+  `FacilityFaultController.findAll()` applied **no site scoping and no permission check at all**: a
+  caller with any role got every fault at every site. Both are fixed in S153 and recorded as D-01 and
+  D-02 in [S153_Gap_And_Conflict_Report.md](S153_Gap_And_Conflict_Report.md).
 - They now speak the platform envelope. They were the two of seven facilities controllers missed
   when the envelope decision was applied; wrapping them was part of finishing that job, not new work.
 
@@ -113,7 +120,8 @@ Neither is cosmetic and both would have failed in a browser while passing every 
 
 ## 6. What has to happen next
 
-1. **S153 (CMMS)** — faults, work orders, preventive maintenance. It already has endpoints and no
-   screens, and the fault endpoint's missing authorisation should be fixed as part of it.
+1. **S153 (CMMS) screens.** The backend is built and the authorisation hole is closed; the screens
+   are what remains, and they are the last thing standing between the retired static page and full
+   replacement.
 2. **S159 (room and resource booking)** — against the booking flags this module already surfaces.
 3. **Add every new module to `SOURCES`** in `shared/layout/actorPermissions.ts`. See §1.
