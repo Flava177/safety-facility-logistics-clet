@@ -12,8 +12,11 @@ import { allSystems, programmesFor, systems, systemsFor } from './programmeModel
  */
 describe('programme entitlement', () => {
   describe('S152 facilities', () => {
-    it('entitles a facilities manager to S152 and to IFIMP', () => {
-      expect(systemsFor(['FACILITIES_MANAGER'])).toEqual(['S152']);
+    it('entitles a facilities manager to both IFIMP systems', () => {
+      // S153 arrived with the CMMS module. Entitlement to the two is currently identical for every
+      // role, because the permission matrix puts fault and work-order reads in its shared read-only
+      // set — see the note on `SystemCode` for why they are still separate codes.
+      expect(systemsFor(['FACILITIES_MANAGER'])).toEqual(['S152', 'S153']);
       expect(programmesFor(['FACILITIES_MANAGER'])).toEqual(['IFIMP']);
     });
 

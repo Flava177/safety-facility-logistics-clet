@@ -173,6 +173,21 @@ Built the S152 UI in the shared operations dashboard: **fifteen screens** in `sr
 
 **One consequence for go-live:** faults migrated open have no SLA and will not escalate until re-triaged. Back-dating deadlines would have produced a wall of instant breaches on day one; the cost is a triage pass at cutover, and it is on the record rather than in the code.
 
+### Pass — S153 CMMS dashboard module (`frontend/sfl-operations-ui`)
+Nine screens and ten dialogs extending `src/modules/facilities` — the same service, client and envelope as S152 rather than a parallel module. Fault register and detail, work-order queue and detail, preventive schedules and detail, vendors, evidence detail, and open faults on the S152 space page. One new navigation section, **Maintenance**, each item gated on its real service permission.
+
+**The capability ADR 0006 gave up is back.** Retiring the static facilities page cost CLET its fault register and work-order controls, recorded in `S152_UI_Gap_Report.md` §2.1 as the one real loss. That section is now closed, and what replaced it carries the SLA, escalation, preventive maintenance and closure evidence the old page never had.
+
+**S153 became its own `SystemCode`**, and the reasoning is recorded at the declaration because the obvious reading of two codes that always move together is that one is redundant: entitlement is identical to S152 for every role today, because the permission matrix puts fault and work-order reads in its shared read-only set. It is separate because the C9 mapping treats S153 as a Fast-Track system, the coverage claims count systems, `VITE_SFL_SYSTEMS=S153` makes maintenance viewable in isolation, and a refusal page should name the right thing.
+
+**Nothing the service derives is recomputed.** `overdue`, `minutesOverdue`, `assignable`, `dueForGeneration`, `disposalEligibleFrom` and `supportsClosure` all come down the wire — a browser working out for itself what is late would disagree with the escalation sweep the moment a workstation clock drifted, and the sweep is the one that notifies people. The single piece of client-side arrangement is the queue's overdue-first sort.
+
+**Two defects found by driving it, both invisible to a green build and 73 green tests.** A technician was shown a Close button disabled with "You do not have permission" — permanent, on every job, forever — because the page disabled rather than hid on a permission denial. The fix draws a line the module now follows: *a permission denial hides the control, a state or data shortfall disables it with the reason*. And two empty states claimed "every work order at this site is closed", which is a confident falsehood for a contractor who sees only their own; both now describe what is visible to you rather than what exists.
+
+**Verified end to end against real PostgreSQL, as four actors.** A supervisor reported, triaged, raised, assigned, attached evidence and closed — and watched HALL-A go BLOCKED → READY with the fault resolved and its blocker cleared. Closure was refused first with the service's own sentence and allowed after the evidence. A technician could complete but not close; a vendor saw exactly the one order assigned to them while another vendor saw none; a requester saw only their own fault. Tests: **73**, up from 44. Docs: `docs/facilities/S153_UI_Screen_Inventory.md`, `S153_UI_Gap_Report.md`.
+
+**IFIMP is now complete for S152 and S153.** Six of the thirteen Phase 1 systems have screens; S159 room and resource booking is what remains in this programme.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

@@ -10,6 +10,15 @@ import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
 
 const FacilitiesDashboardPage = lazy(() => import('modules/facilities/pages/FacilitiesDashboardPage'));
+// S153 CMMS
+const FaultRegisterPage = lazy(() => import('modules/facilities/pages/FaultRegisterPage'));
+const FaultDetailPage = lazy(() => import('modules/facilities/pages/FaultDetailPage'));
+const WorkOrderQueuePage = lazy(() => import('modules/facilities/pages/WorkOrderQueuePage'));
+const WorkOrderDetailPage = lazy(() => import('modules/facilities/pages/WorkOrderDetailPage'));
+const PreventiveSchedulesPage = lazy(() => import('modules/facilities/pages/PreventiveSchedulesPage'));
+const ScheduleDetailPage = lazy(() => import('modules/facilities/pages/ScheduleDetailPage'));
+const MaintenanceVendorsPage = lazy(() => import('modules/facilities/pages/MaintenanceVendorsPage'));
+const EvidenceDetailPage = lazy(() => import('modules/facilities/pages/EvidenceDetailPage'));
 const SiteRegisterPage = lazy(() => import('modules/facilities/pages/SiteRegisterPage'));
 const SiteDetailPage = lazy(() => import('modules/facilities/pages/SiteDetailPage'));
 const SpaceRegisterPage = lazy(() => import('modules/facilities/pages/SpaceRegisterPage'));
@@ -165,6 +174,29 @@ const App = () => {
               </Route>
               <Route path="audit" element={<FacilitiesAuditPage />} />
               <Route path="configuration" element={<FacilitiesConfigurationPage />} />
+            </Route>
+            {/*
+              S153 shares the /facilities base with S152 — same service, same programme — but is
+              guarded on its own system code, so a role entitled to one and not the other lands on
+              the no-entitlement page rather than an empty screen. Evidence sits outside the
+              /maintenance prefix because an auditor reaching a piece of evidence has no interest in
+              the planning register it came from.
+            */}
+            <Route path="facilities" element={<SystemRoutes system="S153" />}>
+              <Route path="faults">
+                <Route index element={<FaultRegisterPage />} />
+                <Route path=":faultId" element={<FaultDetailPage />} />
+              </Route>
+              <Route path="work-orders">
+                <Route index element={<WorkOrderQueuePage />} />
+                <Route path=":workOrderId" element={<WorkOrderDetailPage />} />
+              </Route>
+              <Route path="maintenance/schedules">
+                <Route index element={<PreventiveSchedulesPage />} />
+                <Route path=":scheduleId" element={<ScheduleDetailPage />} />
+              </Route>
+              <Route path="maintenance/vendors" element={<MaintenanceVendorsPage />} />
+              <Route path="maintenance-evidence/:evidenceId" element={<EvidenceDetailPage />} />
             </Route>
             <Route path="fleet" element={<SystemRoutes system="S166" />}>
               <Route index element={<FleetDashboardPage />} />

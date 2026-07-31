@@ -29,11 +29,13 @@ while the service could not start. Running the thing is what finds these.
 
 ### 2.1 Fault reporting and work orders have no screens — S153
 
-> **Update, 31 July 2026.** The backend half of this is now built: S153 replaced the two controllers
-> named below, gave them the authorisation they did not have, and added preventive maintenance, SLA
-> escalation, vendors, parts and closure evidence. See
-> [S153_CMMS_Design.md](S153_CMMS_Design.md). **The screens still do not exist** — this section stays
-> open until they do, and the endpoints they need are now stable and enveloped.
+> **Closed, 31 July 2026.** Both halves are built. S153 replaced the two controllers named below and
+> gave them the authorisation they did not have; the S153 UI then added nine screens — fault
+> register and detail, work-order queue and detail, preventive schedules, vendors, evidence — plus
+> faults on the S152 space page. See [S153_UI_Screen_Inventory.md](S153_UI_Screen_Inventory.md).
+>
+> **The capability the retired static page carried is back**, and with the SLA, escalation,
+> preventive maintenance and closure evidence it never had.
 
 The static page this module retires carried a fault register and work-order controls.
 `FacilityFaultController` and `WorkOrderController` serve them, but nothing in the dashboard reaches
@@ -120,8 +122,7 @@ Neither is cosmetic and both would have failed in a browser while passing every 
 
 ## 6. What has to happen next
 
-1. **S153 (CMMS) screens.** The backend is built and the authorisation hole is closed; the screens
-   are what remains, and they are the last thing standing between the retired static page and full
-   replacement.
+1. ~~**S153 (CMMS) screens.**~~ Built. See [S153_UI_Gap_Report.md](S153_UI_Gap_Report.md) for what
+   those screens do not yet do — chiefly that evidence cannot be uploaded from the dashboard alone.
 2. **S159 (room and resource booking)** — against the booking flags this module already surfaces.
 3. **Add every new module to `SOURCES`** in `shared/layout/actorPermissions.ts`. See §1.

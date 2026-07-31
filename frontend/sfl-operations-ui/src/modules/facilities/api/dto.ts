@@ -13,6 +13,13 @@ import type {
   SourceChannel,
   SpaceType,
   ZoneMemberType,
+  EvidenceType,
+  FacilityFaultStatus,
+  FaultDismissalOutcome,
+  FaultPriority,
+  RetentionClass,
+  WorkOrderStatus,
+  WorkOrderType,
 } from './enums';
 
 /**
@@ -615,5 +622,350 @@ export interface AuditSearchParams {
   action?: AuditAction;
   from?: string;
   to?: string;
+  limit?: number;
+}
+
+// =================================================================================================
+// S153 CMMS — transcribed from the service's OpenAPI document
+//
+// Several fields here are derived by the service and must not be recomputed on this side:
+// `overdue`, `minutesOverdue`, `open`, `assignable`, `dueForGeneration`, `disposalEligibleFrom`
+// and `supportsClosure`. A client that works them out again is one that will eventually disagree
+// with the escalation sweep about whether something is late.
+// =================================================================================================
+
+export interface FacilityFault {
+  id: string;
+  faultNumber: string;
+  siteCode: string;
+  /** Null when the fault is somewhere the estate model has no room for — a corridor, a car park. */
+  roomId: string | null;
+  locationCode: string | null;
+  assetId: string | null;
+  title: string;
+  description: string;
+  category: string | null;
+  priority: FaultPriority;
+  status: FacilityFaultStatus;
+  /** Derived from the status by the service. */
+  open: boolean;
+  reportedBy: string;
+  reportedAt: string;
+  triagedBy: string | null;
+  triagedAt: string | null;
+  triageNotes: string | null;
+  duplicateOfFaultId: string | null;
+  workOrderId: string | null;
+  /** Null until triaged: an untriaged fault has no confirmed priority, and so no deadline. */
+  slaDueAt: string | null;
+  overdue: boolean;
+  escalationLevel: number;
+  escalatedAt: string | null;
+  /** Whether this fault currently holds a readiness blocker open on its space. */
+  blockerRaised: boolean;
+  resolvedAt: string | null;
+  resolutionNotes: string | null;
+  lifecycleStatus: RecordLifecycleStatus;
+  metadata: RecordMetadata;
+}
+
+export interface WorkOrder {
+  id: string;
+  workOrderNumber: string;
+  workOrderType: WorkOrderType;
+  facilityFaultId: string | null;
+  faultNumber: string | null;
+  scheduleId: string | null;
+  siteCode: string;
+  roomId: string | null;
+  locationCode: string | null;
+  assetId: string | null;
+  title: string;
+  description: string | null;
+  priority: FaultPriority;
+  status: WorkOrderStatus;
+  open: boolean;
+  assignedTo: string | null;
+  vendorId: string | null;
+  assignedAt: string | null;
+  startedAt: string | null;
+  holdReason: string | null;
+  heldAt: string | null;
+  /** Accumulated hold time. Reported beside the deadline, never subtracted from it. */
+  totalHeldSeconds: number;
+  slaDueAt: string | null;
+  overdue: boolean;
+  minutesOverdue: number | null;
+  escalationLevel: number;
+  escalatedAt: string | null;
+  /** How many evidence items closure needs, fixed when the order was raised. */
+  evidenceRequired: number;
+  completedAt: string | null;
+  completionNotes: string | null;
+  closureNotes: string | null;
+  closedBy: string | null;
+  closedAt: string | null;
+  cancellationReason: string | null;
+  lifecycleStatus: RecordLifecycleStatus;
+  metadata: RecordMetadata;
+}
+
+export interface WorkOrderPart {
+  id: string;
+  workOrderId: string;
+  partCode: string;
+  description: string;
+  quantity: number;
+  unitCost: number | null;
+  /** Quantity times unit cost, or null when no cost was recorded. */
+  lineCost: number | null;
+  currency: string;
+  supplier: string | null;
+  recordedBy: string;
+  recordedAt: string;
+}
+
+export interface MaintenanceEvidence {
+  id: string;
+  workOrderId: string;
+  siteCode: string;
+  evidenceType: EvidenceType;
+  /** Where the file is in object storage. This service never holds the bytes. */
+  fileReference: string;
+  fileName: string | null;
+  mediaType: string | null;
+  sizeBytes: number | null;
+  contentHash: string;
+  retentionClass: RetentionClass;
+  legalHold: boolean;
+  /** Null while a legal hold is in force, which is how a hold reads to a client. */
+  disposalEligibleFrom: string | null;
+  /** False for an invoice: it proves money was spent, not that the work was done. */
+  supportsClosure: boolean;
+  notes: string | null;
+  uploadedBy: string;
+  uploadedAt: string;
+}
+
+export interface EvidenceExportGrant {
+  evidenceId: string;
+  fileReference: string;
+  contentHash: string;
+  retentionClass: RetentionClass;
+  recipient: string;
+  reason: string;
+  approvedBy: string;
+  approvedAt: string;
+}
+
+export interface MaintenanceVendor {
+  id: string;
+  siteCode: string;
+  vendorCode: string;
+  name: string;
+  specialisation: string | null;
+  contactName: string | null;
+  contactEmail: string | null;
+  contactPhone: string | null;
+  /** The contracted hours to respond. Wins over the priority rule when it is tighter. */
+  responseHours: number | null;
+  contractReference: string | null;
+  contractExpiresOn: string | null;
+  /** Procurement's identifier for the same company. A value, not a link this service follows. */
+  externalVendorId: string | null;
+  assignable: boolean;
+  unassignableReason: string | null;
+  lifecycleStatus: RecordLifecycleStatus;
+  metadata: RecordMetadata;
+}
+
+export interface PreventiveSchedule {
+  id: string;
+  siteCode: string;
+  scheduleCode: string;
+  name: string;
+  description: string | null;
+  assetId: string;
+  roomId: string | null;
+  intervalDays: number;
+  leadTimeDays: number;
+  priority: FaultPriority;
+  workOrderType: WorkOrderType;
+  nextDueOn: string;
+  /** The date the work order is raised on — the due date minus the lead time. */
+  generateOn: string;
+  lastGeneratedFor: string | null;
+  lastGeneratedAt: string | null;
+  lastWorkOrderId: string | null;
+  dueForGeneration: boolean;
+  lifecycleStatus: RecordLifecycleStatus;
+  metadata: RecordMetadata;
+}
+
+export interface EscalationSweep {
+  evaluatedAt: string;
+  faultsEscalated: number;
+  workOrdersEscalated: number;
+  total: number;
+}
+
+export interface GenerationRun {
+  generatedFor: string;
+  workOrdersRaised: number;
+  workOrders: WorkOrder[];
+}
+
+// ---- requests -----------------------------------------------------------------------------------
+
+export interface ReportFaultRequest {
+  siteCode?: string;
+  roomId?: string | null;
+  locationCode?: string | null;
+  assetId?: string | null;
+  title: string;
+  description: string;
+  category?: string | null;
+  priority: FaultPriority;
+}
+
+export interface TriageFaultRequest {
+  priority?: FaultPriority;
+  notes?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface DismissFaultRequest {
+  outcome: FaultDismissalOutcome;
+  reason: string;
+  duplicateOfFaultId?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface CreateWorkOrderRequest {
+  facilityFaultId: string;
+  vendorId?: string | null;
+  assignTo?: string | null;
+}
+
+export interface AssignWorkOrderRequest {
+  assignedTo: string;
+  vendorId?: string | null;
+  expectedVersion?: number | null;
+}
+
+/** Start, hold, complete and reopen. The service requires notes for hold and reopen. */
+export interface TransitionWorkOrderRequest {
+  notes?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface CloseWorkOrderRequest {
+  closureNotes: string;
+  expectedVersion?: number | null;
+}
+
+export interface CancelWorkOrderRequest {
+  reason: string;
+  expectedVersion?: number | null;
+}
+
+export interface RecordPartRequest {
+  partCode: string;
+  description: string;
+  quantity: number;
+  unitCost?: number | null;
+  currency?: string | null;
+  supplier?: string | null;
+}
+
+export interface AttachEvidenceRequest {
+  evidenceType: EvidenceType;
+  fileReference: string;
+  fileName?: string | null;
+  mediaType?: string | null;
+  sizeBytes?: number | null;
+  /** 64-character hex SHA-256. Rejected at the edge as well as in the domain. */
+  contentHash: string;
+  retentionClass: RetentionClass;
+  notes?: string | null;
+}
+
+export interface ExportEvidenceRequest {
+  reason: string;
+  recipient: string;
+}
+
+export interface SetLegalHoldRequest {
+  legalHold: boolean;
+  reason: string;
+}
+
+export interface RegisterVendorRequest {
+  siteCode: string;
+  vendorCode: string;
+  name: string;
+  specialisation?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  responseHours?: number | null;
+  contractReference?: string | null;
+  contractExpiresOn?: string | null;
+  externalVendorId?: string | null;
+}
+
+export interface UpdateVendorRequest {
+  name?: string | null;
+  specialisation?: string | null;
+  contactName?: string | null;
+  contactEmail?: string | null;
+  contactPhone?: string | null;
+  responseHours?: number | null;
+  contractReference?: string | null;
+  contractExpiresOn?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface CreateScheduleRequest {
+  siteCode: string;
+  scheduleCode: string;
+  name: string;
+  description?: string | null;
+  assetId: string;
+  intervalDays: number;
+  leadTimeDays: number;
+  priority: FaultPriority;
+  workOrderType: WorkOrderType;
+  firstDueOn: string;
+}
+
+export interface UpdateScheduleRequest {
+  name?: string | null;
+  description?: string | null;
+  intervalDays?: number | null;
+  leadTimeDays?: number | null;
+  priority?: FaultPriority | null;
+  nextDueOn?: string | null;
+  expectedVersion?: number | null;
+}
+
+// ---- search params ------------------------------------------------------------------------------
+
+export interface FaultSearchParams {
+  siteCode?: string;
+  roomId?: string;
+  status?: FacilityFaultStatus;
+  openOnly?: boolean;
+  limit?: number;
+}
+
+export interface WorkOrderSearchParams {
+  siteCode?: string;
+  roomId?: string;
+  assetId?: string;
+  status?: WorkOrderStatus;
+  assignedTo?: string;
+  vendorId?: string;
+  openOnly?: boolean;
   limit?: number;
 }

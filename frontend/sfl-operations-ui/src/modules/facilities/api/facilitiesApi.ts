@@ -44,6 +44,33 @@ import type {
   UpdateSpaceRequest,
   Zone,
   ZoneMember,
+  AssignWorkOrderRequest,
+  AttachEvidenceRequest,
+  CancelWorkOrderRequest,
+  CloseWorkOrderRequest,
+  CreateScheduleRequest,
+  CreateWorkOrderRequest,
+  DismissFaultRequest,
+  EscalationSweep,
+  EvidenceExportGrant,
+  ExportEvidenceRequest,
+  FacilityFault,
+  FaultSearchParams,
+  GenerationRun,
+  MaintenanceEvidence,
+  MaintenanceVendor,
+  PreventiveSchedule,
+  RecordPartRequest,
+  RegisterVendorRequest,
+  ReportFaultRequest,
+  SetLegalHoldRequest,
+  TransitionWorkOrderRequest,
+  TriageFaultRequest,
+  UpdateScheduleRequest,
+  UpdateVendorRequest,
+  WorkOrder,
+  WorkOrderPart,
+  WorkOrderSearchParams,
   BlockerSearchParams,
 } from './dto';
 import type { DeviceReferenceType } from './enums';
@@ -280,3 +307,154 @@ export const putConfiguration = (key: string, request: PutConfigurationRequest) 
  */
 export const getActorPermissions = (signal?: AbortSignal) =>
   get<string[]>('/actor/permissions', undefined, signal);
+
+// =================================================================================================
+// S153 CMMS
+//
+// Same service, same client, same envelope. `idempotent: true` appears on exactly the four
+// state-creating POSTs the service marks as accepting an `Idempotency-Key` — reporting a fault,
+// raising a work order, attaching evidence, registering a vendor or schedule. It is deliberately
+// absent from every PATCH: those are guarded by the record's version and its state machine, so a
+// repeat is either a no-op or an invalid-transition error, and a key there would be ceremony.
+// =================================================================================================
+
+// ---- faults -------------------------------------------------------------------------------------
+
+export const searchFaults = (params: FaultSearchParams, signal?: AbortSignal) =>
+  get<FacilityFault[]>('/faults', params as QueryParams, signal);
+
+export const getFault = (faultId: string, signal?: AbortSignal) =>
+  get<FacilityFault>(`/faults/${faultId}`, undefined, signal);
+
+/** Open faults on one space, for the S152 space-detail screen. */
+export const listFaultsForRoom = (roomId: string, signal?: AbortSignal) =>
+  get<FacilityFault[]>(`/faults/rooms/${roomId}`, undefined, signal);
+
+export const reportFault = (request: ReportFaultRequest) =>
+  post<FacilityFault>('/faults', request, true);
+
+/** Confirms the priority and starts the SLA clock. The only place priority may change. */
+export const triageFault = (faultId: string, request: TriageFaultRequest) =>
+  patch<FacilityFault>(`/faults/${faultId}/triage`, request);
+
+export const dismissFault = (faultId: string, request: DismissFaultRequest) =>
+  patch<FacilityFault>(`/faults/${faultId}/dismissal`, request);
+
+export const changeFaultLifecycle = (faultId: string, request: ChangeLifecycleRequest) =>
+  patch<FacilityFault>(`/faults/${faultId}/lifecycle`, request);
+
+// ---- work orders --------------------------------------------------------------------------------
+
+export const searchWorkOrders = (params: WorkOrderSearchParams, signal?: AbortSignal) =>
+  get<WorkOrder[]>('/work-orders', params as QueryParams, signal);
+
+export const getWorkOrder = (workOrderId: string, signal?: AbortSignal) =>
+  get<WorkOrder>(`/work-orders/${workOrderId}`, undefined, signal);
+
+export const createWorkOrderFromFault = (request: CreateWorkOrderRequest) =>
+  post<WorkOrder>('/work-orders/from-fault', request, true);
+
+/** Assignment and reassignment are the same call. Assigning releases a hold. */
+export const assignWorkOrder = (workOrderId: string, request: AssignWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/assignment`, request);
+
+export const startWorkOrder = (workOrderId: string, request: TransitionWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/start`, request);
+
+export const holdWorkOrder = (workOrderId: string, request: TransitionWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/hold`, request);
+
+export const completeWorkOrder = (workOrderId: string, request: TransitionWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/completion`, request);
+
+/** Reverses a completion, and so takes the closing permission rather than the updating one. */
+export const reopenWorkOrder = (workOrderId: string, request: TransitionWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/reopen`, request);
+
+/** Refused without a reason, and without the evidence the order required when it was raised. */
+export const closeWorkOrder = (workOrderId: string, request: CloseWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/closure`, request);
+
+export const cancelWorkOrder = (workOrderId: string, request: CancelWorkOrderRequest) =>
+  patch<WorkOrder>(`/work-orders/${workOrderId}/cancellation`, request);
+
+// ---- parts --------------------------------------------------------------------------------------
+
+export const listParts = (workOrderId: string, signal?: AbortSignal) =>
+  get<WorkOrderPart[]>(`/work-orders/${workOrderId}/parts`, undefined, signal);
+
+export const recordPart = (workOrderId: string, request: RecordPartRequest) =>
+  post<WorkOrderPart>(`/work-orders/${workOrderId}/parts`, request);
+
+export const removePart = (workOrderId: string, partId: string) =>
+  apiClient.delete<void>(`${base}/work-orders/${workOrderId}/parts/${partId}`, { service });
+
+// ---- evidence -----------------------------------------------------------------------------------
+
+export const listEvidence = (workOrderId: string, signal?: AbortSignal) =>
+  get<MaintenanceEvidence[]>(`/work-orders/${workOrderId}/evidence`, undefined, signal);
+
+/** By reference. The file goes to object storage; this records where it is and what it hashed to. */
+export const attachEvidence = (workOrderId: string, request: AttachEvidenceRequest) =>
+  post<MaintenanceEvidence>(`/work-orders/${workOrderId}/evidence`, request, true);
+
+export const getEvidence = (evidenceId: string, signal?: AbortSignal) =>
+  get<MaintenanceEvidence>(`/maintenance-evidence/${evidenceId}`, undefined, signal);
+
+/** Authorises and records an export. It does not move the file — it returns the reference to fetch. */
+export const exportEvidence = (evidenceId: string, request: ExportEvidenceRequest) =>
+  post<EvidenceExportGrant>(`/maintenance-evidence/${evidenceId}/exports`, request);
+
+export const setEvidenceLegalHold = (evidenceId: string, request: SetLegalHoldRequest) =>
+  patch<MaintenanceEvidence>(`/maintenance-evidence/${evidenceId}/legal-hold`, request);
+
+// ---- vendors ------------------------------------------------------------------------------------
+
+export const listVendors = (siteCode?: string, signal?: AbortSignal) =>
+  get<MaintenanceVendor[]>('/maintenance/vendors', { siteCode }, signal);
+
+export const getVendor = (vendorId: string, signal?: AbortSignal) =>
+  get<MaintenanceVendor>(`/maintenance/vendors/${vendorId}`, undefined, signal);
+
+export const registerVendor = (request: RegisterVendorRequest) =>
+  post<MaintenanceVendor>('/maintenance/vendors', request, true);
+
+export const updateVendor = (vendorId: string, request: UpdateVendorRequest) =>
+  patch<MaintenanceVendor>(`/maintenance/vendors/${vendorId}`, request);
+
+export const changeVendorLifecycle = (vendorId: string, request: ChangeLifecycleRequest) =>
+  patch<MaintenanceVendor>(`/maintenance/vendors/${vendorId}/lifecycle`, request);
+
+// ---- preventive schedules -------------------------------------------------------------------------
+
+export const listSchedules = (
+  params: { siteCode?: string; assetId?: string },
+  signal?: AbortSignal,
+) => get<PreventiveSchedule[]>('/maintenance/schedules', params as QueryParams, signal);
+
+export const getSchedule = (scheduleId: string, signal?: AbortSignal) =>
+  get<PreventiveSchedule>(`/maintenance/schedules/${scheduleId}`, undefined, signal);
+
+export const createSchedule = (request: CreateScheduleRequest) =>
+  post<PreventiveSchedule>('/maintenance/schedules', request, true);
+
+export const updateSchedule = (scheduleId: string, request: UpdateScheduleRequest) =>
+  patch<PreventiveSchedule>(`/maintenance/schedules/${scheduleId}`, request);
+
+export const changeScheduleLifecycle = (scheduleId: string, request: ChangeLifecycleRequest) =>
+  patch<PreventiveSchedule>(`/maintenance/schedules/${scheduleId}/lifecycle`, request);
+
+// ---- sweeps ---------------------------------------------------------------------------------------
+
+/**
+ * Runs preventive generation on demand — what the scheduler does, when somebody asks.
+ *
+ * Idempotent by cycle: a schedule already generated for its current due date produces nothing,
+ * however often this is called. No `Idempotency-Key` is needed or accepted for that reason.
+ */
+export const runGeneration = () =>
+  post<GenerationRun>('/maintenance/schedules/runs', {});
+
+/** Runs the SLA sweep on demand. Evaluated against the configuration active right now. */
+export const runEscalationSweep = () =>
+  post<EscalationSweep>('/maintenance/escalations/runs', {});
