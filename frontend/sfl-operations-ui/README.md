@@ -1,11 +1,12 @@
 # SFL Operations UI
 
-The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). Five
+The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). Six
 systems have screens, across three services:
 
 | System | Module | Service | Port |
 | --- | --- | --- | --- |
 | S152 — Facility management (CAFM/IWMS) | `modules/facilities` | `sfl-facilities-service` | `8091` |
+| S153 — Maintenance management (CMMS) | `modules/facilities` | `sfl-facilities-service` | `8091` |
 | S166 — Fleet and vehicle management | `modules/fleet` | `sfl-fleet-logistics-service` | `8093` |
 | S168 — Fuel and driver logbooks | `modules/fuel` | `sfl-fleet-logistics-service` | `8093` |
 | S171 — Courier and dispatch | `modules/dispatch` | `sfl-fleet-logistics-service` | `8093` |
@@ -219,7 +220,7 @@ src/
   theme/                  # Aurora theme with the SFL palette (sflNavy / sflGold)
 ```
 
-Adding the next SFL module (S153 CMMS, S159 booking, Safety & Security, Asset Visibility) means
+Adding the next SFL module (S159 booking, Safety & Security, Asset Visibility) means
 adding `src/modules/<module>` and a navigation section — the API client, error envelope handling,
 validation and layout are already shared.
 
@@ -237,8 +238,9 @@ npm run test          # vitest run
 npm run test:watch
 ```
 
-44 tests today, covering system entitlement per role, the S152 readiness rules, the formatting
-helpers, and the facilities dashboard's loading / error / stale / restricted-drilldown states.
+73 tests today, covering system entitlement per role, the S152 readiness rules, the S153 closure
+evidence gate and work-order transition table, the formatting helpers, and the facilities
+dashboard's loading / error / stale / restricted-drilldown states.
 
 ### Data-fetching contract
 

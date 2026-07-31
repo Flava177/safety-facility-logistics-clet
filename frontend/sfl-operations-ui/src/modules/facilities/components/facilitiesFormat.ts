@@ -2,7 +2,10 @@ import type { Tone } from 'shared/components/StatusChip';
 import type {
   AssetOperationalStatus,
   BlockerSeverity,
+  FacilityFaultStatus,
+  FaultPriority,
   LocationReadinessStatus,
+  WorkOrderStatus,
 } from '../api/enums';
 
 /**
@@ -126,3 +129,113 @@ export const formatDateTime = (iso: string | null | undefined): string => {
 /** `null` and `undefined` render as an em dash rather than as an empty cell. */
 export const orDash = (value: string | number | null | undefined): string =>
   value === null || value === undefined || value === '' ? '—' : String(value);
+
+// ---- S153 -----------------------------------------------------------------------------------
+
+/** How urgent a fault is. Critical is the one that stops a space being used. */
+export const priorityTone = (priority: FaultPriority): Tone => {
+  switch (priority) {
+    case 'CRITICAL':
+      return 'blocked';
+    case 'HIGH':
+      return 'caution';
+    case 'MEDIUM':
+      return 'active';
+    default:
+      return 'neutral';
+  }
+};
+
+/**
+ * The tone a fault status carries.
+ *
+ * `RESOLVED` is the only success. The three dismissals are neutral rather than negative — a fault
+ * correctly rejected is not a failure, and colouring it red would train people to ignore red.
+ */
+export const faultStatusTone = (status: FacilityFaultStatus): Tone => {
+  switch (status) {
+    case 'RESOLVED':
+      return 'ready';
+    case 'WORK_ORDER_CREATED':
+      return 'active';
+    case 'REPORTED':
+    case 'TRIAGED':
+      return 'caution';
+    default:
+      return 'neutral';
+  }
+};
+
+/** The tone a work-order status carries. Held is warned about; cancelled is merely over. */
+export const workOrderStatusTone = (status: WorkOrderStatus): Tone => {
+  switch (status) {
+    case 'CLOSED':
+      return 'ready';
+    case 'COMPLETED':
+      return 'accent';
+    case 'ON_HOLD':
+      return 'caution';
+    case 'CANCELLED':
+      return 'neutral';
+    default:
+      return 'active';
+  }
+};
+
+/**
+ * How an SLA reads at a glance.
+ *
+ * Overdue is an error whatever the escalation level, because level zero overdue is still a breached
+ * deadline. The level is shown separately rather than folded into the tone — "overdue" and "nobody
+ * has picked it up three times" are different facts and a single colour cannot carry both.
+ */
+export const slaTone = (overdue: boolean): Tone => (overdue ? 'blocked' : 'ready');
+
+/**
+ * How late something is, in words.
+ *
+ * Takes `minutesOverdue` from the service rather than comparing the deadline to the browser clock: a
+ * workstation whose clock is ten minutes fast would otherwise disagree with the escalation sweep
+ * about what is late, and the sweep is the one that notifies people.
+ */
+export const overdueBy = (minutes: number | null | undefined): string => {
+  if (minutes === null || minutes === undefined || minutes <= 0) {
+    return '';
+  }
+  if (minutes < 60) {
+    return `${minutes} min overdue`;
+  }
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) {
+    return `${hours}h overdue`;
+  }
+  const days = Math.floor(hours / 24);
+  return `${days}d overdue`;
+};
+
+/** Accumulated hold time, shown beside the deadline and never subtracted from it. */
+export const heldFor = (seconds: number): string => {
+  if (!seconds) {
+    return '';
+  }
+  const hours = Math.floor(seconds / 3600);
+  if (hours < 1) {
+    return `${Math.max(1, Math.round(seconds / 60))} min on hold`;
+  }
+  if (hours < 24) {
+    return `${hours}h on hold`;
+  }
+  return `${Math.floor(hours / 24)}d on hold`;
+};
+
+/**
+ * The evidence shortfall, as the sentence a user needs.
+ *
+ * Empty when the requirement is met, so a caller can render it or not without asking twice.
+ */
+export const evidenceGap = (attached: number, required: number): string =>
+  attached >= required ? '' : `${attached} of ${required} required`;
+
+/** An escalation level, or empty at zero. Level is not a status; it is how many times it has been raised. */
+export const escalationLabel = (level: number): string =>
+  level > 0 ? `Escalated · level ${level}` : '';

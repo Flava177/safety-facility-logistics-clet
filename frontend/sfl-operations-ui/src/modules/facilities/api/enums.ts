@@ -200,3 +200,77 @@ export type FacilitiesPermission =
   | 'FACILITIES_AUDIT_INTEGRITY_CHECK'
   | 'FACILITIES_CONFIG_READ'
   | 'FACILITIES_CONFIG_MANAGE';
+
+// =================================================================================================
+// S153 CMMS
+// =================================================================================================
+
+/**
+ * How urgent a fault is, and therefore what SLA it earns.
+ *
+ * The order is meaningful and relied on by two configurable thresholds — the priority at which a
+ * fault blocks its space, and the priority at which closure evidence becomes mandatory. Both are
+ * expressed as "at least this", so reordering this array changes behaviour.
+ */
+export const faultPriorities = ['LOW', 'MEDIUM', 'HIGH', 'CRITICAL'] as const;
+export type FaultPriority = (typeof faultPriorities)[number];
+
+/** The life of a reported fault. `REJECTED`, `DUPLICATE` and `CANCELLED` are terminal dismissals. */
+export const faultStatuses = [
+  'REPORTED',
+  'TRIAGED',
+  'WORK_ORDER_CREATED',
+  'RESOLVED',
+  'REJECTED',
+  'DUPLICATE',
+  'CANCELLED',
+] as const;
+export type FacilityFaultStatus = (typeof faultStatuses)[number];
+
+/** The three outcomes `PATCH /faults/{id}/dismissal` accepts. All require a reason. */
+export const faultDismissalOutcomes = ['REJECTED', 'DUPLICATE', 'CANCELLED'] as const;
+export type FaultDismissalOutcome = (typeof faultDismissalOutcomes)[number];
+
+/**
+ * The life of a work order.
+ *
+ * `COMPLETED` and `CLOSED` are separate on purpose: the assignee says the work is done, an
+ * authorised officer says it is accepted. Passing through `COMPLETED` is not mandatory — closure is
+ * reachable from any working state, because the gate is the closing permission and the evidence
+ * rule rather than the route taken.
+ */
+export const workOrderStatuses = [
+  'OPEN',
+  'ASSIGNED',
+  'IN_PROGRESS',
+  'ON_HOLD',
+  'COMPLETED',
+  'CLOSED',
+  'CANCELLED',
+] as const;
+export type WorkOrderStatus = (typeof workOrderStatuses)[number];
+
+/** Why a work order exists. Closing a `PREVENTIVE` one records the service against its asset. */
+export const workOrderTypes = ['CORRECTIVE', 'PREVENTIVE', 'INSPECTION'] as const;
+export type WorkOrderType = (typeof workOrderTypes)[number];
+
+/** What a piece of evidence is. `INVOICE` does not satisfy the closure requirement. */
+export const evidenceTypes = [
+  'BEFORE_PHOTO',
+  'AFTER_PHOTO',
+  'SERVICE_REPORT',
+  'CERTIFICATE',
+  'INVOICE',
+  'OTHER',
+] as const;
+export type EvidenceType = (typeof evidenceTypes)[number];
+
+/** How long evidence must be kept. Mandatory on every attachment — SRS-SFL-S153-03. */
+export const retentionClasses = [
+  'OPERATIONAL',
+  'COMPLIANCE',
+  'SAFETY_CRITICAL',
+  'EXAMINATION',
+  'LEGAL',
+] as const;
+export type RetentionClass = (typeof retentionClasses)[number];

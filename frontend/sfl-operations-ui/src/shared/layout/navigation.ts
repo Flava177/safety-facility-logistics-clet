@@ -83,6 +83,17 @@ export const facilitiesPaths = {
   checklistDetail: (checklistId: string) => `/facilities/checklists/${checklistId}`,
   audit: '/facilities/audit',
   configuration: '/facilities/configuration',
+
+  // S153 CMMS. Same route base as S152 because it is the same service and the same programme; the
+  // system code differs, which is what the route guard reads.
+  faults: '/facilities/faults',
+  faultDetail: (faultId: string) => `/facilities/faults/${faultId}`,
+  workOrders: '/facilities/work-orders',
+  workOrderDetail: (workOrderId: string) => `/facilities/work-orders/${workOrderId}`,
+  schedules: '/facilities/maintenance/schedules',
+  scheduleDetail: (scheduleId: string) => `/facilities/maintenance/schedules/${scheduleId}`,
+  vendors: '/facilities/maintenance/vendors',
+  evidenceDetail: (evidenceId: string) => `/facilities/maintenance-evidence/${evidenceId}`,
 };
 
 export const fleetPaths = {
@@ -189,6 +200,50 @@ export const navSections: NavSection[] = [
         description: 'Inspect a space against its checklist',
         // Enforced by ReadinessApplicationService.assessments.
         permission: 'FACILITIES_READINESS_READ',
+      },
+    ],
+  },
+  {
+    // S153. Its own section rather than items inside 'Facility operations', because maintenance has
+    // a different audience: a technician and a contractor live here and never open the estate
+    // registers, and a section they can read end to end is easier to trust than three items
+    // scattered through one they mostly cannot.
+    heading: 'Maintenance',
+    programme: 'IFIMP',
+    system: 'S153',
+    items: [
+      {
+        label: 'Faults',
+        to: facilitiesPaths.faults,
+        icon: 'flag',
+        matchPrefix: facilitiesPaths.faults,
+        description: 'Reported problems, triage and SLA',
+        // Enforced by FacilityFaultService. A requester holds this and sees only their own.
+        permission: 'FACILITIES_FAULT_READ',
+      },
+      {
+        label: 'Work orders',
+        to: facilitiesPaths.workOrders,
+        icon: 'wrench',
+        matchPrefix: facilitiesPaths.workOrders,
+        description: 'The queue, its assignees and what is overdue',
+        // Enforced by WorkOrderApplicationService, which also narrows a vendor to their own.
+        permission: 'FACILITIES_WORK_ORDER_READ',
+      },
+      {
+        label: 'Preventive schedules',
+        to: facilitiesPaths.schedules,
+        icon: 'calendar',
+        matchPrefix: facilitiesPaths.schedules,
+        description: 'Planned servicing, and what it has raised',
+        permission: 'FACILITIES_PM_SCHEDULE_READ',
+      },
+      {
+        label: 'Vendors',
+        to: facilitiesPaths.vendors,
+        icon: 'users',
+        description: 'Contractors, contracts and response times',
+        permission: 'FACILITIES_VENDOR_READ',
       },
     ],
   },

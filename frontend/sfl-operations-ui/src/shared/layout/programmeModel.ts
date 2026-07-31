@@ -66,8 +66,25 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  * S152 is the first IFIMP system to arrive. Until it did, the programme was declared in
  * {@link programmes} and had no systems at all, so a facilities manager was entitled to a programme
  * that showed them nothing — an empty sidebar with no explanation.
+ *
+ * ## Why S153 is its own code even though no role's entitlement differs from S152
+ *
+ * Today every role entitled to S152 is also entitled to S153, and the reverse. That is not an
+ * oversight and it is worth stating, because the obvious reading of two codes that always move
+ * together is that one of them is redundant.
+ *
+ * It is here for three reasons. The C9 mapping lists S153 as a **Fast-Track system in its own
+ * right**, the same status as S152, and the coverage claims in `solution.md` and ADR 0006 count
+ * systems — "IFIMP: S152 and S153 complete" is only checkable if both exist. `VITE_SFL_SYSTEMS=S153`
+ * becomes possible, which is how somebody looks at maintenance in isolation and is not possible
+ * otherwise. And the no-entitlement page names the system: a user refused maintenance should read
+ * "Maintenance management", not "Facility management".
+ *
+ * Entitlement is identical because `FacilitiesPermissionMatrix` puts `FACILITIES_FAULT_READ` and
+ * `FACILITIES_WORK_ORDER_READ` inside its shared `READ_ONLY` set, so every facilities-facing role can
+ * read maintenance. The day a role diverges, the code is already here to say so.
  */
-export type SystemCode = 'S152' | 'S166' | 'S168' | 'S171' | 'S174';
+export type SystemCode = 'S152' | 'S153' | 'S166' | 'S168' | 'S171' | 'S174';
 
 export interface SflSystem {
   code: SystemCode;
@@ -79,6 +96,7 @@ export interface SflSystem {
 
 export const systems: Record<SystemCode, SflSystem> = {
   S152: { code: 'S152', label: 'Facility management', programme: 'IFIMP' },
+  S153: { code: 'S153', label: 'Maintenance management', programme: 'IFIMP' },
   S166: { code: 'S166', label: 'Fleet & vehicle management', programme: 'FTLMP' },
   S168: { code: 'S168', label: 'Fuel & driver logbooks', programme: 'FTLMP' },
   S171: { code: 'S171', label: 'Courier & dispatch', programme: 'FTLMP' },
@@ -170,17 +188,22 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
  * default rather than the fail-closed one used for programmes.
  */
 export const roleSystems: Record<string, SystemCode[]> = {
-  // SFL.IFIMP — S152 is the facilities platform; S153 and S159 will join it in the same service.
-  // Transcribed from `FacilitiesPermissionMatrix`: a role appears here exactly when that matrix
-  // grants it something. `IFIMP_REQUESTER` is in the matrix for two read permissions and no more —
-  // a requester needs to name the room their fault is in, not browse the asset register — so it is
-  // entitled to the system and the sidebar drops the screens it cannot read.
-  FACILITIES_DIRECTOR: ['S152'],
-  FACILITIES_MANAGER: ['S152'],
-  IFIMP_MAINTENANCE_SUPERVISOR: ['S152'],
-  IFIMP_TECHNICIAN: ['S152'],
-  IFIMP_REQUESTER: ['S152'],
-  VENDOR_TECHNICIAN: ['S152'],
+  // SFL.IFIMP — S152 is the facilities platform, S153 the maintenance module in the same service;
+  // S159 will join them. Transcribed from `FacilitiesPermissionMatrix`: a role appears here exactly
+  // when that matrix grants it something.
+  //
+  // `VENDOR_TECHNICIAN` is the one worth reading twice. A contractor holds work-order and evidence
+  // permissions plus three estate *reads* — site, space and asset — and nothing else: no dashboard,
+  // no readiness, not even `FACILITIES_FAULT_READ`. Both codes are granted because the estate reads
+  // are what let a work order say where it is and what it is on; dropping S152 would break the link
+  // from a job to the hall it is in. The sidebar then shows them exactly what they can read, which
+  // is three registers and their own queue — the service narrows the queue itself, per record.
+  FACILITIES_DIRECTOR: ['S152', 'S153'],
+  FACILITIES_MANAGER: ['S152', 'S153'],
+  IFIMP_MAINTENANCE_SUPERVISOR: ['S152', 'S153'],
+  IFIMP_TECHNICIAN: ['S152', 'S153'],
+  IFIMP_REQUESTER: ['S152', 'S153'],
+  VENDOR_TECHNICIAN: ['S152', 'S153'],
 
   // SFL.FTLMP — all three systems live in `sfl-fleet-logistics-service`
   FLEET_MANAGER: ['S166', 'S168', 'S171'],
@@ -192,20 +215,20 @@ export const roleSystems: Record<string, SystemCode[]> = {
   LOGISTICS_COORDINATOR: ['S171'],
   // A centre manager receives consignments and declares their centre's operating mode, which is an
   // S152 permission the facilities matrix grants them.
-  CENTRE_MANAGER: ['S152', 'S171'],
+  CENTRE_MANAGER: ['S152', 'S153', 'S171'],
 
   // SFL.SSEMP — S174 is its own deployable, split by ADR 0004
   EMERGENCY_COORDINATOR: ['S174'],
   SECURITY_DIRECTOR: ['S174'],
   SOC_OPERATOR: ['S174'],
   // An HSE manager reads the estate to place an incident and judge a location's standing.
-  HSE_MANAGER: ['S152', 'S174'],
+  HSE_MANAGER: ['S152', 'S153', 'S174'],
 
   // Roles that span programmes at the system grain too
   SECURITY_OFFICER: ['S171', 'S174'],
-  COMMAND_ROLE: ['S152', 'S166', 'S168', 'S171', 'S174'],
-  INTEGRATION_ENGINEER: ['S152', 'S166', 'S168', 'S171', 'S174'],
-  SERVICE_INTEGRATION: ['S152', 'S166', 'S168', 'S171'],
+  COMMAND_ROLE: ['S152', 'S153', 'S166', 'S168', 'S171', 'S174'],
+  INTEGRATION_ENGINEER: ['S152', 'S153', 'S166', 'S168', 'S171', 'S174'],
+  SERVICE_INTEGRATION: ['S152', 'S153', 'S166', 'S168', 'S171'],
 };
 
 /** Splits a comma-separated header or env value into normalised role names. */
