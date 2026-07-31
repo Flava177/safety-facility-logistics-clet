@@ -16,6 +16,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RegisterDriverCo
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RegisterVehicleCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.StartTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleRepository;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.query.TripQueryService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.query.VehicleQueryService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.DriverApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetDashboardApplicationService;
@@ -104,6 +105,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     @Autowired private VehicleRepository vehicleRepository;
     @Autowired private DriverApplicationService drivers;
     @Autowired private TripApplicationService trips;
+    @Autowired private TripQueryService tripQueries;
     @Autowired private FleetReadinessService readiness;
     @Autowired private FleetWorkflowApplicationService workflow;
     @Autowired private SlaEvaluationService slaEvaluation;
@@ -296,6 +298,45 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     // =====================================================================================
     // Scenario 7 — Prevent overlapping vehicle and driver assignments (S166-02)
     // =====================================================================================
+
+    /**
+     * A driver reads their own trip and is refused another driver's <strong>by id</strong>.
+     *
+     * <p>{@link gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetAccessPolicy#requireRecordScope}
+     * is documented as "what keeps the limited driver/mobile user class to their own trips and
+     * inspections", and it was unit-tested — but no read ever called it, and its single production
+     * call site passed {@code null} as the owner reference, which the policy returns on immediately.
+     * The rule was therefore enforced nowhere, and a {@code FLEET_DRIVER} holding any trip id read
+     * that trip in full.
+     *
+     * <p>Asserted by id rather than by an absent row in a list: a filter the collection obeys and the
+     * record does not is decorative, and only a refusal by id distinguishes the two.
+     */
+    @Test
+    @DisplayName("7a. a driver reads their own trip and is refused another driver's by id")
+    void a_driver_is_scoped_to_their_own_trips() {
+        String site = uniqueSite();
+        Vehicle vehicle = registerVehicle(site, uniqueRegistration());
+        giveMandatoryCompliance(vehicle, site);
+        DriverProfileReference mine = registerDriver(site);
+        DriverProfileReference theirs = registerDriver(site);
+
+        Instant start = now.plus(Duration.ofHours(2));
+        Trip myTrip = createTrip(vehicle, mine, site, start, start.plus(Duration.ofHours(3)));
+        Trip theirTrip = createTrip(vehicle, theirs, site, start.plus(Duration.ofHours(4)),
+                start.plus(Duration.ofHours(7)));
+
+        // The driver signs in as their staff reference — the equivalence fuel already relies on when
+        // it refuses a driver a logbook opened for somebody else.
+        ActorContext driver = actor(mine.staffReference(), Set.of(SflRole.FLEET_DRIVER), site, false);
+
+        assertThat(tripQueries.findById(myTrip.id(), driver).id()).isEqualTo(myTrip.id());
+        assertThatThrownBy(() -> tripQueries.findById(theirTrip.id(), driver))
+                .isInstanceOf(FleetAuthorizationException.class);
+
+        // A supervising officer is unaffected: the rule narrows the driver, not the fleet office.
+        assertThat(tripQueries.findById(theirTrip.id(), officer(site)).id()).isEqualTo(theirTrip.id());
+    }
 
     @Test
     @DisplayName("7. overlapping vehicle and driver assignments are prevented, back-to-back ones are not")

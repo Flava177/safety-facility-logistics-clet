@@ -89,7 +89,7 @@ class TripApplicationServiceTest {
 
         FleetReadinessService readiness = new FleetReadinessService(complianceDocuments, inspections, trips,
                 drivers, new FleetTestDoubles.FixedRuntimeConfiguration(), clock);
-        service = new TripApplicationService(trips, vehicles, inspections, readiness, workflowRaiser,
+        service = new TripApplicationService(trips, vehicles, inspections, drivers, readiness, workflowRaiser,
                 new FleetAccessPolicy(), audit, events, new FleetTestDoubles.InMemoryIdempotencyPort(), clock);
 
         vehicle = vehicles.save(FleetFixtures.vehicle());

@@ -10,6 +10,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.HoldTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RecordInspectionCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.StartTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.DriverProfileRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IdempotencyPort;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.TripRepository;
@@ -23,6 +24,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ReadinessBlockedExc
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DateTimeRange;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionFinding;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OdometerSource;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
@@ -63,6 +65,7 @@ public class TripApplicationService {
     private final TripRepository trips;
     private final VehicleRepository vehicles;
     private final VehicleInspectionRepository inspections;
+    private final DriverProfileRepository driverProfiles;
     private final FleetReadinessService readinessService;
     private final FleetWorkflowRaiser workflowRaiser;
     private final FleetAccessPolicy accessPolicy;
@@ -72,12 +75,14 @@ public class TripApplicationService {
     private final Clock clock;
 
     public TripApplicationService(TripRepository trips, VehicleRepository vehicles,
-            VehicleInspectionRepository inspections, FleetReadinessService readinessService,
+            VehicleInspectionRepository inspections, DriverProfileRepository driverProfiles,
+            FleetReadinessService readinessService,
             FleetWorkflowRaiser workflowRaiser, FleetAccessPolicy accessPolicy, AuditPort auditPort,
             IntegrationEventPublisher eventPublisher, IdempotencyPort idempotency, Clock clock) {
         this.trips = trips;
         this.vehicles = vehicles;
         this.inspections = inspections;
+        this.driverProfiles = driverProfiles;
         this.readinessService = readinessService;
         this.workflowRaiser = workflowRaiser;
         this.accessPolicy = accessPolicy;
@@ -85,6 +90,24 @@ public class TripApplicationService {
         this.eventPublisher = eventPublisher;
         this.idempotency = idempotency;
         this.clock = clock;
+    }
+
+    /**
+     * The owner reference {@link FleetAccessPolicy#requireRecordScope} compares against, resolved from
+     * the trip's driver.
+     *
+     * <p>{@code Trip} carries {@code driverId}, a register key, and the record-scope rule is written in
+     * terms of the actor's own id — so the two are joined here through the driver's
+     * {@code staffReference}, which is the value the actor authenticates as. Fuel already relies on
+     * that same equivalence when it refuses a driver a logbook opened for somebody else.
+     *
+     * <p>Returns {@code null} for an unresolvable driver, which {@code requireRecordScope} treats as
+     * "no owner, no narrowing". That is the pre-existing behaviour for an unassigned trip and is not
+     * widened here: a trip with no driver has no owner to be scoped to.
+     */
+    private String driverOwnerReference(UUID driverId) {
+        return driverId == null ? null
+                : driverProfiles.findById(driverId).map(DriverProfileReference::staffReference).orElse(null);
     }
 
     /** SRS-SFL-S166-02: create a trip, optionally assigning vehicle and driver immediately. */
@@ -318,10 +341,12 @@ public class TripApplicationService {
 
         accessPolicy.require(command.actor(), SflPermission.FLEET_INSPECTION_RECORD, vehicle.siteCode(),
                 INSPECTION_RESOURCE_TYPE, vehicleId.toString());
-        // A driver may only inspect the vehicle on their own trip.
+        // A driver may only inspect the vehicle on their own trip. The owner reference used to be
+        // passed as null, which `requireRecordScope` returns on immediately — so the rule this comment
+        // describes has never once been enforced, at the only call site the policy has.
         if (trip != null && trip.driverId() != null) {
-            accessPolicy.requireRecordScope(command.actor(), null, SflPermission.FLEET_TRIP_MANAGE,
-                    RESOURCE_TYPE, trip.id().toString());
+            accessPolicy.requireRecordScope(command.actor(), driverOwnerReference(trip.driverId()),
+                    SflPermission.FLEET_TRIP_MANAGE, RESOURCE_TYPE, trip.id().toString());
         }
 
         String fingerprint = idempotency.fingerprint(command.idempotencyPayload());
