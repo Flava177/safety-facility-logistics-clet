@@ -122,6 +122,10 @@ public enum SflPermission {
     FUEL_TRANSACTION_IMPORT,
     FUEL_TRANSACTION_VOID,
     FUEL_POLICY_READ,
+    /** SRS-SFL-S168fuel-04. Reading the card register is a fleet-office read, not a driver's. */
+    FUEL_CARD_READ,
+    /** Issue, reassign, suspend, reinstate, cancel. A payment instrument, so manager-only. */
+    FUEL_CARD_MANAGE,
     FUEL_POLICY_MANAGE,
     FUEL_LOGBOOK_READ,
     FUEL_LOGBOOK_CREATE,
