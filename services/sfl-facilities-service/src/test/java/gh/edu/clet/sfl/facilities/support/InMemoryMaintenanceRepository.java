@@ -138,6 +138,15 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
     }
 
     @Override
+    public List<MaintenanceEvidence> findDisposalCandidates(int limit) {
+        return evidence.values().stream()
+                .filter(item -> item.disposedAt() == null && !item.legalHold())
+                .sorted(Comparator.comparing(MaintenanceEvidence::uploadedAt))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
     public List<WorkOrder> findResponseBreaches(Instant asOf, int limit) {
         return workOrders.values().stream()
                 .filter(order -> order.responseBreached(asOf))

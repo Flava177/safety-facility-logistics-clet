@@ -62,6 +62,15 @@ public interface MaintenanceRepository {
     /** Work past its response deadline that nobody has started and nobody has yet been told about. */
     List<WorkOrder> findResponseBreaches(Instant asOf, int limit);
 
+    /**
+     * Evidence that is not held and not already disposed of, oldest first.
+     *
+     * <p>Eligibility itself is decided in the domain by {@link MaintenanceEvidence#isDisposalEligible},
+     * because the retention arithmetic is a rule rather than a query. This narrows the candidates to
+     * the rows that could possibly qualify so the sweep does not read the whole table to find them.
+     */
+    List<MaintenanceEvidence> findDisposalCandidates(int limit);
+
     String nextWorkOrderNumber(String siteCode);
 
     // ---- parts and evidence -------------------------------------------------------------------

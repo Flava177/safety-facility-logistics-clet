@@ -10,6 +10,7 @@ import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceCommands;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceConfiguration;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceEscalationService;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceEvidenceService;
+import gh.edu.clet.sfl.facilities.maintenance.application.EvidenceDisposalService;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceVendorService;
 import gh.edu.clet.sfl.facilities.maintenance.application.PreventiveMaintenanceService;
 import gh.edu.clet.sfl.facilities.maintenance.application.WorkOrderApplicationService;
@@ -100,6 +101,7 @@ class S153MandatoryScenariosTest {
     private MaintenanceVendorService vendors;
     private PreventiveMaintenanceService preventive;
     private MaintenanceEscalationService escalation;
+    private EvidenceDisposalService disposal;
 
     private ActorContext manager;
     private ActorContext supervisor;
@@ -143,6 +145,7 @@ class S153MandatoryScenariosTest {
         notifications = new RecordingNotifications();
         escalation = new MaintenanceEscalationService(maintenance, maintenanceConfiguration, faults,
                 workOrders, notifications, clock);
+        disposal = new EvidenceDisposalService(maintenance, audit, outbox, clock);
 
         manager = TestDoubles.actor("manager", Set.of(SflRole.FACILITIES_MANAGER), "MAIN");
         supervisor = TestDoubles.actor("supervisor", Set.of(SflRole.IFIMP_MAINTENANCE_SUPERVISOR), "MAIN");
@@ -658,6 +661,49 @@ class S153MandatoryScenariosTest {
             assertThatThrownBy(() -> close(order, "Fixed"))
                     .isInstanceOf(FacilitiesException.ClosureEvidenceMissingException.class)
                     .hasMessageContaining("1 item(s) required, 0 attached");
+        }
+
+        @Test
+        void retention_elapsing_disposes_of_the_reference_and_keeps_the_record() {
+            WorkOrder order = readyToClose(FaultPriority.HIGH);
+            MaintenanceEvidence attached = attachEvidence(order);
+            close(order, "Fixed");
+
+            // OPERATIONAL retention is one year. A day short of it, nothing happens.
+            clock.advance(Duration.ofDays(364));
+            assertThat(disposal.sweep(system)).isZero();
+            assertThat(maintenance.findEvidence(attached.id()).orElseThrow().fileReference()).isNotNull();
+
+            clock.advance(Duration.ofDays(2));
+            assertThat(disposal.sweep(system)).isEqualTo(1);
+
+            MaintenanceEvidence disposed = maintenance.findEvidence(attached.id()).orElseThrow();
+            // The pointer is gone; everything needed to prove what was destroyed, and why, remains.
+            assertThat(disposed.fileReference()).isNull();
+            assertThat(disposed.disposedAt()).isNotNull();
+            assertThat(disposed.disposalReason()).contains("OPERATIONAL");
+            assertThat(disposed.contentHash()).isEqualTo(attached.contentHash());
+            assertThat(disposed.uploadedBy()).isEqualTo(attached.uploadedBy());
+            assertThat(audit.actions()).contains(AuditAction.EVIDENCE_DISPOSED);
+            assertThat(outbox.published("sfl.ifimp.maintenance-evidence-disposed.v1")).isTrue();
+
+            // Idempotent: a second sweep finds nothing left to do.
+            assertThat(disposal.sweep(system)).isZero();
+        }
+
+        @Test
+        void a_legal_hold_outlives_the_retention_period() {
+            WorkOrder order = readyToClose(FaultPriority.HIGH);
+            MaintenanceEvidence attached = attachEvidence(order);
+            close(order, "Fixed");
+            evidence.setLegalHold(new MaintenanceCommands.SetLegalHold(attached.id(), true,
+                    "Held pending an investigation", auditor, SourceChannel.WEB));
+
+            clock.advance(Duration.ofDays(400));
+
+            // Well past a one-year retention, and untouched — which is the whole point of a hold.
+            assertThat(disposal.sweep(system)).isZero();
+            assertThat(maintenance.findEvidence(attached.id()).orElseThrow().fileReference()).isNotNull();
         }
 
         @Test

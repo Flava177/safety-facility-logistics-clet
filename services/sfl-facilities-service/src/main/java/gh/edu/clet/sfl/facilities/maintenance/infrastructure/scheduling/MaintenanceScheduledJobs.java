@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.maintenance.infrastructure.scheduling;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
+import gh.edu.clet.sfl.facilities.maintenance.application.EvidenceDisposalService;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceEscalationService;
 import gh.edu.clet.sfl.facilities.maintenance.application.PreventiveMaintenanceService;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder;
@@ -58,14 +59,16 @@ public class MaintenanceScheduledJobs {
 
     private final PreventiveMaintenanceService preventive;
     private final MaintenanceEscalationService escalation;
+    private final EvidenceDisposalService disposal;
     private final Clock clock;
     private final boolean enabled;
 
     public MaintenanceScheduledJobs(PreventiveMaintenanceService preventive,
-            MaintenanceEscalationService escalation, Clock clock,
+            MaintenanceEscalationService escalation, EvidenceDisposalService disposal, Clock clock,
             @Value("${sfl.maintenance.scheduling.enabled:true}") boolean enabled) {
         this.preventive = preventive;
         this.escalation = escalation;
+        this.disposal = disposal;
         this.clock = clock;
         this.enabled = enabled;
     }
@@ -95,6 +98,31 @@ public class MaintenanceScheduledJobs {
             // — the failure mode being least likely to be noticed, on the job whose whole purpose is
             // to notice things.
             log.error("SLA escalation sweep failed; it will be retried on the next run", failure);
+        }
+    }
+
+    /**
+     * Disposes of evidence whose retention has run out.
+     *
+     * <p>Daily, and deliberately not more often. Retention is measured in years, so nothing is gained
+     * by checking hourly — and this is the one job in the module that destroys something, so its blast
+     * radius per run should be as small as the requirement allows.
+     */
+    @Scheduled(cron = "${sfl.maintenance.disposal.cron:0 30 2 * * *}")
+    public void sweepEvidenceDisposal() {
+        if (!enabled) {
+            return;
+        }
+        try {
+            int disposed = disposal.sweep(systemActor());
+            if (disposed > 0) {
+                log.info("Retention sweep disposed of {} evidence reference(s)", disposed);
+            }
+        } catch (RuntimeException failure) {
+            // Swallowed for the same reason as the escalation sweep: an uncaught exception from a
+            // scheduled task cancels the schedule for the life of the process. A retention sweep that
+            // silently stopped running would be discovered by a regulator rather than by us.
+            log.error("Evidence disposal sweep failed; it will be retried on the next run", failure);
         }
     }
 
