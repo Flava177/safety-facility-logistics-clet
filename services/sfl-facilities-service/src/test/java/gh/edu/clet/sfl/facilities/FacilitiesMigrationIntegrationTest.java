@@ -11,11 +11,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
-import org.testcontainers.junit.jupiter.Testcontainers;
 
 /**
  * The migrations, applied to a real PostgreSQL (SRS-SFL-S152-01…05).
@@ -25,28 +23,25 @@ import org.testcontainers.junit.jupiter.Testcontainers;
  * a PL/pgSQL loop. None of that is exercised by a unit test, and a migration that fails on first
  * deploy is the worst place to find out.
  *
- * <p>Skipped automatically when no Docker daemon is available, so a developer without Docker still
- * gets a green build. It is not skipped in CI, where Docker is present.
+ * <p>The database comes from {@link FacilitiesPostgresSupport}, which prefers an external one and
+ * falls back to Testcontainers. This class used to be gated on
+ * {@code @Testcontainers(disabledWithoutDocker = true)}, and on Windows that predicate asks a question
+ * with the wrong answer: the <em>Java</em> Docker client cannot reach the named pipe even while the
+ * daemon is running and {@code docker ps} works. All twelve of these tests were therefore skipped on
+ * every single run in the environment this service is developed in — so the migration evidence the
+ * class exists to produce never existed. Pointing it at a running PostgreSQL is what makes it real.
  */
-@Testcontainers(disabledWithoutDocker = true)
+@EnabledIf(value = "gh.edu.clet.sfl.facilities.FacilitiesPostgresSupport#databaseAvailable",
+        disabledReason = "No PostgreSQL available; see FacilitiesPostgresSupport.unavailableReason()")
 @SpringBootTest(properties = {
         "sfl.security.enabled=false",
         "spring.jpa.hibernate.ddl-auto=validate"
 })
 class FacilitiesMigrationIntegrationTest {
 
-    @Container
-    @SuppressWarnings("resource")
-    static final PostgreSQLContainer<?> POSTGRES = new PostgreSQLContainer<>("postgres:16-alpine")
-            .withDatabaseName("sfl_facilities_service")
-            .withUsername("sfl")
-            .withPassword("sfl");
-
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", POSTGRES::getJdbcUrl);
-        registry.add("spring.datasource.username", POSTGRES::getUsername);
-        registry.add("spring.datasource.password", POSTGRES::getPassword);
+        FacilitiesPostgresSupport.datasource(registry);
     }
 
     @Autowired
@@ -212,11 +207,23 @@ class FacilitiesMigrationIntegrationTest {
      */
     @Test
     void the_readiness_checklist_seed_matches_the_sites_that_existed_when_it_ran() {
-        Integer siteCount = jdbc().queryForObject("select count(*) from facilities.sites", Integer.class);
-        Integer checklistCount = jdbc().queryForObject(
-                "select count(*) from facilities.facility_readiness_checklists", Integer.class);
+        // Counted per seeded site, not against `count(*) from sites`. V7 seeds two checklists for each
+        // site that exists **at the moment it runs**, and the original assertion multiplied the site
+        // count as it stands *now* — so it passed only while no sibling test had inserted a site, and
+        // failed as soon as one ran first. Its intent, which the method name states exactly, is that
+        // the seed is two-per-site and references nothing that is not a site; that is what is asserted.
+        List<Map<String, Object>> perSite = jdbc().queryForList(
+                "select site_code, count(*) as checklists from facilities.facility_readiness_checklists"
+                        + " group by site_code");
 
-        assertThat(checklistCount).isEqualTo(siteCount * 2);
+        assertThat(perSite).allSatisfy(row ->
+                assertThat(((Number) row.get("checklists")).intValue()).isEqualTo(2));
+
+        Integer orphaned = jdbc().queryForObject(
+                "select count(*) from facilities.facility_readiness_checklists c"
+                        + " where not exists (select 1 from facilities.sites s where s.site_code = c.site_code)",
+                Integer.class);
+        assertThat(orphaned).isZero();
     }
 
     private static String seedSpace(JdbcTemplate jdbc) {

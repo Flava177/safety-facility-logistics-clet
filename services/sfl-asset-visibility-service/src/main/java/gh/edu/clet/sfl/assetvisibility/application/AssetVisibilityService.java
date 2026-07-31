@@ -34,7 +34,7 @@ public class AssetVisibilityService {
                 command.category(), command.siteCode(), command.locationType(), command.locationReference(),
                 command.custodianReference(), command.externalReference(), clock.instant());
         AssetReference saved = assets.save(asset);
-        record("sfl.asset.asset-registered", "AssetReference", saved, command.actor(), command.correlationId());
+        record("sfl.avamp.asset-registered.v1", "AssetReference", saved, command.actor(), command.correlationId());
         return saved;
     }
 
@@ -42,7 +42,7 @@ public class AssetVisibilityService {
     public AssetReference move(MoveAssetCommand command) {
         AssetReference asset = requireAsset(command.assetId());
         AssetReference saved = assets.save(asset.moveTo(command.locationType(), command.locationReference(), clock.instant()));
-        record("sfl.asset.asset-location-changed", "AssetReference", saved, command.actor(), command.correlationId());
+        record("sfl.avamp.asset-location-changed.v1", "AssetReference", saved, command.actor(), command.correlationId());
         return saved;
     }
 
@@ -50,7 +50,7 @@ public class AssetVisibilityService {
     public AssetReference assignCustody(AssignCustodyCommand command) {
         AssetReference asset = requireAsset(command.assetId());
         AssetReference saved = assets.save(asset.assignCustodian(command.custodianReference(), clock.instant()));
-        record("sfl.asset.asset-custody-changed", "AssetReference", saved, command.actor(), command.correlationId());
+        record("sfl.avamp.asset-custody-changed.v1", "AssetReference", saved, command.actor(), command.correlationId());
         return saved;
     }
 
@@ -58,7 +58,7 @@ public class AssetVisibilityService {
     public AssetReference linkEvidence(LinkEvidenceCommand command) {
         AssetReference asset = requireAsset(command.assetId());
         AssetReference saved = assets.save(asset.linkEvidence(command.evidenceReference(), clock.instant()));
-        record("sfl.asset.asset-evidence-linked", "AssetReference", saved, command.actor(), command.correlationId());
+        record("sfl.avamp.asset-evidence-linked.v1", "AssetReference", saved, command.actor(), command.correlationId());
         return saved;
     }
 

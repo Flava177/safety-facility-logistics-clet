@@ -14,6 +14,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.DriverApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetIntegrationApplicationService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.VehicleApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.LicenceClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
@@ -210,8 +211,19 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         // A FLEET_DRIVER-only actor whose subject is driver A's staff reference may not open a logbook for driver B.
         ActorContext driverA = new ActorContext(new SiteScopedPrincipal("DRV-"+f.site(),"Fuel Driver",Set.of(SflRole.FLEET_DRIVER),Set.of(f.site()),false),"driver-a");
         assertThatThrownBy(() -> fuel.createLogbook(new FuelApplicationService.CreateLogbook(f.site(),driverB.id(),f.vehicle().id(),null,LocalDate.now(),now,now.plusSeconds(3600),"HQ","Court",null,DriverLogbook.UseClassification.OFFICIAL,"Official delivery",null,1100,1150L,true,UUID.randomUUID(),driverA,SourceChannel.WEB)))
-                .isInstanceOf(IllegalStateException.class)
-                .hasMessageContaining("own");
+                .isInstanceOf(FleetAuthorizationException.class);
+
+        // The same rule, proved on a record the driver did not create and fetches **by id**. The
+        // narrowing used to live only in the logbook list's SQL, so a driver holding a colleague's
+        // id read the whole record — journey, route, purpose, passenger notes — through the detail
+        // endpoint. A narrowing the collection obeys and the record does not is decorative: the row
+        // still crosses the boundary, one at a time instead of in a page. An empty list is not
+        // evidence of this rule; a refusal by id is.
+        var someoneElses = fuel.createLogbook(new FuelApplicationService.CreateLogbook(f.site(),f.driver().id(),f.vehicle().id(),null,LocalDate.now(),now,now.plusSeconds(3600),"HQ","Court",null,DriverLogbook.UseClassification.OFFICIAL,"Official delivery",null,1200,1250L,true,UUID.randomUUID(),f.manager(),SourceChannel.WEB));
+        assertThatThrownBy(() -> fuel.logbook(someoneElses.id(),driverA))
+                .isInstanceOf(FleetAuthorizationException.class);
+        assertThatThrownBy(() -> fuel.transitionLogbook(someoneElses.id(),"submit",null,driverA,SourceChannel.WEB))
+                .isInstanceOf(FleetAuthorizationException.class);
     }
 
     // 11

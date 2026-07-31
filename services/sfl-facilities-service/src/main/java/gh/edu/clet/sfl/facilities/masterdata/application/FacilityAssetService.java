@@ -89,7 +89,7 @@ public class FacilityAssetService {
 
         audit.record(actor, command.channel(), AuditAction.FACILITY_ASSET_REGISTERED, "FacilityAsset",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.facility-asset.registered", saved, actor);
+        publish("sfl.ifimp.facility-asset-registered.v1", saved, actor);
         idempotency.recordResult("register-asset", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), saved.id(), saved.siteCode(),
                 actor.actorId());
@@ -111,7 +111,7 @@ public class FacilityAssetService {
 
         audit.record(actor, command.channel(), AuditAction.FACILITY_ASSET_UPDATED, "FacilityAsset",
                 saved.id().toString(), saved.siteCode(), asset, saved);
-        publish("ifimp.facility-asset.updated", saved, actor);
+        publish("sfl.ifimp.facility-asset-updated.v1", saved, actor);
 
         // Criticality may have changed, which changes the severity of any blocker this asset raises.
         spaceReadiness.reconcileAssetBlockers(saved, actor, command.channel());
@@ -139,7 +139,7 @@ public class FacilityAssetService {
 
         audit.record(actor, command.channel(), AuditAction.FACILITY_ASSET_STATUS_CHANGED, "FacilityAsset",
                 saved.id().toString(), saved.siteCode(), previous, saved.operationalStatus());
-        publish("ifimp.facility-asset.status-changed", saved, actor);
+        publish("sfl.ifimp.facility-asset-status-changed.v1", saved, actor);
 
         spaceReadiness.reconcileAssetBlockers(saved, actor, command.channel());
         return saved;
@@ -163,7 +163,7 @@ public class FacilityAssetService {
 
         audit.record(actor, command.channel(), AuditAction.FACILITY_ASSET_RELOCATED, "FacilityAsset",
                 saved.id().toString(), saved.siteCode(), asset.roomId(), saved.roomId());
-        publish("ifimp.facility-asset.relocated", saved, actor);
+        publish("sfl.ifimp.facility-asset-relocated.v1", saved, actor);
 
         // Both ends move: the space it left may recover, the space it joined may now be impaired.
         if (previousRoom != null) {

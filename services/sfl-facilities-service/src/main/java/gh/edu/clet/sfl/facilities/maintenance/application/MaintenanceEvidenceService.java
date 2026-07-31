@@ -91,7 +91,7 @@ public class MaintenanceEvidenceService {
 
         audit.record(actor, command.channel(), AuditAction.EVIDENCE_ATTACHED, "MaintenanceEvidence",
                 evidence.id().toString(), evidence.siteCode(), null, evidence);
-        outbox.record("ifimp.maintenance-evidence.attached", 1, "MaintenanceEvidence", evidence.id(),
+        outbox.record("sfl.ifimp.maintenance-evidence-attached.v1", 1, "MaintenanceEvidence", evidence.id(),
                 evidence.siteCode(), actor.correlationId(), actor.actorId(), evidence);
         idempotency.recordResult("attach-maintenance-evidence", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), evidence.id(), evidence.siteCode(),
@@ -130,7 +130,7 @@ public class MaintenanceEvidenceService {
                 actor.actorId(), at);
         audit.record(actor, command.channel(), AuditAction.EVIDENCE_EXPORTED, "MaintenanceEvidence",
                 evidence.id().toString(), evidence.siteCode(), null, grant);
-        outbox.record("ifimp.maintenance-evidence.exported", 1, "MaintenanceEvidence", evidence.id(),
+        outbox.record("sfl.ifimp.maintenance-evidence-exported.v1", 1, "MaintenanceEvidence", evidence.id(),
                 evidence.siteCode(), actor.correlationId(), actor.actorId(), grant);
         return grant;
     }

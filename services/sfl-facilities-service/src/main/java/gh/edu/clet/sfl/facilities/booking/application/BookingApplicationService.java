@@ -158,7 +158,7 @@ public class BookingApplicationService {
             audit.record(actor, command.channel(), AuditAction.BOOKING_READINESS_OVERRIDDEN, "Booking",
                     saved.id().toString(), saved.siteCode(), null, saved.overrideReason());
         }
-        publish("ifimp.booking.requested", saved, actor);
+        publish("sfl.ifimp.booking-requested.v1", saved, actor);
 
         // A booking needing no approval is confirmed here rather than left REQUESTED. Two audit
         // records for one act is the honest account: the request happened, and the rule that would
@@ -216,7 +216,7 @@ public class BookingApplicationService {
         skipSetupTasks(rejected, "Booking rejected: " + command.reason(), actor, at, command.channel());
         audit.record(actor, command.channel(), AuditAction.BOOKING_REJECTED, "Booking",
                 rejected.id().toString(), rejected.siteCode(), booking, rejected);
-        publish("ifimp.booking.rejected", rejected, actor);
+        publish("sfl.ifimp.booking-rejected.v1", rejected, actor);
         return rejected;
     }
 
@@ -262,7 +262,7 @@ public class BookingApplicationService {
 
         audit.record(actor, command.channel(), AuditAction.BOOKING_RESCHEDULED, "Booking",
                 moved.id().toString(), moved.siteCode(), booking, moved);
-        publish("ifimp.booking.rescheduled", moved, actor);
+        publish("sfl.ifimp.booking-rescheduled.v1", moved, actor);
         return moved;
     }
 
@@ -291,7 +291,7 @@ public class BookingApplicationService {
         }
         audit.record(actor, command.channel(), action, "Booking", saved.id().toString(), saved.siteCode(),
                 booking, saved);
-        publish("ifimp.booking." + command.transition().name().toLowerCase(Locale.ROOT), saved, actor);
+        publish("sfl.ifimp.booking-" + command.transition().name().toLowerCase(Locale.ROOT) + ".v1", saved, actor);
         return saved;
     }
 
@@ -310,7 +310,7 @@ public class BookingApplicationService {
 
         audit.record(actor, command.channel(), AuditAction.BOOKING_CANCELLED, "Booking",
                 cancelled.id().toString(), cancelled.siteCode(), booking, cancelled);
-        publish("ifimp.booking.cancelled", cancelled, actor);
+        publish("sfl.ifimp.booking-cancelled.v1", cancelled, actor);
         return cancelled;
     }
 
@@ -374,7 +374,7 @@ public class BookingApplicationService {
                 actor.correlationId()));
         audit.record(actor, channel, AuditAction.BOOKING_CONFIRMED, "Booking", confirmed.id().toString(),
                 confirmed.siteCode(), booking, confirmed);
-        publish("ifimp.booking.confirmed", confirmed, actor);
+        publish("sfl.ifimp.booking-confirmed.v1", confirmed, actor);
         return confirmed;
     }
 

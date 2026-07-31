@@ -133,7 +133,7 @@ public class WorkOrderApplicationService {
                 actor.correlationId()));
         audit.record(actor, command.channel(), AuditAction.WORK_ORDER_CREATED, "WorkOrder",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.work-order.created", saved, actor);
+        publish("sfl.ifimp.work-order-created.v1", saved, actor);
         idempotency.recordResult("create-work-order", command.idempotencyKey(),
                 idempotency.fingerprint(command.idempotencyPayload()), saved.id(), saved.siteCode(),
                 actor.actorId());
@@ -156,7 +156,7 @@ public class WorkOrderApplicationService {
                 actor.actorId(), at, command.channel(), actor.correlationId()));
         audit.record(actor, command.channel(), AuditAction.WORK_ORDER_ASSIGNED, "WorkOrder",
                 assigned.id().toString(), assigned.siteCode(), order, assigned);
-        publish("ifimp.work-order.assigned", assigned, actor);
+        publish("sfl.ifimp.work-order-assigned.v1", assigned, actor);
         return assigned;
     }
 
@@ -189,7 +189,7 @@ public class WorkOrderApplicationService {
         WorkOrder saved = maintenance.saveWorkOrder(moved);
         audit.record(actor, command.channel(), action, "WorkOrder", saved.id().toString(), saved.siteCode(),
                 order, saved);
-        publish("ifimp.work-order." + command.transition().name().toLowerCase(java.util.Locale.ROOT), saved,
+        publish("sfl.ifimp.work-order-" + command.transition().name().toLowerCase(java.util.Locale.ROOT) + ".v1", saved,
                 actor);
         return saved;
     }
@@ -229,7 +229,7 @@ public class WorkOrderApplicationService {
 
         audit.record(actor, command.channel(), AuditAction.WORK_ORDER_CLOSED, "WorkOrder",
                 closed.id().toString(), closed.siteCode(), order, closed);
-        publish("ifimp.work-order.closed", closed, actor);
+        publish("sfl.ifimp.work-order-closed.v1", closed, actor);
         return closed;
     }
 
@@ -245,7 +245,7 @@ public class WorkOrderApplicationService {
                 command.channel(), actor.correlationId()));
         audit.record(actor, command.channel(), AuditAction.WORK_ORDER_CANCELLED, "WorkOrder",
                 cancelled.id().toString(), cancelled.siteCode(), order, cancelled);
-        publish("ifimp.work-order.cancelled", cancelled, actor);
+        publish("sfl.ifimp.work-order-cancelled.v1", cancelled, actor);
         return cancelled;
     }
 
@@ -338,7 +338,7 @@ public class WorkOrderApplicationService {
         WorkOrder saved = maintenance.saveWorkOrder(escalated);
         audit.record(actor, channel, AuditAction.WORK_ORDER_ESCALATED, "WorkOrder", saved.id().toString(),
                 saved.siteCode(), order, saved);
-        publish("ifimp.work-order.escalated", saved, actor);
+        publish("sfl.ifimp.work-order-escalated.v1", saved, actor);
         return saved;
     }
 
@@ -374,7 +374,7 @@ public class WorkOrderApplicationService {
                 channel, actor.correlationId()));
         audit.record(actor, channel, AuditAction.FACILITY_ASSET_UPDATED, "FacilityAsset",
                 serviced.id().toString(), serviced.siteCode(), asset, serviced);
-        outbox.record("ifimp.facility-asset.serviced", 1, "FacilityAsset", serviced.id(), serviced.siteCode(),
+        outbox.record("sfl.ifimp.facility-asset-serviced.v1", 1, "FacilityAsset", serviced.id(), serviced.siteCode(),
                 actor.correlationId(), actor.actorId(), serviced);
     }
 

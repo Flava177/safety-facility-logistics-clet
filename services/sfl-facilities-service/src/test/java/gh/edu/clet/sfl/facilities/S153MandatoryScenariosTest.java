@@ -178,7 +178,7 @@ class S153MandatoryScenariosTest {
             assertThat(fault.metadata().version()).isZero();
             assertThat(fault.metadata().sourceChannel()).isEqualTo(SourceChannel.WEB);
             assertThat(audit.actions()).contains(AuditAction.FAULT_REPORTED);
-            assertThat(outbox.published("ifimp.facility-fault.reported")).isTrue();
+            assertThat(outbox.published("sfl.ifimp.facility-fault-reported.v1")).isTrue();
         }
 
         @Test
@@ -404,7 +404,7 @@ class S153MandatoryScenariosTest {
 
             assertThat(sweep.workOrdersEscalated()).isEqualTo(1);
             assertThat(maintenance.findWorkOrder(order.id()).orElseThrow().escalationLevel()).isEqualTo(1);
-            assertThat(outbox.published("ifimp.work-order.escalated")).isTrue();
+            assertThat(outbox.published("sfl.ifimp.work-order-escalated.v1")).isTrue();
             assertThat(audit.actions()).contains(AuditAction.WORK_ORDER_ESCALATED);
         }
 

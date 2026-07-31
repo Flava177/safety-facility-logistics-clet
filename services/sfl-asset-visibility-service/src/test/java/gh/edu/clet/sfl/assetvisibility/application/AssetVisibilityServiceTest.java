@@ -35,7 +35,7 @@ class AssetVisibilityServiceTest {
         assertThat(asset.assetCode()).isEqualTo("CAM-001");
         assertThat(repository.findByAssetCode("CAM-001")).isPresent();
         assertThat(outbox.events).hasSize(1);
-        assertThat(outbox.events.get(0).eventType).isEqualTo("sfl.asset.asset-registered");
+        assertThat(outbox.events.get(0).eventType).isEqualTo("sfl.avamp.asset-registered.v1");
         assertThat(outbox.events.get(0).siteScope).isEqualTo("MAIN");
     }
 

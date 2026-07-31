@@ -38,15 +38,33 @@ Every integration event should carry these fields:
 
 ### SFL.IFIMP
 
+Published by `sfl-facilities-service` (S152 estate and readiness, S153 maintenance, S159 booking).
+Enforced at the write path by `ServiceEventType`, so a name that breaks the rule above fails the
+publish rather than reaching a queue nobody is bound to.
+
 | Event | Trigger |
 |---|---|
-| `sfl.ifimp.facility-fault-reported.v1` | A user reports a facility fault. |
-| `sfl.ifimp.work-order-created.v1` | A work order is created from a fault, planned task or maintenance request. |
-| `sfl.ifimp.work-order-assigned.v1` | A work order is assigned to a team, staff member or vendor. |
-| `sfl.ifimp.work-order-status-changed.v1` | A work order changes status. |
-| `sfl.ifimp.work-order-closed.v1` | A work order is completed and closed with required evidence. |
-| `sfl.ifimp.room-booking-created.v1` | A room or resource booking is created. |
-| `sfl.ifimp.room-readiness-changed.v1` | A room readiness state changes. |
+| `sfl.ifimp.site-created.v1` · `-updated.v1` · `-lifecycle-changed.v1` | A site is registered, amended or moved through its lifecycle. |
+| `sfl.ifimp.site-operating-mode-changed.v1` | A site moves between Routine and Examination mode (NFR 23.3). |
+| `sfl.ifimp.building-created.v1` · `floor-created.v1` | Estate structure is extended. |
+| `sfl.ifimp.room-created.v1` · `-updated.v1` · `-lifecycle-changed.v1` | A space is registered, amended or archived. |
+| `sfl.ifimp.room-readiness-changed.v1` | A space's derived readiness state changes. |
+| `sfl.ifimp.zone-created.v1` · `zone-member-added.v1` · `zone-member-removed.v1` | Zone composition changes. |
+| `sfl.ifimp.device-reference-registered.v1` | A device reference is registered against the estate. |
+| `sfl.ifimp.facility-asset-registered.v1` · `-updated.v1` · `-relocated.v1` · `-serviced.v1` · `-status-changed.v1` | Fixed-plant register changes; a status change to out-of-service raises a readiness blocker. |
+| `sfl.ifimp.readiness-checklist-created.v1` · `-updated.v1` | A versioned readiness checklist is published or revised. |
+| `sfl.ifimp.readiness-assessment-submitted.v1` | An assessment is recorded against a space. |
+| `sfl.ifimp.readiness-blocker-created.v1` · `-resolved.v1` | A blocker is raised or cleared, from any source. |
+| `sfl.ifimp.readiness-lock-engaged.v1` · `-released.v1` | The examination readiness lock is applied or lifted. |
+| `sfl.ifimp.facility-fault-reported.v1` · `-triaged.v1` · `-escalated.v1` · `-resolved.v1` · `-dismissed.v1` | S153 fault lifecycle. |
+| `sfl.ifimp.work-order-created.v1` · `-assigned.v1` · `-escalated.v1` · `-closed.v1` · `-cancelled.v1` | S153 work-order lifecycle. |
+| `sfl.ifimp.work-order-start.v1` · `-hold.v1` · `-complete.v1` · `-reopen.v1` | Work-order transitions, named from the transition applied. |
+| `sfl.ifimp.preventive-schedule-created.v1` | A preventive-maintenance schedule is defined. |
+| `sfl.ifimp.maintenance-vendor-registered.v1` | A maintenance vendor is registered. |
+| `sfl.ifimp.maintenance-evidence-attached.v1` · `-exported.v1` | Closure evidence is registered, or exported as a separate authorised act. |
+| `sfl.ifimp.booking-requested.v1` · `-confirmed.v1` · `-rejected.v1` · `-rescheduled.v1` · `-cancelled.v1` · `-no-show.v1` | S159 booking lifecycle. |
+| `sfl.ifimp.booking-start.v1` · `-complete.v1` | Booking transitions, named from the transition applied. |
+| `sfl.ifimp.booking-readiness-hold-placed.v1` · `-cleared.v1` | A confirmed booking is flagged, or unflagged, by estate readiness. |
 
 ### SFL.SSEMP
 
@@ -177,18 +195,25 @@ integration inbox.
 | `sfl.ftlmp.dispatch-exception-escalated.v1` | Manual or SLA escalation of a dispatch exception occurs. |
 | `sfl.ftlmp.dispatch-security-variance.v1` | A security-relevant variance (seal/tamper/custody gap) is surfaced to SSEMP. |
 
-> **Known inconsistency (do not copy).** `sfl-facilities-service` currently publishes `sfl.facilities.work-order-created`
-> and `sfl-asset-visibility-service` publishes `sfl.avamp.*` without the `.vN` suffix, neither of which matches the
-> naming rule above. S166 follows this catalog. Renaming the earlier services is tracked as conflict **C-03** in
-> `docs/fleet/S166_Gap_And_Conflict_Report.md` and must happen before an external consumer binds those routing keys.
+> **Closed, 31 July 2026.** `sfl-facilities-service` published `ifimp.work-order.assigned` — no `sfl.`
+> prefix, no `.vN` suffix, and a dot inside the event name where the rule allows hyphens only — and
+> `sfl-asset-visibility-service` published `sfl.asset.*` with the wrong platform token and no version.
+> A consumer binding `sfl.ifimp.*.v1` or `sfl.avamp.*.v1` would have received nothing and had no way to
+> tell that from a quiet week. Both are renamed to the names in this catalogue, and both services now
+> validate the name at the outbox write path (`ServiceEventType`), so the rule cannot drift again by a
+> new literal being typed at a fifty-first call site. Conflict **C-03** in
+> `docs/fleet/S166_Gap_And_Conflict_Report.md` is discharged.
 
 ### SFL.AVAMP
 
+Published by `sfl-asset-visibility-service`, and enforced by its own copy of `ServiceEventType`.
+
 | Event | Trigger |
 |---|---|
-| `sfl.avamp.asset-registered.v1` | An asset/device is registered for reference. |
-| `sfl.avamp.asset-status-changed.v1` | Asset/device status changes. |
-| `sfl.avamp.external-device-linked.v1` | A vendor device ID is linked to an SFL asset reference. |
+| `sfl.avamp.asset-registered.v1` | An asset/device reference is registered. |
+| `sfl.avamp.asset-location-changed.v1` | A reference is moved to a new site-scoped location. |
+| `sfl.avamp.asset-custody-changed.v1` | Custody is assigned or cleared. |
+| `sfl.avamp.asset-evidence-linked.v1` | Evidence metadata is linked to a reference (no files). |
 
 ### Shared Platform Events
 

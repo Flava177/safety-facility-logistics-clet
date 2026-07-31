@@ -93,7 +93,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.SITE_CREATED, "Site", saved.id().toString(),
                 saved.siteCode(), null, saved);
-        publish("ifimp.site.created", "Site", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.site-created.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
         remember("create-site", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
                 saved.siteCode(), actor);
         return saved;
@@ -112,7 +112,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.SITE_UPDATED, "Site", saved.id().toString(),
                 saved.siteCode(), site, saved);
-        publish("ifimp.site.updated", "Site", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.site-updated.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -129,7 +129,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.SITE_LIFECYCLE_CHANGED, "Site",
                 saved.id().toString(), saved.siteCode(), site.lifecycleStatus(), saved.lifecycleStatus());
-        publish("ifimp.site.lifecycle-changed", "Site", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.site-lifecycle-changed.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -154,7 +154,7 @@ public class FacilitiesMasterDataService {
         audit.record(actor, command.channel(), AuditAction.SITE_OPERATING_MODE_CHANGED, "Site",
                 saved.id().toString(), saved.siteCode(),
                 new ModeChange(previous, null), new ModeChange(saved.operatingMode(), command.reason()));
-        publish("ifimp.site.operating-mode-changed", "Site", saved.id(), saved.siteCode(), actor,
+        publish("sfl.ifimp.site-operating-mode-changed.v1", "Site", saved.id(), saved.siteCode(), actor,
                 new ModeChangeEvent(saved.siteCode(), previous, saved.operatingMode(), command.reason(),
                         actor.actorId(), saved.operatingModeChangedAt()));
         return saved;
@@ -200,7 +200,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.BUILDING_CREATED, "Building",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.building.created", "Building", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.building-created.v1", "Building", saved.id(), saved.siteCode(), actor, saved);
         remember("create-building", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
                 saved.siteCode(), actor);
         return saved;
@@ -235,7 +235,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.FLOOR_CREATED, "FacilityFloor",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.floor.created", "FacilityFloor", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.floor-created.v1", "FacilityFloor", saved.id(), saved.siteCode(), actor, saved);
         remember("create-floor", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
                 saved.siteCode(), actor);
         return saved;
@@ -274,7 +274,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.ROOM_CREATED, "FacilityRoom",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.room.created", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.room-created.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         remember("create-room", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
                 saved.siteCode(), actor);
         return saved;
@@ -294,7 +294,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.ROOM_UPDATED, "FacilityRoom", saved.id().toString(),
                 saved.siteCode(), room, saved);
-        publish("ifimp.room.updated", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.room-updated.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -311,7 +311,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.ROOM_LIFECYCLE_CHANGED, "FacilityRoom",
                 saved.id().toString(), saved.siteCode(), room.lifecycleStatus(), saved.lifecycleStatus());
-        publish("ifimp.room.lifecycle-changed", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.room-lifecycle-changed.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
         return saved;
     }
 
@@ -354,7 +354,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.ZONE_CREATED, "Zone", saved.id().toString(),
                 saved.siteCode(), null, saved);
-        publish("ifimp.zone.created", "Zone", saved.id(), saved.siteCode(), actor, saved);
+        publish("sfl.ifimp.zone-created.v1", "Zone", saved.id(), saved.siteCode(), actor, saved);
         remember("create-zone", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
                 saved.siteCode(), actor);
         return saved;
@@ -386,7 +386,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.ZONE_MEMBER_ADDED, "Zone", zone.id().toString(),
                 zone.siteCode(), null, saved);
-        publish("ifimp.zone.member-added", "Zone", zone.id(), zone.siteCode(), actor, saved);
+        publish("sfl.ifimp.zone-member-added.v1", "Zone", zone.id(), zone.siteCode(), actor, saved);
         return saved;
     }
 
@@ -403,7 +403,7 @@ public class FacilitiesMasterDataService {
         ZoneMemberRef removed = new ZoneMemberRef(command.memberType(), command.memberId());
         audit.record(actor, command.channel(), AuditAction.ZONE_MEMBER_REMOVED, "Zone", zone.id().toString(),
                 zone.siteCode(), removed, null);
-        publish("ifimp.zone.member-removed", "Zone", zone.id(), zone.siteCode(), actor, removed);
+        publish("sfl.ifimp.zone-member-removed.v1", "Zone", zone.id(), zone.siteCode(), actor, removed);
     }
 
     private record ZoneMemberRef(ZoneMemberType memberType, UUID memberId) {
@@ -444,7 +444,7 @@ public class FacilitiesMasterDataService {
 
         audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_REGISTERED, "DeviceReference",
                 saved.id().toString(), saved.siteCode(), null, saved);
-        publish("ifimp.device-reference.registered", "DeviceReference", saved.id(), saved.siteCode(), actor,
+        publish("sfl.ifimp.device-reference-registered.v1", "DeviceReference", saved.id(), saved.siteCode(), actor,
                 saved);
         remember("register-device-reference", command.idempotencyKey(), command.idempotencyPayload(),
                 saved.id(), saved.siteCode(), actor);

@@ -219,3 +219,82 @@ points at Zulu 11, which cannot build the reactor. Builds and tests for this sli
 | `sfl.facilities.*` / `sfl.assetvisibility.*` event renaming (C-03) | Cross-service routing-key inconsistency | Each service team |
 | Permissions as JWT claims (C-07) | Role→permission matrix must be kept in sync with IAM | IAM / DTI |
 | S168_fuel odometer source of truth | Fleet stores odometer with provenance; fuel logbooks will also write odometer readings — reconciliation rule needed | F&L Transportation & Logistics |
+
+---
+
+## C-16 — `requireRecordScope` was enforced nowhere *(defect, closed 31 July 2026)*
+
+| | |
+|---|---|
+| **Guidance says** | `SRS-SFL-S166-01`: "Users shall only see and update records inside their assigned site scopes and roles." `FleetAccessPolicy.requireRecordScope` javadoc: "This is what keeps the limited driver/mobile user class to their own trips and inspections." |
+| **What was true** | The method existed, was unit-tested by `FleetAccessPolicyTest`, and had **one** production call site — `TripApplicationService`, guarding vehicle inspection — where it was passed `null` as the owner reference. `requireRecordScope` returns immediately on a null owner, so the control was a no-op at the only place it was invoked. No read called it at all. |
+| **Consequence** | A `FLEET_DRIVER` holding any trip id read that trip in full: route, purpose, operating mode and the driver it belongs to. Site scope was the only boundary, and it is the wrong one for a driver. |
+| **Resolution** | The inspection call site now passes the trip's real owner reference. `TripQueryService.findById` applies the same rule, so the record read is narrowed and not only the write. Ownership is the driver's `staffReference` — the value the actor signs in as — resolved from `Trip.driverId` through `DriverProfileRepository`, which is the equivalence fuel already relied on. A supervising `FLEET_TRIP_MANAGE` passes through, so an officer or manager is unaffected. |
+| **Proof** | `FleetCriticalScenariosEndToEndTest` scenario 7a: a driver reads their own trip, is refused another driver's **by id**, and an officer reads both. Asserted by refusal rather than by an absent list row, because a narrowing the collection obeys and the record does not is decorative. |
+
+## C-17 — The mandatory-scenario suites had never executed *(process defect, closed 31 July 2026)*
+
+`FleetCriticalScenariosEndToEndTest`, `FuelMandatoryScenariosEndToEndTest`, `FuelGapClosureEndToEndTest`,
+`FuelCriticalScenariosEndToEndTest` and `DispatchMandatoryScenariosEndToEndTest` — 67 tests carrying the
+SRS mandatory-scenario evidence for S166, S168_fuel and S171 — skipped on every run in this environment.
+
+`FleetPostgresSupport` resolves its database from `SFL_FLEET_LOGISTICS_TEST_DB_URL` first and
+Testcontainers second, and nothing set the variable, so resolution fell through to a Docker client that
+cannot reach the Windows named pipe. **A skip reads as a pass in a summary line**, which is why this
+survived several passes that reported green.
+
+Setting the variable at the e2e container already running on 55443 runs all 67 with no code change:
+
+```
+SFL_FLEET_LOGISTICS_TEST_DB_URL=jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e
+SFL_TEST_DB_USERNAME=sfl
+SFL_TEST_DB_PASSWORD=sfl
+```
+
+They pass. `FleetPostgresEndToEndTest` (1 test) remains gated on `@Testcontainers` and still skips;
+giving it the same support class is the outstanding half. **This belongs in CI configuration**, because
+the evidence is worthless if producing it depends on a developer remembering an environment variable.
+
+## C-18 — The audit hash chain did not verify against a real database *(critical defect, fixed 31 July 2026)*
+
+**`SRS-SFL-S166-03` requires a tamper-evident audit trail. It was not tamper-evident; it was
+permanently reporting tampered, and nothing was looking.**
+
+`S152_Gap_And_Conflict_Report.md` §8a recorded two defects that broke the *facilities* chain and warned
+in writing that this service was likely to carry both — "that is outside this pass's scope and is not
+asserted here, but it should be checked before S166 is relied on for evidence." It was never checked.
+Checking it took one test.
+
+| | |
+|---|---|
+| **Symptom** | `verifyChain()` against the e2e database: `intact=false`, `recordsChecked=201`, `firstDivergentSequence=8`, `reason=Record hash does not match the stored content`. |
+| **Cause** | `AuditHashChain.canonical` hashes `occurredAt.toString()`. The JVM clock yields nanoseconds; `timestamptz` stores microseconds. The value hashed on the way in was therefore not the value read back on replay — S152's **D-05**, verbatim. |
+| **Scope** | **Every record written by a real clock.** Sequence 7 (`2026-07-21 08:00:00+00`, the tests' fixed clock) verifies; sequence 8 (`2026-07-31 17:36:11.346663+00`, the first record written outside a test) does not. In production, that is every record. |
+| **Why four passes missed it** | Every existing chain-intact assertion — `TripApplicationServiceTest`, `VehicleApplicationServiceTest` — uses an in-memory `RecordingAuditPort`, which round-trips nothing and so cannot see a storage-precision defect. The one end-to-end check, `DispatchMandatoryScenariosEndToEndTest:370`, asserts `isNotNull()` rather than `intact()`. And the unit clocks are fixed at whole seconds, which truncate to themselves. |
+| **Fix** | `JpaAuditAdapter.storedPrecision()` truncates to `ChronoUnit.MICROS` before the instant is hashed or stored — the same fix facilities applied for D-05. |
+| **Proof** | `FleetAuditChainPostgresTest` writes through the real JPA adapter, with a real clock, against PostgreSQL, and replays the whole chain from genesis. It fails on the old code and passes on the new. |
+
+**D-04 does not apply to this service.** S152's other defect — jsonb reordering object keys so the
+stored payload is not the hashed payload — is already neutralised here, because
+`AuditRecordEntity.toDomain(ObjectMapper)` re-canonicalises the stored JSON through `CanonicalJson` on
+read. Fleet solved it by re-canonicalising where facilities solved it by storing `TEXT`. Both work;
+recorded so nobody "fixes" one into the other.
+
+### What to do about an existing environment
+
+**Pre-fix records cannot be repaired.** A hash chain has no mechanism for amending history — that is
+the property it exists to provide — so any database carrying records written before this fix will keep
+reporting tampered at the first of them, forever. There are two honest options and no third:
+
+1. **Truncate the chain and restart it at genesis**, recording in writing that the audit history before
+   the cut is unverifiable. Acceptable for the e2e and development databases, which is what was done
+   here.
+2. **Keep the history and record a known divergence point**, so an auditor is told that records before
+   sequence *N* were written under a defect and cannot be replayed, and that everything after *N* can.
+
+**Neither is acceptable silently.** Whichever is chosen must be on the go-live record, because "the
+audit chain does not verify" and "the audit chain does not verify for a known and documented reason"
+are very different statements to an auditor — and only one of them is survivable.
+
+**No production environment exists yet**, so in practice this is closed by option 1 before first
+deploy. The requirement is that the first production record is written by the fixed code.

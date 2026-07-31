@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.assetvisibility.infrastructure.persistence;
 import java.time.Clock;
 import java.util.UUID;
 
+import gh.edu.clet.sfl.assetvisibility.application.ServiceEventType;
 import gh.edu.clet.sfl.assetvisibility.application.ServiceOutbox;
 import org.springframework.stereotype.Component;
 import tools.jackson.core.JacksonException;
@@ -24,6 +25,7 @@ class JpaServiceOutbox implements ServiceOutbox {
     @Override
     public void record(String eventType, int eventVersion, String aggregateType, UUID aggregateId,
             String siteScope, String correlationId, String causationId, Object payload) {
+        ServiceEventType.require(eventType, eventVersion);
         outboxMessages.save(new OutboxMessageRecord(UUID.randomUUID(), eventType, eventVersion, aggregateType,
                 aggregateId, siteScope, correlationId, causationId, writeJson(payload), clock.instant()));
     }

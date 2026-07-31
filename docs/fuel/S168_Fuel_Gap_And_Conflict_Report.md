@@ -101,3 +101,37 @@ against verbatim S166 contracts; **it has not yet been compiled or run in this e
 
 Verification owed locally: `mvn -pl sfl-fleet-logistics-service -am test`, app boot on 8093,
 `/actuator/health`, `/v3/api-docs`, Swagger UI, `/fuel/`, and S166 regression suite.
+
+---
+
+## Update — record scope on logbooks (31 July 2026)
+
+**A driver could read another driver's logbook by id.** `FuelAccessPolicy.isDriverOnly` narrows the
+logbook **list** in SQL on `created_by`, guards `createLogbook` against the trip's driver reference and
+guards `transitionLogbook` against the record's creator. `logbook(UUID, ActorContext)` — the detail read
+behind `GET /api/v1/fuel/logbooks/{id}` — checked permission and site only.
+
+The comment three lines below it already stated the rule the method broke: *"Scoping a query by what the
+caller may see belongs on this side of the wire: a client-side filter is a display convention, and the
+records would still have crossed the boundary."* That is exactly what happened, one record at a time
+instead of a page at a time — a driver holding a colleague's logbook id read journey, route, purpose and
+passenger-load notes in full.
+
+Closed by `FuelAccessPolicy.requireOwnRecord`, applied to the read, the create and the transition.
+Ownership is `created_by`, deliberately the same column the list query filters on, so the collection and
+the record cannot disagree about who owns what.
+
+**Both ownership refusals were 500s, and unaudited.** They threw `IllegalStateException`, which reaches
+the caller as an internal error and writes nothing to the hash chain — so a driver being refused a
+colleague's record left no evidence that anyone had been refused. They now throw
+`FleetAuthorizationException`, which is the SRS's `FLEET_UNAUTHORIZED_SCOPE` envelope, returns 403, and is
+recorded as a denial.
+
+`FuelMandatoryScenariosEndToEndTest.driver_is_restricted_to_own_records` asserted the defect — it required
+`IllegalStateException` — and now asserts the authorisation refusal plus the two by-id cases that the old
+assertion could not distinguish from an empty list.
+
+**Not closed:** a `FLEET_DRIVER` still reads every fuel **transaction** at their site, because they hold
+`FUEL_TRANSACTION_READ` and neither `transaction(id, actor)` nor `transactions(...)` narrows. Whether a
+driver should see only their own vehicle's transactions is a policy question for the Transportation &
+Logistics Unit, not a defect to be fixed on an assumption — recorded here rather than decided here.
