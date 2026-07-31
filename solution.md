@@ -188,6 +188,25 @@ Nine screens and ten dialogs extending `src/modules/facilities` — the same ser
 
 **IFIMP is now complete for S152 and S153.** Six of the thirteen Phase 1 systems have screens; S159 room and resource booking is what remains in this programme.
 
+### Pass — S159 Room and Resource Booking (`sfl-facilities-service`)
+`SRS-SFL-S159-01..03`, NFR 23.3, 23.8. The third IFIMP system, built on the S152 platform alongside S153 — same estate register, audit chain, idempotency store, runtime configuration and permission matrix. Six tables, five application services, four controllers, and one database constraint that is the reason the module works.
+
+**The rule that cannot be enforced in Java.** A space cannot be double-booked, and a read-then-write check cannot guarantee it: two requests can both read an empty diary before either writes. The guarantee is a PostgreSQL `GIST` exclusion constraint — `EXCLUDE USING gist (room_id WITH =, tstzrange(occupied_from, occupied_to, '[)') WITH &&) WHERE (status IN ('REQUESTED','CONFIRMED','IN_USE'))`. The application check is kept because it produces the message a requester can act on, naming the booking that has the hall; the constraint is what makes the rule true. `S159MandatoryScenariosTest` reads `V10` off the classpath and asserts the constraint's status list matches `BookingStatus.holdsTheSpace()`, because those are two expressions of one rule in two languages with no compiler between them.
+
+**Half-open intervals, `[start, end)`, decided once and applied in three places.** A booking ending at ten and one starting at ten do not clash. Wrong one way, every back-to-back lecture reports a phantom conflict until people stop trusting the check; wrong the other, the hall is double-booked on the hour — which is exactly when lectures change over. Conflict is tested on the *occupied* window, widened by setup and teardown buffers, so the next booking cannot start while the chairs are still being moved.
+
+**Three decisions that shaped the module.** A **request holds the space** rather than waiting for approval, so the second person to ask is refused now instead of three people planning around one hall and the approver arbitrating a clash. There is **no `APPROVED` state** — approval is an event recorded as a `BookingApproval`, and the absence of one is what records that a booking needed none. A **readiness hold is a flag beside the status, not a state**: a confirmed booking on a hall blocked on Tuesday is still a confirmed booking somebody has in their diary, and moving it to `AT_RISK` would decide on the estate's behalf that Tuesday's leak will still be there on Friday.
+
+**Setup tasks are deliberately not S153 work orders.** The obvious move buys the queue, the SLA and the closure evidence for free; it also puts a twenty-minute chair rearrangement in the same queue as a failed standby generator, and the generator ends up on page four.
+
+**Verified by running it, and it found two defects 290 green tests could not.** Every booking search returned HTTP 500 — `could not determine data type of parameter $11` — because the codebase's `(:p is null or column = :p)` idiom does not work for a null `Instant` on PostgreSQL: `IS NULL` gives the planner no type and pgjdbc sends `UNSPECIFIED`. And sixteen simultaneous requests for one hall produced one booking and **fifteen HTTP 500s**: the constraint held perfectly, but the losers hit a deadlock (`SQLSTATE 40P01`) rather than a constraint violation, because two transactions each insert then each wait on the other's uncommitted row. A per-space transaction-scoped advisory lock taken before the conflict check turns that into one booking and fifteen readable `BOOKING_CONFLICT` refusals; the deadlock translation stays as a backstop.
+
+Also proven against a real database: `V1..V10` on an empty schema, `btree_gist` installable by the application user, Hibernate `validate` passing, both exclusion constraints refusing overlaps and accepting back-to-back pairs at the SQL level, the examination buffer blocking the slot straight after a paper, a requester seeing only their own bookings, an override refused without the permission and recorded with it, the reconciliation sweep placing four holds without changing a status, the no-show sweep releasing a hall and writing the room-time lost, and the audit chain verifying intact.
+
+Tests: **290**, 61 of them S159, 12 skipped. API: 25 paths. Persistence: `V10__room_and_resource_booking.sql`. Docs: `docs/facilities/S159_Booking_Design.md`, `S159_API_Reference.md`, `S159_Gap_And_Conflict_Report.md`.
+
+**IFIMP's backend is complete: S152, S153 and S159.** S159 has no screens yet — that is the next pass, and the two lessons above it still apply: add the module to the permissions source, and drive the screens rather than only rendering them.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

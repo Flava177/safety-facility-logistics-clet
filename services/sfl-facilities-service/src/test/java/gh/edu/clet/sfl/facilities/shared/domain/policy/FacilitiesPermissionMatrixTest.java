@@ -63,17 +63,56 @@ class FacilitiesPermissionMatrixTest {
     }
 
     @Test
-    void a_requester_reports_a_fault_and_follows_it_and_does_nothing_else() {
+    void a_requester_reports_a_fault_books_a_room_and_does_nothing_else() {
         Set<SflPermission> granted = FacilitiesPermissionMatrix.permissionsFor(SflRole.IFIMP_REQUESTER);
 
-        // S153 gave the requester the two permissions reporting a fault actually needs. The read is
-        // narrowed per record to their own reports, in FacilityFaultService — a matrix cannot express
-        // "mine", so the set here is the outer bound rather than the whole rule.
+        // S153 gave the requester the two permissions reporting a fault actually needs; S159 added the
+        // two booking a room needs, because a requester is exactly the person who books a room. Both
+        // reads are narrowed per record to their own — a matrix cannot express "mine", so the set here
+        // is the outer bound rather than the whole rule.
+        //
+        // Exact rather than "contains", deliberately. This is the narrowest role in the module and the
+        // test exists to make widening it a decision somebody takes rather than a side effect.
         assertThat(granted).containsExactlyInAnyOrder(
                 SflPermission.FACILITIES_SITE_READ,
                 SflPermission.FACILITIES_SPACE_READ,
                 SflPermission.FACILITIES_FAULT_REPORT,
-                SflPermission.FACILITIES_FAULT_READ);
+                SflPermission.FACILITIES_FAULT_READ,
+                SflPermission.FACILITIES_BOOKING_READ,
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_RESOURCE_READ);
+    }
+
+    /**
+     * Booking past a readiness refusal is a centre-level decision, not an estate-maintenance one.
+     *
+     * <p>The maintenance supervisor holds {@code FACILITIES_READINESS_OVERRIDE} and deliberately not
+     * this: the two would be redundant, and the redundancy is harmful. A supervisor who needs a blocked
+     * hall used should clear or downgrade the blocker — which leaves a readiness record somebody can
+     * review — rather than book past it and leave the hall still reading BLOCKED to everyone else.
+     */
+    @Test
+    void only_centre_level_roles_may_book_into_a_space_readiness_refuses() {
+        assertThat(FacilitiesPermissionMatrix.grants(Set.of(SflRole.CENTRE_MANAGER),
+                SflPermission.FACILITIES_BOOKING_OVERRIDE)).isTrue();
+        assertThat(FacilitiesPermissionMatrix.grants(Set.of(SflRole.COMMAND_ROLE),
+                SflPermission.FACILITIES_BOOKING_OVERRIDE)).isTrue();
+
+        assertThat(FacilitiesPermissionMatrix.grants(Set.of(SflRole.IFIMP_MAINTENANCE_SUPERVISOR),
+                SflPermission.FACILITIES_BOOKING_OVERRIDE)).isFalse();
+        assertThat(FacilitiesPermissionMatrix.grants(Set.of(SflRole.FACILITIES_MANAGER),
+                SflPermission.FACILITIES_BOOKING_OVERRIDE)).isFalse();
+        assertThat(FacilitiesPermissionMatrix.grants(Set.of(SflRole.IFIMP_REQUESTER),
+                SflPermission.FACILITIES_BOOKING_OVERRIDE)).isFalse();
+    }
+
+    /** A contractor is not staff and does not book CLET's rooms. */
+    @Test
+    void a_vendor_technician_holds_nothing_in_the_booking_module() {
+        assertThat(FacilitiesPermissionMatrix.permissionsFor(SflRole.VENDOR_TECHNICIAN))
+                .noneMatch(permission -> permission.name().startsWith("FACILITIES_BOOKING_")
+                        || permission.name().startsWith("FACILITIES_RESOURCE_")
+                        || permission.name().startsWith("FACILITIES_SETUP_TASK_"));
     }
 
     @Test

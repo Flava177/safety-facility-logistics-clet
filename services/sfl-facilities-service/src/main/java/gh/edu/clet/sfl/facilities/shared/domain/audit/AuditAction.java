@@ -85,6 +85,34 @@ public enum AuditAction {
     EVIDENCE_EXPORTED,
     EVIDENCE_LEGAL_HOLD_CHANGED,
 
+    // Booking — SRS-SFL-S159-01, -02, -03
+    BOOKING_REQUESTED,
+    BOOKING_CONFIRMED,
+    BOOKING_REJECTED,
+    BOOKING_RESCHEDULED,
+    BOOKING_STARTED,
+    BOOKING_COMPLETED,
+    BOOKING_CANCELLED,
+    /**
+     * Somebody booked into a space readiness said was unavailable. SRS-SFL-S159-02.
+     *
+     * <p>Its own action rather than a field on {@code BOOKING_REQUESTED}, because "show me every
+     * override this term" is the question an examinations board asks after something goes wrong, and
+     * it should be one filtered read rather than a scan of every booking looking for a non-null column.
+     */
+    BOOKING_READINESS_OVERRIDDEN,
+    /** The sweep marked a booking never used. Audited because nobody did it. */
+    BOOKING_NO_SHOW_RECORDED,
+    BOOKING_READINESS_HOLD_PLACED,
+    BOOKING_READINESS_HOLD_CLEARED,
+    BOOKABLE_RESOURCE_REGISTERED,
+    BOOKABLE_RESOURCE_UPDATED,
+    BOOKABLE_RESOURCE_LIFECYCLE_CHANGED,
+    BOOKING_RESOURCE_ALLOCATED,
+    BOOKING_RESOURCE_RELEASED,
+    BOOKING_SETUP_TASK_CREATED,
+    BOOKING_SETUP_TASK_RESOLVED,
+
     // Governance — SRS-SFL-S152-03, -04, -05
     RUNTIME_CONFIGURATION_CHANGED,
     DASHBOARD_SNAPSHOT_GENERATED,
