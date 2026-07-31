@@ -39,7 +39,9 @@ public record MaintenanceEvidence(
         boolean legalHold,
         String notes,
         String uploadedBy,
-        Instant uploadedAt) {
+        Instant uploadedAt,
+        Instant disposedAt,
+        String disposalReason) {
 
     /** Lower-case hex SHA-256. Upper-case is accepted on the way in and normalised. */
     private static final Pattern SHA_256_HEX = Pattern.compile("^[0-9a-f]{64}$");
@@ -49,8 +51,22 @@ public record MaintenanceEvidence(
         Objects.requireNonNull(workOrderId, "workOrderId is required");
         siteCode = EstateCodes.normalize(siteCode);
         Objects.requireNonNull(evidenceType, "evidenceType is required");
-        EstateCodes.require(fileReference, "fileReference");
-        fileReference = fileReference.strip();
+        // Null once disposed, and only then: the pointer is what disposal removes, and a record with
+        // neither a pointer nor a disposal date would be evidence that had simply vanished.
+        if (disposedAt == null) {
+            EstateCodes.require(fileReference, "fileReference");
+            fileReference = fileReference.strip();
+            if (disposalReason != null) {
+                throw new IllegalArgumentException("a disposal reason without a disposal date is not a state");
+            }
+        } else {
+            if (fileReference != null && !fileReference.isBlank()) {
+                throw new IllegalArgumentException("disposed evidence must not keep its file reference");
+            }
+            fileReference = null;
+            EstateCodes.require(disposalReason, "disposalReason");
+            disposalReason = disposalReason.strip();
+        }
         fileName = EstateCodes.blankToNull(fileName);
         mediaType = EstateCodes.blankToNull(mediaType);
         notes = EstateCodes.blankToNull(notes);
@@ -76,20 +92,58 @@ public record MaintenanceEvidence(
             String fileReference, String fileName, String mediaType, Long sizeBytes, String contentHash,
             RetentionClass retentionClass, String notes, String uploadedBy, Instant uploadedAt) {
         return new MaintenanceEvidence(id, workOrderId, siteCode, type, fileReference, fileName, mediaType,
-                sizeBytes, contentHash, retentionClass, false, notes, uploadedBy, uploadedAt);
+                sizeBytes, contentHash, retentionClass, false, notes, uploadedBy, uploadedAt, null, null);
     }
 
     public MaintenanceEvidence withLegalHold(boolean held) {
         return held == legalHold
                 ? this
                 : new MaintenanceEvidence(id, workOrderId, siteCode, evidenceType, fileReference, fileName,
-                        mediaType, sizeBytes, contentHash, retentionClass, held, notes, uploadedBy, uploadedAt);
+                        mediaType, sizeBytes, contentHash, retentionClass, held, notes, uploadedBy, uploadedAt,
+                        disposedAt, disposalReason);
     }
 
     /** The earliest date this may be disposed of. {@code null} while a legal hold is in force. */
     public LocalDate disposalEligibleFrom() {
         return legalHold ? null : retentionClass.disposalEligibleFrom(
                 uploadedAt.atZone(ZoneOffset.UTC).toLocalDate());
+    }
+
+    /**
+     * Whether the retention period has run out and nothing is holding this back.
+     *
+     * <p>A legal hold beats the clock, always, and outlives it: evidence held past its retention date
+     * stays until the hold is lifted, at which point it becomes eligible immediately rather than
+     * restarting a period. That is what a hold is for.
+     */
+    public boolean isDisposalEligible(LocalDate today) {
+        if (disposedAt != null || legalHold) {
+            return false;
+        }
+        LocalDate eligibleFrom = disposalEligibleFrom();
+        return eligibleFrom != null && !today.isBefore(eligibleFrom);
+    }
+
+    /**
+     * Disposes of the reference, keeping the record that it existed.
+     *
+     * <p>The row survives with its hash, its retention class and who uploaded it, because a retention
+     * policy must be able to prove two different things: that a thing was destroyed when it should have
+     * been, and that it existed and was destroyed for a stated reason. Deleting the row proves neither,
+     * and leaves an auditor unable to tell disposal from the evidence never having been captured.
+     *
+     * <p>Refuses a held item rather than silently skipping it, because "the sweep did not dispose this"
+     * and "the sweep could not dispose this" must not look the same from the outside.
+     */
+    public MaintenanceEvidence disposed(Instant at, String reason) {
+        if (legalHold) {
+            throw new IllegalStateException("Evidence under legal hold cannot be disposed of");
+        }
+        if (disposedAt != null) {
+            return this;
+        }
+        return new MaintenanceEvidence(id, workOrderId, siteCode, evidenceType, null, fileName, mediaType,
+                sizeBytes, contentHash, retentionClass, false, notes, uploadedBy, uploadedAt, at, reason);
     }
 
     /** {@code true} when this item satisfies a closure-evidence requirement. */

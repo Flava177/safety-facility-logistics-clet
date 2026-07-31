@@ -130,6 +130,12 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
     }
 
     @Override
+    public List<MaintenanceEvidence> findDisposalCandidates(int limit) {
+        return evidence.findByDisposedAtIsNullAndLegalHoldFalseOrderByUploadedAtAsc(page(limit)).stream()
+                .map(MaintenanceEvidenceRecord::toDomain).toList();
+    }
+
+    @Override
     public String nextWorkOrderNumber(String siteCode) {
         return "WO-" + normalize(siteCode) + "-" + String.format("%06d", workOrders.nextWorkOrderSequence());
     }

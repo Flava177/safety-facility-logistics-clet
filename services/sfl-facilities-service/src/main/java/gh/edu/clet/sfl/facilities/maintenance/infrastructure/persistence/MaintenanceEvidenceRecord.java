@@ -55,6 +55,13 @@ public class MaintenanceEvidenceRecord {
     @Column(name = "uploaded_at", nullable = false)
     private Instant uploadedAt;
 
+    /** Set when the reference was cleared. The row outlives the object it pointed at. */
+    @Column(name = "disposed_at")
+    private Instant disposedAt;
+
+    @Column(name = "disposal_reason", length = 500)
+    private String disposalReason;
+
     protected MaintenanceEvidenceRecord() {
     }
 
@@ -79,10 +86,13 @@ public class MaintenanceEvidenceRecord {
         notes = evidence.notes();
         uploadedBy = evidence.uploadedBy();
         uploadedAt = evidence.uploadedAt();
+        disposedAt = evidence.disposedAt();
+        disposalReason = evidence.disposalReason();
     }
 
     public MaintenanceEvidence toDomain() {
         return new MaintenanceEvidence(id, workOrderId, siteCode, evidenceType, fileReference, fileName,
-                mediaType, sizeBytes, contentHash, retentionClass, legalHold, notes, uploadedBy, uploadedAt);
+                mediaType, sizeBytes, contentHash, retentionClass, legalHold, notes, uploadedBy, uploadedAt,
+                disposedAt, disposalReason);
     }
 }
