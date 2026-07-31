@@ -68,6 +68,14 @@ public class WorkOrderRecord {
     private long totalHeldSeconds;
     @Column(name = "sla_due_at")
     private Instant slaDueAt;
+
+    /** When somebody should have started. Null on rows migrated before V12, deliberately. */
+    @Column(name = "response_due_at")
+    private Instant responseDueAt;
+
+    /** Set once, by the sweep, so an unstarted job is not re-raised every fifteen minutes. */
+    @Column(name = "response_escalated_at")
+    private Instant responseEscalatedAt;
     @Column(name = "escalation_level", nullable = false)
     private int escalationLevel;
     @Column(name = "escalated_at")
@@ -124,6 +132,8 @@ public class WorkOrderRecord {
         heldAt = order.heldAt();
         totalHeldSeconds = order.totalHeldSeconds();
         slaDueAt = order.slaDueAt();
+        responseDueAt = order.responseDueAt();
+        responseEscalatedAt = order.responseEscalatedAt();
         escalationLevel = order.escalationLevel();
         escalatedAt = order.escalatedAt();
         evidenceRequired = order.evidenceRequired();
@@ -141,6 +151,7 @@ public class WorkOrderRecord {
         return new WorkOrder(id, workOrderNumber, workOrderType, facilityFaultId, faultNumber, scheduleId,
                 siteCode, roomId, locationCode, assetId, title, description, priority, status, assignedTo,
                 vendorId, assignedAt, startedAt, holdReason, heldAt, totalHeldSeconds, slaDueAt,
+                responseDueAt, responseEscalatedAt,
                 escalationLevel, escalatedAt, evidenceRequired, completedAt, completionNotes, closureNotes,
                 closedBy, closedAt, cancellationReason, lifecycleStatus, metadata.toDomain());
     }

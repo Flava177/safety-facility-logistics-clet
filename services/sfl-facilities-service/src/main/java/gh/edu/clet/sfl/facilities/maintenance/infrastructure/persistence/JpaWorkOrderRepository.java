@@ -54,6 +54,26 @@ public interface JpaWorkOrderRepository extends JpaRepository<WorkOrderRecord, U
             """)
     List<WorkOrderRecord> findOverdue(@Param("asOf") Instant asOf, Pageable pageable);
 
+    /**
+     * Work nobody has started, past the response deadline, not yet raised.
+     *
+     * <p>Started rather than assigned: assigning a job to somebody who never opens it is exactly what
+     * this deadline exists to catch. {@code responseEscalatedAt is null} is the idempotence guard —
+     * the sweep is at-least-once, and re-raising every fifteen minutes is how an escalation gets muted.
+     */
+    @Query("""
+            select w from WorkOrderRecord w
+             where w.responseDueAt is not null
+               and w.responseEscalatedAt is null
+               and w.startedAt is null
+               and w.responseDueAt < :asOf
+               and w.status not in (gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CLOSED,
+                                    gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CANCELLED,
+                                    gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.COMPLETED)
+             order by w.responseDueAt asc
+            """)
+    List<WorkOrderRecord> findResponseBreaches(@Param("asOf") Instant asOf, Pageable pageable);
+
     @Query("""
             select count(w) from WorkOrderRecord w
             where w.siteCode = :siteCode

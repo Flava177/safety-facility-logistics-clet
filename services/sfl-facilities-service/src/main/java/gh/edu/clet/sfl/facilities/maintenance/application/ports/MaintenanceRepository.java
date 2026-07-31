@@ -59,6 +59,9 @@ public interface MaintenanceRepository {
 
     List<WorkOrder> findOverdueWorkOrders(Instant asOf, int limit);
 
+    /** Work past its response deadline that nobody has started and nobody has yet been told about. */
+    List<WorkOrder> findResponseBreaches(Instant asOf, int limit);
+
     String nextWorkOrderNumber(String siteCode);
 
     // ---- parts and evidence -------------------------------------------------------------------

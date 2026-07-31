@@ -119,9 +119,12 @@ public class WorkOrderApplicationService {
         Instant due = sla.resolutionDueFrom(at, fault.priority(), operatingModeOf(fault.siteCode()),
                 vendor == null ? null : vendor.responseHours());
         int evidenceRequired = configuration.evidenceRequiredFor(fault.siteCode(), fault.priority());
+        // The response deadline comes from the same policy, read at the same moment, so the two clocks
+        // on one job can never have been set from different configuration versions.
+        Instant responseDue = sla.responseDueFrom(at, fault.priority(), operatingModeOf(fault.siteCode()));
 
         WorkOrder order = WorkOrder.fromFault(UUID.randomUUID(),
-                maintenance.nextWorkOrderNumber(fault.siteCode()), fault, due, evidenceRequired,
+                maintenance.nextWorkOrderNumber(fault.siteCode()), fault, due, responseDue, evidenceRequired,
                 actor.actorId(), at, command.channel(), actor.correlationId());
         if (command.assignTo() != null && !command.assignTo().isBlank()) {
             order = order.assignTo(command.assignTo(), command.vendorId(), actor.actorId(), at,

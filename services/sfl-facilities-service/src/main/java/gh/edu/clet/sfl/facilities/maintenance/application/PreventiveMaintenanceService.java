@@ -209,6 +209,8 @@ public class PreventiveMaintenanceService {
             SlaPolicy sla = configuration.slaPolicyFor(schedule.siteCode());
             Instant slaDue = sla.resolutionDueFrom(at, schedule.priority(),
                     operatingModeOf(schedule.siteCode()));
+            Instant responseDue = sla.responseDueFrom(at, schedule.priority(),
+                    operatingModeOf(schedule.siteCode()));
             int evidenceRequired = configuration.evidenceRequiredFor(schedule.siteCode(),
                     schedule.priority());
 
@@ -217,7 +219,7 @@ public class PreventiveMaintenanceService {
                     schedule.id(), schedule.siteCode(), schedule.roomId(), asset.get().locationCode(),
                     schedule.assetId(),
                     schedule.name() + " — due " + schedule.nextDueOn(),
-                    schedule.description(), schedule.priority(), slaDue, evidenceRequired,
+                    schedule.description(), schedule.priority(), slaDue, responseDue, evidenceRequired,
                     systemActor.actorId(), at, SourceChannel.SCHEDULER, systemActor.correlationId()));
 
             maintenance.saveSchedule(schedule.markGenerated(order.id(), at, systemActor.actorId(),

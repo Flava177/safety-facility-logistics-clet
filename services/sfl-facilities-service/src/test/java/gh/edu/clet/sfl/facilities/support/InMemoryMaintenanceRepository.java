@@ -138,6 +138,15 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
     }
 
     @Override
+    public List<WorkOrder> findResponseBreaches(Instant asOf, int limit) {
+        return workOrders.values().stream()
+                .filter(order -> order.responseBreached(asOf))
+                .sorted(Comparator.comparing(WorkOrder::responseDueAt))
+                .limit(limit)
+                .toList();
+    }
+
+    @Override
     public String nextWorkOrderNumber(String siteCode) {
         return "WO-" + normalize(siteCode) + "-" + String.format("%06d", workOrderSequence.incrementAndGet());
     }
