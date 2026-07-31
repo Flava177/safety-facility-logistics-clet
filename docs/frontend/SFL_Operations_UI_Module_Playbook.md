@@ -444,3 +444,36 @@ point, because that is the truth.**
 **What to do when you add the next module.** Declare its programme on the section, and wrap its route
 subtree in `RequireEntitlement`. Two lines, and they are the same two lines whether the portal is later
 split per programme or left as one bundle.
+
+
+---
+
+## The portal pattern (added 31 July 2026)
+
+A **portal** is a landing that answers *what do I have to do today*, where a module answers *what is
+the state of the estate*. Same services, same shell, same components — a different first paragraph.
+
+Build one when a role holds real permissions and the module built for its system was designed for
+somebody else. Six exist, under `/me/`, in `src/modules/me/pages`.
+
+**Three rules, and the second is the one that is easy to get wrong.**
+
+1. **Compose, do not fork.** A portal is `PageHeader` + `DataState` + `DataTable` over an existing
+   API client. If it needs a component the modules do not have, add it to `shared/components` rather
+   than to the portal — a second design system starts with one exception.
+
+2. **Gate on a persona only when a permission cannot do the job, and never for anything else.**
+   Every operational screen stays permission-gated, because a screen should be offered exactly when
+   the service will answer it. The exception exists because `FLEET_DRIVER`'s eight permissions are
+   all held by `FLEET_MANAGER` too, so no permission distinguishes them. `shared/layout/personas.ts`
+   encodes the *narrowest-role* rule the services already enforce — it does not invent one — and it
+   is not an authorisation check: nothing there hides data.
+
+3. **A portal may only claim what the service enforces.** If the backend narrows per record, say
+   "mine". If it does not, say where the data actually comes from — on the page, not in a report.
+   The centre-manager portal carries an `Alert` saying it cannot narrow to a centre, because a user
+   who assumes otherwise would be wrong and no screen should let somebody be wrong quietly.
+
+**Placement.** Personal sections go first in `navSections`, because `landingPath()` returns the first
+item of the first entitled section. That ordering is the whole mechanism — no router change, no shell
+change, and operators are unaffected because every personal item is persona-gated.

@@ -1,6 +1,7 @@
 import { IconName } from 'shared/components/Icon';
 import { ProgrammeCode, SystemCode, entitledTo, entitledToSystem } from './programmes';
 import { permits } from './actorPermissions';
+import { isPersona, PersonaCode } from './personas';
 
 /**
  * Dashboard navigation.
@@ -39,6 +40,19 @@ export interface NavItem {
    * not inferred from the name.
    */
   permission?: string;
+  /**
+   * Show this item only to a given persona.
+   *
+   * **The escape hatch for the one thing a permission cannot express.** `FLEET_DRIVER` holds eight
+   * permissions and every one is also held by `FLEET_MANAGER`, so gating "My driving day" on a
+   * permission would offer it to the fleet office as their landing page. What makes somebody a
+   * driver is what they *cannot* do, and `personas.ts` encodes that using the same
+   * narrowest-role rule the services already enforce.
+   *
+   * Use it only for personal landings. Every operational screen stays permission-gated, because a
+   * screen should be offered exactly when the service will answer it.
+   */
+  persona?: PersonaCode;
 }
 
 export interface NavSection {
@@ -176,7 +190,114 @@ export const emergencyPaths = {
   integrations: '/emergency/integrations',
 };
 
+/**
+ * Personal landings — the "what do I have to do today" views.
+ *
+ * Under `/me/` rather than inside a system's routes because they cross systems: a driver's day is
+ * S166 assignments and an S168 logbook, and filing either under the other would be arbitrary. The
+ * URL says whose view it is, which is the honest description.
+ */
+export const mePaths = {
+  driverDay: '/me/driving',
+  myRequests: '/me/requests',
+  myQueue: '/me/queue',
+  mailroom: '/me/mailroom',
+  centreReceipts: '/me/receipts',
+  assurance: '/me/assurance',
+} as const;
+
+
 export const navSections: NavSection[] = [
+  // ── Personal landings ───────────────────────────────────────────────────────────────────────
+  //
+  // First in the list on purpose. `landingPath()` returns the first item of the first entitled
+  // section, so putting these ahead of the operator sections is what makes a driver open on their
+  // own day rather than on the fleet dashboard — with no change to the router or the shell.
+  //
+  // Each is `persona`-gated, so an operator never sees them: the sections below are unchanged for
+  // everybody who was already served.
+  {
+    heading: 'My work',
+    programme: 'FTLMP',
+    system: 'S166',
+    items: [
+      {
+        label: 'My driving day',
+        to: mePaths.driverDay,
+        icon: 'truck',
+        description: 'Today’s assignments, my logbook and pre-trip checks',
+        // Enforced by FuelApplicationService.logbooks, narrowed per record on created_by.
+        permission: 'FUEL_LOGBOOK_READ',
+        persona: 'driver',
+      },
+    ],
+  },
+  {
+    heading: 'My work',
+    programme: 'FTLMP',
+    system: 'S171',
+    items: [
+      {
+        label: 'Mailroom',
+        to: mePaths.mailroom,
+        icon: 'inbox',
+        description: 'Register inbound items and today’s distribution',
+        // Enforced by DispatchAccessPolicy on the courier item register.
+        permission: 'DISPATCH_ITEM_READ',
+        persona: 'mailroom',
+      },
+      {
+        label: 'Centre receipts',
+        to: mePaths.centreReceipts,
+        icon: 'clipboard',
+        description: 'Confirm receipt, record a variance, chase returns',
+        // Enforced by DispatchAccessPolicy; confirmation needs DISPATCH_RECEIPT_CONFIRM.
+        permission: 'DISPATCH_MANIFEST_READ',
+        persona: 'centre',
+      },
+    ],
+  },
+  {
+    heading: 'My work',
+    programme: 'IFIMP',
+    system: 'S153',
+    items: [
+      {
+        label: 'My requests',
+        to: mePaths.myRequests,
+        icon: 'clipboard',
+        description: 'The bookings and faults I raised',
+        // Enforced by FacilityFaultService.requesterFilter and its booking twin.
+        permission: 'FACILITIES_FAULT_READ',
+        persona: 'requester',
+      },
+      {
+        label: 'My work queue',
+        to: mePaths.myQueue,
+        icon: 'wrench',
+        description: 'The jobs assigned to me',
+        // Enforced by WorkOrderApplicationService.assertVisible, per record on assignedTo.
+        permission: 'FACILITIES_WORK_ORDER_READ',
+        persona: 'technician',
+      },
+    ],
+  },
+  {
+    heading: 'Assurance',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Audit & evidence',
+        to: mePaths.assurance,
+        icon: 'shield-check',
+        description: 'Chain verification, evidence and denials across every system',
+        // Enforced by the facilities audit endpoints; FTLMP has its own, read side by side.
+        permission: 'FACILITIES_AUDIT_READ',
+        persona: 'assurance',
+      },
+    ],
+  },
   {
     // S152 leads the list because IFIMP is the first programme in `allProgrammes`, and an actor
     // entitled to both lands on their facilities dashboard rather than on fleet's.
@@ -586,13 +707,19 @@ export const directorate = {
 };
 
 /** The navigation sections this actor is entitled to, in declared order. */
+/** No persona named means "everyone who is entitled" — the ordinary case. */
+const suitsPersona = (persona?: PersonaCode): boolean => persona === undefined || isPersona(persona);
+
 export const entitledSections = (): NavSection[] =>
   navSections
     .filter((section) => entitledTo(section.programme) && entitledToSystem(section.system))
     // Then drop the items the actor cannot read, and any section left with none — an empty heading is
     // worse than no heading. `permits` returns true for everything when the services could not be
     // asked, so a failed lookup never hides a screen.
-    .map((section) => ({ ...section, items: section.items.filter((item) => permits(item.permission)) }))
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => permits(item.permission) && suitsPersona(item.persona)),
+    }))
     .filter((section) => section.items.length > 0);
 
 /**

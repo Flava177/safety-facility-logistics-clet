@@ -9,6 +9,12 @@ import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
 
+const DriverDayPage = lazy(() => import('modules/me/pages/DriverDayPage'));
+const MyRequestsPage = lazy(() => import('modules/me/pages/MyRequestsPage'));
+const MyQueuePage = lazy(() => import('modules/me/pages/MyQueuePage'));
+const MailroomPage = lazy(() => import('modules/me/pages/MailroomPage'));
+const CentreReceiptsPage = lazy(() => import('modules/me/pages/CentreReceiptsPage'));
+const AssurancePage = lazy(() => import('modules/me/pages/AssurancePage'));
 const FacilitiesDashboardPage = lazy(() => import('modules/facilities/pages/FacilitiesDashboardPage'));
 // S153 CMMS
 const FaultRegisterPage = lazy(() => import('modules/facilities/pages/FaultRegisterPage'));
@@ -148,6 +154,21 @@ const App = () => {
               index
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
             />
+            {/*
+              Personal landings. Outside the SystemRoutes guards on purpose: these cross systems — a
+              driver's day is an S166 assignment and an S168 logbook — and every one of them is
+              already gated in the sidebar by persona plus permission, with the services enforcing
+              per record underneath. A system guard here would have to pick one system arbitrarily
+              and would refuse the other half of the page.
+            */}
+            <Route path="me">
+              <Route path="driving" element={<DriverDayPage />} />
+              <Route path="requests" element={<MyRequestsPage />} />
+              <Route path="queue" element={<MyQueuePage />} />
+              <Route path="mailroom" element={<MailroomPage />} />
+              <Route path="receipts" element={<CentreReceiptsPage />} />
+              <Route path="assurance" element={<AssurancePage />} />
+            </Route>
             <Route path="facilities" element={<SystemRoutes system="S152" />}>
               <Route index element={<FacilitiesDashboardPage />} />
               <Route path="sites">
