@@ -12,6 +12,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelCard;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
@@ -469,6 +470,44 @@ public class JdbcFuelRepository implements FuelRepository {
     }
 
     /* ------------------------------------------------------------------------------- mappers */
+
+    // ---- fuel cards (SRS-SFL-S168fuel-04) ---------------------------------------------------------
+
+    private static final Map<String,String> CARD_SORTS = Map.of("issuedOn","issued_on","maskedReference","masked_reference","status","status");
+
+    @Override public FuelCard saveCard(FuelCard c) {
+        int updated = jdbc.update("UPDATE fleet_logistics.fuel_cards SET vehicle_id=?,driver_id=?,status=?,expires_on=?,daily_limit=?,monthly_limit=?,per_transaction_limit=?,suspension_reason=?,notes=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?",
+                c.vehicleId(), c.driverId(), c.status().name(), c.expiresOn(), c.dailyLimit(), c.monthlyLimit(), c.perTransactionLimit(), c.suspensionReason(), c.notes(), c.metadata().lastModifiedBy(), ts(c.metadata().lastModifiedAt()), c.metadata().sourceChannel().name(), c.metadata().auditCorrelationId(), c.id(), c.metadata().version());
+        if (updated == 0 && findCard(c.id()).isEmpty()) {
+            jdbc.update("""
+                INSERT INTO fleet_logistics.fuel_cards (id,site_code,masked_reference,provider,vehicle_id,driver_id,status,issued_on,expires_on,daily_limit,monthly_limit,per_transaction_limit,suspension_reason,notes,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, c.id(), c.siteCode().value(), c.maskedReference(), c.provider(), c.vehicleId(), c.driverId(), c.status().name(), c.issuedOn(), c.expiresOn(), c.dailyLimit(), c.monthlyLimit(), c.perTransactionLimit(), c.suspensionReason(), c.notes(), c.metadata().createdBy(), ts(c.metadata().createdAt()), c.metadata().lastModifiedBy(), ts(c.metadata().lastModifiedAt()), c.metadata().sourceChannel().name(), c.metadata().auditCorrelationId(), c.metadata().version());
+        }
+        return c;
+    }
+
+    @Override public Optional<FuelCard> findCard(UUID id) {
+        return one("SELECT * FROM fleet_logistics.fuel_cards WHERE id=?", this::card, id);
+    }
+
+    @Override public Optional<FuelCard> findLiveCardByReference(String site, String maskedReference) {
+        if (site == null || maskedReference == null || maskedReference.isBlank()) return Optional.empty();
+        return one("SELECT * FROM fleet_logistics.fuel_cards WHERE site_code=? AND masked_reference=? AND status<>'CANCELLED' LIMIT 1", this::card, site, maskedReference.strip());
+    }
+
+    @Override public FuelPage<FuelCard> findCards(CardQuery q) {
+        Order order = order(q.paging().sort(), CARD_SORTS, "issuedOn", true);
+        if (q.sites().isEmpty()) return FuelPage.empty(q.paging().page(), q.paging().size(), order.describedAs());
+        Where where = Where.scoped()
+                .and("status=?", q.status() == null ? null : q.status().name())
+                .and("vehicle_id=?", q.vehicleId())
+                .and("driver_id=?", q.driverId())
+                .and("masked_reference=?", q.maskedReference());
+        return page("fleet_logistics.fuel_cards", q.sites(), where, order, q.paging(), this::card);
+    }
+
+    private FuelCard card(ResultSet r,int n)throws SQLException{return new FuelCard(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("masked_reference"),r.getString("provider"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),FuelCard.Status.valueOf(r.getString("status")),r.getObject("issued_on",LocalDate.class),r.getObject("expires_on",LocalDate.class),r.getBigDecimal("daily_limit"),r.getBigDecimal("monthly_limit"),r.getBigDecimal("per_transaction_limit"),r.getString("suspension_reason"),r.getString("notes"),metadata(r));}
 
     private FuelPolicy policy(ResultSet r,int n)throws SQLException{return new FuelPolicy(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("policy_name"),instant(r,"effective_from"),instant(r,"effective_to"),r.getInt("policy_version"),r.getBigDecimal("max_per_transaction"),r.getBigDecimal("daily_limit"),r.getBigDecimal("monthly_limit"),r.getBigDecimal("tank_capacity"),r.getBigDecimal("min_consumption"),r.getBigDecimal("max_consumption"),r.getLong("odometer_jump_tolerance"),r.getBoolean("receipt_required"),r.getInt("receipt_grace_hours"),r.getBigDecimal("materiality_amount"),r.getInt("anomaly_sla_hours"),csv(r.getString("allowed_fuel_products")),csv(r.getString("approved_vendors")),FuelPolicy.Status.valueOf(r.getString("status")),metadata(r));}
     private FuelTransaction transaction(ResultSet r,int n)throws SQLException{return new FuelTransaction(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("provider_transaction_id"),r.getString("source_system"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),instant(r,"occurred_at"),r.getString("vendor_reference"),r.getString("station_reference"),r.getString("fuel_product"),r.getBigDecimal("quantity"),r.getString("quantity_unit"),r.getBigDecimal("unit_price"),r.getBigDecimal("total_cost"),Currency.getInstance(r.getString("currency")),r.getString("masked_card_reference"),r.getLong("odometer_reading"),uuid(r,"receipt_evidence_id"),r.getString("comments"),FuelTransaction.Status.valueOf(r.getString("status")),FuelTransaction.Lifecycle.valueOf(r.getString("lifecycle_status")),instant(r,"ingestion_timestamp"),r.getString("idempotency_key"),metadata(r));}

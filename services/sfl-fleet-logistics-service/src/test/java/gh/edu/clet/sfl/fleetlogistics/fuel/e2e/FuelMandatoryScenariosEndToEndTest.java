@@ -24,6 +24,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.e2e.FleetPostgresSupport;
 import gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.messaging.OutboxMessageEntity;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelCardService;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
@@ -55,6 +56,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     @Autowired VehicleApplicationService vehicleService;
     @Autowired DriverApplicationService driverService;
     @Autowired FuelApplicationService fuel;
+    @Autowired FuelCardService cards;
     @Autowired VehicleRepository vehicles;
     @Autowired FuelRepository repository;
     @Autowired AuditPort audit;
@@ -73,6 +75,14 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         // effectiveFrom is wound a week back (the existing critical test uses now-60s) so backdated occurredAt scenarios such as the
         // missing-receipt grace test still resolve an applicable policy at reconcile time; every other field mirrors the critical test.
         fuel.createPolicy(new FuelApplicationService.CreatePolicy(site,"Default",now.minusSeconds(7L*24*3600),null,1,new BigDecimal("50"),new BigDecimal("100"),new BigDecimal("1000"),new BigDecimal("80"),null,null,500,true,24,new BigDecimal("400"),8,Set.of("DIESEL"),Set.of("CLET STATION"),manager,SourceChannel.WEB));
+        // Every fixture capture quotes card 1234567890, and since S168fuel-04 an unquoted card is an
+        // anomaly — so the fixture has to register it, exactly as a site must before its transactions
+        // can reconcile. That is the control working, not the fixture accommodating a quirk.
+        // "****7890", not "1234567890": capture masks the number on the way in and stores only the
+        // last four, so the register has to be keyed on the same masked form. That is the point — the
+        // full card number is payment data and never reaches this platform.
+        cards.issue(new FuelCardService.IssueCard(site,"****7890","CLET FUEL CARDS",vehicle.id(),
+                driver.id(),LocalDate.now().minusDays(7),null,null,null,null,null,manager,SourceChannel.WEB));
         return new Fixture(site,manager,vehicle,driver);
     }
 
@@ -201,6 +211,49 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         assertThatThrownBy(() -> fuel.transitionLogbook(approved.id(),"submit",null,f.manager(),SourceChannel.WEB)).isInstanceOf(IllegalStateException.class);
         var reopened = fuel.transitionLogbook(approved.id(),"reopen","audit",f.manager(),SourceChannel.WEB);
         assertThat(reopened.status()).isEqualTo(DriverLogbook.Status.REOPENED);
+    }
+
+
+    // SRS-SFL-S168fuel-04 — the card register, which had no implementation at all.
+    @Test void a_fuel_card_must_be_known_active_and_on_the_right_vehicle() {
+        Fixture f = newFixture();
+        Instant now = Instant.now();
+
+        // masked_card_reference has been captured since V10 and meant nothing: an unknown card
+        // reconciled clean. Now it is an exception, which is what "anti-fraud control" requires.
+        var unknown = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-1","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****9999",1100,UUID.randomUUID(),null,"tx-card-unknown-"+f.site(),f.manager(),SourceChannel.WEB));
+        assertThat(fuel.reconcile(unknown.id(),f.manager(),SourceChannel.WEB).status())
+                .isEqualTo(FuelTransaction.Status.EXCEPTION);
+        assertThat(anomalyOfType(f, FuelAnomalyCase.Type.CARD_UNKNOWN)).isNotNull();
+
+        // Issued to this vehicle, the same fill reconciles.
+        var card = cards.issue(new FuelCardService.IssueCard(f.site(),"****1234","CLET FUEL CARDS",
+                f.vehicle().id(), f.driver().id(), LocalDate.now().minusDays(1), null, null, null,
+                new BigDecimal("500"), null, f.manager(), SourceChannel.WEB));
+        var good = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-2","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1200,UUID.randomUUID(),null,"tx-card-good-"+f.site(),f.manager(),SourceChannel.WEB));
+        assertThat(fuel.reconcile(good.id(),f.manager(),SourceChannel.WEB).status())
+                .isEqualTo(FuelTransaction.Status.RECONCILED);
+
+        // Suspended, and the same card stops working — with a reason on the record.
+        cards.transition(new FuelCardService.TransitionCard(card.id(),"suspend","Reported lost",null,null,
+                f.manager(),SourceChannel.WEB));
+        var suspended = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-3","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1300,UUID.randomUUID(),null,"tx-card-susp-"+f.site(),f.manager(),SourceChannel.WEB));
+        assertThat(fuel.reconcile(suspended.id(),f.manager(),SourceChannel.WEB).status())
+                .isEqualTo(FuelTransaction.Status.EXCEPTION);
+
+        // Reinstated but pointed at another vehicle: the commonest fuel fraud there is, and now visible.
+        cards.transition(new FuelCardService.TransitionCard(card.id(),"reinstate",null,null,null,f.manager(),SourceChannel.WEB));
+        var otherVehicle = vehicleService.register(new RegisterVehicleCommand("GN2-"+f.site(),null,"Toyota","Hilux",2024,VehicleCategory.PICKUP,5,f.site(),"Transport","Fleet Manager",null,1000,false,Set.of(),f.manager(),SourceChannel.WEB,"vehicle2-"+f.site()));
+        var wrongVehicle = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-4","MANUAL",otherVehicle.id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1400,UUID.randomUUID(),null,"tx-card-wrong-"+f.site(),f.manager(),SourceChannel.WEB));
+        assertThat(fuel.reconcile(wrongVehicle.id(),f.manager(),SourceChannel.WEB).status())
+                .isEqualTo(FuelTransaction.Status.EXCEPTION);
+        assertThat(anomalyOfType(f, FuelAnomalyCase.Type.CARD_VEHICLE_MISMATCH)).isNotNull();
+
+        // A cancelled card cannot be reinstated: cancellation is terminal, and the row survives so the
+        // transactions above still resolve to it.
+        cards.transition(new FuelCardService.TransitionCard(card.id(),"cancel","Returned",null,null,f.manager(),SourceChannel.WEB));
+        assertThatThrownBy(() -> cards.transition(new FuelCardService.TransitionCard(card.id(),"reinstate",null,null,null,f.manager(),SourceChannel.WEB)))
+                .isInstanceOf(IllegalStateException.class);
     }
 
     // 10

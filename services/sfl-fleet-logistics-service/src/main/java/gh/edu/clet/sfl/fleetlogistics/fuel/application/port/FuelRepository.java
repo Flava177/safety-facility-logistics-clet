@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.fleetlogistics.fuel.application.port;
 
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelCard;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
@@ -75,6 +76,28 @@ public interface FuelRepository {
     }
 
     /** Filters `GET /api/v1/fuel/logbooks` accepts. */
+    // ---- fuel cards (SRS-SFL-S168fuel-04) ------------------------------------------------------
+
+    FuelCard saveCard(FuelCard card);
+
+    java.util.Optional<FuelCard> findCard(java.util.UUID id);
+
+    /**
+     * The reconciliation lookup: the live card behind a transaction's masked reference.
+     *
+     * <p>Excludes cancelled cards, because a cancelled reference may have been reissued and the live
+     * one is the answer to "whose card is this now". Historic resolution goes through {@link #findCard}
+     * by id, which is what a transaction stores once matched.
+     */
+    java.util.Optional<FuelCard> findLiveCardByReference(String siteCode, String maskedReference);
+
+    FuelPage<FuelCard> findCards(CardQuery query);
+
+    /** Filters {@code GET /api/v1/fuel/cards} accepts. */
+    record CardQuery(java.util.List<String> sites, FuelCard.Status status, java.util.UUID vehicleId,
+            java.util.UUID driverId, String maskedReference, Paging paging) {
+    }
+
     record LogbookQuery(
             List<String> sites,
             String actorId,
