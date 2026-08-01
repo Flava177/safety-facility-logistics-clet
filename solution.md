@@ -295,6 +295,55 @@ The addition is a **role split**, and it was forced by a real hazard. A table ow
 
 Facilities is the reference implementation; the same migration is owed against the other three schemas, and the mechanism is already shared. Backend: **778 tests, 0 failures, 0 skipped.**
 
+### Pass — The S159 booking UI
+
+S159 shipped with twenty-five API paths and no client. This is the client: five screens, seven
+dialogs, and the first IFIMP module whose route base does not mirror its service — `/bookings`, not
+`/facilities/bookings`, because a lecturer booking a hall does not think of themselves as visiting
+facilities and a URL somebody can be told over the phone is worth more than one that mirrors
+deployment topology.
+
+**Two mistakes were made in the first draft and both were caught by reading the service rather than
+by a failing test**, which is the same way the last four passes found what they found.
+
+`FACILITIES_BOOKING_CANCEL` does not mean "may cancel". `requireMayAct` uses it as the *"may act on
+somebody else's booking"* grant and routes cancel, reschedule, start and completion through it
+identically — so anything you requested you may move, start, complete and cancel holding nothing
+beyond `FACILITIES_BOOKING_REQUEST`, and anything you did not you may touch only holding that one
+grant. The first draft gated reschedule and start on `BOOKING_REQUEST`, which is the reading the
+names invite and which would have offered a requester the Move button on a hall booked by the
+registry. And the turnaround queue was gated on `FACILITIES_SETUP_TASK_MANAGE`; `BookingSetupService.queue`
+gates the read on `FACILITIES_BOOKING_READ` and reserves the manage permission for raising and
+resolving a task, so shipping it as written would have hidden the queue from everybody who can only
+look at it — while the technicians who can resolve tasks saw it fine, so it would have looked correct
+to whoever tested it.
+
+**The occupied window is the thing every screen exists to make visible.** A lecture booked 09:00–11:00
+with a fifteen-minute teardown refuses a meeting at 11:05, and the refusal names the *booked* window
+in its message — so somebody reads 11:00, asked for 11:05, and is refused. The screens do not rewrite
+the service's wording; they show the occupied window beside it, on the diary row, as its own stat card
+on the detail page, and in the request dialog's description.
+
+**Verified against PostgreSQL, not only against tests**, per the standing rule. A seeded site, two
+rooms and one exclusive resource, then thirteen behaviours driven through the same paths the UI calls:
+buffers widening the occupied window, the conflict landing on the buffer, setup tasks auto-raised at
+the occupied start, completion releasing every allocation, the requester narrowing on both the list
+and the by-id read, own-booking cancellation without `BOOKING_CANCEL`, the readiness override with a
+recorded reason, and the self-approval refusal. Every field of every response matched the TypeScript
+DTOs with no adjustment — they were transcribed from `BookingResponses` rather than inferred.
+
+**One entitlement fact is worth stating because it happened silently.** Adding `FACILITIES_BOOKING_READ`
+to the facilities matrix's shared `READ_ONLY` set entitled ten roles to the room diary and left
+`VENDOR_TECHNICIAN` out — correctly, and only because a contractor's matrix entry is an explicit
+`EnumSet` rather than a union with that set. A test now pins it, so rebuilding `VENDOR_TECHNICIAN` on
+`READ_ONLY` cannot hand a contractor the estate's diary by accident.
+
+Recorded rather than built, in `docs/facilities/S159_UI_Gap_Report.md`: the calendar grid (a half-grid
+drawing the booked window would actively mislead), post-hoc resource allocation, resource editing, and
+manual setup tasks. Each has an endpoint and no control, and each is named with the reason.
+
+Frontend: **115 tests**, up from 84.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

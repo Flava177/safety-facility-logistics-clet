@@ -58,7 +58,7 @@ const SOURCES: Source[] = [
   { path: '/api/v1/fleet/actor/permissions' },
   // S174 is its own deployable with its own matrix (ADR 0004), so it answers separately.
   { path: '/api/v1/emergency/actor/permissions', service: 'emergency' },
-  // S152, and in time S153 and S159 — the IFIMP deployable, one matrix in `shared`.
+  // S152, S153 and S159 — the IFIMP deployable, one matrix in `shared` answering for all three.
   { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
 ];
 
