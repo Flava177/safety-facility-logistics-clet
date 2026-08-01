@@ -281,6 +281,20 @@ PLAT-01, `solution.md` §Security, ADR 0007. **Every API in this platform was un
 
 Backend: **772 tests, 0 failures, 0 skipped.**
 
+### Pass — Row-level security (ADR 0007)
+
+Site scope had one layer of enforcement, and it was the layer this platform has twice been observed to get wrong: `FacilityFaultController.findAll()` once returned every fault at every site to any caller, and `FleetAccessPolicy.requireRecordScope` was passed `null` at its only call site and enforced nothing. Both were found by reading code, not by a test failing. RLS is the layer that makes that class of mistake harmless, and A1 unblocked it — enforcing scopes asserted by an unauthenticated caller would have been theatre.
+
+**Built as ADR 0007 decided, plus one thing it did not name.** The per-request session GUC is there: `SiteScopeGuc` in the shared kernel issues `SET LOCAL app.site_scopes` in `afterBegin`. `SET LOCAL` rather than `SET` is the entire safety argument — it rolls back with the transaction either way, so a pooled connection never carries a stranger's scopes to its next borrower, which is the failure this design is usually accused of.
+
+The addition is a **role split**, and it was forced by a real hazard. A table owner bypasses RLS unless `FORCE` is set, and `FORCE` would have applied the policies to Flyway — so a migration that backfills would have silently written nothing, which is worse than the problem and invisible. The owner therefore keeps its bypass and runs migrations, and a separate `sfl_app` role carries the policies. Development and the whole test suite keep connecting as the owner, so nothing that worked stopped working, and adopting RLS in an environment is a connection-string change rather than a deployment that must land in lockstep with a migration.
+
+**The policies fail closed.** `site_in_scope` returns false when the GUC is unset or empty. That is the only setting worth having: a second layer that opens up when the first forgets to speak is not a second layer. `*` is the cross-site scope, matching `SiteScopeFilter.all()`. Two tables are exempt and the reason travels with the rule — the audit chain, because a tamper-evident record that is invisible in parts replays as a break that is really a filter; and runtime configuration, because it is read during evaluation for sites the actor may not hold and narrowing it would make an SLA silently unresolvable rather than refused.
+
+**Proved against the role it applies to.** `FacilitiesRowLevelSecurityTest` opens its own connection as `sfl_app`, because a test running as the owner would have passed while proving nothing at all. Six cases, including that a write outside scope is refused by `WITH CHECK` with SQLSTATE 42501 rather than silently dropped.
+
+Facilities is the reference implementation; the same migration is owed against the other three schemas, and the mechanism is already shared. Backend: **778 tests, 0 failures, 0 skipped.**
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

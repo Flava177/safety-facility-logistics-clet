@@ -1,6 +1,7 @@
 # ADR 0007 — Row-Level Security: the mechanism is chosen, the implementation is deferred
 
-- Status: **Accepted**, 31 July 2026. Decision taken; implementation scheduled, not built.
+- Status: **Accepted and implemented**, 1 August 2026. Mechanism as decided; facilities is the
+  reference implementation (V14), rollout to the other three schemas is the remaining work.
 - **Unblocked 1 August 2026:** A1 landed, so the precondition this ADR names — "until the actor is a
   verified JWT principal rather than an `X-SFL-*` header, RLS would be enforcing scopes asserted by
   the caller, which is theatre" — no longer holds. The `site_scopes` claim the policies will read is
@@ -96,3 +97,54 @@ not a delay, it is the only order in which it means anything.
 **DTI platform** owns the sign-off on the session-GUC mechanism. Until that sign-off exists this ADR is
 a decision the SFL team has taken and the platform team has not yet ratified, and it should be read
 that way.
+
+
+---
+
+## Implementation, 1 August 2026
+
+Built as decided — the per-request session GUC — with one addition the decision did not name and
+needed.
+
+**A role split, because FORCE would have broken migrations.** A table owner bypasses RLS unless
+`FORCE ROW LEVEL SECURITY` is set, and FORCE applies the policies to *everything* including Flyway.
+A migration that backfills would then silently write nothing — a worse failure than the one being
+prevented, and a silent one. So the schema owner keeps its bypass and runs migrations, and a separate
+`sfl_app` role carries the policies. Production connects as `sfl_app`; development and the test suite
+keep connecting as the owner, so nothing that works today stops working and adoption is a
+connection-string change per environment rather than a synchronised deployment.
+
+`sfl_app` is created `NOLOGIN`. An environment that adopts it grants LOGIN and a credential itself
+rather than a migration inventing one and committing it.
+
+**What is enforced.** `facilities.site_in_scope(text)` reads `app.site_scopes` and returns false when
+it is unset or empty — failing closed, because a second layer that opens up when the first forgets to
+speak is not a second layer. `*` is the cross-site scope, matching `SiteScopeFilter.all()` and
+`crossProgrammeRoles`. Policies are applied by a catalogue-driven loop over every table carrying
+`site_code`, so a table added later without a policy is a visible omission rather than a silent one.
+
+**Two tables are exempt, deliberately.** `facility_audit_records`, because an auditor's job is to read
+across sites and a hash chain that is invisible in parts cannot be replayed — verification would
+report a break that is really a filter. And `facility_runtime_configuration`, which is read during
+evaluation for sites the actor may not hold; narrowing it would make an SLA silently unresolvable
+rather than refused.
+
+**`SiteScopeGuc` lives in `sfl-service-common`**, as this ADR said it should, and issues `SET LOCAL`
+in `afterBegin`. `SET LOCAL` rather than `SET` is the whole safety argument: it is rolled back with
+the transaction either way, so a pooled connection never carries a stranger's scopes to its next
+borrower. It is declared as a plain bean and never registered by hand — Boot discovers
+`TransactionExecutionListener` beans itself, and asking for the transaction manager in order to call
+`addListener` is a circular reference.
+
+**Proved by `FacilitiesRowLevelSecurityTest`**, which opens its own connection as `sfl_app` because a
+test running as the owner would pass while proving nothing — the most dangerous kind of green. Six
+cases: unset sees nothing, empty sees nothing, one scope sees one site, two scopes see both, `*` sees
+across, and a write outside scope is refused by `WITH CHECK` with SQLSTATE 42501 rather than silently
+dropped.
+
+### Outstanding
+
+Fleet-logistics, emergency-notification and asset-visibility need the same migration against their own
+schemas. The mechanism is shared and already on their classpath; what each needs is the policy
+migration and a configuration class binding the GUC to its own actor resolver. Facilities is the
+reference to copy.

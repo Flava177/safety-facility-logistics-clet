@@ -11,6 +11,22 @@
     <name>SFL Service Common</name>
     <description>Shared DTO, error, auth-context, site-scope and event-envelope conventions.</description>
     <dependencies>
+        <!--
+          ADR 0007. The site-scope GUC belongs in the shared kernel because all four services enforce
+          the same rule against their own schema, and a copy per service is four places for it to
+          drift. These are the narrowest dependencies that allow it: a transaction listener and a way
+          to reach the transaction's connection. No starter, so this stays a library.
+        -->
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-tx</artifactId>
+            <optional>true</optional>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-jdbc</artifactId>
+            <optional>true</optional>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>
