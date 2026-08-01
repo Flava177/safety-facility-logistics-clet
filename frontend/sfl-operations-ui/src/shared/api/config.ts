@@ -1,3 +1,4 @@
+import { readSession } from 'shared/auth/session';
 import { readActorOverride } from 'shared/dev/actorOverride';
 
 /**
@@ -124,7 +125,61 @@ const defaultRoles = [
   'INTEGRATION_ENGINEER',
 ].join(',');
 
-export const sflActor: SflActorConfig = {
+/**
+ * Where the realm lives, and which client the dashboard signs in as.
+ *
+ * Both mirror `deploy/keycloak/sfl-realm.json` and the `SFL_IAM_ISSUER` the services read, so the
+ * dashboard and the resource servers are talking about the same realm by construction rather than by
+ * two people remembering to edit two files.
+ */
+export const keycloakIssuer = readEnv('VITE_SFL_IAM_ISSUER', 'http://localhost:8080/realms/sfl');
+export const keycloakClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operations-ui');
+
+/**
+ * Whether this dashboard must have a session before it will render.
+ *
+ * Defaults to **false**, and that is deliberate rather than lax. A service running with
+ * `SFL_SECURITY_ENABLED=false` issues no tokens and has no Keycloak beside it, so demanding a
+ * sign-in there produces a form that cannot succeed and locks the dashboard out of a setup that
+ * works. Set this to `true` alongside a service running with security on — the two move together.
+ *
+ * It is a usability control, never enforcement: without a token the services answer 401 regardless.
+ */
+export const authenticationRequired =
+  readEnv('VITE_SFL_AUTH_REQUIRED', 'false').toLowerCase() === 'true';
+
+/**
+ * The actor, from the strongest source available.
+ *
+ * Three sources in a deliberate order, and the order is the whole point:
+ *
+ * 1. **The signed-in session**, when there is one. Roles and site scopes come from the token's own
+ *    claims — the same `realm_access.roles` and `site_scopes` the services read — so the sidebar and
+ *    the service cannot disagree about who you are.
+ * 2. **The development actor switcher**, for header-based local work with security off.
+ * 3. **The environment**, which is the fallback that has always been here.
+ *
+ * The headers are still sent in every case, and that is not redundant: with
+ * `SFL_SECURITY_ENABLED=false` they are the only identity there is, and with security on the
+ * services ignore them entirely in favour of the JWT. Sending both means one build works against
+ * either, and there is no mode where the headers can *override* a token — the resolver prefers the
+ * verified principal, which is what makes this safe rather than merely convenient.
+ */
+const sessionActor = (): SflActorConfig | null => {
+  const session = readSession();
+  if (!session) {
+    return null;
+  }
+  return {
+    user: session.username,
+    displayName: session.displayName,
+    roles: session.roles.join(','),
+    sites: session.siteScopes.join(',') || 'CLET-HQ',
+    sourceChannel: 'WEB',
+  };
+};
+
+export const sflActor: SflActorConfig = sessionActor() ?? {
   user: actorOverride?.user || readEnv('VITE_SFL_USER', 'fleet.operator'),
   displayName: actorOverride?.displayName || readEnv('VITE_SFL_DISPLAY_NAME', 'Fleet Operator'),
   roles: actorOverride?.roles || readEnv('VITE_SFL_ROLES', defaultRoles),

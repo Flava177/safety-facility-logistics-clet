@@ -1,6 +1,8 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import { fleetApiBaseUrl, sflActor } from 'shared/api/config';
+import { signOut } from 'shared/auth/keycloak';
+import { readSession } from 'shared/auth/session';
 import { actorOverridden, devToolsEnabled } from 'shared/dev/actorOverride';
 import Button from 'shared/components/Button';
 import Icon from 'shared/components/Icon';
@@ -56,6 +58,8 @@ const roles = sflActor.roles
 const TopBar = () => {
   const { openMobile } = useSidebar();
   const [profileOpen, setProfileOpen] = useState(false);
+  /** Null when nobody has signed in — the header-based development actor is then in force. */
+  const session = readSession();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
 
@@ -184,11 +188,45 @@ const TopBar = () => {
                   </div>
                 </dl>
 
-                <p className="mt-3 border-t border-gray-200 pt-3 text-theme-xs leading-relaxed text-gray-600">
-                  Sign-in is disabled in this environment. These values are sent as
-                  <code className="mx-1 rounded bg-gray-100 px-1">X-SFL-*</code>
-                  headers on every request.
-                </p>
+                {/*
+                  Says which of the two identities is actually in force. Before the login page there
+                  was only one, and this panel asserted it flatly; now a signed-in operator and a
+                  header-based development actor look identical here unless it is stated.
+                */}
+                {session ? (
+                  <p className="mt-3 border-t border-gray-200 pt-3 text-theme-xs leading-relaxed text-gray-600">
+                    Signed in as <strong>{session.email ?? session.username}</strong>. Requests carry
+                    your access token, and the roles above are read from it rather than from this
+                    browser.
+                  </p>
+                ) : (
+                  <p className="mt-3 border-t border-gray-200 pt-3 text-theme-xs leading-relaxed text-gray-600">
+                    Not signed in. These values are sent as
+                    <code className="mx-1 rounded bg-gray-100 px-1">X-SFL-*</code>
+                    headers, which the services accept only while
+                    <code className="mx-1 rounded bg-gray-100 px-1">SFL_SECURITY_ENABLED=false</code>.
+                  </p>
+                )}
+
+                {session && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    startIcon="lock"
+                    className="mt-3 w-full"
+                    onClick={async () => {
+                      setProfileOpen(false);
+                      await signOut();
+                      // Full reload for the same reason sign-in does one: entitlement, permissions
+                      // and the landing path are all resolved once at module scope.
+                      window.location.assign(
+                        `${import.meta.env.BASE_URL.replace(/\/$/, '')}/login`,
+                      );
+                    }}
+                  >
+                    Sign out
+                  </Button>
+                )}
 
                 {devToolsEnabled && (
                   <Button

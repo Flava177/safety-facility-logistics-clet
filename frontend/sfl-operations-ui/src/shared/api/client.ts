@@ -1,3 +1,4 @@
+import { readSession } from 'shared/auth/session';
 import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
 import { emergencyApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
@@ -109,6 +110,22 @@ const buildHeaders = (options: RequestOptions, hasJsonBody: boolean): Headers =>
   headers.set('Accept', options.accept ?? 'application/json');
   if (hasJsonBody) {
     headers.set('Content-Type', 'application/json');
+  }
+  /*
+    The bearer token, when this browser has a session.
+
+    Added with the login page. Before it, this client sent the X-SFL-* headers and no Authorization
+    header at all — so A1's resource server, JWT resolvers and imported realm were unreachable from
+    the dashboard, and the whole UI only worked against a service running with security switched off.
+
+    Both are sent, and the services prefer the verified principal: with `SFL_SECURITY_ENABLED=false`
+    the headers are the only identity there is, and with security on the JWT wins and the headers are
+    ignored. There is deliberately no mode in which a header can override a token — that ordering is
+    what makes sending both safe rather than merely convenient.
+  */
+  const session = readSession();
+  if (session) {
+    headers.set('Authorization', `Bearer ${session.accessToken}`);
   }
   headers.set(HEADER_USER, sflActor.user);
   headers.set(HEADER_DISPLAY_NAME, sflActor.displayName);

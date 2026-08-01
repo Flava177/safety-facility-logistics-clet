@@ -94,7 +94,11 @@ export interface TextInputProps extends CommonProps {
   value: string;
   onChange: (value: string) => void;
   maxLength?: number;
-  type?: 'text' | 'email' | 'tel' | 'url';
+  /** `password` added for the sign-in form; the browser owns masking and manager integration. */
+  type?: 'text' | 'email' | 'tel' | 'url' | 'password';
+  /** Passed through so a sign-in form can ask for `current-password` and `username`. */
+  autoComplete?: string;
+  name?: string;
 }
 
 export const TextInput = ({
@@ -111,6 +115,8 @@ export const TextInput = ({
   maxLength,
   autoFocus,
   type = 'text',
+  autoComplete,
+  name,
 }: TextInputProps) => {
   const id = useId();
   return (
@@ -125,6 +131,8 @@ export const TextInput = ({
       <input
         id={id}
         type={type}
+        name={name}
+        autoComplete={autoComplete}
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}

@@ -504,6 +504,58 @@ API, and the dashboard at `/ui/` returning 200 on both its index and a deep rout
 of the five ports wrong — safety-security is 8092 and asset-visibility 8094, not 8094 and 8096 — which
 is corrected there too.
 
+### Pass — The sign-in page, and the half of A1 that was never reachable
+
+A1 turned authentication on across every service: resource server, JWT actor resolvers, imported
+realm, the 403-versus-401 distinction, a test that runs the real chain. **None of it could be reached
+from a browser.** `shared/api/client.ts` sent `X-SFL-User`, `X-SFL-Roles` and `X-SFL-Sites` and no
+`Authorization` header at any point in the file. So the dashboard worked only against a service
+running with `SFL_SECURITY_ENABLED=false`, and a service running with the secure default answered 401
+to everything the dashboard did. This pass is the missing half.
+
+**The roles come out of the token, not out of the form.** The shortcut is to keep sending the
+`X-SFL-*` headers and put a login screen in front of them, and it would be theatre of the kind ADR
+0007 refuses: the headers are caller-supplied, so a "signed-in driver" could still assert `SFL_ADMIN`
+by editing storage. `realm_access.roles` and `site_scopes` are read from the token's own claims — the
+same two the services read — so the sidebar and the enforcement point derive from one signed source.
+Both are still sent, and the ordering is what makes that safe: with security off the headers are the
+only identity there is, with security on the verified principal wins, and there is no mode where a
+header overrides a token.
+
+**Twenty-two seeded accounts, one password.** The realm had twelve personas with no email and the
+password `password`; it now has twenty-two with `firstname@clet.gh`-style addresses and
+`Password@Clet1`, plus `loginWithEmailAllowed` — without which Keycloak accepts only the username and
+every credential handed out is an email. The ten added cover roles that had no user at all, including
+the dispatch controller. Proved against the running realm: the fleet manager and the driver receive
+tokens carrying their role and site scope, and a wrong password is refused with `invalid_grant`.
+
+**The specified component was not used verbatim, for two concrete reasons.** It is a shadcn block
+whose classes are shadcn's CSS-variable tokens — `bg-background`, `text-muted-foreground`,
+`border-input`, `ring-ring` — and this project defines **none of them**; its Tailwind theme is a
+bespoke scale, so pasting the block would have produced a transparent, borderless, default-typed
+form. And it ships its own `Button`, `Input`, `Label` and `cn`, all four of which already exist in
+`shared/components/` where `cn` is the same clsx + tailwind-merge helper and the fields carry the
+label/error/helper rhythm every other form uses. Building it on the existing kit added **zero
+dependencies** where the prompt called for six. The layout, copy and behaviour are as specified.
+
+**`-WithLogin` flips both halves together**, because they cannot move apart: the service demands a
+token and the dashboard is *built* demanding a session, since Vite inlines `import.meta.env` at build
+time. Setting either alone gives a dashboard that cannot authenticate, or a login form guarding a
+service that does not want one. Plain `.\start-fleet.ps1` is unchanged.
+
+**The guard defaults to off, which looks wrong until you see what it prevents.** A service with
+security off issues no tokens and has no realm beside it; forcing the login page there produces a
+form that cannot succeed and locks the dashboard out of a setup that works — the same shape of
+failure as a control nobody can satisfy, which this codebase has now found four times.
+
+Recorded as owed in `docs/frontend/SFL_Sign_In_And_Seeded_Accounts.md`: the resource-owner password
+grant is deprecated for public clients and cannot support multi-factor, step-up or an external IdP,
+so Authorization Code with PKCE replaces it; there is no token refresh yet; and the token sits in
+`sessionStorage`, which a successful XSS can read, because the `HttpOnly` cookie alternative needs a
+backend-for-frontend that does not exist.
+
+Frontend: **144 tests**, up from 132.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

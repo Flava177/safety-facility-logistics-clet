@@ -40,7 +40,8 @@ param(
     [switch] $SkipDb,
     [switch] $SkipUiBuild,
     [switch] $RebuildUi,
-    [switch] $NoBrowser
+    [switch] $NoBrowser,
+    [switch] $WithLogin
 )
 
 $ErrorActionPreference = "Stop"
@@ -89,6 +90,13 @@ if ($SkipUiBuild) {
         npm install --no-audit --no-fund
         if ($LASTEXITCODE -ne 0) { throw "npm install failed." }
 
+        if ($WithLogin) {
+            # Vite inlines import.meta.env at build time, so the dashboard has to be built knowing
+            # whether it should demand a session. A bundle built without this shows no login page.
+            $env:VITE_SFL_AUTH_REQUIRED = "true"
+        } else {
+            $env:VITE_SFL_AUTH_REQUIRED = "false"
+        }
         npm run build
         if ($LASTEXITCODE -ne 0) {
             throw "npm run build failed. Fix the errors above, then re-run .\start-fleet.ps1."
@@ -115,9 +123,21 @@ if (Test-Path $indexHtml) {
 }
 
 # --- 4. Service -----------------------------------------------------------------------------
-# Load-bearing since A1: absent now means SECURE. Removing this line makes the service demand a
-# token, which is correct everywhere except a developer laptop with no Keycloak running.
-$env:SFL_SECURITY_ENABLED   = "false"
+# Load-bearing since A1: absent means SECURE. Removing this line makes the service demand a token,
+# which is correct everywhere except a developer laptop with no Keycloak running.
+#
+# -WithLogin flips both halves together, and they have to move together: the service demands a token
+# and the dashboard shows the sign-in page. Setting either alone gives you a dashboard that cannot
+# authenticate, or a login form guarding a service that does not want one.
+if ($WithLogin) {
+    $env:SFL_SECURITY_ENABLED = "true"
+    Write-Step "Sign-in is ON - the realm must be running"
+    Write-Host "  keycloak : http://localhost:8080/realms/sfl"
+    Write-Host "  start it : docker compose -f deploy\compose\docker-compose.microservices.yml up -d keycloak"
+    Write-Host "  sign in  : fleetmanager@clet.gh / Password@Clet1"
+} else {
+    $env:SFL_SECURITY_ENABLED = "false"
+}
 $env:SFL_FLEET_OPEN_BROWSER = if ($NoBrowser) { "false" } else { "true" }
 
 Write-Step "Starting the Fleet & Logistics service on http://localhost:8093"

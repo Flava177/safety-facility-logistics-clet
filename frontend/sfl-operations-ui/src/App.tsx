@@ -3,12 +3,14 @@ import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router';
 import { Spinner } from 'shared/components/DataState';
 import { NotifierProvider } from 'shared/components/Notifier';
 import AppShell from 'shared/layout/AppShell';
+import RequireSession from 'shared/auth/RequireSession';
 import RequireEntitlement, { NoProgrammePage } from 'shared/layout/RequireEntitlement';
 import type { SystemCode } from 'shared/layout/programmes';
 import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
 
+const LoginPage = lazy(() => import('shared/pages/LoginPage'));
 const DriverDayPage = lazy(() => import('modules/me/pages/DriverDayPage'));
 const MyRequestsPage = lazy(() => import('modules/me/pages/MyRequestsPage'));
 const MyQueuePage = lazy(() => import('modules/me/pages/MyQueuePage'));
@@ -157,7 +159,12 @@ const App = () => {
     <NotifierProvider>
       <Suspense fallback={<PageFallback />}>
         <Routes>
-          <Route element={<AppShell />}>
+          {/*
+            Outside the shell on purpose: the sign-in page has no sidebar, no top bar and no actor to
+            build them from. It is also the one route that must render when nothing else can.
+          */}
+          <Route path="login" element={<LoginPage />} />
+          <Route element={<RequireSession><AppShell /></RequireSession>}>
             <Route
               index
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
