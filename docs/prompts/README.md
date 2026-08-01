@@ -8,7 +8,7 @@ Three prompts that take CLET Cluster 9 SFL from its state on **31 July 2026** to
 | 1 | [`PROMPT_1_Close_Release_1_Gaps.md`](PROMPT_1_Close_Release_1_Gaps.md) | Per-record authorisation, the six platform blockers, and every open gap in the seven built systems — including the S159 screens |
 | 2 | [`PROMPT_2_Role_Portals.md`](PROMPT_2_Role_Portals.md) | Landing views for the stakeholders the SRS names and the platform currently strands |
 | 3 | [`PROMPT_3_Cleanup.md`](PROMPT_3_Cleanup.md) | Stale documents, dead code, stray files, merged branches |
-| 4 | [`PROMPT_4_Driver_Record_Scope.md`](PROMPT_4_Driver_Record_Scope.md) | Binds an actor to their driver record, so a driver sees only their own trips and can confirm or defer one |
+| 4 | [`PROMPT_4_Authorisation_Across_Every_System.md`](PROMPT_4_Authorisation_Across_Every_System.md) | The whole authorisation surface: AVAMP has **no checks at all**, the actor is bound to no domain record, RLS exists in one schema of five, and fuel/dispatch/emergency gate no actions |
 
 ## Why this order
 
