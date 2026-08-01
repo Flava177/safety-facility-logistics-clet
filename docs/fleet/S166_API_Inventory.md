@@ -129,7 +129,7 @@ verbatim, plus `fieldErrors[]` for Bean Validation failures.
 
 The entries above were reconciled against the controllers. **In every case the code was correct and
 this document was wrong**, so the document changed and no working endpoint was moved. Recorded as
-gaps 1, 6, 7, 8 and 9 of `S166_Frontend_Gap_Register.md`.
+gaps 1, 6, 7, 8 and 9 of `S166_UI_Gap_Report.md`.
 
 | Was documented as | Actually implemented |
 | --- | --- |

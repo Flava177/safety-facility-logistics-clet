@@ -10,7 +10,7 @@ records, `/v3/api-docs` and a live probe — not against the API inventory docum
 `feat/fuel-backend-gaps`; two need nothing. Each entry keeps its original finding so the reasoning
 survives, and states what changed.
 
-Companion to `docs/fleet/S166_Frontend_Gap_Register.md`, same conventions.
+Companion to `docs/fleet/S166_UI_Gap_Report.md`, same conventions.
 
 ---
 

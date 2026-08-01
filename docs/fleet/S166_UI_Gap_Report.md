@@ -449,7 +449,7 @@ not cover:
 
 So a logbook module **is** a system of record, not a derived view over trips, and it supports
 submission, review, correction and approval end to end. It was built as part of the S168 **Fuel &
-Driver Logbooks** module; see `docs/fuel/S168_Fuel_Frontend_Gap_Register.md`.
+Driver Logbooks** module; see `docs/fuel/S168_Fuel_UI_Gap_Report.md`.
 
 The two things the review named that are genuinely absent remain absent: there is **no duty or shift
 concept** — nothing models on-duty and off-duty periods, rest, or hours-of-service limits — and there

@@ -147,7 +147,7 @@ These were all learned the hard way during the Fleet build. Each one is a defect
 
 1. **Confirm the contract before building.** Read `/v3/api-docs`, the controllers, the request and
    response records, the domain model and the tests. Never assume an endpoint. If one is missing,
-   record it in `docs/fleet/S166_Frontend_Gap_Register.md` and stop — do not mock it.
+   record it in `docs/fleet/S166_UI_Gap_Report.md` and stop — do not mock it.
 2. **Client validation mirrors the service, never replaces it.** Every mutation still submits, and
    `FieldErrorResponse` entries map back onto the field that caused them.
 3. **Field errors stay on fields.** Everything else goes through `Notifier` with the service's own

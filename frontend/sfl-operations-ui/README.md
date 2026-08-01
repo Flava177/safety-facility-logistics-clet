@@ -283,7 +283,7 @@ buttons disable while a request is in flight.
 ## Fleet endpoints integrated
 
 Taken from the controllers, not from the API inventory document — see
-`docs/fleet/S166_Frontend_Gap_Register.md` for where the two disagree.
+`docs/fleet/S166_UI_Gap_Report.md` for where the two disagree.
 
 | Area         | Endpoints                                                                                                                                                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

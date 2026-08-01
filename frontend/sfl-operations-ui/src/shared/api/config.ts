@@ -136,7 +136,7 @@ export const sflActor: SflActorConfig = {
  * Development fallback switch.
  *
  * Kept `false` by default and named explicitly: no screen may present mock data as if it came from
- * the service. See `docs/fleet/S166_Frontend_Gap_Register.md` for the endpoints this affects.
+ * the service. See `docs/fleet/S166_UI_Gap_Report.md` for the endpoints this affects.
  */
 export const useDevelopmentFallback =
   readEnv('VITE_FLEET_DEV_FALLBACK', 'false').toLowerCase() === 'true';

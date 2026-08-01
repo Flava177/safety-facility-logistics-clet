@@ -1,4 +1,4 @@
-﻿# SFL Java Backend
+# SFL Java Backend
 
 This repository is being realigned to the updated SFL SRS and Phase 1 microservices workflow plan.
 
@@ -13,7 +13,7 @@ notification needs independent availability, callback, retry, degraded-mode and 
 - `services/sfl-asset-visibility-service` for AVAMP-Lite and future S168 asset tagging/RFID/barcode inventory.
 - `services/sfl-emergency-notification-service` for S174 Emergency Mass Notification.
 
-The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` is retained only as Java migration/reference material while its IFIMP vertical slice is moved into the new service layout.
+The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` — a second application at the repository root that the root `pom.xml` still compiled — **was removed on 1 August 2026**, once its IFIMP vertical slice had been fully superseded by `services/sfl-facilities-service`. It read as live code to anyone opening the repository, and a dev script still launched it against a database that no longer exists. Its history is preserved on the `archive/java-migration-snapshot-2026-07-21` and `archive/pre-java-cleanup-2026-07-21` branches, and on `master`.
 
 ## Running Fleet & Vehicle Management locally
 
@@ -35,6 +35,38 @@ which then serves the API, Swagger and the dashboard together on port 8093:
 
 For front-end work with hot reload, use `.\scripts\dev\run-fleet-dev.ps1`, which runs the service
 on 8093 and the dashboard on 5005. Details are in `frontend/sfl-operations-ui/README.md`.
+
+## Environment
+
+Two things that have each cost somebody an afternoon.
+
+**Java 17, and the machine default may not be it.** The reactor needs 17+. This machine's `PATH` has
+carried `C:\Program Files\Zulu\zulu-11\bin`, and Maven picks that up silently and fails with errors
+that do not mention the JDK. The supported JDK is:
+
+```powershell
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
+```
+
+**The "Invalid VCS root mapping" warning on project open.** `.idea/vcs.xml` acquires a Git root
+mapping for `frontend/sfl-operations-ui`, which is neither a repository nor a submodule — it is a
+directory inside this one. Remove the second `<mapping>` line, leaving only the project-root mapping.
+`.idea/` is gitignored, so this recurs for every person who opens the project; it is recorded here so
+nobody diagnoses it twice.
+
+**Running the tests the way CI does.** A plain `mvnw test` **skips** the end-to-end suites and reports
+green — 119 tests skipped at the last count. The suites are gated on three environment variables, and
+CI fails the build if anything skipped. To reproduce CI locally, start the databases and set:
+
+```powershell
+$env:SFL_FACILITIES_TEST_DB_URL = 'jdbc:postgresql://localhost:55441/sfl_facilities_migration_test'
+$env:SFL_FLEET_LOGISTICS_TEST_DB_URL = 'jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e'
+$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL = 'jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
+```
+
+The facilities one points at a **dedicated, empty** database on purpose: the migration suite asserts a
+genesis audit hash of all zeros, so running it against a database with any history fails with four
+errors that look like defects and are residue. Drop and recreate it if that happens.
 
 ## Source Documents
 

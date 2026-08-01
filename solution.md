@@ -1,10 +1,12 @@
 # SFL Implementation Solution Log & Architecture Standard
 
 > **Authoritative references**
-> - **Specification (the contract):** `docs/System Mappings and SRS/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx` — the 13 Fast-Track systems, all functional/non-functional requirements. Every module, endpoint, event and test traces to an `SRS-SFL-*` ID.
+> - **Specification (the contract):** `docs/System Mappings and SRS/SFL_SRS.docx` — the 13 Fast-Track systems, all functional/non-functional requirements. Every module, endpoint, event and test traces to an `SRS-SFL-*` ID.
 > - **Build plan:** `docs/SFL_Phase1_Implementation_Workplan.md` — hexagonal design, per-service backlog, delivery waves, testing/commissioning.
 > - **Reference implementation pattern:** the S074 comms-service (API-first, contract → 202 → fast/deferred processing → transactional audit outbox → runtime-resolved adapter registry → OIDC/JWT + permission checks → emergency fast-lane). We mirror its *shape*, re-expressed in Java/Spring with hexagonal layering.
-> - **ADRs:** `docs/adr/0001` (foundation), `0002` (build/buy/hybrid), `0003` (Java/Spring migration).
+> - **ADRs:** `docs/adr/0001` (foundation), `0002` (build/buy/hybrid), `0003` (Java/Spring migration),
+>   `0004` (S174 as its own deployable), `0005` (programme-scoped portals), `0006` (one dashboard),
+>   `0007` (row-level security). All seven, so this list cannot quietly fall behind `docs/adr/`.
 
 We implement to the SRS. Where the SRS and any earlier note disagree, **the SRS wins** and this log is corrected.
 
@@ -394,6 +396,67 @@ should go once a second module needed it. Three now do, and dispatch had already
 across a module boundary.
 
 Frontend: **132 tests**, up from 115.
+
+### Pass — Cleanup, and the go-live record re-cut
+
+Housekeeping and record-keeping, no new capability. The valuable half was the readiness pack.
+
+**The document carrying the Go-Live recommendation described a build that no longer exists.**
+`SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md` still scored S152 and S153 as *thin*, S159
+as *not built*, and totalled **3 built · 3 partial · 7 not built**. The real position is
+**7 · 0 · 6**. Its §C.5 described three service-hosted Bootstrap dashboards that ADR 0006 retired —
+all three paths now serve a notice page pointing at `/ui/`, and the estate is one application with 78
+screens across seven modules. Its §F.1 listed eight cross-cutting blockers of which **six are now
+closed**, and each closure in the re-cut names its evidence, because a gap register that marks its
+own items done without saying how is the same document that let five of them sit open.
+
+**Two blockers remain and neither is closable by this team**: no external integration has been proven
+against a real vendor, and S174 has no notification gateway — an emergency mass-notification system
+that composes, approves, records and audits a broadcast it cannot send. Both are stated plainly
+rather than softened.
+
+**Verified, not asserted: 778 tests, 0 failures, 0 skipped.** That number needed three runs to
+establish honestly. A plain local run reports 778 with **119 skipped**, because the end-to-end suites
+are gated on three `SFL_*_TEST_DB_URL` variables. Setting them surfaced **four failures** that looked
+like defects and were residue: the facilities migration suite asserts a genesis audit hash of all
+zeros, so it needs an empty database, and it had inherited state from the previous run in the same
+session. Dropping and recreating that database gave 0/0/0. All three facts are now in the README, so
+the next person does not repeat the diagnosis.
+
+**The legacy root application is gone** — 48 Java files under `src/main/java/gh/edu/clet/sfl/ifimp/`,
+a second Spring Boot app the root `pom.xml` still compiled. The prompt described it as reading like
+live code to a newcomer; it was worse than that. `scripts/dev/run-local.ps1` still launched it, and
+had been maintained as recently as the authentication pass — its `SFL_SECURITY_ENABLED=false` line
+carries a comment explaining that the line became load-bearing after A1. It pointed at port 8081 and
+a database `sfl_java` on 5434 that no longer exists in any compose file. The app, the root pom whose
+only job was to build it, and the script that launched it were removed together. History survives on
+both `archive/*` branches and on `master`.
+
+**Two documentation defects closed** that had been logged and carried for weeks. `solution.md` and the
+readiness pack both cited an SRS filename that does not exist (S166 C-13) — worth chasing for a
+filename because both documents name that file as the contract everything traces to. And the
+workplan's endpoint table mapped four endpoints to SRS *ordinals* rather than semantics, including one
+requirement that does not exist (C-02): S166-03 is Evidence and Audit Trail, not telematics; S166-05
+is Dashboards, not the driver register; there is no S166-06. `/fleet/emergency-logistics` now claims
+**no** requirement rather than a plausible one, because it is unbuilt and asserting a trace would
+manufacture coverage.
+
+**Declined: deleting the merged branches.** Prompt 3 item 5 called for deleting twenty (in fact
+thirty-one) branches merged into `main`. They were deleted and then **restored in full** at the
+owner's instruction — 31 local, 32 remote, every tip verified as still an ancestor of `main`.
+Recovery worked because a `--no-ff` merge stores the branch tip as its second parent, so 29 came back
+from the merge commits themselves; two more had no merge commit and came from the reflog, which
+returned **pre-history-rewrite SHAs** — the 31 July trailer-strip changed every hash — and had to be
+matched by subject to their post-rewrite commits. Recorded as a deliberate decision, not an oversight:
+branch deletion buys tidiness and costs a recovery path, and this repository has now demonstrated
+exactly how narrow that path is.
+
+Also: gap reports converged on one name (`*_UI_Gap_Report.md`, four renamed, eight inbound links
+fixed), all seven ADRs indexed from `solution.md`, `tools/` given a README because
+`build_sfl_srs.py` overwrites the contract document, and the strays deleted.
+
+**Item 6 needed no work.** CI already runs `clean test` with a comment naming the phantom-failure
+reason, and the stale surefire XML was already gone — verified before assuming, as the prompt asked.
 
 ---
 
