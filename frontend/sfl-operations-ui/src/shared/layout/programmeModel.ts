@@ -83,8 +83,16 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  * Entitlement is identical because `FacilitiesPermissionMatrix` puts `FACILITIES_FAULT_READ` and
  * `FACILITIES_WORK_ORDER_READ` inside its shared `READ_ONLY` set, so every facilities-facing role can
  * read maintenance. The day a role diverges, the code is already here to say so.
+ *
+ * ## S159 is the case that argument was making
+ *
+ * `IFIMP_REQUESTER` is entitled to S152, S153 and S159 and holds almost nothing in the first two: it
+ * can report a fault and read the estate, and that is all. What it is *for* is booking rooms. Before
+ * S159 had a code, that role's whole purpose was a screen the model could not name — and the
+ * no-entitlement page told a refused requester they could not see "Facility management", which is not
+ * what they came for.
  */
-export type SystemCode = 'S152' | 'S153' | 'S166' | 'S168' | 'S171' | 'S174';
+export type SystemCode = 'S152' | 'S153' | 'S159' | 'S166' | 'S168' | 'S171' | 'S174';
 
 export interface SflSystem {
   code: SystemCode;
@@ -97,6 +105,7 @@ export interface SflSystem {
 export const systems: Record<SystemCode, SflSystem> = {
   S152: { code: 'S152', label: 'Facility management', programme: 'IFIMP' },
   S153: { code: 'S153', label: 'Maintenance management', programme: 'IFIMP' },
+  S159: { code: 'S159', label: 'Room & resource booking', programme: 'IFIMP' },
   S166: { code: 'S166', label: 'Fleet & vehicle management', programme: 'FTLMP' },
   S168: { code: 'S168', label: 'Fuel & driver logbooks', programme: 'FTLMP' },
   S171: { code: 'S171', label: 'Courier & dispatch', programme: 'FTLMP' },
@@ -188,21 +197,28 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
  * default rather than the fail-closed one used for programmes.
  */
 export const roleSystems: Record<string, SystemCode[]> = {
-  // SFL.IFIMP — S152 is the facilities platform, S153 the maintenance module in the same service;
-  // S159 will join them. Transcribed from `FacilitiesPermissionMatrix`: a role appears here exactly
-  // when that matrix grants it something.
+  // SFL.IFIMP — S152 is the facilities platform, S153 the maintenance module and S159 the booking
+  // module, all three in one service. Transcribed from `FacilitiesPermissionMatrix`: a role appears
+  // here exactly when that matrix grants it something for that system.
   //
-  // `VENDOR_TECHNICIAN` is the one worth reading twice. A contractor holds work-order and evidence
-  // permissions plus three estate *reads* — site, space and asset — and nothing else: no dashboard,
-  // no readiness, not even `FACILITIES_FAULT_READ`. Both codes are granted because the estate reads
-  // are what let a work order say where it is and what it is on; dropping S152 would break the link
-  // from a job to the hall it is in. The sidebar then shows them exactly what they can read, which
-  // is three registers and their own queue — the service narrows the queue itself, per record.
-  FACILITIES_DIRECTOR: ['S152', 'S153'],
-  FACILITIES_MANAGER: ['S152', 'S153'],
-  IFIMP_MAINTENANCE_SUPERVISOR: ['S152', 'S153'],
-  IFIMP_TECHNICIAN: ['S152', 'S153'],
-  IFIMP_REQUESTER: ['S152', 'S153'],
+  // `VENDOR_TECHNICIAN` is the one worth reading twice, and it is now the only IFIMP role **not**
+  // entitled to S159. A contractor holds work-order and evidence permissions plus three estate
+  // *reads* — site, space and asset — and nothing else: no dashboard, no readiness, not even
+  // `FACILITIES_FAULT_READ`, and no `FACILITIES_BOOKING_READ`. S152 and S153 are granted because the
+  // estate reads are what let a work order say where it is and what it is on; dropping S152 would
+  // break the link from a job to the hall it is in. Its `EnumSet` in the matrix is explicit rather
+  // than built on `READ_ONLY`, which is exactly why adding booking to `READ_ONLY` did not quietly
+  // hand a contractor the room diary.
+  //
+  // `IFIMP_TECHNICIAN` is entitled to S159 for a narrower reason than the rest: it holds
+  // `FACILITIES_SETUP_TASK_MANAGE` and no booking-request permission at all. A technician turns rooms
+  // around; a technician who could reserve a hall would be scheduling the estate from the shop floor.
+  // The section renders for them with the turnaround queue and nothing that books anything.
+  FACILITIES_DIRECTOR: ['S152', 'S153', 'S159'],
+  FACILITIES_MANAGER: ['S152', 'S153', 'S159'],
+  IFIMP_MAINTENANCE_SUPERVISOR: ['S152', 'S153', 'S159'],
+  IFIMP_TECHNICIAN: ['S152', 'S153', 'S159'],
+  IFIMP_REQUESTER: ['S152', 'S153', 'S159'],
   VENDOR_TECHNICIAN: ['S152', 'S153'],
 
   // SFL.FTLMP — all three systems live in `sfl-fleet-logistics-service`
@@ -213,22 +229,24 @@ export const roleSystems: Record<string, SystemCode[]> = {
   DISPATCH_CONTROLLER: ['S171'],
   MAILROOM_OFFICER: ['S171'],
   LOGISTICS_COORDINATOR: ['S171'],
-  // A centre manager receives consignments and declares their centre's operating mode, which is an
-  // S152 permission the facilities matrix grants them.
-  CENTRE_MANAGER: ['S152', 'S153', 'S171'],
+  // A centre manager receives consignments, declares their centre's operating mode, and owns its
+  // diary — the role the matrix expects to hold `FACILITIES_BOOKING_OVERRIDE` in practice.
+  CENTRE_MANAGER: ['S152', 'S153', 'S159', 'S171'],
 
   // SFL.SSEMP — S174 is its own deployable, split by ADR 0004
   EMERGENCY_COORDINATOR: ['S174'],
   SECURITY_DIRECTOR: ['S174'],
   SOC_OPERATOR: ['S174'],
-  // An HSE manager reads the estate to place an incident and judge a location's standing.
-  HSE_MANAGER: ['S152', 'S153', 'S174'],
+  // An HSE manager reads the estate to place an incident and judge a location's standing. It takes
+  // the matrix's shared READ_ONLY set, which carries FACILITIES_BOOKING_READ — so the diary is
+  // readable, and nothing in the section can book, approve or turn a room around.
+  HSE_MANAGER: ['S152', 'S153', 'S159', 'S174'],
 
   // Roles that span programmes at the system grain too
   SECURITY_OFFICER: ['S171', 'S174'],
-  COMMAND_ROLE: ['S152', 'S153', 'S166', 'S168', 'S171', 'S174'],
-  INTEGRATION_ENGINEER: ['S152', 'S153', 'S166', 'S168', 'S171', 'S174'],
-  SERVICE_INTEGRATION: ['S152', 'S153', 'S166', 'S168', 'S171'],
+  COMMAND_ROLE: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171', 'S174'],
+  INTEGRATION_ENGINEER: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171', 'S174'],
+  SERVICE_INTEGRATION: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171'],
 };
 
 /** Splits a comma-separated header or env value into normalised role names. */

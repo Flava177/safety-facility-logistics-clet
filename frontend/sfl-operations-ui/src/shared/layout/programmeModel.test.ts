@@ -12,11 +12,12 @@ import { allSystems, programmesFor, systems, systemsFor } from './programmeModel
  */
 describe('programme entitlement', () => {
   describe('S152 facilities', () => {
-    it('entitles a facilities manager to both IFIMP systems', () => {
-      // S153 arrived with the CMMS module. Entitlement to the two is currently identical for every
-      // role, because the permission matrix puts fault and work-order reads in its shared read-only
-      // set — see the note on `SystemCode` for why they are still separate codes.
-      expect(systemsFor(['FACILITIES_MANAGER'])).toEqual(['S152', 'S153']);
+    it('entitles a facilities manager to all three IFIMP systems', () => {
+      // S153 arrived with the CMMS module and S159 with booking. Entitlement to the three is
+      // identical for this role, because the permission matrix puts fault, work-order, booking and
+      // resource reads in its shared read-only set — see the note on `SystemCode` for why they are
+      // still separate codes.
+      expect(systemsFor(['FACILITIES_MANAGER'])).toEqual(['S152', 'S153', 'S159']);
       expect(programmesFor(['FACILITIES_MANAGER'])).toEqual(['IFIMP']);
     });
 
@@ -32,6 +33,30 @@ describe('programme entitlement', () => {
       ifimpRoles.forEach((role) => {
         expect(systemsFor([role]), `${role} should see S152`).toContain('S152');
       });
+    });
+
+    it('withholds booking from a contractor and gives it to every other IFIMP role', () => {
+      /*
+        The one IFIMP role that is not entitled to S159, and the reason the split is worth a test:
+        `VENDOR_TECHNICIAN` is the only facilities role whose matrix entry is an explicit `EnumSet`
+        rather than a union with the shared `READ_ONLY` set. Adding `FACILITIES_BOOKING_READ` to that
+        set therefore entitled ten roles to the room diary and left the contractor out — correctly,
+        but silently. If somebody ever rebuilds `VENDOR_TECHNICIAN` on top of `READ_ONLY`, a
+        contractor quietly gains the whole estate's diary, and this is what says so.
+      */
+      expect(systemsFor(['VENDOR_TECHNICIAN'])).not.toContain('S159');
+
+      ['FACILITIES_DIRECTOR', 'IFIMP_MAINTENANCE_SUPERVISOR', 'IFIMP_REQUESTER'].forEach((role) => {
+        expect(systemsFor([role]), `${role} should see S159`).toContain('S159');
+      });
+    });
+
+    it('entitles a technician to booking for turnaround alone', () => {
+      // S159 for a narrower reason than the rest: `IFIMP_TECHNICIAN` holds
+      // `FACILITIES_SETUP_TASK_MANAGE` and no booking-request permission. The section renders with
+      // the turnaround queue and nothing that reserves a hall — a technician who could book one
+      // would be scheduling the estate from the shop floor.
+      expect(systemsFor(['IFIMP_TECHNICIAN'])).toContain('S159');
     });
 
     it('does not show facilities to a fleet driver', () => {
@@ -60,6 +85,13 @@ describe('programme entitlement', () => {
     it('places S152 in IFIMP', () => {
       expect(systems.S152.programme).toBe('IFIMP');
       expect(systems.S152.label).toBe('Facility management');
+    });
+
+    it('names S159 as booking rather than as facilities', () => {
+      // The no-entitlement page reads this label. A refused requester should be told they cannot see
+      // "Room & resource booking" — which is what they came for — not "Facility management".
+      expect(systems.S159.programme).toBe('IFIMP');
+      expect(systems.S159.label).toBe('Room & resource booking');
     });
   });
 

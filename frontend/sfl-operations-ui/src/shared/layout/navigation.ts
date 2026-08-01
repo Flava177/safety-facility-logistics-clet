@@ -110,6 +110,32 @@ export const facilitiesPaths = {
   evidenceDetail: (evidenceId: string) => `/facilities/maintenance-evidence/${evidenceId}`,
 };
 
+/**
+ * S159 room and resource booking routes.
+ *
+ * Under `/bookings` rather than `/facilities/bookings`, which is the odd one out among the three
+ * IFIMP systems and is deliberate. S152 and S153 are read by the people who run the estate; the
+ * booking diary is read by everybody who ever needs a room, and most of them do not think of
+ * themselves as visiting facilities at all. A path a lecturer can be told over the phone is worth
+ * more than a URL that mirrors the service topology.
+ *
+ * Availability is a destination, not a dialog on the diary. It is where a booking begins, it takes
+ * eight fields, and its answer is a page of spaces with reasons — none of which fits in a modal, and
+ * all of which somebody will want to link to.
+ */
+export const bookingPaths = {
+  diary: '/bookings',
+  /*
+    Static siblings of `:bookingId`. React Router ranks a static segment above a dynamic one, so
+    `/bookings/availability` never resolves as a booking whose id is the word "availability" — and
+    ids are UUIDs regardless. Keep new static children out of the UUID shape and this stays true.
+  */
+  availability: '/bookings/availability',
+  resources: '/bookings/resources',
+  setupTasks: '/bookings/turnaround',
+  bookingDetail: (bookingId: string) => `/bookings/${bookingId}`,
+};
+
 export const fleetPaths = {
   dashboard: '/fleet',
   vehicles: '/fleet/vehicles',
@@ -365,6 +391,54 @@ export const navSections: NavSection[] = [
         icon: 'users',
         description: 'Contractors, contracts and response times',
         permission: 'FACILITIES_VENDOR_READ',
+      },
+    ],
+  },
+  {
+    // S159. Its own section rather than items inside 'Facility operations', for the same reason
+    // maintenance has one: the audience is different. A lecturer or a registry clerk books a room and
+    // opens nothing else in this programme, and a section they can read end to end is easier to trust
+    // than three items scattered through one they mostly cannot.
+    heading: 'Room booking',
+    programme: 'IFIMP',
+    system: 'S159',
+    items: [
+      {
+        label: 'Booking diary',
+        to: bookingPaths.diary,
+        icon: 'calendar',
+        // Not `matchPrefix`: the diary is the index of `/bookings`, and a prefix match would keep it
+        // highlighted while the operator is on turnaround or the resource register.
+        description: 'What is booked, and what the estate thinks of it',
+        // Enforced by BookingApplicationService.search. A requester holds this and sees only their own.
+        permission: 'FACILITIES_BOOKING_READ',
+      },
+      {
+        label: 'Find a space',
+        to: bookingPaths.availability,
+        icon: 'search',
+        description: 'What can take a window, and what cannot',
+        // The availability endpoints are read with BOOKING_READ; the request that follows needs more,
+        // and the page hides the control rather than the screen.
+        permission: 'FACILITIES_BOOKING_READ',
+      },
+      {
+        label: 'Room turnaround',
+        to: bookingPaths.setupTasks,
+        icon: 'clipboard',
+        description: 'What has to happen to a room before its next booking',
+        // BOOKING_READ, not SETUP_TASK_MANAGE — read off `BookingSetupService.queue`, which gates the
+        // queue on reading bookings and reserves SETUP_TASK_MANAGE for raising and resolving a task.
+        // Gating the screen on the write permission would hide the queue from everybody who can only
+        // look at it, which is most of the people who need to.
+        permission: 'FACILITIES_BOOKING_READ',
+      },
+      {
+        label: 'Bookable resources',
+        to: bookingPaths.resources,
+        icon: 'package',
+        description: 'Projectors, furniture and what else can be booked',
+        permission: 'FACILITIES_RESOURCE_READ',
       },
     ],
   },

@@ -46,6 +46,13 @@ const FacilitiesConfigurationPage = lazy(
   () => import('modules/facilities/pages/FacilitiesConfigurationPage'),
 );
 
+// S159 room and resource booking
+const BookingDiaryPage = lazy(() => import('modules/booking/pages/BookingDiaryPage'));
+const BookingDetailPage = lazy(() => import('modules/booking/pages/BookingDetailPage'));
+const AvailabilitySearchPage = lazy(() => import('modules/booking/pages/AvailabilitySearchPage'));
+const BookableResourcesPage = lazy(() => import('modules/booking/pages/BookableResourcesPage'));
+const SetupTaskQueuePage = lazy(() => import('modules/booking/pages/SetupTaskQueuePage'));
+
 const FleetDashboardPage = lazy(() => import('modules/fleet/pages/FleetDashboardPage'));
 const VehicleRegisterPage = lazy(() => import('modules/fleet/pages/VehicleRegisterPage'));
 const VehicleDetailPage = lazy(() => import('modules/fleet/pages/VehicleDetailPage'));
@@ -218,6 +225,24 @@ const App = () => {
               </Route>
               <Route path="maintenance/vendors" element={<MaintenanceVendorsPage />} />
               <Route path="maintenance-evidence/:evidenceId" element={<EvidenceDetailPage />} />
+            </Route>
+            {/*
+              S159 sits at /bookings rather than under /facilities, and that is the one IFIMP system
+              whose route base does not mirror its service. Deliberate: a lecturer booking a hall does
+              not think of themselves as visiting facilities, and a path somebody can be told over the
+              phone is worth more than a URL that mirrors deployment topology.
+
+              The three static children are declared before `:bookingId`. React Router ranks static
+              segments above dynamic ones regardless of order, so this is for the reader rather than
+              the router — but a new static child that looks like a UUID would break that, and having
+              them together is what makes it obvious.
+            */}
+            <Route path="bookings" element={<SystemRoutes system="S159" />}>
+              <Route index element={<BookingDiaryPage />} />
+              <Route path="availability" element={<AvailabilitySearchPage />} />
+              <Route path="resources" element={<BookableResourcesPage />} />
+              <Route path="turnaround" element={<SetupTaskQueuePage />} />
+              <Route path=":bookingId" element={<BookingDetailPage />} />
             </Route>
             <Route path="fleet" element={<SystemRoutes system="S166" />}>
               <Route index element={<FleetDashboardPage />} />
