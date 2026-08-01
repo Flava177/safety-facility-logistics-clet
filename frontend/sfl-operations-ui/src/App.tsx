@@ -27,6 +27,7 @@ const MaintenanceVendorsPage = lazy(() => import('modules/facilities/pages/Maint
 const EvidenceDetailPage = lazy(() => import('modules/facilities/pages/EvidenceDetailPage'));
 const SiteRegisterPage = lazy(() => import('modules/facilities/pages/SiteRegisterPage'));
 const SiteDetailPage = lazy(() => import('modules/facilities/pages/SiteDetailPage'));
+const BuildingDetailPage = lazy(() => import('modules/facilities/pages/BuildingDetailPage'));
 const SpaceRegisterPage = lazy(() => import('modules/facilities/pages/SpaceRegisterPage'));
 const SpaceDetailPage = lazy(() => import('modules/facilities/pages/SpaceDetailPage'));
 const AssetRegisterPage = lazy(() => import('modules/facilities/pages/AssetRegisterPage'));
@@ -182,6 +183,12 @@ const App = () => {
                 <Route index element={<SiteRegisterPage />} />
                 <Route path=":siteId" element={<SiteDetailPage />} />
               </Route>
+              {/*
+                Buildings have a detail route and no register: a building is only ever reached from
+                the site that owns it, and a register would be a screen whose whole content is
+                "choose a site first".
+              */}
+              <Route path="buildings/:buildingId" element={<BuildingDetailPage />} />
               <Route path="spaces">
                 <Route index element={<SpaceRegisterPage />} />
                 <Route path=":roomId" element={<SpaceDetailPage />} />

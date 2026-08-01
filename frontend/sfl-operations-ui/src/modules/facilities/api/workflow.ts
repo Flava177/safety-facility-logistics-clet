@@ -170,6 +170,14 @@ export const assetBlockerSeverity = (
 export const canAssessReadiness = (): boolean => permits('FACILITIES_READINESS_ASSESS');
 export const canManageChecklists = (): boolean => permits('FACILITIES_READINESS_CHECKLIST_MANAGE');
 export const canManageAssets = (): boolean => permits('FACILITIES_ASSET_MANAGE');
+/**
+ * Adding to the estate hierarchy — a **building**, a **floor** or a space.
+ *
+ * All three are `FACILITIES_SPACE_MANAGE` in `FacilitiesMasterDataService`, and that is not an
+ * oversight to route around here: a building and a floor exist only to hold spaces, and somebody
+ * trusted to place a moot courtroom is trusted to say which floor it is on. `canManageSites` is the
+ * separate, higher-water grant, because creating a *site* is creating a centre.
+ */
 export const canManageSpaces = (): boolean => permits('FACILITIES_SPACE_MANAGE');
 export const canManageZones = (): boolean => permits('FACILITIES_ZONE_MANAGE');
 export const canRegisterDevices = (): boolean => permits('FACILITIES_DEVICE_REFERENCE_REGISTER');

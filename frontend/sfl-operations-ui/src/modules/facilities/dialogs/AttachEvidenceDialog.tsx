@@ -1,8 +1,12 @@
 import { useState } from 'react';
 import Alert from 'shared/components/Alert';
+import Button from 'shared/components/Button';
+import FileField from 'shared/components/FileField';
 import FormDialog from 'shared/components/FormDialog';
-import { NumberInput, SelectInput, TextAreaInput, TextInput } from 'shared/components/fields';
+import Icon from 'shared/components/Icon';
+import { SelectInput, TextAreaInput, TextInput } from 'shared/components/fields';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
+import { digestUnavailable, formatBytes, sha256OfFile } from 'shared/files/digest';
 import type { AttachEvidenceRequest } from '../api/dto';
 import type { EvidenceType, RetentionClass } from '../api/enums';
 import { evidenceTypes, retentionClasses } from '../api/enums';
@@ -19,27 +23,44 @@ const SHA_256 = /^[0-9a-fA-F]{64}$/;
 /**
  * Attaching closure evidence — SRS-SFL-S153-03.
  *
- * ## Why this form asks for a reference and a hash rather than a file
+ * ## The file is read here and uploaded nowhere
  *
- * The architecture standard stores evidence **by reference**: the file goes to the document and
- * object-storage service, which returns where it landed and what it hashed to, and this service
- * records those two facts. Nothing here ever holds the bytes, so there is no upload control — and
- * that is a deliberate design rather than a missing feature. It is recorded in the gap report as
- * the reason this dialog looks unusual.
+ * The architecture standard stores evidence **by reference**: the bytes live in the document and
+ * object-storage service, and this service records where they landed and what they hashed to. That
+ * has not changed and this dialog does not upload anything.
  *
- * The digest is validated at the edge as well as in the domain because a mistyped hash is the one
- * error that would otherwise surface years later, during an integrity check, on evidence nobody can
- * re-hash.
+ * What has changed is who computes the digest. Choosing the file fills the name, the media type, the
+ * size and — the one that matters — the SHA-256, because the browser has the bytes and can hash them.
+ * Before this, a technician standing in a plant room with a photograph had to obtain a digest from
+ * somewhere else and type sixty-four hexadecimal characters into a form. Nobody does that correctly,
+ * and a mistyped digest is the one error in this system that surfaces years later, during an
+ * integrity check, on evidence nobody can now re-hash — as a **false report that the file was
+ * tampered with**.
+ *
+ * The storage reference is still typed, because it genuinely cannot be known here: it is what the
+ * document service gives back, and this dashboard cannot call it. `S153_UI_Gap_Report.md` §2.1 owns
+ * that half, and it belongs to whoever builds that integration.
+ *
+ * ## Why the digest can still be entered by hand
+ *
+ * Three cases where the browser cannot hash: a file above the size cap, a browser without Web Crypto,
+ * and a dashboard served over plain HTTP. In each the field falls back to what it was — manual — with
+ * the reason on the field rather than a control that silently does nothing. Somebody re-recording
+ * evidence from a paper trail also has a digest and no file, and that has always been legitimate.
  *
  * ## Why the retention class cannot be skipped
  *
  * Disposal is the irreversible half of retention. Evidence with no class attached has no defensible
- * date on which anybody may delete it, so in practice it is either kept forever or deleted by
- * whoever is clearing space — and only one of those failures is visible. The service refuses without
- * it; the form says why.
+ * date on which anybody may delete it, so in practice it is either kept forever or deleted by whoever
+ * is clearing space — and only one of those failures is visible. The service refuses without it; the
+ * form says why.
  */
 const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) => {
   const [evidenceType, setEvidenceType] = useState<EvidenceType>('AFTER_PHOTO');
+  const [file, setFile] = useState<File | null>(null);
+  const [hashing, setHashing] = useState(false);
+  const [hashNote, setHashNote] = useState<string | null>(null);
+  const [derived, setDerived] = useState(false);
   const [fileReference, setFileReference] = useState('');
   const [fileName, setFileName] = useState('');
   const [mediaType, setMediaType] = useState('');
@@ -54,6 +75,38 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
   const missingReference = fileReference.trim().length === 0;
   const badHash = !SHA_256.test(contentHash.trim());
   const invalid = missingReference || badHash;
+  const unavailable = digestUnavailable();
+
+  /**
+   * Takes everything the file itself knows.
+   *
+   * The three metadata fields are overwritten without asking, and the digest with them: they describe
+   * *this* file, and leaving a previous file's values beside a new one is how evidence ends up
+   * recorded against the wrong hash. Only the storage reference and the notes survive a re-pick,
+   * because neither comes from the bytes.
+   */
+  const choose = async (chosen: File | null) => {
+    setFile(chosen);
+    setHashNote(null);
+    setDerived(false);
+    if (!chosen) {
+      return;
+    }
+    setFileName(chosen.name);
+    setMediaType(chosen.type || '');
+    setSizeBytes(String(chosen.size));
+
+    setHashing(true);
+    setContentHash('');
+    const result = await sha256OfFile(chosen);
+    setHashing(false);
+    if (result.ok) {
+      setContentHash(result.hex);
+      setDerived(true);
+    } else {
+      setHashNote(result.message);
+    }
+  };
 
   const submit = async () => {
     setTouched(true);
@@ -84,9 +137,10 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
     <FormDialog
       open
       title="Attach evidence"
-      description="By reference. The file itself lives in document storage."
+      description="Choose the file to read its digest, then say where it was stored."
       submitLabel="Attach"
       submitting={submitting}
+      submitDisabled={hashing}
       formError={formError}
       onClose={onClose}
       onSubmit={submit}
@@ -105,6 +159,31 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           }
         />
 
+        <FileField
+          label="The file"
+          value={file}
+          onChange={choose}
+          disabled={hashing}
+          helperText={
+            unavailable
+              ? unavailable
+              : 'Read in this browser to take its digest, name, type and size. Nothing is uploaded.'
+          }
+        />
+
+        {hashing && (
+          <p className="flex items-center gap-2 text-theme-sm text-gray-600" role="status">
+            <Icon name="refresh" size={15} className="animate-spin" />
+            Reading {file ? formatBytes(file.size) : 'the file'} and computing its SHA-256…
+          </p>
+        )}
+
+        {hashNote && (
+          <Alert variant="warning" title="The digest could not be computed here">
+            <p className="text-theme-sm">{hashNote}</p>
+          </Alert>
+        )}
+
         <TextInput
           label="File reference"
           value={fileReference}
@@ -117,25 +196,42 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           helperText={
             touched && missingReference
               ? 'Where the file is stored is required.'
-              : 'Given back by document storage when the file was uploaded.'
+              : 'Given back by document storage when the file was uploaded. This dashboard cannot upload for you.'
           }
         />
 
         <TextInput
           label="SHA-256"
           value={contentHash}
-          onChange={setContentHash}
+          onChange={(value) => {
+            setContentHash(value);
+            // Typing over a derived hash makes it a typed hash, and the field should stop claiming
+            // it came from the file — the whole point of the badge is that it cannot be mistyped.
+            setDerived(false);
+          }}
           onBlur={() => setTouched(true)}
           required
           maxLength={64}
+          disabled={hashing}
           placeholder="64 hexadecimal characters"
-          error={touched && badHash}
+          error={touched && badHash && !hashing}
           helperText={
-            touched && badHash
-              ? 'Must be a 64-character hex SHA-256 digest.'
-              : 'Recorded at upload, so a later integrity check can tell if the stored file changed.'
+            hashing
+              ? 'Computing…'
+              : derived
+                ? 'Computed from the file you chose. Nothing was typed, so nothing can be mistyped.'
+                : touched && badHash
+                  ? 'Must be a 64-character hex SHA-256 digest.'
+                  : 'Recorded at upload, so a later integrity check can tell if the stored file changed.'
           }
         />
+
+        {derived && (
+          <p className="-mt-2 flex items-center gap-1.5 text-theme-xs font-medium text-success-800">
+            <Icon name="check-circle" size={14} />
+            Digest read from {fileName}
+          </p>
+        )}
 
         <SelectInput
           label="Retention class"
@@ -146,24 +242,50 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           helperText="Mandatory. It is what sets the date this may eventually be disposed of."
         />
 
-        <div className="grid gap-4 sm:grid-cols-2">
-          <TextInput
-            label="File name"
-            value={fileName}
-            onChange={setFileName}
-            maxLength={300}
-            placeholder="after.jpg"
-          />
-          <TextInput
-            label="Media type"
-            value={mediaType}
-            onChange={setMediaType}
-            maxLength={120}
-            placeholder="image/jpeg"
-          />
-        </div>
-
-        <NumberInput label="Size (bytes)" value={sizeBytes} onChange={setSizeBytes} min={0} />
+        <details className="rounded-lg border border-gray-200 px-4 py-3">
+          <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
+            File details
+            {file ? ` — taken from ${fileName}` : ''}
+          </summary>
+          <div className="mt-4 space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <TextInput
+                label="File name"
+                value={fileName}
+                onChange={setFileName}
+                maxLength={300}
+                placeholder="after.jpg"
+              />
+              <TextInput
+                label="Media type"
+                value={mediaType}
+                onChange={setMediaType}
+                maxLength={120}
+                placeholder="image/jpeg"
+              />
+            </div>
+            {/*
+              Read-only rather than a NumberInput: it is a fact about the chosen file, and an
+              operator editing it would be recording a size the digest cannot corroborate.
+            */}
+            <p className="text-theme-sm text-gray-600">
+              Size:{' '}
+              {sizeBytes === ''
+                ? 'not known — choose a file, or leave it unrecorded'
+                : `${formatBytes(Number(sizeBytes))} (${Number(sizeBytes).toLocaleString()} bytes)`}
+              {sizeBytes !== '' && (
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  className="ml-2"
+                  onClick={() => setSizeBytes('')}
+                >
+                  Clear
+                </Button>
+              )}
+            </p>
+          </div>
+        </details>
 
         <TextAreaInput
           label="Notes"
@@ -173,10 +295,11 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           placeholder="Anything a reviewer would need to make sense of it."
         />
 
-        <Alert variant="info" title="No file is uploaded here">
+        <Alert variant="info" title="The file is not uploaded from here">
           <p className="text-theme-sm">
-            This service stores references and hashes, never the files themselves. Upload to document
-            storage first, then record what it gave you back.
+            This service stores references and hashes, never the bytes. Choosing a file lets the
+            browser read its digest so it cannot be mistyped — you still upload to document storage
+            yourself and record the reference it gives back.
           </p>
         </Alert>
       </div>

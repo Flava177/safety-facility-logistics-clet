@@ -344,6 +344,57 @@ manual setup tasks. Each has an endpoint and no control, and each is named with 
 
 Frontend: **115 tests**, up from 84.
 
+### Pass — Evidence digests, and the building screen that was missing from the middle of the estate
+
+Two gaps closed, and neither closed the way its gap report proposed.
+
+**S153 evidence still uploads nothing, and the digest is no longer typed.** Evidence is stored by
+reference — the bytes live in the document and object-storage service, this service records where
+they landed and what they hashed to — and that standard has not changed. What changed is who computes
+the hash. Choosing the file now fills the name, the media type, the size and the SHA-256, because the
+browser has the bytes and `crypto.subtle` can hash them. Before this, a technician standing in a plant
+room with a photograph had to obtain a digest from somewhere else and type sixty-four hexadecimal
+characters into a form. Nobody does that correctly, and a mistyped digest is the one error in this
+system that surfaces years later — during an integrity check, on evidence nobody can now re-hash — as
+a **false report that the file was tampered with**. Three cases still fall back to typing and each
+says why on the field: a file over the 64 MB cap (Web Crypto cannot stream, so the file is read whole,
+and the cap is what stops a mis-selected video freezing a site laptop), a browser without Web Crypto,
+and a dashboard served over plain HTTP. The storage reference is still typed and still a genuine gap,
+because it is what the document service gives back and this dashboard cannot call it — but the half
+that was error-prone is closed. Four known-answer SHA-256 vectors pin the helper, so a stub that
+merely returns bytes fails the suite.
+
+**The S152 floors gap was real and was not about floors.** Its gap report argued a floor page was not
+justified, and that was right about the page and wrong about the gap. A floor has four fields and no
+behaviour, so a floor detail route really would have had nothing on it. What was missing was the
+**building**: the estate is Site → Building → Floor → Space, the dashboard had screens for the first,
+second and fourth, and a building row on the site page led nowhere. `listFloors`, `getFloor`,
+`createFloor` and `createBuilding` were written, exported and called by nothing — so the only way to
+place a space was to already know a floor id. `BuildingDetailPage` shows a building, its floors, and
+what is on the floor being looked at; choosing a floor filters the spaces beside it rather than
+navigating away, because what somebody wants from "the second floor" is what is on it.
+
+**The floor filter is a server-side query and a test says so.** The space query is capped at a hundred
+rows, so filtering the array in the browser — the obvious implementation — would filter the first page
+rather than the floor, and the third floor of a large block would appear empty. And level number is
+signed *and* nullable because both cases are real: a basement is `-1`, and a mezzanine has no honest
+number at all, so a client sorting `null` as zero would file every mezzanine at ground level.
+`floorLabel` renders `B1 · basement 1`, `GF · ground`, `MEZZ · no level` — the last because a blank
+cell reads as missing data rather than as the answer.
+
+**One service-side wording inaccuracy found and recorded rather than patched.** A duplicate floor code
+is refused with *"An active floor with identifier 'GF' already exists for site CLET-HQ"*, and the
+constraint is per **building**, not per site — `GF` was accepted in a second building on the same
+site. The message uses the shared `DUPLICATE_IDENTIFIER` wording, which names the site scope rather
+than the true key, so it reads as a stricter rule than the one enforced. The wording is the SRS's, so
+it is in the gap report rather than rewritten here.
+
+`FileField` moved from `modules/fuel/components` into the shared kit, where its own comment said it
+should go once a second module needed it. Three now do, and dispatch had already been importing it
+across a module boundary.
+
+Frontend: **132 tests**, up from 115.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

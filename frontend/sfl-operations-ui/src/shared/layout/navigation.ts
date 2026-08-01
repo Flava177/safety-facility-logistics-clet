@@ -85,6 +85,12 @@ export const facilitiesPaths = {
   dashboard: '/facilities',
   sites: '/facilities/sites',
   siteDetail: (siteId: string) => `/facilities/sites/${siteId}`,
+  /*
+    Buildings have a detail route and no register. A building is only ever reached from the site that
+    owns it — nobody searches an estate for a building — and a fourth register would be a sidebar
+    entry whose whole content is "choose a site first".
+  */
+  buildingDetail: (buildingId: string) => `/facilities/buildings/${buildingId}`,
   spaces: '/facilities/spaces',
   spaceDetail: (roomId: string) => `/facilities/spaces/${roomId}`,
   assets: '/facilities/assets',

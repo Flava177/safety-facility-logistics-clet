@@ -69,11 +69,35 @@ them; a maintenance screen is the natural home and that is S153 again.
 displayed, and the dashboard reports "bookable now". There is no booking. That is S159, and the
 flags exist precisely so it can be built against them.
 
-### 2.4 Floors have no screen of their own
+### 2.4 Floors have no screen of their own — closed, and not the way this section proposed
 
-Floors are created and read through the API and appear in the space register's context, but there is
-no floor page. An estate of one building and one floor does not justify one, and a deep-linked floor
-route with nothing on it would be worse than its absence. Buildings are listed on the site detail.
+**Closed.** `BuildingDetailPage` at `/facilities/buildings/{buildingId}` shows a building, its floors
+and what is on the floor being looked at. `CreateBuildingDialog` and `CreateFloorDialog` complete the
+hierarchy from the site page down.
+
+The original reasoning here was that a floor page was not justified. That was right about the *page*
+and wrong about the *gap*. A floor has four fields and no behaviour — a code, a name, a level number
+and a lifecycle status — and nothing is ever done to one, so a floor detail route really would have
+had nothing on it. What was actually missing was the **building**: the estate is Site → Building →
+Floor → Space, the dashboard had screens for the first, second and fourth, and a building row on the
+site page led nowhere. `listFloors`, `getFloor`, `createFloor` and `createBuilding` were written,
+exported and called by nothing, so the only way to place a space was to already know a floor id.
+
+So floors are a list *beside* the spaces rather than a destination. Choosing one filters the spaces
+next to it and the building stays on screen, because what somebody wants from "the second floor" is
+what is on it.
+
+**The floor filter is a server-side query, not an array filter**, and the reason is testable: the
+space query is capped at a hundred rows, so filtering in the browser would filter the first page
+rather than the floor, and the third floor of a large block would appear empty. A test asserts the
+request carried `floorId`.
+
+**Level number is signed and nullable, and both cases are real.** A basement is `-1`; a mezzanine has
+no honest number at all, and one forced to `1` would file itself above the floor it sits inside. The
+service returns floors lowest level first and the screen preserves that order rather than re-sorting,
+because a client sorting `null` as zero would file every mezzanine at ground level. `floorLabel`
+renders the three cases as `B1 · basement 1`, `GF · ground`, `MEZZ · no level` — the last of which
+matters because a blank cell reads as missing data rather than as the answer.
 
 ## 3. Known rough edges
 
@@ -81,8 +105,9 @@ route with nothing on it would be worse than its absence. Buildings are listed o
 | --- | --- | --- |
 | Space detail, blocker list | An asset-sourced blocker shows the asset's UUID in its source line (`Asset · c8f166ae-…`) | The description beside it already names the asset (`GEN-01 (GENERATOR) is OUT_OF_SERVICE`), so the identifier is redundant rather than misleading. Resolving it to a code means a second fetch per blocker. |
 | Registers | Only the code cell is clickable, not the whole row | Consistent with the fleet registers, which is why it was left. It is a discoverability cost and worth revisiting across all of them at once, not in one module. |
-| Site detail | No building or floor creation | The API supports both. Left with the estate-setup screens rather than added to a read-mostly page. |
+| Buildings | No register, and no edit or retire | A building is only ever reached from the site that owns it — nobody searches an estate for one — so a fourth register would be a sidebar entry whose whole content is "choose a site first". `PATCH` on a building or a floor has no endpoint at all. |
 | Assessment history | Fixed at the ten most recent | The full history is at `/facilities/assessments?roomId=…`, which the page links to. |
+| Duplicate floor code | The service refuses with `An active floor with identifier 'GF' already exists for site CLET-HQ` | Confirmed against the database: floor codes are unique **per building**, not per site — `GF` was accepted in a second building on the same site. The message uses the shared `DUPLICATE_IDENTIFIER` wording, which names the site scope rather than the true key, so it reads as a stricter rule than the one being enforced. The wording is the SRS's and is not rewritten here. |
 
 ## 4. Things the browser confirmed
 

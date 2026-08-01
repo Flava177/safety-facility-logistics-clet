@@ -1,8 +1,8 @@
 import { useId, useRef } from 'react';
-import Button from 'shared/components/Button';
-import Icon from 'shared/components/Icon';
-import { FieldShell } from 'shared/components/fields';
-import { cn } from 'shared/components/cn';
+import Button from './Button';
+import Icon from './Icon';
+import { FieldShell } from './fields';
+import { cn } from './cn';
 
 interface FileFieldProps {
   label: string;
@@ -19,10 +19,14 @@ interface FileFieldProps {
 /**
  * File selection, in the dashboard's field rhythm.
  *
- * The CSV import is the only place in the application that uploads anything, so this lives in the
- * fuel module rather than in the shared kit — the kit gains a component when a second module needs
- * it, not in anticipation. It is built on `FieldShell` so it sits in the same label/control/helper
- * rhythm as every other field and inherits the one focus treatment.
+ * Lived in the fuel module while the CSV import was the only screen that took a file, with a note
+ * saying the shared kit gains a component when a second module needs it rather than in anticipation.
+ * Three now do — the fuel import, the dispatch scan batch, and S153 evidence — and dispatch was
+ * already importing it across a module boundary, which is the shape of a component that should have
+ * moved a release earlier.
+ *
+ * Built on `FieldShell` so it sits in the same label/control/helper rhythm as every other field and
+ * inherits the one focus treatment.
  *
  * A native `<input type="file">` cannot be styled and reads differently on every browser, so the
  * real input is visually hidden and a button drives it — but it stays in the accessible tree with
