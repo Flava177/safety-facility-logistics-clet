@@ -13,14 +13,13 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "apexcharts": "^4.5.0",
     "clsx": "^2.1.1",
     "dayjs": "^1.11.18",
     "flatpickr": "^4.6.13",
     "react": "^19.2.0",
-    "react-apexcharts": "^1.7.0",
     "react-dom": "^19.2.0",
     "react-router": "^7.9.4",
+    "recharts": "^3.10.1",
     "tailwind-merge": "^3.0.1"
   },
   "devDependencies": {

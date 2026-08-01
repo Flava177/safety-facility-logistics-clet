@@ -1,11 +1,9 @@
 import { FormEvent, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import Alert from 'shared/components/Alert';
-import Button from 'shared/components/Button';
-import { TextInput } from 'shared/components/fields';
+import FloatingField from 'shared/components/FloatingField';
 import { SEEDED_PASSWORD, seededAccounts } from 'shared/auth/accounts';
 import { signIn } from 'shared/auth/signIn';
-import type { SignInFailure } from 'shared/auth/signIn';
 import { directorate } from 'shared/layout/navigation';
 
 /**
@@ -18,61 +16,43 @@ import { directorate } from 'shared/layout/navigation';
  *
  * Its classes are shadcn's CSS-variable tokens — `bg-background`, `text-muted-foreground`,
  * `border-input`, `ring-ring`. **This project defines none of them.** Its Tailwind theme is a bespoke
- * scale (`--text-theme-sm`, `--color-teal-*`, `--color-gray-*`), so pasting the block would have
- * produced an unstyled form: transparent surfaces, invisible borders, default type.
+ * scale, so pasting the block would have produced an unstyled form: transparent surfaces, invisible
+ * borders, default type. And it ships its own `Button`, `Input`, `Label` and `cn`, all four of which
+ * already exist in `shared/components/`.
  *
- * And it ships its own `Button`, `Input`, `Label` and `cn`. All four already exist in
- * `shared/components/`, where `cn` is the same clsx + tailwind-merge helper and the field controls
- * carry the label/error/helper rhythm every other form in this application uses — including the one
- * line reserved under each field so a form never jumps when validation fires. Adding a parallel set
- * would fork the design system and pull in four Radix dependencies to do what is already here.
+ * <h2>One error message for a wrong email and a wrong password</h2>
  *
- * The layout, the copy and the behaviour are as specified. Only the parts are this repository's.
- *
- * <h2>What signing in does</h2>
- *
- * Matches the email against the seeded accounts, then makes that account the actor for this browser
- * — username, display name, roles, site scopes. Those are what every API call carries, so the portal
- * that opens next is the one that account's roles entitle it to: a fleet manager lands on the fleet
- * dashboard, a driver on their driving day, a requester on their requests.
- *
- * It is a development sign-in and `accounts.ts` says so plainly. The services it talks to run with
- * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the headers claim, so a form here can
- * only decide which headers to send. The token-issuing path exists beside it in `keycloak.ts` for
- * when a service runs with security on.
+ * An earlier version told them apart — "no account for that address" versus "that password is not
+ * right" — on the grounds that this is a development sign-in whose whole account list is printed on
+ * the page, so there was nothing to protect. The owner asked for the single message, and that is the
+ * right default to build in: the moment this page points at real accounts, distinguishing the two
+ * turns the form into an account-enumeration oracle. The list below still tells a developer which
+ * addresses exist, which is where that information belongs.
  */
 const LoginPage = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [failure, setFailure] = useState<SignInFailure | null>(null);
-  const [touched, setTouched] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
-
-  const emailMissing = email.trim().length === 0;
-  const passwordMissing = password.length === 0;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    setTouched(true);
     const result = signIn(email, password);
     if (!result.ok) {
-      setFailure(result);
-      if (result.reason === 'wrong-password') {
-        // Clear only the password. Retyping an email that was probably right is a small insult
-        // after a failed sign-in, and it is the field people get wrong least.
-        setPassword('');
-      }
+      setError(
+        result.reason === 'incomplete'
+          ? 'Enter your email address and password.'
+          : 'Invalid username/email or password.',
+      );
+      setPassword('');
       return;
     }
     /*
-      A full navigation to the application root rather than a router push.
-
-      Everything derived from the actor — programme entitlement, system entitlement, the merged
-      permission set and the landing destination — is computed once at module scope, which is what
-      makes the sidebar and the route guards synchronous. A client-side transition would leave all
-      of it holding the pre-sign-in actor, so the signed-in user would land on somebody else's
-      portal. The root then redirects to `landingPath()`, which is this account's first entitled
-      destination.
+      A full navigation rather than a router push. Everything derived from the actor — programme
+      entitlement, system entitlement, the merged permission set, the landing destination — is
+      computed once at module scope, which is what makes the sidebar and route guards synchronous.
+      A client-side transition would leave all of it holding the pre-sign-in actor, so the signed-in
+      user would land on somebody else's portal.
     */
     window.location.assign(`${import.meta.env.BASE_URL.replace(/\/$/, '')}/`);
   };
@@ -80,15 +60,15 @@ const LoginPage = () => {
   const fillFrom = (accountEmail: string) => {
     setEmail(accountEmail);
     setPassword(SEEDED_PASSWORD);
-    setFailure(null);
+    setError(null);
     setAccountsOpen(false);
   };
 
   return (
     <div className="relative flex min-h-screen flex-col items-center justify-center px-4 py-10">
       {/*
-        The campus at night, with a scrim over it. The scrim is not decoration: the wordmark sits on
-        a photograph whose brightness varies across the frame, and without it the white heading falls
+        The campus at night, with a scrim over it. The scrim is not decoration: the wordmark sits on a
+        photograph whose brightness varies across the frame, and without it the white lettering falls
         to roughly 2:1 against the lit windows. `aria-hidden` because it carries nothing a screen
         reader needs.
       */}
@@ -99,23 +79,30 @@ const LoginPage = () => {
       />
       <div aria-hidden="true" className="absolute inset-0 bg-gray-950/70" />
 
-      <div className="relative w-full max-w-[26rem]">
-        <div className="mb-6 flex flex-col items-center text-center">
-          <img src={logo} alt="" aria-hidden="true" className="h-14 w-14 object-contain" />
-          <h1 className="mt-3 text-title-sm font-bold tracking-tight text-white">
+      <div className="relative w-full max-w-[34rem]">
+        {/*
+          CLET carries the weight and the organisation name leads, because CLET is the institution and
+          Safety, Facilities & Logistics is one directorate inside it. The earlier order had that
+          backwards.
+        */}
+        <div className="mb-7 flex flex-col items-center text-center">
+          <img src={logo} alt="" aria-hidden="true" className="h-16 w-16 object-contain" />
+          <p className="mt-4 text-title-md font-extrabold tracking-tight text-white">
+            {directorate.parentOrganisation}
+          </p>
+          <h1 className="mt-1 text-theme-xl font-medium tracking-tight text-gray-200">
             {directorate.name}
           </h1>
-          <p className="mt-1 text-theme-sm text-gray-300">{directorate.parentOrganisation}</p>
         </div>
 
-        <div className="rounded-2xl bg-white p-7 shadow-theme-lg">
-          <h2 className="text-theme-xl font-bold text-gray-900">Welcome Back</h2>
-          <p className="mt-1 text-theme-sm text-gray-600">
+        <div className="rounded-2xl bg-white px-10 py-9 shadow-theme-lg sm:px-12">
+          <h2 className="text-center text-title-sm font-bold text-gray-900">Welcome Back</h2>
+          <p className="mx-auto mt-2 max-w-sm text-center text-theme-sm text-gray-600">
             Sign in to your account to access CLET services securely from this browser.
           </p>
 
-          <form onSubmit={submit} noValidate className="mt-6 space-y-4">
-            <TextInput
+          <form onSubmit={submit} noValidate className="mt-8 space-y-4">
+            <FloatingField
               label="Email"
               type="email"
               name="username"
@@ -123,16 +110,14 @@ const LoginPage = () => {
               value={email}
               onChange={(value) => {
                 setEmail(value);
-                setFailure(null);
+                setError(null);
               }}
-              onBlur={() => setTouched(true)}
-              required
               autoFocus
-              placeholder="you@clet.gh"
-              error={touched && emailMissing}
+              required
+              error={Boolean(error)}
             />
 
-            <TextInput
+            <FloatingField
               label="Password"
               type="password"
               name="password"
@@ -140,36 +125,45 @@ const LoginPage = () => {
               value={password}
               onChange={(value) => {
                 setPassword(value);
-                setFailure(null);
+                setError(null);
               }}
-              onBlur={() => setTouched(true)}
               required
-              placeholder="••••••••••"
-              error={touched && passwordMissing}
+              error={Boolean(error)}
             />
 
-            {failure && (
+            {error && (
               <Alert variant="error" title="Could not sign you in">
-                <p className="text-theme-sm">{failure.message}</p>
+                <p className="text-theme-sm">{error}</p>
               </Alert>
             )}
 
-            <Button type="submit" className="w-full">
-              Sign in
-            </Button>
+            <div className="pt-2">
+              {/*
+                Blue rather than the platform's `primary`, which is brand navy at #0a1931 and reads
+                as near-black on a white card. `teal-500` is the palette's blue despite the name —
+                the ramp is a sky/blue scale — at #0284c7, which carries 4.6:1 against white for the
+                label and holds its meaning as the one thing to press on this page.
+              */}
+              <button
+                type="submit"
+                className="mx-auto flex h-12 w-full items-center justify-center rounded-xl bg-teal-500 text-theme-sm font-semibold text-white transition-colors hover:bg-teal-600 active:bg-teal-700 focus-visible:ring-2 focus-visible:ring-teal-400 focus-visible:ring-offset-2 focus-visible:outline-none"
+              >
+                Sign in
+              </button>
+            </div>
           </form>
 
           {/*
-            The account list is on the page deliberately. This is a development sign-in against
-            seeded accounts, and hiding the list would mean the only way to use the form is to read
-            the source — while the accounts themselves are in the bundle either way.
+            The account list is on the page deliberately. This is a development sign-in against seeded
+            accounts, and hiding the list would mean the only way to use the form is to read the
+            source — while the accounts are in the bundle either way.
           */}
-          <div className="mt-6 border-t border-gray-200 pt-4">
+          <div className="mt-7 border-t border-gray-200 pt-4 text-center">
             <button
               type="button"
               onClick={() => setAccountsOpen((open) => !open)}
               aria-expanded={accountsOpen}
-              className="text-theme-sm font-medium text-teal-800 hover:underline"
+              className="text-theme-sm font-medium text-teal-600 hover:underline"
             >
               {accountsOpen ? 'Hide accounts' : `Show the ${seededAccounts.length} seeded accounts`}
             </button>
@@ -181,7 +175,7 @@ const LoginPage = () => {
                   <code className="rounded bg-gray-100 px-1 font-medium">{SEEDED_PASSWORD}</code>.
                   Choose one to fill the form.
                 </p>
-                <ul className="custom-scrollbar mt-3 max-h-64 space-y-1 overflow-y-auto pr-1">
+                <ul className="custom-scrollbar mt-3 max-h-64 space-y-1 overflow-y-auto pr-1 text-left">
                   {seededAccounts.map((account) => (
                     <li key={account.email}>
                       <button
@@ -202,16 +196,7 @@ const LoginPage = () => {
               </>
             )}
           </div>
-
-          <p className="mt-5 text-theme-xs text-gray-500">
-            This is a CLET system. Activity is recorded against your account, and every action you
-            take is attributed to it in the audit trail.
-          </p>
         </div>
-
-        <p className="mt-5 text-center text-theme-xs text-gray-400">
-          {directorate.parentOrganisation} · Cluster 9
-        </p>
       </div>
     </div>
   );

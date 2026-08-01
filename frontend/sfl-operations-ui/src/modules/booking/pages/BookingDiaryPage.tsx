@@ -5,7 +5,7 @@ import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
-import Select from 'shared/components/Select';
+import FacetFilter from 'shared/components/FacetFilter';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -37,8 +37,8 @@ import { bookingStatusTone, formatWindow } from '../components/bookingFormat';
 const BookingDiaryPage = () => {
   const navigate = useNavigate();
   const [siteCode, setSiteCode] = useState(defaultSite);
-  const [status, setStatus] = useState('');
-  const [purpose, setPurpose] = useState('');
+  const [status, setStatus] = useState<string[]>([]);
+  const [purpose, setPurpose] = useState<string[]>([]);
   const [scope, setScope] = useState('');
 
   const bookings = useApiQuery(
@@ -46,8 +46,18 @@ const BookingDiaryPage = () => {
       bookingsApi.search(
         {
           siteCode: siteCode || undefined,
-          status: (status as BookingStatus) || undefined,
-          purpose: (purpose as BookingPurpose) || undefined,
+          /*
+            One value goes to the service; the rest are applied to the returned set below.
+
+            `BookingQuery` takes a single status and a single purpose, so a multi-select cannot be
+            pushed down whole. Sending the first narrows the fetch — which matters, the register is
+            capped at 200 — and the remainder is filtered here. That is a compromise and it is worth
+            naming: with more than one value selected the cap applies to a *wider* set than the
+            filter shows, so a very large site could clip. Widening the query to accept a list is the
+            real fix and belongs in the service.
+          */
+          status: (status[0] as BookingStatus) || undefined,
+          purpose: (purpose[0] as BookingPurpose) || undefined,
           liveOnly: scope === 'live' ? true : undefined,
           onReadinessHold: scope === 'held' ? true : undefined,
           limit: 200,
@@ -57,8 +67,27 @@ const BookingDiaryPage = () => {
     [siteCode, status, purpose, scope],
   );
 
-  const rows = bookings.data ?? [];
-  const filtered = Boolean(status || purpose || scope);
+  const fetched = bookings.data ?? [];
+  const rows = fetched.filter(
+    (booking) =>
+      (status.length === 0 || status.includes(booking.status)) &&
+      (purpose.length === 0 || purpose.includes(booking.purpose)),
+  );
+  const filtered = status.length > 0 || purpose.length > 0 || Boolean(scope);
+
+  /*
+    Counts come from what the service returned, so they describe the data in hand rather than the
+    whole register. A count that claimed to be the site total would be a promise this screen cannot
+    keep — the fetch is capped and a requester's view is narrowed per record.
+  */
+  const countBy = (pick: (booking: Booking) => string) =>
+    fetched.reduce<Record<string, number>>((tally, booking) => {
+      const key = pick(booking);
+      tally[key] = (tally[key] ?? 0) + 1;
+      return tally;
+    }, {});
+  const statusCounts = countBy((booking) => booking.status);
+  const purposeCounts = countBy((booking) => booking.purpose);
 
   const columns: Column<Booking>[] = [
     {
@@ -143,37 +172,40 @@ const BookingDiaryPage = () => {
 
       <FilterBar
         onReset={() => {
-          setStatus('');
-          setPurpose('');
+          setStatus([]);
+          setPurpose([]);
           setScope('');
         }}
         resetDisabled={!filtered}
       >
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-        <Select
-          value={status}
+        <FacetFilter
+          label="Status"
+          selected={status}
           onChange={setStatus}
-          placeholder="Any status"
-          options={[
-            { value: '', label: 'Any status' },
-            ...BOOKING_STATUSES.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          options={BOOKING_STATUSES.map((value) => ({
+            value,
+            label: humaniseCode(value),
+            count: statusCounts[value] ?? 0,
+          }))}
         />
-        <Select
-          value={purpose}
+        <FacetFilter
+          label="Purpose"
+          selected={purpose}
           onChange={setPurpose}
-          placeholder="Any purpose"
-          options={[
-            { value: '', label: 'Any purpose' },
-            ...BOOKING_PURPOSES.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          options={BOOKING_PURPOSES.map((value) => ({
+            value,
+            label: humaniseCode(value),
+            count: purposeCounts[value] ?? 0,
+          }))}
         />
-        <Select
-          value={scope}
-          onChange={setScope}
-          placeholder="Everything"
+        <FacetFilter
+          label="Holding"
+          selected={scope ? [scope] : []}
+          // Single-valued by nature: "holding a space" and "on readiness hold" are different
+          // questions, and selecting both would mean neither.
+          onChange={(next) => setScope(next[next.length - 1] ?? '')}
           options={[
-            { value: '', label: 'Everything' },
             { value: 'live', label: 'Holding a space' },
             { value: 'held', label: 'On readiness hold' },
           ]}

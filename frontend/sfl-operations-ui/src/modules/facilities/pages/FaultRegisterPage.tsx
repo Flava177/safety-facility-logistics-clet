@@ -7,13 +7,14 @@ import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import FacetFilter from 'shared/components/FacetFilter';
 import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { FacilityFault } from '../api/dto';
 import type { FacilityFaultStatus } from '../api/enums';
-import { faultStatuses } from '../api/enums';
+import { faultPriorities, faultStatuses } from '../api/enums';
 import { reportFault, searchFaults } from '../api/facilitiesApi';
 import { canReportFaults } from '../api/workflow';
 import ReportFaultDialog from '../dialogs/ReportFaultDialog';
@@ -44,7 +45,8 @@ const FaultRegisterPage = () => {
   const notify = useNotifier();
 
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
-  const [status, setStatus] = useState<string>('');
+  const [status, setStatus] = useState<string[]>([]);
+  const [priority, setPriority] = useState<string[]>([]);
   const [openOnly, setOpenOnly] = useState(true);
   const [reporting, setReporting] = useState(false);
 
@@ -53,7 +55,9 @@ const FaultRegisterPage = () => {
       searchFaults(
         {
           siteCode: siteCode || undefined,
-          status: (status || undefined) as FacilityFaultStatus | undefined,
+          // One value narrows the fetch; the rest are applied below. `FaultQuery` takes a single
+          // status, so a multi-select cannot be pushed down whole.
+          status: (status[0] || undefined) as FacilityFaultStatus | undefined,
           openOnly: openOnly || undefined,
           limit: 100,
         },
@@ -61,6 +65,26 @@ const FaultRegisterPage = () => {
       ),
     [siteCode, status, openOnly],
   );
+
+  /*
+    Counts describe what the service returned, not the whole register. A count claiming to be the
+    site total would be a promise this screen cannot keep: a requester's view is narrowed per record
+    by `FacilityFaultService.requesterFilter`, so their totals are legitimately smaller.
+  */
+  const fetched = faults.data ?? [];
+  const visible = fetched.filter(
+    (fault) =>
+      (status.length === 0 || status.includes(fault.status)) &&
+      (priority.length === 0 || priority.includes(fault.priority)),
+  );
+  const tally = (pick: (fault: (typeof fetched)[number]) => string) =>
+    fetched.reduce<Record<string, number>>((counts, fault) => {
+      const key = pick(fault);
+      counts[key] = (counts[key] ?? 0) + 1;
+      return counts;
+    }, {});
+  const statusCounts = tally((fault) => fault.status);
+  const priorityCounts = tally((fault) => fault.priority);
 
   const columns: Column<FacilityFault>[] = [
     {
@@ -128,15 +152,33 @@ const FaultRegisterPage = () => {
         }
       />
 
-      <FilterBar>
+      <FilterBar
+        onReset={() => {
+          setStatus([]);
+          setPriority([]);
+        }}
+        resetDisabled={status.length === 0 && priority.length === 0}
+      >
         <SiteSelect value={siteCode} onChange={setSiteCode} />
-        <SelectInput
+        <FacetFilter
           label="Status"
-          value={status}
+          selected={status}
           onChange={setStatus}
-          allowEmpty
-          emptyLabel="Any status"
-          options={faultStatuses.map((value) => ({ value, label: humaniseCode(value) }))}
+          options={faultStatuses.map((value) => ({
+            value,
+            label: humaniseCode(value),
+            count: statusCounts[value] ?? 0,
+          }))}
+        />
+        <FacetFilter
+          label="Priority"
+          selected={priority}
+          onChange={setPriority}
+          options={faultPriorities.map((value) => ({
+            value,
+            label: humaniseCode(value),
+            count: priorityCounts[value] ?? 0,
+          }))}
         />
         <SelectInput
           label="Show"
@@ -152,7 +194,7 @@ const FaultRegisterPage = () => {
       <DataState
         loading={faults.loading}
         error={faults.error}
-        empty={faults.data?.length === 0}
+        empty={visible.length === 0}
         emptyTitle={openOnly ? 'Nothing is outstanding' : 'No faults reported'}
         emptyHint={
           // Same caution as the work-order queue: a requester sees only the faults they reported,
@@ -164,7 +206,7 @@ const FaultRegisterPage = () => {
         onRetry={faults.refetch}
       >
         <DataTable
-          rows={faults.data ?? []}
+          rows={visible}
           columns={columns}
           getRowId={(fault) => fault.id}
           onRowClick={(fault) => navigate(facilitiesPaths.faultDetail(fault.id))}

@@ -54,9 +54,19 @@ const Sidebar = () => {
         <nav className="custom-scrollbar flex-1 overflow-y-auto px-3 py-4" aria-label="Sections">
           {sections.map((section) => (
             <div key={section.heading} className="mb-6 last:mb-0">
+              {/*
+                The module groupings, and they now read as groupings.
+
+                They were `text-gray-500` at the same weight as an inactive item, so "Operations" and
+                "Trips & assignments" carried equal visual weight and the sidebar read as one long
+                list. A heading's job is to be scannable and *not* look pressable — so it takes the
+                brand navy, a heavier weight and letter-spacing, none of which any nav item uses.
+                Colour is not doing the work alone: the spacing above and the tracking separate them
+                for anyone who cannot distinguish the hues.
+              */}
               <p
                 className={cn(
-                  'mb-2 px-3 text-theme-xs font-medium text-gray-500',
+                  'mb-2 px-3 text-theme-xs font-bold tracking-wider text-brand-600 uppercase',
                   !expanded && 'lg:hidden',
                 )}
               >

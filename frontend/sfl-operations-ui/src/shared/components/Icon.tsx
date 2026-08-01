@@ -53,6 +53,8 @@ export type IconName =
   | 'flag'
   | 'link'
   | 'lock'
+  | 'eye'
+  | 'eye-off'
   | 'inbox'
   | 'clipboard'
   | 'user'
@@ -277,6 +279,21 @@ const glyphs: Record<IconName, ReactElement> = {
     <>
       <rect x="4.5" y="10.5" width="15" height="10" rx="2.5" />
       <path d="M8 10.5V8a4 4 0 0 1 8 0v2.5" />
+    </>
+  ),
+  /** Reveal a password. Paired with `eye-off`, which is the same eye struck through. */
+  eye: (
+    <>
+      <path d="M2.5 12s3.5-6.5 9.5-6.5S21.5 12 21.5 12s-3.5 6.5-9.5 6.5S2.5 12 2.5 12Z" />
+      <circle cx="12" cy="12" r="3" />
+    </>
+  ),
+  'eye-off': (
+    <>
+      <path d="M10.7 6.1A8.9 8.9 0 0 1 12 6c6 0 9.5 6 9.5 6a16.7 16.7 0 0 1-2.9 3.6" />
+      <path d="M6.4 7.9A16.5 16.5 0 0 0 2.5 12S6 18 12 18a9.6 9.6 0 0 0 4-.85" />
+      <path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" />
+      <path d="m3.5 3.5 17 17" />
     </>
   ),
   inbox: (
