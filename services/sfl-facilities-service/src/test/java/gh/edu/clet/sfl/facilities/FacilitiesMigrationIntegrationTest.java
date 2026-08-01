@@ -6,7 +6,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import java.util.List;
 import java.util.Map;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestInstance;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.dao.DataAccessException;
@@ -37,6 +39,9 @@ import org.springframework.test.context.DynamicPropertySource;
         "sfl.security.enabled=false",
         "spring.jpa.hibernate.ddl-auto=validate"
 })
+// PER_CLASS so the virgin-database precondition can be a non-static @BeforeAll and still reach the
+// injected DataSource. The suite holds no mutable state of its own, so sharing one instance is safe.
+@TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class FacilitiesMigrationIntegrationTest {
 
     @DynamicPropertySource
@@ -49,6 +54,44 @@ class FacilitiesMigrationIntegrationTest {
 
     private JdbcTemplate jdbc() {
         return new JdbcTemplate(dataSource);
+    }
+
+    /**
+     * Fails the run early, and usefully, when the database is not empty.
+     *
+     * <p>This suite asserts absolute facts about a virgin schema — the audit chain sits at genesis,
+     * the configuration defaults are exactly what V5 wrote — and several cases insert rows at fixed
+     * site codes. Run a second time against the same database, it fails on duplicate keys and a chain
+     * that has moved, six tests in, saying nothing whatever about the migrations. That happened twice
+     * in one afternoon and cost twenty minutes each time working out that the tests were fine.
+     *
+     * <p>Checked rather than cleaned. Automatically dropping the schema would make a mistyped
+     * {@code SFL_FACILITIES_TEST_DB_URL} destroy whichever database it pointed at — including
+     * {@code sfl_facilities_service_e2e}, which is shared with the hand-driven verification runs. A
+     * precondition that explains itself is worth more here than a convenience that can take real data
+     * with it.
+     *
+     * <p>{@code @BeforeAll}, not {@code @BeforeEach}, and that distinction is the whole point: this
+     * suite inserts as it goes, so a per-test version of this check passes for the first test and
+     * then fails for the other eleven — reporting the suite's own fixtures as contamination. Written
+     * that way first, and it turned a green run red.
+     */
+    @BeforeAll
+    void requireAVirginDatabase() {
+        Integer existingSites = jdbc().queryForObject(
+                "select count(*) from facilities.sites", Integer.class);
+        assertThat(existingSites)
+                .withFailMessage("""
+                        This database has been used before (%d site rows). The migration suite proves \
+                        V1..V23 apply to an empty schema, so it must start from one — it is not the \
+                        suite that is failing.
+
+                        Recreate it:
+                          docker exec sfl-facilities-e2e-postgres psql -U sfl -d sfl_facilities_service_e2e \\
+                            -c "DROP DATABASE IF EXISTS sfl_facilities_migration_test;" \\
+                            -c "CREATE DATABASE sfl_facilities_migration_test OWNER sfl;"
+                        """, existingSites)
+                .isZero();
     }
 
     @Test
