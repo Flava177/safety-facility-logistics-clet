@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.config;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -33,8 +34,11 @@ import org.springframework.security.web.SecurityFilterChain;
 class FleetSecurityConfiguration {
 
     @Bean
-    @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "false", matchIfMissing = true)
+    @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "false")
     SecurityFilterChain developmentSecurity(HttpSecurity http) throws Exception {
+        LoggerFactory.getLogger(getClass()).warn(
+                "sfl.security.enabled=false: every fleet endpoint is UNAUTHENTICATED and the actor is "
+                        + "whatever the X-SFL-* headers claim. Local development only.");
         return http
                 .csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -44,7 +48,7 @@ class FleetSecurityConfiguration {
     }
 
     @Bean
-    @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "true")
+    @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "true", matchIfMissing = true)
     SecurityFilterChain resourceServerSecurity(HttpSecurity http) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())

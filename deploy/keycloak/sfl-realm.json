@@ -1,0 +1,432 @@
+{
+  "realm": "sfl",
+  "enabled": true,
+  "displayName": "CLET Cluster 9 — SFL",
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "accessTokenLifespan": 1800,
+  "roles": {
+    "realm": [
+      {
+        "name": "SFL_ADMIN",
+        "description": "SflRole.SFL_ADMIN"
+      },
+      {
+        "name": "FACILITIES_DIRECTOR",
+        "description": "SflRole.FACILITIES_DIRECTOR"
+      },
+      {
+        "name": "FACILITIES_MANAGER",
+        "description": "SflRole.FACILITIES_MANAGER"
+      },
+      {
+        "name": "IFIMP_MAINTENANCE_SUPERVISOR",
+        "description": "SflRole.IFIMP_MAINTENANCE_SUPERVISOR"
+      },
+      {
+        "name": "IFIMP_TECHNICIAN",
+        "description": "SflRole.IFIMP_TECHNICIAN"
+      },
+      {
+        "name": "IFIMP_REQUESTER",
+        "description": "SflRole.IFIMP_REQUESTER"
+      },
+      {
+        "name": "VENDOR_TECHNICIAN",
+        "description": "SflRole.VENDOR_TECHNICIAN"
+      },
+      {
+        "name": "COMMAND_ROLE",
+        "description": "SflRole.COMMAND_ROLE"
+      },
+      {
+        "name": "AUDITOR",
+        "description": "SflRole.AUDITOR"
+      },
+      {
+        "name": "DTI_ADMIN",
+        "description": "SflRole.DTI_ADMIN"
+      },
+      {
+        "name": "INTEGRATION_ENGINEER",
+        "description": "SflRole.INTEGRATION_ENGINEER"
+      },
+      {
+        "name": "FLEET_LOGISTICS_OFFICER",
+        "description": "SflRole.FLEET_LOGISTICS_OFFICER"
+      },
+      {
+        "name": "FLEET_MANAGER",
+        "description": "SflRole.FLEET_MANAGER"
+      },
+      {
+        "name": "FLEET_DRIVER",
+        "description": "SflRole.FLEET_DRIVER"
+      },
+      {
+        "name": "COMPLIANCE_OFFICER",
+        "description": "SflRole.COMPLIANCE_OFFICER"
+      },
+      {
+        "name": "FLEET_REPORTING_VIEWER",
+        "description": "SflRole.FLEET_REPORTING_VIEWER"
+      },
+      {
+        "name": "SERVICE_INTEGRATION",
+        "description": "SflRole.SERVICE_INTEGRATION"
+      },
+      {
+        "name": "DISPATCH_CONTROLLER",
+        "description": "SflRole.DISPATCH_CONTROLLER"
+      },
+      {
+        "name": "LOGISTICS_COORDINATOR",
+        "description": "SflRole.LOGISTICS_COORDINATOR"
+      },
+      {
+        "name": "CENTRE_MANAGER",
+        "description": "SflRole.CENTRE_MANAGER"
+      },
+      {
+        "name": "MAILROOM_OFFICER",
+        "description": "SflRole.MAILROOM_OFFICER"
+      },
+      {
+        "name": "SECURITY_OFFICER",
+        "description": "SflRole.SECURITY_OFFICER"
+      },
+      {
+        "name": "EMERGENCY_COORDINATOR",
+        "description": "SflRole.EMERGENCY_COORDINATOR"
+      },
+      {
+        "name": "SOC_OPERATOR",
+        "description": "SflRole.SOC_OPERATOR"
+      },
+      {
+        "name": "SECURITY_DIRECTOR",
+        "description": "SflRole.SECURITY_DIRECTOR"
+      },
+      {
+        "name": "HSE_MANAGER",
+        "description": "SflRole.HSE_MANAGER"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "sfl-operations-ui",
+      "name": "SFL Operations UI",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:5005/*",
+        "http://localhost:8093/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5005",
+        "http://localhost:8093"
+      ],
+      "protocol": "openid-connect",
+      "attributes": {
+        "post.logout.redirect.uris": "+"
+      },
+      "protocolMappers": [
+        {
+          "name": "site_scopes",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "consentRequired": false,
+          "config": {
+            "user.attribute": "site_scopes",
+            "claim.name": "site_scopes",
+            "jsonType.label": "String",
+            "multivalued": "true",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    },
+    {
+      "clientId": "sfl-service-integration",
+      "name": "Machine principal for signed vendor ingest",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "change-me",
+      "serviceAccountsEnabled": true,
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "protocol": "openid-connect"
+    }
+  ],
+  "users": [
+    {
+      "username": "fleet.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Fleet",
+      "lastName": "Manager",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "FLEET_MANAGER"
+      ]
+    },
+    {
+      "username": "kwame.driver",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Kwame",
+      "lastName": "Driver",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "FLEET_DRIVER"
+      ]
+    },
+    {
+      "username": "ama.mailroom",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Ama",
+      "lastName": "Mailroom",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "MAILROOM_OFFICER"
+      ]
+    },
+    {
+      "username": "adjoa.centre",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Adjoa",
+      "lastName": "Centre",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "CENTRE_MANAGER"
+      ]
+    },
+    {
+      "username": "akosua.requester",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Akosua",
+      "lastName": "Requester",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "IFIMP_REQUESTER"
+      ]
+    },
+    {
+      "username": "yaw.technician",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Yaw",
+      "lastName": "Technician",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "IFIMP_TECHNICIAN"
+      ]
+    },
+    {
+      "username": "kofi.vendor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Kofi",
+      "lastName": "Contract",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "VENDOR_TECHNICIAN"
+      ]
+    },
+    {
+      "username": "facilities.manager",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Facilities",
+      "lastName": "Manager",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "FACILITIES_MANAGER"
+      ]
+    },
+    {
+      "username": "emergency.coordinator",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Emergency",
+      "lastName": "Coordinator",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "EMERGENCY_COORDINATOR"
+      ]
+    },
+    {
+      "username": "nana.auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Nana",
+      "lastName": "Auditor",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "AUDITOR"
+      ]
+    },
+    {
+      "username": "esi.compliance",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Esi",
+      "lastName": "Compliance",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "COMPLIANCE_OFFICER"
+      ]
+    },
+    {
+      "username": "sfl.admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "SFL",
+      "lastName": "Administrator",
+      "attributes": {
+        "site_scopes": [
+          "CLET-HQ"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "password",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "SFL_ADMIN"
+      ]
+    }
+  ]
+}

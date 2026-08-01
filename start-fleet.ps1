@@ -12,7 +12,9 @@
         http://localhost:8093/swagger-ui.html Swagger UI
         http://localhost:8093/v3/api-docs     OpenAPI JSON
 
-    Security is off in local development (sfl.security.enabled=false), so there is no sign-in step:
+    Security is off in local development because this script sets SFL_SECURITY_ENABLED=false
+    explicitly. The default is now ON (A1) - an environment that forgets the variable demands a
+    token. Locally there is no sign-in step:
     the front end sends the X-SFL-* actor headers instead.
 
 .PARAMETER SkipDb
@@ -113,6 +115,8 @@ if (Test-Path $indexHtml) {
 }
 
 # --- 4. Service -----------------------------------------------------------------------------
+# Load-bearing since A1: absent now means SECURE. Removing this line makes the service demand a
+# token, which is correct everywhere except a developer laptop with no Keycloak running.
 $env:SFL_SECURITY_ENABLED   = "false"
 $env:SFL_FLEET_OPEN_BROWSER = if ($NoBrowser) { "false" } else { "true" }
 

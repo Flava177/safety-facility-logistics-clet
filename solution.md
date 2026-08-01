@@ -265,6 +265,22 @@ Backend: **760 tests, 0 failures, 1 skipped**, where before this sequence it ran
 
 Frontend: **84 tests**, up from 73, with eleven pinning the persona rule including every case where a persona must *not* apply. Docs: `docs/frontend/SFL_Role_Portal_Trace_Matrix.md`, `SFL_Role_Portal_Gap_Report.md`, and the portal pattern added to the module playbook.
 
+### Pass — Authentication on by default
+
+PLAT-01, `solution.md` §Security, ADR 0007. **Every API in this platform was unauthenticated, and an environment that simply forgot a variable stayed that way.**
+
+`sfl.security.enabled` defaulted to `false`, and — the half that mattered more — the filter chain that permits everything carried `matchIfMissing = true`. So two independent things both had to go right for a deployment to be secure, and neither was the default. Both are inverted: the open chain now requires the property to be *explicitly* false, the secure chain is what an absent property selects, and taking the open path logs a warning naming the service on every startup. The local development scripts set the variable deliberately and carry a comment saying the line is now load-bearing.
+
+**Rather less was missing than the gap report implied, and one thing more.** The resource server, both filter chains and the JWT actor resolvers in facilities, fleet and emergency were all already written — the Prompt 1 note that Keycloak was absent from compose was wrong, it was there with the issuer wired and a `depends_on`. What was actually missing was the **realm**: `start-dev` with no import means `/realms/sfl` does not exist, which under the old default degraded quietly and under the new one is a startup failure. `deploy/keycloak/sfl-realm.json` now carries all 26 `SflRole` values, the `site_scopes` mapper the resolvers already read, a public client for the dashboard, a service-account client for signed ingest, and one user per persona so a portal can be signed into rather than only reasoned about. Compose imports it and health-gates the services on the realm answering, not merely on the port opening.
+
+**The thing more.** `sfl-asset-visibility-service` took its actor as `@RequestHeader(name = "X-SFL-User", defaultValue = "development-user")` on every controller method and passed it straight into the command. Harmless while the header *is* the identity; not harmless the moment a verified principal exists, because the service would still have attributed every asset registration, custody change and evidence link to whatever string the caller chose — or, absent one, to a user literally called `development-user`. It now resolves the JWT subject first and falls back to the header only when there is no authenticated principal, which is what the other three have always done.
+
+**The chain that faces every real user had never been executed.** Searching every `src/test/java` in the reactor for `keycloakSecurity`, `sfl.security.enabled=true` or `JwtAuthenticationToken` returned nothing across four build passes, while the suite reported green off the development chain that permits everything — the same shape as the skipped mandatory scenarios and the audit chain that always replayed as tampered. `FacilitiesJwtSecurityTest` runs the real chain in a real context and pins five things: anonymous is refused rather than served as `development-user`; an `X-SFL-User` header cannot assert an identity while the chain is armed; a token is admitted and its realm roles reach the actor; a token whose roles lack the permission gets **403 rather than 401**, because "who are you" and "you may not" are different answers; and the health probe stays reachable, because a load balancer cannot present a token. It had to be a full context rather than a slice — a slice has no `HttpSecurity` for a chain to be built on, which is exactly why the existing controller tests exclude the resource server and disable filters.
+
+**ADR 0007 is unblocked.** It sequenced row-level security behind this deliberately, on the grounds that RLS enforcing scopes asserted by an unauthenticated caller is theatre. The `site_scopes` claim those policies will read is now issued by the realm and consumed by every resolver.
+
+Backend: **772 tests, 0 failures, 0 skipped.**
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*
