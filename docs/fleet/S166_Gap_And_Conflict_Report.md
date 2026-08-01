@@ -5,9 +5,9 @@
 Precedence applied throughout:
 
 1. `docs/System Mappings and SRS/SFL_SRS.docx` — **the formal SRS defines what the system must do**.
-2. `docs/SFL_Phase1_Implementation_Workplan.md` — how approved requirements are built.
+2. `docs/SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md` — the current Release 1 scope and handoff position.
 3. `solution.md`, `docs/System Mappings and SRS/SFL_Phase1_System_Architecture_Implementation_Guide_v2.md`,
-   `docs/SFL_Phase1_Microservices_Build_Workflow_Plan.md`, `docs/adr/`, `docs/integration/` — technical guidance
+   `docs/adr/`, `docs/integration/` — technical guidance
    that must not override or silently expand the SRS.
 4. Existing code — evidence of the current implementation, not the specification.
 

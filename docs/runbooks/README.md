@@ -16,9 +16,9 @@ reads.
 | Service | Port | Schema | Local DB | e2e DB |
 |---|---|---|---|---|
 | `sfl-facilities-service` | 8091 | `facilities` | 5441 | 55441 |
-| `sfl-safety-security-service` | 8094 | `safety_security` | 5442 | 55442 |
+| `sfl-safety-security-service` | 8092 | `safety_security` | 5442 | 55442 |
 | `sfl-fleet-logistics-service` | 8093 | `fleet_logistics` | 5443 | 55443 |
-| `sfl-asset-visibility-service` | 8096 | `asset_visibility` | 5444 | 55444 |
+| `sfl-asset-visibility-service` | 8094 | `asset_visibility` | 5444 | 55444 |
 | `sfl-emergency-notification-service` | 8095 | `emergency_notification` | 5445 | 55445 |
 
 Each service owns its schema, its migrations and its API boundary. **No runbook here may tell you to

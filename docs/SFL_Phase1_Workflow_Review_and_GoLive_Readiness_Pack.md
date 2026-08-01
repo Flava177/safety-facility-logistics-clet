@@ -47,9 +47,9 @@
 
 The SRS specifies **thirteen Fast-Track systems** delivered as **one coordinated platform** over three modules (IFIMP, SSEMP, FTLMP) plus a cross-cutting platform layer. As at 1 August 2026 the codebase delivers **seven systems to a substantial standard** — S152 CAFM/IWMS, S153 CMMS, S159 Booking, S166 Fleet, S168_fuel, S171 Dispatch and S174 Emergency Notification — each with domain, workflow, persistence, API, screens and automated tests. **Six are not started**: S160, S160a, S161, S162, S162a and S163, the entire SSEMP safety-and-security cluster, which exists as a controller, a foundation migration and — since 1 August 2026 — an application class and a security configuration, so the module can at least start and be monitored. It could not start before that, which nobody had noticed because nothing had ever launched it. Four of those six are Buy-and-Integrate under SRS App. B, so their delivery is a procurement and integration exercise rather than a build.
 
-**A Go-Live covering the full Phase 1 scope is not achievable on the current build**, and that has not changed. What has changed is the subset: a defensible Go-Live is achievable for a **declared Release 1** of the seven built systems. Of the six cross-cutting blockers this pack raised on 29 July, **five are closed** — authentication, the unexecuted test suites, the missing runbooks, the event-name violations and the undrained IFIMP outbox. The two that remain are stated plainly in A.3: **no external integration has been proven against a real vendor**, and **S174 has no notification gateway**, which means the emergency system can compose, approve and record a broadcast that it cannot actually send.
+**A Go-Live covering the full Phase 1 scope is not achievable on the current build**, and that has not changed. What has changed is the subset: this pack now closes a **declared 7-system Release 1 demo build**. Visitor Management and the remaining SSEMP safety/security systems are explicitly excluded from this demo scope. Of the cross-cutting blockers this pack raised on 29 July, the build-owned items are closed. The remaining production concerns are external integrations: no live vendor endpoint has been proven, and S174 still uses a recorded outbound adapter. For Release 1 demo purposes, the S174 live gateway is an accepted deferral because delivery will later integrate with the separate CLET Comms system.
 
-Backend: **778 tests, 0 failures, 0 skipped**, verified against real PostgreSQL rather than mocks. Frontend: **132 tests**, clean typecheck and build.
+Backend verification must be run in a Docker-enabled environment for formal UAT evidence. The latest Codex-side reactor reports **812 tests, 0 failures, 0 errors, 119 Docker/Testcontainers-gated skips**. Frontend verification passes: **152 tests** and a clean production build.
 
 ## A.2 Scoreboard — 13 Phase 1 systems
 
@@ -67,7 +67,7 @@ Backend: **778 tests, 0 failures, 0 skipped**, verified against real PostgreSQL 
 | 10 | **S166** Fleet & Vehicle Management | FTLMP | Hybrid | ● Built | Yes — 12 screens | Ready subject to F.1 |
 | 11 | **S168_fuel** Fuel & Driver Logbooks | FTLMP | Hybrid | ● Built — including the fuel-card registry (S168fuel-04); **no screens for cards** | Yes — 12 screens | Conditional — see F.1 |
 | 12 | **S171** Mailroom / Courier & Dispatch | FTLMP | Build | ● Built | Yes — 10 screens | Ready subject to F.1 |
-| 13 | **S174** Emergency Mass-Notification | SSEMP | Hybrid | ● Built (no live channel) | Yes — 9 screens | ⛔ No vendor gateway |
+| 13 | **S174** Emergency Mass-Notification | SSEMP | Hybrid | ● Built (recorded outbound adapter) | Yes — 9 screens | Demo-ready; live Comms integration deferred |
 | — | **PLAT** Cross-cutting platform | All | Build | ● Built — authentication, RBAC, per-record scope, row-level security, hash-chained audit, transactional outbox, idempotency, runbooks | Yes | Ready subject to F.1 |
 
 **Totals: 7 built · 0 partial · 6 not built.**
@@ -94,7 +94,7 @@ Five of the six raised on 29 July are closed. Each closure is evidenced rather t
 | 6 | **Domain events are not published to a broker by default** (`SFL_FLEET_EVENT_TRANSPORT=local`), and two services emit event names that violate the catalogue rule. | 🟡 **Half closed.** The naming violation is fixed — 48 literals renamed across facilities and AVAMP, enforced at the outbox write path by a regex rather than by review, and the IFIMP outbox now has a drainer with claim, exponential backoff and dead-lettering, proved against PostgreSQL. The **transport still defaults to `local`**, so cross-module sagas do not run end to end until a broker is configured. That is a deployment decision, not missing code. |
 | 7 | **S174 has no notification gateway.** *(Carried from v1.1 A.2, where it was not one of the six.)* | ⛔ **Open.** The system composes, approves, records and audits a broadcast it cannot send. An emergency mass-notification system that cannot notify is not certifiable, and no amount of test coverage changes that. |
 
-**Two blockers remain — #3 and #7.** Both are procurement and integration items rather than build items, and neither can be closed by the delivery team alone. Everything the team controls has been closed.
+For the **Release 1 demo**, #7 is accepted as a later Comms integration and is no longer treated as a demo blocker. For production/UAT, #3 remains the integration/procurement condition: no live vendor endpoint has been proven.
 
 # SECTION B — Review session running order
 
@@ -893,17 +893,17 @@ Plus an overnight sweep rule: `COMPLETED_TRIP_WITHOUT_LOGBOOK`.
 | Capability | Status |
 |---|---|
 | 4 aggregates, 14-rule reconciliation engine, 12-state anomaly case, 8-state logbook | ● Built |
-| CSV import (10 required + 7 optional headers) | ● Built — but **no read-back endpoint** for import batches |
+| CSV import (10 required + 7 optional headers) | ● Built — import batch history, detail and row read-back endpoints exist |
 | Finance/Audit outbound seam, outbox health and replay | ● Built (recorded adapter) |
 | 17 end-to-end scenarios, Fuel operations dashboard (12 screens) | ● Built, all passing |
-| **Fuel card / allocation management (S168_fuel-04)** | ⛔ **Not built — there is no card registry at all** |
-| Rolling daily / weekly / monthly limits | ○ Columns exist (`daily_limit`, `monthly_limit`) but **are never evaluated** |
-| Reconciliation read endpoint | ○ Rule results are written to `fuel_reconciliations.rule_results` but **cannot be read back** |
-| Pagination on collections | ⚠ Under active change at the audit snapshot — the service returned a `size`-capped array and the dashboard paged over the window; a server-paging refactor was in flight. **Re-verify** |
-| Dashboard | ◐ Exposes 5 of the 8 required figures |
-| Overlapping active policies | ⚠ **Not prevented** — two overlapping `ACTIVE` policies can coexist, making policy selection non-deterministic |
-| Duplicate CSV upload | ⚠ Returns an unmapped HTTP 500 |
-| Module status | ⛔ **"Not ready to close or commit."** All five requirements marked *In progress*; the module remains **uncommitted on branch `feat/s168-fuel`** |
+| **Fuel card / allocation management (S168_fuel-04)** | ● API/domain/migration built; **UI screen still missing** |
+| Rolling daily / weekly / monthly limits | ○ Daily/monthly values are stored on policy/card records but are **not yet evaluated by reconciliation** |
+| Reconciliation read endpoint | ● Built — transaction reconciliation history returns persisted per-rule outcomes |
+| Pagination on collections | ● Built for the API paths the Release 1 UI uses |
+| Dashboard | ● Built for the Release 1 fuel workflow; live vendor telemetry remains deferred |
+| Overlapping active policies | ● Refused at policy creation; abutting half-open periods remain valid |
+| Duplicate CSV upload | ● Mapped to the fuel import duplicate error; rows are not duplicated |
+| Module status | ● Closed for Release 1 demo, with residuals tracked in the Release 1 gap prompt |
 
 ### Questions to close
 
@@ -1244,8 +1244,10 @@ marks its own items done without saying how is the same document that let five o
 | **G-07** | **PostgreSQL row-level security not implemented.** Site scope enforced in the application layer only. | ⛔ | ✅ **CLOSED.** `V14__row_level_security.sql` with a `sfl_app` role separate from the table owner, so migrations keep their bypass and a backfill cannot silently write nothing. `SET LOCAL app.site_scopes` per transaction, so a pooled connection never carries a stranger's scopes. Policies **fail closed** when the setting is unset. Proved by a test that opens its own connection as `sfl_app` — one running as the owner would have passed while proving nothing. ADR 0007. |
 | **G-08** | **`GET /api/v1/fleet/audit/records` returns HTTP 500** on dev PostgreSQL. | ⛔ | ✅ **CLOSED.** Nullable-enum parameter cast fixed, with regression tests. The same defect class was found and fixed in two further repositories, which now carry a comment naming it. |
 
-**Two blockers remain — G-02 (a scope decision for the Board) and G-03 (procurement).** G-27, S174's
-absent notification vendor, is the sharpest instance of G-03 and is carried in F.2 below.
+For the **Release 1 demo**, G-02 is closed by scope decision: the demo contains seven systems and excludes
+Visitor Management plus the remaining SSEMP safety/security systems. G-03 remains a production integration
+condition. G-27, S174's absent notification vendor, is accepted as a later integration with the separate
+CLET Comms system and is carried in F.2 as a deferred dependency, not a build gap.
 
 ## F.2 Workflow gaps by system
 
@@ -1258,18 +1260,19 @@ absent notification vendor, is the sharpest instance of G-03 and is carried in F
 | G-13 | S153 | Error envelope non-conforming (ad-hoc shape instead of `ApiResponse`) | M | Facilities engineering |
 | G-14 | PLAT-04 | **No platform-wide operating-mode switch.** Routine / Examination / Emergency are not audited state transitions | ⛔ | DTI Architecture |
 | G-15 | Cross | **No hall readiness gate, no examination-mode lock, no NBES interface** — Architecture BR-01 is unimplementable | ⛔ | DTI + NECC |
-| G-16 | S166 | Standalone/periodic inspection endpoint unmapped — blocks part of SRS-SFL-S166-01 | H | Fleet engineering |
-| G-17 | S166 | `POST /fleet/emergency-logistics` not built — SRS-SFL-S166-04 incomplete | H | Fleet engineering |
-| G-18 | S166 | Missing endpoints: vehicle readiness, vehicle movement, evidence search, inbox search, compliance report. **Dead-letter replay is not operable from the dashboard** | H | Fleet engineering |
+| ~~G-16~~ | S166 | ✅ **CLOSED.** Standalone/periodic vehicle inspection is exposed at `POST /api/v1/fleet/vehicles/{vehicleId}/inspections` and is wired into the fleet UI | — | Fleet engineering |
+| G-17 | S166 | Emergency-logistics mobilisation is deferred to the later cross-module emergency saga; do not add a standalone `/fleet/emergency-logistics` endpoint unless the SRS is amended | Deferred | Logistics Coordinator |
+| ~~G-18~~ | S166 | ✅ **CLOSED.** Vehicle readiness, movement history, evidence/audit search, inbox search, compliance report and dashboard replay paths are exposed and used by the Release 1 UI | — | Fleet engineering |
 | G-19 | S166 | Two conflicting retention vocabularies (`RetentionClass` 6 values vs `EvidenceRetentionClass` 4 values, different periods) | H | Compliance / DPO |
 | ~~G-20~~ | S168 | ✅ **CLOSED for the API, open for the UI.** `FuelCard` domain, `V21__fuel_card_registry.sql`, service and controller with assign/suspend/reinstate/cancel. **No screens** — cards are managed by API only, which is a Release 1 condition rather than a blocker | L | Frontend |
-| G-21 | S168 | Rolling daily/weekly/monthly limits stored but never evaluated; three transaction states unreachable; no read-back endpoint for reconciliation rule results or import batches; dashboard exposes 5 of the 8 required figures. Collection paging was mid-refactor at the audit snapshot — **re-verify before the session** | H | Fuel engineering |
-| G-22 | S168 | Overlapping active policies are not prevented — policy selection is non-deterministic | H | Fuel engineering |
+| G-21 | S168 | Rolling daily/monthly limits are stored on policies/cards but not yet evaluated by reconciliation; fuel card management is API-only and needs a Release 1 UI screen | H | Fuel engineering / Frontend |
+| ~~G-22~~ | S168 | ✅ **CLOSED.** Overlapping active fuel policies are refused at creation; abutting half-open periods remain valid | — | Fuel engineering |
 | G-23 | S168 | `COST_VARIANCE` (±30 %) and `REPEATED_PATTERN` (3 in 30 days) hard-coded rather than versioned policy | M | Fuel engineering |
 | G-24 | S171 | **No NBES examination dispatch-context contract** — a deployment order cannot become a manifest | ⛔ | Examination Operations |
 | G-25 | S171 | SSEMP has no receiving system for security-relevant receipt variances | H | Security Director |
 | ~~G-26~~ | S171 / S174 / S152 / S153 | ✅ **CLOSED by ADR 0006.** The three service-hosted Bootstrap dashboards are retired. Each path now serves a notice page pointing at `/ui/`. One application, one design system, one stack — 78 screens across seven modules | — | Frontend |
-| G-27 | S174 | **No notification vendor connected.** `RecordedNotificationGateway` only; no message reaches a recipient | ⛔ | Procurement |
+| G-27 | S174 | **Live notification delivery deferred.** `RecordedNotificationGateway` is sufficient for the Release 1 demo; real delivery will integrate with the separate CLET Comms system later | Deferred | Procurement / Comms integration owner |
+| G-27A | S174 | Operator actions `cancel`, `reopen` and explicit degraded-fallback routing exist in the domain model but are not exposed as controller/UI actions | H | Emergency engineering / Frontend |
 | G-28 | S174 / S162a | Fast-lane latency target undefined (SRS NFR-P1 "to be confirmed"; conflict C-09) | H | Emergency Coordinator + DTI |
 | G-29 | PLAT-03 | 🟡 **HALF CLOSED.** Facilities now has a hash-chained audit with integrity replay. **S204 integration is still absent** and audit remains per-service. A defect worth naming: the fleet chain reported `intact=false` against a real database from the first record written outside a test, and was found by reading code rather than by a failing test | H | DTI Platform |
 | G-30 | PLAT-07 | None of the seven dashboards specified in Architecture §13.13 exists; no S225 publication | H | DTI Platform |
@@ -1291,13 +1294,13 @@ absent notification vendor, is the sharpest instance of G-03 and is carried in F
 | DD-07 | **ADR 0001 and ADR 0003 both mandate a modular monolith**; the delivered architecture is five microservices, with no superseding ADR | Raise and accept an ADR recording the microservices decision |
 | DD-08 | The Architecture v1.2 REVIEWED file's internal version block still reads **"Version 1.1 — May 2026"** | Correct the document control block |
 | DD-09 | `solution.md` cites an SRS filename that does not exist on disk | Correct the reference |
-| DD-10 | `docs/api-contracts/`, `docs/event-contracts/` and `docs/runbooks/` are **empty directories** | Populate or remove |
-| DD-11 | Stale .NET-era documents describe EF Core, Razor and `admin@sfl.local`: `demo-script-s153.md`, `phase-2/3/4-*.md`, `portal-persistence-setup.md`, `development/run-spring-boot-locally.md`, `integration/vendor-adapter-guide.md` | Archive or rewrite. **`demo-script-s153.md` cannot be run as written** |
+| ~~DD-10~~ | ✅ **CLOSED.** Empty `docs/api-contracts/` and `docs/event-contracts/` were removed; `docs/runbooks/` is populated and retained | — |
+| ~~DD-11~~ | ✅ **CLOSED.** Stale .NET-era/demo build documents were moved to `docs/archive/release1-demo-cleanup-2026-08-01/`; current Spring Boot local-run guidance remains in `docs/development/run-spring-boot-locally.md` | — |
 | DD-12 | Two SRS artefacts and two architecture artefacts of differing vintage are referenced across `README.md`, `solution.md` and the REQUIREMENT DOC folder | Declare one of each authoritative |
 | DD-13 | The S174 traceability matrix names controllers and ports (`TemplateController`, `LifeSafetyEventPort`, `CctvEvidencePort`, `AccessControlLockdownPort`, …) that **do not exist as files** | Correct the matrix to match the code |
 | DD-14 | The S166 state-model document describes a 7-value inbox status enum that does not exist in code (the real one has 4 values), and states `RETURNED → DRAFT` for logbooks where the code does `RETURNED → RESUBMITTED` | Correct the documents to match the code |
 | DD-15 | Documented fleet API paths diverge from implemented controllers across dashboards, evidence, audit and integrations | Regenerate the API inventory from the code |
-| DD-16 | Three separate plan documents (`SFL_Phase1_Implementation_Workplan.md` W1–W7, `SFL_Phase1_Microservices_Build_Workflow_Plan.md` Waves 0–6, `project-workplan.md` Phases 0–7) do not reconcile, and their build orders contradict what was actually built | Retire two; keep one |
+| ~~DD-16~~ | ✅ **CLOSED.** The duplicate implementation/build workplans were archived; this workflow review/readiness pack is the current Release 1 handoff document | — |
 
 ## F.4 Refinements register
 
@@ -1489,7 +1492,7 @@ Two gate sets exist and must be read together: the Architecture document's **G1�
 | Requirements, workflows, state names, business rules, NFRs | `docs/System Mappings and SRS/SFL_SRS.docx` |
 | Lifecycles, business rules BR-01…BR-12, gates G1–G6, SOPs, dashboards, KPIs, commissioning tests CT-01…CT-10, open decisions | Cluster 9 SFL System Architecture Document v1.2 (Reviewed) |
 | Implementation status, state machines, thresholds, permission matrix, endpoints | SFL repository `services/**` source, Flyway migrations, `target/surefire-reports/*.xml` from the test run of 29 July 2026, and `frontend/sfl-operations-ui/src` |
-| Planned scope, waves, conflicts C-01…C-15, F-01…F-09, D-01…D-15 | `docs/SFL_Phase1_Implementation_Workplan.md`, `docs/SFL_Phase1_Microservices_Build_Workflow_Plan.md`, `docs/adr/**`, and the per-domain gap and final-implementation reports |
+| Release 1 scope, current build status, remaining gaps and handoff position | `docs/SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md`, `docs/adr/**`, and the per-domain traceability, operations and final-implementation reports |
 
 Where documentation and code disagreed, **code was treated as the fact** and the documentation defect logged in F.3.
 

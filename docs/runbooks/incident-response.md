@@ -24,8 +24,8 @@ SELECT occurred_at, actor_id, action, resource_type, resource_id, site_scope
 GET http://<host>:<port>/actuator/health
 ```
 
-Ports: facilities 8091, fleet-logistics 8093, safety-security 8094, emergency 8095,
-asset-visibility 8096.
+Ports: facilities 8091, safety-security 8092, fleet-logistics 8093, asset-visibility 8094,
+emergency 8095.
 
 - **Connection refused** → the process is not running. Go to §2.
 - **`DOWN` with a `db` component failure** → go to §3.
