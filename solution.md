@@ -458,6 +458,52 @@ fixed), all seven ADRs indexed from `solution.md`, `tools/` given a README becau
 **Item 6 needed no work.** CI already runs `clean test` with a comment naming the phantom-failure
 reason, and the stale surefire XML was already gone — verified before assuming, as the prompt asked.
 
+### Pass — Starting all five services at once, which had never been done
+
+The question was whether the platform launches. Four of five did. The fifth had never been started by
+anybody, and starting it found two defects that had been invisible for months because nothing had
+tried.
+
+**`sfl-safety-security-service` had no `@SpringBootApplication` class.** `spring-boot:run` failed with
+*"Unable to find a suitable main class"*. Four documents described this module as a service that
+compiles and boots — the go-live readiness pack, `README.md`, `CLAUDE.md` and the developer guide —
+and it could not start on any machine. It went unnoticed because nothing ever launched it: it has no
+tests, compose does not run it, and CI builds without launching, so a module that could not boot
+compiled green while every document asserted the opposite.
+
+**And it had no security configuration at all**, which is the more interesting half. The readiness
+pack recorded that absence under G-01 and it was never closed with the rest of the item. The
+consequence was the opposite of what "no security block" suggests: with no filter chain declared,
+Spring Security's default secured *everything* including `/actuator/health`, so the service answered
+**401 to its own probe** and `SFL_SECURITY_ENABLED` had nothing to read. A service whose liveness
+probe returns 401 is a service every orchestrator treats as dead. Both chains now match the four
+siblings, including the rule that secure is what an absent property selects.
+
+**A third defect, in a service that was working.** `sfl-facilities-service` started cleanly, applied
+its migrations and served its API correctly — and reported `503 DOWN`. It carries
+`spring-boot-starter-amqp` and defaults its event transport to `local`, so it never talks to RabbitMQ;
+but Boot registers the Rabbit health indicator on classpath presence alone, and a failing indicator
+drags the **aggregate** status down. In Kubernetes or behind a load balancer, a fully functional
+service would have been taken out of rotation. `sfl-fleet-logistics-service` already had the guard for
+exactly this; facilities was the only module with AMQP on the classpath and without it, so the fix
+existed in the repository and had never propagated.
+
+**Two dead scripts found and rewritten rather than left.** `scripts/dev/verify-local.ps1` called
+`/api/health` and `/api/version` on port 8081 — endpoints that existed only on the legacy application
+removed earlier in this pass — and reported the failure as a hard error. It now checks all five
+actuator probes and distinguishes *not running* from *answering but reporting a failed dependency*,
+because those are different problems and looked identical before. `docs/development/run-spring-boot-locally.md`
+described the same deleted application end to end and has been rewritten around the five services.
+
+**One claim of mine was wrong within the hour and is corrected.** The rewritten developer guide said
+safety-security "starts and answers its health probe, and that is all it does". It did not start at
+all. The correction is in the document with the reason, rather than quietly edited.
+
+Final state: **five services up**, each answering `/actuator/health` with `200 UP`, each serving its
+API, and the dashboard at `/ui/` returning 200 on both its index and a deep route. `CLAUDE.md` had two
+of the five ports wrong — safety-security is 8092 and asset-visibility 8094, not 8094 and 8096 — which
+is corrected there too.
+
 ---
 
 *Going forward, every new pass follows the API-First Build Recipe, references its `SRS-SFL-*` IDs, and updates the Workplan §15 backlog.*

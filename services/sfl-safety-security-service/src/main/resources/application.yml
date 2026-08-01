@@ -40,6 +40,12 @@ management:
         enabled: true
 
 sfl:
+  security:
+    # Secure unless deliberately opened, matching the other four services. This key was absent
+    # entirely, and so was any filter chain to read it — which did not leave the service open, it
+    # left Spring Security's default securing everything including /actuator/health, so the service
+    # answered 401 to its own probe. See SafetySecurityConfiguration.
+    enabled: ${SFL_SECURITY_ENABLED:true}
   service-boundary:
     schema: safety_security
     owns: "Safety and security service for S160, S160a, S161, S162, S162a and S163"

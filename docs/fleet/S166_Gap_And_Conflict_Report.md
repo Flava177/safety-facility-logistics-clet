@@ -204,11 +204,23 @@ is the one kind of documentation defect that undermines the document containing 
 
 ---
 
-## C-14 — Root `pom.xml` single-app project still compiles legacy IFIMP code *(pre-existing, untouched)*
+## C-14 — Root `pom.xml` single-app project still compiles legacy IFIMP code — **CLOSED 1 Aug 2026**
 
-`src/main/java/gh/edu/clet/sfl/ifimp/**` remains a second Spring Boot application at the repository root.
-`docs/architecture/microservices-realignment.md` designates it migration/reference material only. It is **not**
-modified by this slice and does not participate in the `services/` reactor.
+`src/main/java/gh/edu/clet/sfl/ifimp/**` was a second Spring Boot application at the repository root,
+designated migration/reference material by `docs/architecture/microservices-realignment.md` and not part of the
+`services/` reactor. **Removed** — 48 main and 2 test classes, the root `pom.xml` whose only job was to compile
+them, and `scripts/dev/run-local.ps1`.
+
+The script is why this was worse than the "reads as live code" it was recorded as. It still launched the legacy
+app, and it had been *maintained* as recently as the authentication pass — its `SFL_SECURITY_ENABLED=false` line
+carries a comment explaining that the line became load-bearing after A1. So somebody had edited this file
+believing it was live. It pointed at port 8081 and a database `sfl_java` on 5434 that appears in no compose file
+in the repository, meaning it could not have worked for weeks.
+
+Nothing in `services/` referenced the package, and `services/pom.xml` inherits from
+`spring-boot-starter-parent` directly rather than from the root pom, so the reactor was unaffected. History is
+preserved on `archive/java-migration-snapshot-2026-07-21`, `archive/pre-java-cleanup-2026-07-21` and `master`,
+all three of which are now on `origin` — until 1 August they existed only on one laptop.
 
 ---
 

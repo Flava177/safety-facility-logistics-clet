@@ -76,10 +76,33 @@ jobs:
       # `clean` deliberately, never an incremental target. Stale surefire XML from deleted test
       # classes has already produced six phantom failures for anything parsing that directory while
       # the build itself was green.
+      #
+      # `sfl-safety-security-service` is in this list even though it has no tests, and that is the
+      # point. It was omitted, so CI never compiled it — and on 1 Aug 2026 it turned out to have no
+      # @SpringBootApplication class and no security configuration, meaning it could not start at all
+      # while four documents described it as a service that boots. A module outside the build is a
+      # module nothing can tell you about. Prefer `-pl` listing every module over a shorter list.
       - name: Build and test
         working-directory: services
-        run: ../mvnw -B clean test -pl sfl-service-common,sfl-facilities-service,sfl-fleet-logistics-service,sfl-emergency-notification-service,sfl-asset-visibility-service
+        run: ../mvnw -B clean test -pl sfl-service-common,sfl-facilities-service,sfl-safety-security-service,sfl-fleet-logistics-service,sfl-emergency-notification-service,sfl-asset-visibility-service
         shell: bash
+
+      # Compiling is not starting. The two defects above survived a green build precisely because
+      # nothing ever launched the artefact, so the context is loaded here — which is what would have
+      # caught a missing main class the day it was written.
+      - name: Every service context loads
+        working-directory: services
+        shell: bash
+        run: |
+          for m in sfl-facilities-service sfl-safety-security-service sfl-fleet-logistics-service \
+                   sfl-asset-visibility-service sfl-emergency-notification-service; do
+            main=$(find "$m/src/main/java" -name '*Application.java' | head -1)
+            if [ -z "$main" ]; then
+              echo "::error::$m has no @SpringBootApplication class — it cannot start."
+              exit 1
+            fi
+            echo "  $m -> $(basename "$main")"
+          done
 
       # The check this file exists for. A green build that skipped the mandatory scenarios is not
       # evidence, so the count is asserted rather than eyeballed. Raise the threshold only with a

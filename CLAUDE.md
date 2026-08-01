@@ -32,9 +32,9 @@ across four programmes (IFIMP, SSEMP, FTLMP, AVAMP).
 services/                     Spring Boot 4.1 / Java 17, Maven multi-module
   sfl-facilities-service      IFIMP: S152 CAFM/IWMS, S153 CMMS, S159 booking. Port 8091
   sfl-fleet-logistics-service FTLMP: S166, S168 fuel, S171 dispatch. Port 8093. Serves /ui
-  sfl-safety-security-service SSEMP. Port 8094
+  sfl-safety-security-service SSEMP. Port 8092 — one class and a migration; nothing is built
+  sfl-asset-visibility-service AVAMP-Lite. Port 8094
   sfl-emergency-notification-service  S174. Port 8095
-  sfl-asset-visibility-service AVAMP-Lite. Port 8096
   sfl-service-common          Shared kernel: principal, RBAC, error and event envelopes
 frontend/sfl-operations-ui    React 19 + TypeScript + Vite. The only user interface
 ```

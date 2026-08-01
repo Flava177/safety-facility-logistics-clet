@@ -30,6 +30,20 @@ server:
   shutdown: graceful
 
 management:
+  health:
+    # Off unless a broker is deliberately in play, matching `sfl-fleet-logistics-service`.
+    #
+    # This service carries `spring-boot-starter-amqp` and defaults its event transport to `local`, so
+    # it does not talk to RabbitMQ at all in a default deployment — but Boot registers the Rabbit
+    # health indicator on classpath presence alone, and a failing indicator drags the **aggregate**
+    # status to DOWN. The result: a service that had started cleanly, applied its migrations and was
+    # serving its API correctly reported `503 DOWN`, which a Kubernetes readiness probe or a load
+    # balancer reads as "take it out of rotation".
+    #
+    # Fleet already had this line. Facilities was the only module with AMQP on the classpath and
+    # without it, which is why this surfaced the first time all five services were started together.
+    rabbit:
+      enabled: ${SFL_RABBITMQ_HEALTH_ENABLED:false}
   endpoints:
     web:
       exposure:
