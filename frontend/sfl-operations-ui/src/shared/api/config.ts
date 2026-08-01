@@ -135,18 +135,6 @@ const defaultRoles = [
 export const keycloakIssuer = readEnv('VITE_SFL_IAM_ISSUER', 'http://localhost:8080/realms/sfl');
 export const keycloakClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operations-ui');
 
-/**
- * Whether this dashboard must have a session before it will render.
- *
- * Defaults to **false**, and that is deliberate rather than lax. A service running with
- * `SFL_SECURITY_ENABLED=false` issues no tokens and has no Keycloak beside it, so demanding a
- * sign-in there produces a form that cannot succeed and locks the dashboard out of a setup that
- * works. Set this to `true` alongside a service running with security on — the two move together.
- *
- * It is a usability control, never enforcement: without a token the services answer 401 regardless.
- */
-export const authenticationRequired =
-  readEnv('VITE_SFL_AUTH_REQUIRED', 'false').toLowerCase() === 'true';
 
 /**
  * The actor, from the strongest source available.

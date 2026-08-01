@@ -3,19 +3,12 @@
 ## Running it
 
 ```powershell
-docker compose -f deploy\compose\docker-compose.microservices.yml up -d keycloak
-.\start-fleet.ps1 -WithLogin
+.\start-fleet.ps1
 ```
 
-Then `http://localhost:8093/ui/` → the sign-in page.
-
-`-WithLogin` flips **both** halves together, and they have to move together: it sets
-`SFL_SECURITY_ENABLED=true` on the service and builds the dashboard with
-`VITE_SFL_AUTH_REQUIRED=true`. Setting either alone gives you a dashboard that cannot authenticate,
-or a login form guarding a service that does not want one.
-
-Without the switch nothing changes: `.\start-fleet.ps1` runs security-off with the `X-SFL-*` headers
-and the development actor switcher, exactly as before.
+`http://localhost:8093/ui/` opens on the sign-in page. Nothing else to start — no Keycloak, no extra
+flag. Signing in decides which account's `X-SFL-*` headers the dashboard sends, and the services run
+open locally, so the whole flow is self-contained.
 
 ## The accounts
 
@@ -52,16 +45,42 @@ Every account is scoped to `CLET-HQ` except the director, command and admin, whi
 twenty-two accounts is a seeding convenience, not a security posture, and this realm must not be
 imported into any environment reachable from outside a laptop.
 
-## What signing in actually does
+## What signing in does
 
-The dashboard exchanges the email and password for a token at the realm's token endpoint, stores it
-for the tab, and sends it as `Authorization: Bearer` on every call thereafter.
+Matches the email against the seeded accounts, checks the shared password, and makes that account the
+actor for the browser session — username, display name, roles, site scopes. Those are what every API
+call carries, so **the portal that opens is the one that account's roles entitle it to**:
 
-**The roles come from the token, not from the form.** `realm_access.roles` and `site_scopes` are read
-out of the token's own claims — the same two the services read — so what the sidebar shows and what
-the service enforces come from one signed source. That is the whole reason this was built rather than
-gating the existing header-based actor behind a login screen: the headers are caller-supplied, so a
-"signed-in driver" could otherwise still assert `SFL_ADMIN` by editing storage.
+| Signing in as | Lands on |
+|---|---|
+| `fleetmanager@clet.gh` | `/ui/fleet` — Fleet operations, FTLMP sidebar |
+| `driver@clet.gh` | `/ui/me/driving` — My driving day |
+| `requester@clet.gh` | `/ui/me/requests` — My requests |
+| `technician@clet.gh` | `/ui/me/queue` — My work queue |
+| `facilitiesmanager@clet.gh` | `/ui/facilities` — Facilities dashboard |
+
+Both verified in a browser rather than asserted.
+
+**This is a development sign-in and `accounts.ts` says so in its own docblock.** No token is issued,
+nothing is verified against an identity provider, and the credentials are in the bundle served to the
+browser. That is bounded on purpose: the services run locally with `SFL_SECURITY_ENABLED=false`,
+where the actor is whatever the `X-SFL-*` headers claim, so a form here can only decide which headers
+to send. Making it look like more would be worse — a form that appears to authenticate while the
+service behind it is open.
+
+## The token-issuing path, for when it is wanted
+
+`deploy/keycloak/sfl-realm.json` carries the same twenty-two accounts with the same addresses and the
+same password, and `shared/auth/keycloak.ts` exchanges them for a real token via the realm. Both write
+the same session shape, so nothing downstream cares which signed you in. To use it, start Keycloak
+and run the service with security on:
+
+```powershell
+docker compose -f deploy\compose\docker-compose.microservices.yml up -d keycloak
+```
+
+Verified against the running realm: the fleet manager and driver receive tokens carrying their role
+and site scope, and a wrong password is refused `invalid_grant`.
 
 ## What this closed
 

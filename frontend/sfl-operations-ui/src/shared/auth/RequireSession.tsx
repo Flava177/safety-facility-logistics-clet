@@ -1,39 +1,37 @@
 import { ReactNode } from 'react';
 import { Navigate, useLocation } from 'react-router';
-import { authenticationRequired } from 'shared/api/config';
 import { isSignedIn } from './session';
 
 /**
  * Sends an unauthenticated visitor to the sign-in page.
  *
- * <h2>Why this is conditional rather than absolute</h2>
+ * <h2>Why there is no flag on this</h2>
  *
- * It refuses entry only when {@link authenticationRequired} is true, and that flag defaults to
- * **false** — which looks like the wrong default until you see what the services do.
+ * The first version made it conditional on a build-time variable, defaulting to off, on the grounds
+ * that a service running with security off issues no tokens and forcing a login page there produces
+ * a form that cannot succeed.
  *
- * A service running with `SFL_SECURITY_ENABLED=false` accepts the `X-SFL-*` headers and issues no
- * tokens; there is no Keycloak in that setup and nothing to sign in against. Forcing the login page
- * there would produce a form that cannot succeed — the realm is not running, so every attempt fails
- * with "identity provider unreachable" and the dashboard becomes unreachable with it. That is
- * exactly the shape of failure this codebase keeps finding: a control that cannot be satisfied.
+ * That reasoning was right about a Keycloak-backed form and wrong about this one. Signing in here
+ * matches an email against the seeded accounts and makes that account the actor — it depends on
+ * nothing external, so it always succeeds and the objection disappears. Leaving the flag in place
+ * meant the default run showed no login page at all, which was the whole point of building it.
  *
- * So the rule is: **the dashboard demands a session when it has been told the services demand one.**
- * `VITE_SFL_AUTH_REQUIRED=true` is set alongside a service running with security on, and the two
- * move together. `start-fleet.ps1` sets neither, which is why local header-based work is unchanged.
+ * <h2>What it is not</h2>
  *
- * This is a usability control and never the enforcement point. Bypassing it buys nothing: without a
- * token the services answer 401 to every call, and the screens behind it would be empty.
+ * Not an enforcement point, and nothing here pretends otherwise. Bypassing it buys nothing: with the
+ * services open the actor is whatever the headers claim, and with the services secure they refuse
+ * every call without a token. It decides which portal opens, not what the portal may do.
  */
 const RequireSession = ({ children }: { children: ReactNode }) => {
   const location = useLocation();
 
-  if (!authenticationRequired || isSignedIn()) {
+  if (isSignedIn()) {
     return <>{children}</>;
   }
 
   // `replace` so the back button does not bounce between a guarded route and the form, and the
-  // attempted path travels along so sign-in can return there rather than dumping everyone on the
-  // landing page.
+  // attempted path travels along so a future version can return there rather than to the landing
+  // page.
   return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
 };
 

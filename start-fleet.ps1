@@ -12,10 +12,15 @@
         http://localhost:8093/swagger-ui.html Swagger UI
         http://localhost:8093/v3/api-docs     OpenAPI JSON
 
-    Security is off in local development because this script sets SFL_SECURITY_ENABLED=false
-    explicitly. The default is now ON (A1) - an environment that forgets the variable demands a
-    token. Locally there is no sign-in step:
-    the front end sends the X-SFL-* actor headers instead.
+    The dashboard opens on its sign-in page. Sign in with a seeded account - for example
+    fleetmanager@clet.gh or driver@clet.gh, password Password@Clet1 - and the portal that opens is
+    the one that account's roles entitle it to. The full list is on the sign-in page itself and in
+    docs\frontend\SFL_Sign_In_And_Seeded_Accounts.md.
+
+    Service security stays off locally because this script sets SFL_SECURITY_ENABLED=false
+    explicitly; the default is ON since A1, so an environment that forgets the variable demands a
+    token. Signing in here decides which X-SFL-* actor headers the dashboard sends, which is what
+    the open services read.
 
 .PARAMETER SkipDb
     Do not run docker compose - use when the databases are already up.
@@ -40,8 +45,7 @@ param(
     [switch] $SkipDb,
     [switch] $SkipUiBuild,
     [switch] $RebuildUi,
-    [switch] $NoBrowser,
-    [switch] $WithLogin
+    [switch] $NoBrowser
 )
 
 $ErrorActionPreference = "Stop"
@@ -90,13 +94,6 @@ if ($SkipUiBuild) {
         npm install --no-audit --no-fund
         if ($LASTEXITCODE -ne 0) { throw "npm install failed." }
 
-        if ($WithLogin) {
-            # Vite inlines import.meta.env at build time, so the dashboard has to be built knowing
-            # whether it should demand a session. A bundle built without this shows no login page.
-            $env:VITE_SFL_AUTH_REQUIRED = "true"
-        } else {
-            $env:VITE_SFL_AUTH_REQUIRED = "false"
-        }
         npm run build
         if ($LASTEXITCODE -ne 0) {
             throw "npm run build failed. Fix the errors above, then re-run .\start-fleet.ps1."
@@ -124,24 +121,18 @@ if (Test-Path $indexHtml) {
 
 # --- 4. Service -----------------------------------------------------------------------------
 # Load-bearing since A1: absent means SECURE. Removing this line makes the service demand a token,
-# which is correct everywhere except a developer laptop with no Keycloak running.
+# which is correct everywhere except a developer laptop with no identity provider running.
 #
-# -WithLogin flips both halves together, and they have to move together: the service demands a token
-# and the dashboard shows the sign-in page. Setting either alone gives you a dashboard that cannot
-# authenticate, or a login form guarding a service that does not want one.
-if ($WithLogin) {
-    $env:SFL_SECURITY_ENABLED = "true"
-    Write-Step "Sign-in is ON - the realm must be running"
-    Write-Host "  keycloak : http://localhost:8080/realms/sfl"
-    Write-Host "  start it : docker compose -f deploy\compose\docker-compose.microservices.yml up -d keycloak"
-    Write-Host "  sign in  : fleetmanager@clet.gh / Password@Clet1"
-} else {
-    $env:SFL_SECURITY_ENABLED = "false"
-}
+# The dashboard still opens on its sign-in page: that form picks which seeded account's X-SFL-*
+# headers to send, which is exactly the identity an open service reads. Signing in is how the
+# portal is chosen, not how the service is secured.
+$env:SFL_SECURITY_ENABLED = "false"
 $env:SFL_FLEET_OPEN_BROWSER = if ($NoBrowser) { "false" } else { "true" }
 
 Write-Step "Starting the Fleet & Logistics service on http://localhost:8093"
-Write-Host "  dashboard : http://localhost:8093/ui/"
+Write-Host "  dashboard : http://localhost:8093/ui/  (opens on the sign-in page)"
+Write-Host "  sign in   : fleetmanager@clet.gh / Password@Clet1" -ForegroundColor Green
+Write-Host "  driver    : driver@clet.gh / Password@Clet1"
 Write-Host "  swagger   : http://localhost:8093/swagger-ui.html"
 Write-Host "  stop      : Ctrl+C"
 

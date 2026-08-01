@@ -124,7 +124,7 @@ const buildHeaders = (options: RequestOptions, hasJsonBody: boolean): Headers =>
     what makes sending both safe rather than merely convenient.
   */
   const session = readSession();
-  if (session) {
+  if (session?.accessToken) {
     headers.set('Authorization', `Bearer ${session.accessToken}`);
   }
   headers.set(HEADER_USER, sflActor.user);

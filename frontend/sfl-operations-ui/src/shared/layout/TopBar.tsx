@@ -1,7 +1,7 @@
 import { lazy, Suspense, useEffect, useRef, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import { fleetApiBaseUrl, sflActor } from 'shared/api/config';
-import { signOut } from 'shared/auth/keycloak';
+import { signOut } from 'shared/auth/signIn';
 import { readSession } from 'shared/auth/session';
 import { actorOverridden, devToolsEnabled } from 'shared/dev/actorOverride';
 import Button from 'shared/components/Button';
@@ -214,9 +214,9 @@ const TopBar = () => {
                     variant="outline"
                     startIcon="lock"
                     className="mt-3 w-full"
-                    onClick={async () => {
+                    onClick={() => {
                       setProfileOpen(false);
-                      await signOut();
+                      signOut();
                       // Full reload for the same reason sign-in does one: entitlement, permissions
                       // and the landing path are all resolved once at module scope.
                       window.location.assign(

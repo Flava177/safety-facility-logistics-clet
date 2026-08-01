@@ -538,15 +538,23 @@ form. And it ships its own `Button`, `Input`, `Label` and `cn`, all four of whic
 label/error/helper rhythm every other form uses. Building it on the existing kit added **zero
 dependencies** where the prompt called for six. The layout, copy and behaviour are as specified.
 
-**`-WithLogin` flips both halves together**, because they cannot move apart: the service demands a
-token and the dashboard is *built* demanding a session, since Vite inlines `import.meta.env` at build
-time. Setting either alone gives a dashboard that cannot authenticate, or a login form guarding a
-service that does not want one. Plain `.\start-fleet.ps1` is unchanged.
+**Corrected the same day, after the owner ran it.** The first version put the login behind a
+`-WithLogin` switch defaulting to **off**, reasoning that a service with security off issues no tokens
+so a Keycloak-backed form there could not succeed. The reasoning was sound and the conclusion was
+wrong: the deliverable was a login page, and the default run showed none. It also required starting
+Keycloak, which was never asked for.
 
-**The guard defaults to off, which looks wrong until you see what it prevents.** A service with
-security off issues no tokens and has no realm beside it; forcing the login page there produces a
-form that cannot succeed and locks the dashboard out of a setup that works — the same shape of
-failure as a control nobody can satisfy, which this codebase has now found four times.
+What replaced it needs nothing external. `shared/auth/accounts.ts` holds the twenty-two seeded
+accounts, `signIn.ts` matches the email and the shared password and makes that account the actor, and
+the guard is now unconditional — `.\start-fleet.ps1` alone opens on the sign-in page. Verified in a
+browser rather than asserted: `fleetmanager@clet.gh` lands on `/ui/fleet` with the FTLMP sidebar,
+`driver@clet.gh` on `/ui/me/driving` as Kwame Driver with "My work" at the top.
+
+`accounts.ts` states in its own docblock that this is a **development sign-in** — no token, nothing
+verified, credentials in the served bundle — and why that is bounded rather than sloppy: the services
+run open locally, where the actor is whatever the headers claim, so a form here can only decide which
+headers to send. The token-issuing path sits beside it in `keycloak.ts` against the same twenty-two
+accounts, for when a service runs with security on.
 
 Recorded as owed in `docs/frontend/SFL_Sign_In_And_Seeded_Accounts.md`: the resource-owner password
 grant is deprecated for public clients and cannot support multi-factor, step-up or an external IdP,
