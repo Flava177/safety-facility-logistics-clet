@@ -28,6 +28,7 @@ import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatOdometer } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageVehicles } from '../api/access';
 
 interface Filters {
   siteCode: string;
@@ -179,9 +180,13 @@ const VehicleRegisterPage = () => {
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button variant="accent" startIcon="plus" onClick={() => setRegisterOpen(true)}>
-              Register vehicle
-            </Button>
+            {/* Hidden, not disabled: a driver will never hold FLEET_VEHICLE_MANAGE, and a
+                permanently greyed control is a question they cannot answer. */}
+            {canManageVehicles() && (
+              <Button variant="accent" startIcon="plus" onClick={() => setRegisterOpen(true)}>
+                Register vehicle
+              </Button>
+            )}
           </>
         }
       />

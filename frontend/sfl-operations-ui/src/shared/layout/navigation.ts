@@ -542,6 +542,9 @@ export const navSections: NavSection[] = [
         icon: 'route',
         matchPrefix: fleetPaths.trips,
         description: 'Plan, assign, start and close movements',
+        // Enforced by TripApplicationService. A driver holds this and sees the register; planning,
+        // assigning and closing are separate permissions the page gates its controls on.
+        permission: 'FLEET_TRIP_READ',
       },
       {
         label: 'Workflow queue',
@@ -549,6 +552,10 @@ export const navSections: NavSection[] = [
         icon: 'workflow',
         matchPrefix: fleetPaths.workflow,
         description: 'Inspections, defects and escalations',
+        // A driver does NOT hold this. The queue is the supervisor's view of inspections, defects
+        // and escalations across the fleet; a driver records an inspection against their own trip
+        // and has no business reading everybody else's defects.
+        permission: 'FLEET_WORKFLOW_READ',
       },
     ],
   },
@@ -563,6 +570,10 @@ export const navSections: NavSection[] = [
         icon: 'truck',
         matchPrefix: fleetPaths.vehicles,
         description: 'Fleet inventory and readiness',
+        // A driver holds this: they need to look up the vehicle they are taking out. Registering,
+        // editing and retiring one are FLEET_VEHICLE_MANAGE, which they do not hold — the page
+        // hides those controls rather than offering a button the service refuses.
+        permission: 'FLEET_VEHICLE_READ',
       },
       {
         label: 'Driver register',
@@ -570,6 +581,10 @@ export const navSections: NavSection[] = [
         icon: 'driver',
         matchPrefix: fleetPaths.drivers,
         description: 'Licence standing and eligibility',
+        // A driver does NOT hold FLEET_DRIVER_READ. The register carries licence numbers, medical
+        // clearance dates and eligibility standing for every colleague, which is personnel data —
+        // being a driver is not a reason to read other drivers' records.
+        permission: 'FLEET_DRIVER_READ',
       },
     ],
   },
@@ -583,12 +598,18 @@ export const navSections: NavSection[] = [
         to: fleetPaths.compliance,
         icon: 'shield-check',
         description: 'Documents, servicing and expiry',
+        // Enforced by the compliance and service-record endpoints. A driver holds neither.
+        permission: 'FLEET_COMPLIANCE_MANAGE',
       },
       {
         label: 'Evidence & audit',
         to: fleetPaths.governance,
         icon: 'document',
         description: 'Closure evidence and audit trail',
+        // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second — they attach
+        // evidence to their own trip closure — and that is deliberately not a licence to read the
+        // fleet's evidence library or replay the audit chain.
+        permission: 'FLEET_EVIDENCE_READ',
       },
       {
         label: 'Integration health',
@@ -619,6 +640,11 @@ export const navSections: NavSection[] = [
         icon: 'coins',
         matchPrefix: fuelPaths.transactions,
         description: 'Captured, imported and provider transactions',
+        // A driver holds this and the service does **not** narrow transactions per driver, so they
+        // see every fill at their site. That is a real gap, not a decision: it is recorded in
+        // `S168_Fuel_UI_Gap_Report.md` and the driver's own page labels the panel "recorded at this
+        // site" rather than "mine" so the screen never claims otherwise.
+        permission: 'FUEL_TRANSACTION_READ',
       },
       {
         label: 'Driver logbooks',
@@ -626,12 +652,16 @@ export const navSections: NavSection[] = [
         icon: 'book',
         matchPrefix: fuelPaths.logbooks,
         description: 'Journey records through review to approval',
+        // Narrowed per record in SQL by FuelApplicationService.logbooks on created_by, so a driver
+        // holding this genuinely sees only their own.
+        permission: 'FUEL_LOGBOOK_READ',
       },
       {
         label: 'Reconciliation',
         to: fuelPaths.reconciliation,
         icon: 'scale',
         description: 'Run the policy rules and read the outcome',
+        permission: 'FUEL_RECONCILIATION_RUN',
       },
       {
         label: 'Anomaly cases',
@@ -639,12 +669,14 @@ export const navSections: NavSection[] = [
         icon: 'alert-triangle',
         matchPrefix: fuelPaths.anomalies,
         description: 'Exception queue, explanation and closure',
+        permission: 'FUEL_ANOMALY_READ',
       },
       {
         label: 'CSV imports',
         to: fuelPaths.imports,
         icon: 'upload',
         description: 'Bulk capture with row-level outcomes',
+        permission: 'FUEL_TRANSACTION_IMPORT',
       },
       {
         label: 'Fuel policies',
@@ -652,12 +684,16 @@ export const navSections: NavSection[] = [
         icon: 'shield-check',
         matchPrefix: fuelPaths.policies,
         description: 'Effective-dated limits the rules are read from',
+        // The limits every reconciliation is judged against. A driver being judged by them is not a
+        // reason to let them read — still less edit — the thresholds.
+        permission: 'FUEL_POLICY_READ',
       },
       {
         label: 'Provider integration',
         to: fuelPaths.integrations,
         icon: 'cloud',
         description: 'Provider ingest and outbound publication',
+        permission: 'FUEL_INTEGRATION_REPLAY',
       },
     ],
   },
@@ -680,6 +716,7 @@ export const navSections: NavSection[] = [
         icon: 'package',
         matchPrefix: dispatchPaths.items,
         description: 'Every tracked item, inbound and outbound',
+        permission: 'DISPATCH_ITEM_READ',
       },
       {
         label: 'Manifests',
@@ -687,12 +724,14 @@ export const navSections: NavSection[] = [
         icon: 'clipboard-list',
         matchPrefix: dispatchPaths.manifests,
         description: 'Seals, custody, receipt and the return leg',
+        permission: 'DISPATCH_MANIFEST_READ',
       },
       {
         label: 'Inbound mail',
         to: dispatchPaths.inbound,
         icon: 'inbox',
         description: 'Registration and acknowledged distribution',
+        permission: 'DISPATCH_ITEM_READ',
       },
       {
         label: 'Exception cases',
@@ -700,18 +739,21 @@ export const navSections: NavSection[] = [
         icon: 'alert-triangle',
         matchPrefix: dispatchPaths.exceptions,
         description: 'Custody gaps, variances and discrepancies',
+        permission: 'DISPATCH_EXCEPTION_READ',
       },
       {
         label: 'Scan imports',
         to: dispatchPaths.scans,
         icon: 'upload',
         description: 'Scanner batches and per-row outcomes',
+        permission: 'DISPATCH_MANIFEST_READ',
       },
       {
         label: 'Scanner integration',
         to: dispatchPaths.integrations,
         icon: 'cloud',
         description: 'Scanner and carrier feeds, outbound publication',
+        permission: 'DISPATCH_INTEGRATION_REPLAY',
       },
     ],
   },
@@ -737,12 +779,17 @@ export const navSections: NavSection[] = [
         icon: 'megaphone',
         matchPrefix: emergencyPaths.activations,
         description: 'Compose, approve, send, stand down and close',
+        permission: 'EMERGENCY_ACTIVATION_READ',
       },
       {
         label: 'Break glass',
         to: emergencyPaths.breakGlass,
         icon: 'zap',
         description: 'Declared-emergency send with no approval',
+        // The one screen in the platform that sends without approval. It is offered only to an
+        // actor who may actually press it — a break-glass page somebody cannot use is worse than
+        // absent, because in a declared emergency they will try.
+        permission: 'EMERGENCY_BREAK_GLASS_SEND',
       },
       {
         label: 'Templates & scenarios',
@@ -750,24 +797,28 @@ export const navSections: NavSection[] = [
         icon: 'document',
         matchPrefix: emergencyPaths.templates,
         description: 'What a broadcast says, and what cites it',
+        permission: 'EMERGENCY_TEMPLATE_READ',
       },
       {
         label: 'Audiences & zones',
         to: emergencyPaths.audiences,
         icon: 'users',
         description: 'Who a broadcast reaches, and where',
+        permission: 'EMERGENCY_AUDIENCE_READ',
       },
       {
         label: 'Drills',
         to: emergencyPaths.drills,
         icon: 'target',
         description: 'Rehearsals and notification performance',
+        permission: 'EMERGENCY_REPORT_READ',
       },
       {
         label: 'Provider integration',
         to: emergencyPaths.integrations,
         icon: 'cloud',
         description: 'Outbound publication and the callback path',
+        permission: 'EMERGENCY_INTEGRATION_REPLAY',
       },
     ],
   },

@@ -19,6 +19,7 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDateTime, fromLocalInputValue } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageTrips } from '../api/access';
 
 interface Filters {
   siteCode: string;
@@ -131,9 +132,12 @@ const TripQueuePage = () => {
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button variant="accent" startIcon="plus" onClick={() => setCreateOpen(true)}>
-              Plan a trip
-            </Button>
+            {/* A driver reads the register and plans nothing. Planning is FLEET_TRIP_MANAGE. */}
+            {canManageTrips() && (
+              <Button variant="accent" startIcon="plus" onClick={() => setCreateOpen(true)}>
+                Plan a trip
+              </Button>
+            )}
           </>
         }
       />

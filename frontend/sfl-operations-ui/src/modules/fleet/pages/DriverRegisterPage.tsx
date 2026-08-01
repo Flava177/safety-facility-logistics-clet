@@ -25,6 +25,7 @@ import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDate, formatDaysRemaining } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageDrivers } from '../api/access';
 
 interface Filters {
   siteCode: string;
@@ -178,9 +179,13 @@ const DriverRegisterPage = () => {
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
-            <Button variant="accent" startIcon="user-plus" onClick={() => setRegisterOpen(true)}>
-              Register driver
-            </Button>
+            {/* FLEET_DRIVER_MANAGE is a personnel function, not "am I a driver". A driver
+                registering themselves is precisely what this gate prevents. */}
+            {canManageDrivers() && (
+              <Button variant="accent" startIcon="user-plus" onClick={() => setRegisterOpen(true)}>
+                Register driver
+              </Button>
+            )}
           </>
         }
       />
