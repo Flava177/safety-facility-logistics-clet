@@ -126,16 +126,22 @@ const DriverDayPage = () => {
       </section>
 
       <section className="space-y-3">
-        <h2 className="text-lg font-semibold text-slate-800">Fuel recorded at this site</h2>
+        <h2 className="text-lg font-semibold text-slate-800">My fuel</h2>
+        {/*
+          This said "Not filtered to you… this is every fill recorded at {site}", which was accurate
+          and is no longer: S168 now narrows fuel transactions to the signed-in driver, server-side.
+          The caption is replaced rather than deleted because a list that used to be site-wide and is
+          now personal looks like missing data to whoever was reading it yesterday.
+        */}
         <p className="text-sm text-slate-600">
-          Not filtered to you. The service does not narrow fuel transactions per driver, so this is
-          every fill recorded at {site}.
+          Fills recorded against you at {site}.
         </p>
         <DataState
           loading={transactions.loading}
           error={transactions.error}
           empty={(transactions.data?.content ?? []).length === 0}
-          emptyTitle="No fuel recorded at this site"
+          emptyTitle="No fuel recorded against you"
+          emptyHint="Fills matched to you by the fuel provider feed appear here."
           onRetry={transactions.refetch}
         >
           <DataTable

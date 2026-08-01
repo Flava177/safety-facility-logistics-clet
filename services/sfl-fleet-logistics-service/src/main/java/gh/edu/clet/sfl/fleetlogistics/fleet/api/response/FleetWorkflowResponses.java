@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionResult;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowAction;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowPriority;
@@ -43,6 +44,15 @@ public final class FleetWorkflowResponses {
             Long startOdometer,
             Long endOdometer,
             Long distanceCovered,
+            /*
+              The assigned driver's answer, alongside status rather than folded into it. A dispatcher
+              looking at a list of assigned trips needs to see which are unanswered, and a status field
+              that could say either "assigned" or "confirmed" cannot show both facts at once.
+            */
+            TripAcknowledgementState acknowledgementState,
+            String acknowledgementReason,
+            Instant acknowledgedAt,
+            String acknowledgedBy,
             String createdBy,
             Instant createdAt,
             String lastModifiedBy,

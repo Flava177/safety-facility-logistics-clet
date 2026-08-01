@@ -36,6 +36,7 @@ public class FleetAssessmentMapper {
                 driver.lifecycleStatus(),
                 driver.eligibilityStatus(),
                 driver.suspensionReason(),
+                driver.isBound(),
                 driver.metadata().createdBy(),
                 driver.metadata().createdAt(),
                 driver.metadata().lastModifiedBy(),

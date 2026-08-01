@@ -6,6 +6,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgement;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -88,6 +90,20 @@ public class TripEntity {
     @Column(name = "end_odometer")
     private Long endOdometer;
 
+    /** The assigned driver's answer. Independent of {@link #status} — see TripAcknowledgementState. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "acknowledgement_state", nullable = false, length = 20)
+    private TripAcknowledgementState acknowledgementState;
+
+    @Column(name = "acknowledgement_reason", length = 1000)
+    private String acknowledgementReason;
+
+    @Column(name = "acknowledged_at")
+    private Instant acknowledgedAt;
+
+    @Column(name = "acknowledged_by", length = 160)
+    private String acknowledgedBy;
+
     @Column(name = "created_by", nullable = false, length = 160)
     private String createdBy;
 
@@ -142,6 +158,10 @@ public class TripEntity {
         this.closureEvidenceId = trip.closureEvidenceId();
         this.startOdometer = trip.startOdometer();
         this.endOdometer = trip.endOdometer();
+        this.acknowledgementState = trip.acknowledgement().state();
+        this.acknowledgementReason = trip.acknowledgement().reason();
+        this.acknowledgedAt = trip.acknowledgement().answeredAt();
+        this.acknowledgedBy = trip.acknowledgement().answeredBy();
         this.createdBy = trip.metadata().createdBy();
         this.createdAt = trip.metadata().createdAt();
         this.lastModifiedBy = trip.metadata().lastModifiedBy();
@@ -155,6 +175,9 @@ public class TripEntity {
                 operatingMode, DateTimeRange.of(plannedStart, plannedEnd), actualStart, actualEnd, status,
                 statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer,
                 endOdometer,
+                new TripAcknowledgement(
+                        acknowledgementState == null ? TripAcknowledgementState.PENDING : acknowledgementState,
+                        acknowledgementReason, acknowledgedAt, acknowledgedBy),
                 RecordMetadata.rehydrate(createdBy, createdAt, lastModifiedBy, lastModifiedAt, version,
                         sourceChannel, auditCorrelationId));
     }

@@ -722,8 +722,12 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
         var stale = dashboard.operations(filter, manager(site), false);
 
         assertThat(stale.stale()).isTrue();
+        // The flag is the signal; the sentence is not. Staleness was also pushed into `warnings`, which
+        // put a permanent amber banner on every environment whose data does not change hourly — so the
+        // dashboard showed a warning nobody read, on every screen, including on the day it mattered.
+        // Asserted absent rather than merely dropped, so the sentence cannot quietly return.
         assertThat(stale.warnings())
-                .contains(FleetErrorCode.FLEET_DASHBOARD_DATA_STALE.message());
+                .doesNotContain(FleetErrorCode.FLEET_DASHBOARD_DATA_STALE.message());
 
         // Stale data is surfaced, not silently served, when the caller demands freshness.
         assertThatThrownBy(() -> dashboard.operations(filter, manager(site), true))
@@ -748,7 +752,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
         String reference = "CLET/HR/" + SEQUENCE.incrementAndGet();
         return drivers.register(new RegisterDriverCommand(reference, "Kwame Mensah",
                 "GHA-DL-" + SEQUENCE.incrementAndGet(), LicenceClass.D, licenceExpiry, today().plusYears(1),
-                site, "Transportation & Logistics Unit", officer(site), SourceChannel.WEB, uniqueKey()));
+                site, "Transportation & Logistics Unit", reference, officer(site), SourceChannel.WEB, uniqueKey()));
     }
 
     private Trip createTrip(Vehicle vehicle, DriverProfileReference driver, String site, Instant start,

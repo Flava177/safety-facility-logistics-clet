@@ -23,6 +23,9 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOver
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.DriverScope;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.DriverScopeResolver;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
@@ -55,7 +58,9 @@ public class FuelApplicationService {
     private final FuelRepository repository; private final FuelFleetReferencePort fleet; private final FuelAccessPolicy access;
     private final AuditPort audit; private final IntegrationEventPublisher events; private final IdempotencyPort idempotency; private final Clock clock;
     private final NotificationPort notifications; private final FinanceAuditVisibilityPort financeAudit; private final FuelOutboxAdminPort outboxAdmin;
-    public FuelApplicationService(FuelRepository r,FuelFleetReferencePort f,FuelAccessPolicy a,AuditPort audit,IntegrationEventPublisher e,IdempotencyPort i,Clock c,NotificationPort n,FinanceAuditVisibilityPort fa,FuelOutboxAdminPort ox){repository=r;fleet=f;access=a;this.audit=audit;events=e;idempotency=i;clock=c;notifications=n;financeAudit=fa;outboxAdmin=ox;}
+    /** Resolves which driver a signed-in person is. Shared with S166 so both modules agree on the answer. */
+    private final DriverScopeResolver driverScopes;
+    public FuelApplicationService(FuelRepository r,FuelFleetReferencePort f,FuelAccessPolicy a,AuditPort audit,IntegrationEventPublisher e,IdempotencyPort i,Clock c,NotificationPort n,FinanceAuditVisibilityPort fa,FuelOutboxAdminPort ox,DriverScopeResolver ds){repository=r;fleet=f;access=a;this.audit=audit;events=e;idempotency=i;clock=c;notifications=n;financeAudit=fa;outboxAdmin=ox;driverScopes=ds;}
 
     public FuelOutboxAdminPort.OutboxHealth integrationHealth(ActorContext actor){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");return outboxAdmin.health();}
     @Transactional public boolean replayIntegration(UUID messageId,ActorContext actor,SourceChannel channel){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");boolean requeued=outboxAdmin.replay(messageId);audit.record(actor,channel,SiteCode.of("SYSTEM"),AuditAction.INTEGRATION_REPLAYED,"FuelOutboxMessage",messageId.toString(),null,Map.of("requeued",requeued));return requeued;}
@@ -139,14 +144,64 @@ public class FuelApplicationService {
     private static Map<String,String> anomalyContext(FuelAnomalyCase a){Map<String,String> m=new LinkedHashMap<>();m.put("anomalyNumber",a.anomalyNumber());m.put("type",a.type().name());m.put("severity",a.severity().name());m.put("status",a.status().name());m.put("material",Boolean.toString(a.material()));if(a.transactionId()!=null)m.put("transactionId",a.transactionId().toString());if(a.vehicleId()!=null)m.put("vehicleId",a.vehicleId().toString());if(a.driverId()!=null)m.put("driverId",a.driverId().toString());if(a.metadata().auditCorrelationId()!=null)m.put("correlationId",a.metadata().auditCorrelationId());return m;}
 
     @Transactional public FuelTransaction voidTransaction(UUID id,String reason,ActorContext actor,SourceChannel channel){var before=transaction(id,actor);access.require(actor,SflPermission.FUEL_TRANSACTION_VOID,before.siteCode().value(),"FuelTransaction",id.toString());var after=repository.saveTransaction(before.voided(reason,before.metadata().modifiedBy(actor.actorId(),clock.instant(),channel,actor.correlationId())));audit.record(actor,channel,after.siteCode(),AuditAction.CANCEL,"FuelTransaction",id.toString(),before,after);return after;}
-    public FuelTransaction transaction(UUID id,ActorContext actor){var t=repository.findTransaction(id).orElseThrow(()->RecordNotFoundException.of("FuelTransaction",id));access.require(actor,SflPermission.FUEL_TRANSACTION_READ,t.siteCode().value(),"FuelTransaction",id.toString());return t;}
+    /**
+     * One fuel transaction.
+     *
+     * <p>The per-driver check was missing here while the list had none either, so a driver holding any
+     * transaction id read it: vehicle, site, litres, cost, card and vendor. Narrowed on {@code driverId}
+     * — the transaction's own field — rather than on {@code createdBy} as logbooks are, because these
+     * records are written by the provider feed and nobody's {@code createdBy} is a driver.
+     */
+    public FuelTransaction transaction(UUID id,ActorContext actor){
+        var t=repository.findTransaction(id).orElseThrow(()->RecordNotFoundException.of("FuelTransaction",id));
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,t.siteCode().value(),"FuelTransaction",id.toString());
+        requireOwnFuelRecord(actor,t.driverId(),t.siteCode().value(),"FuelTransaction",id.toString());
+        return t;
+    }
+
+    /**
+     * Refuses a driver-only actor a fuel record belonging to another driver.
+     *
+     * <p>An unbound driver is refused everything rather than allowed everything — the same fail-closed
+     * choice the trip list makes. A record with no driver at all is also refused to them: an
+     * unattributed fuel transaction is not theirs, and treating "no owner" as "anyone's" is how the
+     * narrowing leaks in exactly the cases worth investigating.
+     */
+    private void requireOwnFuelRecord(ActorContext actor,UUID recordDriverId,String site,String resource,String id){
+        if(!access.isDriverOnly(actor))return;
+        var scope=driverScopes.resolve(actor,true);
+        if(scope instanceof DriverScope.Own own&&own.driverId().equals(recordDriverId))return;
+        Map<String,Object> details=new LinkedHashMap<>();
+        details.put("reason",scope instanceof DriverScope.Nothing nothing?nothing.reason()
+                :"A driver may see only their own "+resource+" records");
+        details.put("siteCode",site);
+        details.put("resourceType",resource);
+        if(id!=null&&!id.isBlank())details.put("resourceId",id);
+        throw new FleetAuthorizationException(details);
+    }
     public DriverLogbook logbook(UUID id,ActorContext actor){var l=repository.findLogbook(id).orElseThrow(()->RecordNotFoundException.of("DriverLogbook",id));access.require(actor,SflPermission.FUEL_LOGBOOK_READ,l.siteCode().value(),"DriverLogbook",id.toString());access.requireOwnRecord(actor,l.metadata().createdBy(),l.siteCode().value(),"DriverLogbook",id.toString());return l;}
     public FuelAnomalyCase anomaly(UUID id,ActorContext actor){var a=repository.findAnomaly(id).orElseThrow(()->RecordNotFoundException.of("FuelAnomalyCase",id));access.require(actor,SflPermission.FUEL_ANOMALY_READ,a.siteCode().value(),"FuelAnomalyCase",id.toString());return a;}
     /* ---------------------------------------------------------------------------- paged reads */
 
+    /**
+     * The fuel transaction list, narrowed to the actor's own when they are a driver.
+     *
+     * <p>It had no narrowing at all: a driver's fuel screen was every transaction at their site, which
+     * is every colleague's fuel spend, card and vehicle. The driver filter is <strong>overridden</strong>
+     * rather than merged with the caller's, so passing {@code ?driverId=} somebody else returns your
+     * own records and not theirs.
+     */
     public FuelRepository.FuelPage<FuelTransaction> transactions(String site,FuelTransaction.Status status,UUID vehicle,UUID driver,String source,String vendor,Instant from,Instant to,FuelRepository.Paging paging,ActorContext actor){
         access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelTransaction",null);
-        return repository.findTransactions(new FuelRepository.TransactionQuery(List.of(SiteCode.of(site).value()),site,status,vehicle,driver,source,vendor,from,to,paging));
+        UUID effectiveDriver=driver;
+        if(access.isDriverOnly(actor)){
+            var scope=driverScopes.resolve(actor,true);
+            // An unbound driver sees nothing. Answered without touching the database, because there is
+            // no driver id that would produce an honest empty page — null would produce every row.
+            if(!(scope instanceof DriverScope.Own own))return new FuelRepository.FuelPage<FuelTransaction>(List.of(),paging.page(),paging.size(),0L,0,paging.sort());
+            effectiveDriver=own.driverId();
+        }
+        return repository.findTransactions(new FuelRepository.TransactionQuery(List.of(SiteCode.of(site).value()),site,status,vehicle,effectiveDriver,source,vendor,from,to,paging));
     }
 
     /**

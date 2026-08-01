@@ -36,6 +36,17 @@ export interface PageResponse<T> {
   first: boolean;
   last: boolean;
   sort: string | null;
+  /**
+   * Why the server returned less than the caller asked for, when it did.
+   *
+   * Set on lists the service narrowed on the caller's behalf — a driver's trip list is their own
+   * trips, not their site's. Absent on every unnarrowed list.
+   *
+   * Surface it. A narrowing the user cannot see is one they report as missing data, and the reason
+   * has to come from the server: a client that infers it from the roles it holds will eventually
+   * infer it differently from the service that applied it.
+   */
+  scopeNotice?: string | null;
 }
 
 export const emptyPage = <T>(size = 20): PageResponse<T> => ({
@@ -47,6 +58,7 @@ export const emptyPage = <T>(size = 20): PageResponse<T> => ({
   first: true,
   last: true,
   sort: null,
+  scopeNotice: null,
 });
 
 /** Query parameter bag accepted by the client; `undefined`/`null` entries are dropped. */

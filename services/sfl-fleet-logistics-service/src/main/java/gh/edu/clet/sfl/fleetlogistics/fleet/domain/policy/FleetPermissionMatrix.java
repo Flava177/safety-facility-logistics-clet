@@ -125,10 +125,22 @@ public final class FleetPermissionMatrix {
                 SflPermission.FLEET_DASHBOARD_READ,
                 SflPermission.FLEET_DASHBOARD_DRILLDOWN));
 
-        // Driver / limited mobile user: sees the work assigned to them and records inspections.
+        /*
+          Driver / limited mobile user: sees the work assigned to them and records inspections.
+
+          FLEET_TRIP_ACKNOWLEDGE is their only write against the trip register, and it is narrow by
+          construction — it answers for one trip, the one assigned to them, and the record check in
+          TripApplicationService.acknowledge enforces that. Note what is still absent: no
+          FLEET_TRIP_MANAGE, so a driver cannot create a trip, start one, hold one or close one; no
+          FLEET_TRIP_ASSIGN, so they cannot assign a trip to themselves or anybody else; no
+          FLEET_DRIVER_MANAGE, so they cannot register a driver, including themselves; no
+          FLEET_VEHICLE_MANAGE, so the vehicle register is readable and not writable.
+        */
         matrix.put(SflRole.FLEET_DRIVER, EnumSet.of(
                 SflPermission.FLEET_VEHICLE_READ,
+                SflPermission.FLEET_DRIVER_READ,
                 SflPermission.FLEET_TRIP_READ,
+                SflPermission.FLEET_TRIP_ACKNOWLEDGE,
                 SflPermission.FLEET_INSPECTION_RECORD,
                 SflPermission.FLEET_EVIDENCE_REGISTER));
 

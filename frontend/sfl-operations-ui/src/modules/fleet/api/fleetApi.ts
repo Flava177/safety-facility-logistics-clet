@@ -1,6 +1,7 @@
 import { apiClient } from 'shared/api/client';
 import { PageResponse, QueryParams } from 'shared/api/types';
 import {
+  AcknowledgeTripRequest,
   AssignTripRequest,
   AssignmentPreviewParams,
   AuditChainVerificationResponse,
@@ -200,6 +201,15 @@ export const tripsApi = {
 
   start: (tripId: string, body: StartTripRequest) =>
     apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/start`, body),
+
+  /**
+   * The assigned driver confirms or defers (SRS-SFL-S166-02).
+   *
+   * Refused unless the signed-in identity is bound to the driver on the trip — a driver may answer
+   * for their own assignment and nobody else's, and a supervisor may not answer on their behalf.
+   */
+  acknowledge: (tripId: string, body: AcknowledgeTripRequest) =>
+    apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/acknowledgement`, body),
 
   holdOrResume: (tripId: string, body: HoldTripRequest) =>
     apiClient.patch<TripResponse>(`${BASE}/trips/${tripId}/hold`, body),

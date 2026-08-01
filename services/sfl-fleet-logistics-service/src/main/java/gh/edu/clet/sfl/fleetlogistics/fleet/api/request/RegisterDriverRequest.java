@@ -15,5 +15,13 @@ public record RegisterDriverRequest(
         @NotNull LocalDate licenceExpiresOn,
         LocalDate medicalClearanceExpiresOn,
         @NotBlank @Size(max = 40) String siteCode,
-        @NotBlank @Size(max = 160) String responsibleUnit) {
+        @NotBlank @Size(max = 160) String responsibleUnit,
+        /**
+         * The sign-in this driver profile belongs to. Optional.
+         *
+         * <p>Most driver references are for people who never open SFL, so this is usually absent. When
+         * it is absent the profile is assignable and its holder sees no trips of their own — bind it
+         * later through {@code PATCH /api/v1/fleet/drivers/{driverId}/principal}.
+         */
+        @Size(max = 160) String principalSubject) {
 }

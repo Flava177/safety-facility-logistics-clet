@@ -3,11 +3,13 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.api;
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.mapper.FleetAssessmentMapper;
+import gh.edu.clet.sfl.fleetlogistics.fleet.api.request.BindDriverPrincipalRequest;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.request.RegisterDriverRequest;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.request.UpdateDriverRequest;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.DriverResponse;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.EligibilityResponse;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.PageResponse;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.BindDriverPrincipalCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RegisterDriverCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.UpdateDriverCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.DriverProfileRepository;
@@ -63,13 +65,32 @@ class DriverController {
         DriverProfileReference driver = driverService.register(new RegisterDriverCommand(
                 request.staffReference(), request.displayName(), request.licenceNumber(), request.licenceClass(),
                 request.licenceExpiresOn(), request.medicalClearanceExpiresOn(), request.siteCode(),
-                request.responsibleUnit(), actor, actorResolver.resolveSourceChannel(httpRequest),
+                request.responsibleUnit(), request.principalSubject(), actor,
+                actorResolver.resolveSourceChannel(httpRequest),
                 actorResolver.resolveIdempotencyKey(httpRequest)));
 
         return ResponseEntity
                 .created(URI.create("/api/v1/fleet/drivers/" + driver.id()))
                 .body(ApiResponse.ok(mapper.toResponse(driver, driverQueries.canReadSensitive(actor),
                         clock.instant())));
+    }
+
+    /**
+     * Links this driver profile to the sign-in that belongs to it, or unlinks it with a null subject.
+     *
+     * <p>The binding is what lets a driver see their own trips and confirm them; without it their
+     * list is empty. Separate from the profile update because it is a different authority — see
+     * {@code DriverApplicationService.bindPrincipal}.
+     */
+    @PatchMapping("/{driverId}/principal")
+    ApiResponse<DriverResponse> bindPrincipal(@PathVariable UUID driverId,
+            @Valid @RequestBody BindDriverPrincipalRequest request, HttpServletRequest httpRequest) {
+        ActorContext actor = actorResolver.resolve(httpRequest);
+        DriverProfileReference driver = driverService.bindPrincipal(new BindDriverPrincipalCommand(driverId,
+                request.principalSubject(), request.expectedVersion(), actor,
+                actorResolver.resolveSourceChannel(httpRequest)));
+
+        return ApiResponse.ok(mapper.toResponse(driver, driverQueries.canReadSensitive(actor), clock.instant()));
     }
 
     @GetMapping

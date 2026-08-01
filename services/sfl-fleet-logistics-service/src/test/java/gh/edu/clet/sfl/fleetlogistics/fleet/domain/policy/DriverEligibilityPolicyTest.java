@@ -205,6 +205,7 @@ class DriverEligibilityPolicyTest {
                 medicalClearanceExpiry,
                 site,
                 "Transportation & Logistics Unit",
+                "CLET/HR/00123",
                 metadata());
     }
 }

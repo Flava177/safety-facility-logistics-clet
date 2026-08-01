@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.assetvisibility.infrastructure.persistence;
 
 import java.util.List;
+import java.util.Set;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -14,6 +15,8 @@ interface JpaAssetReferenceRepository extends JpaRepository<AssetReferenceRecord
     List<AssetReferenceRecord> findBySiteCodeOrderByAssetCodeAsc(String siteCode);
 
     List<AssetReferenceRecord> findAllByOrderBySiteCodeAscAssetCodeAsc();
+
+    List<AssetReferenceRecord> findBySiteCodeInOrderBySiteCodeAscAssetCodeAsc(Set<String> siteCodes);
 
     List<AssetReferenceRecord> findBySiteCodeAndLocationTypeAndLocationReferenceOrderByAssetCodeAsc(
             String siteCode, LocationType locationType, String locationReference);

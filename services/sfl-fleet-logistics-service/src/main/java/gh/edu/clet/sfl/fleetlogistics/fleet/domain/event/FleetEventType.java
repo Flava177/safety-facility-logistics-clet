@@ -26,6 +26,15 @@ public enum FleetEventType {
     DRIVER_ELIGIBILITY_CHANGED("sfl.ftlmp.driver-eligibility-changed.v1", "DriverProfileReference"),
     VEHICLE_ASSIGNED("sfl.ftlmp.vehicle-assigned.v1", "Trip"),
     TRIP_REASSIGNED("sfl.ftlmp.trip-reassigned.v1", "Trip"),
+    TRIP_ACKNOWLEDGED("sfl.ftlmp.trip-acknowledged.v1", "Trip"),
+    /**
+     * A driver cannot take an assigned trip as scheduled.
+     *
+     * <p>Published separately from {@code TRIP_ACKNOWLEDGED} because it is the one a dispatcher must
+     * act on. A single event carrying a state field would put "all is well" and "this vehicle may not
+     * go out" on the same subscription, and whoever subscribed would have to filter correctly forever.
+     */
+    TRIP_DEFERRED("sfl.ftlmp.trip-deferred.v1", "Trip"),
     TRIP_CANCELLED("sfl.ftlmp.trip-cancelled.v1", "Trip"),
     TRIP_COMPLETED("sfl.ftlmp.trip-completed.v1", "Trip"),
     VEHICLE_INSPECTION_FAILED("sfl.ftlmp.vehicle-inspection-failed.v1", "VehicleInspection"),

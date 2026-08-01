@@ -394,7 +394,7 @@ class DispatchMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
                 f.manager(), SourceChannel.WEB, "vehicle-" + f.site()));
         var driver = driverService.register(new RegisterDriverCommand("DRV-" + f.site(), "Courier Driver",
                 "LIC-" + f.site(), LicenceClass.B, LocalDate.now().plusYears(2), LocalDate.now().plusYears(1), f.site(),
-                "Transport", f.manager(), SourceChannel.WEB, "driver-" + f.site()));
+                "Transport", "DRV-" + f.site(), f.manager(), SourceChannel.WEB, "driver-" + f.site()));
         var paper1 = register(f, "EX-1", CourierItem.Direction.OUTBOUND, CourierItem.Type.EXAMINATION_PAPER,
                 CourierItem.Sensitivity.SECRET);
         var paper2 = register(f, "EX-2", CourierItem.Direction.OUTBOUND, CourierItem.Type.EXAMINATION_PAPER,

@@ -25,6 +25,8 @@ public class FleetWorkflowMapper {
                 trip.plannedPeriod().start(), trip.plannedPeriod().end(), trip.actualStart(), trip.actualEnd(),
                 trip.status(), trip.holdReason(), trip.cancellationReason(), trip.closureReason(),
                 trip.closureEvidenceId(), trip.startOdometer(), trip.endOdometer(), trip.distanceCovered(),
+                trip.acknowledgement().state(), trip.acknowledgement().reason(),
+                trip.acknowledgement().answeredAt(), trip.acknowledgement().answeredBy(),
                 trip.metadata().createdBy(), trip.metadata().createdAt(), trip.metadata().lastModifiedBy(),
                 trip.metadata().lastModifiedAt(), trip.metadata().version());
     }

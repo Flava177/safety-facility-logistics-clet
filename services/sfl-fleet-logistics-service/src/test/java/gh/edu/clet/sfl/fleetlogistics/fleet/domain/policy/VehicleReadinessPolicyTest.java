@@ -386,6 +386,6 @@ class VehicleReadinessPolicyTest {
         return DriverProfileReference.register(UUID.fromString("22222222-2222-2222-2222-222222222222"),
                 "CLET/HR/00123", "Kwame Mensah",
                 new LicenceDetails("GHA-DL-4477201", LicenceClass.C, expiry), TODAY.plusYears(1), ACCRA,
-                "Transportation & Logistics Unit", metadata());
+                "Transportation & Logistics Unit", "CLET/HR/00123", metadata());
     }
 }

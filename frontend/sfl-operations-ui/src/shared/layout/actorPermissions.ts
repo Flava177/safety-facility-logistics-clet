@@ -1,4 +1,5 @@
 import { apiClient } from 'shared/api/client';
+import type { SflPermission } from './permissions';
 
 /**
  * What the actor is permitted to do, asked of the services rather than guessed.
@@ -100,7 +101,14 @@ export const loadActorPermissions = async (): Promise<void> => {
  * An item with no `permission` is always offered — its section's system entitlement is the whole
  * requirement, which is true of most screens.
  */
-export const permits = (permission?: string): boolean => {
+/**
+ * Whether a control may be offered.
+ *
+ * Takes `SflPermission` rather than `string` deliberately: a mistyped permission returns false and
+ * hides the control **permanently and silently**, which presents as a missing feature rather than as
+ * an error. The union turns that into a compile error.
+ */
+export const permits = (permission?: SflPermission): boolean => {
   if (!permission) {
     return true;
   }

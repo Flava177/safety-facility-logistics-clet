@@ -41,6 +41,7 @@ public record Trip(
         UUID closureEvidenceId,
         Long startOdometer,
         Long endOdometer,
+        TripAcknowledgement acknowledgement,
         RecordMetadata metadata) {
 
     public Trip {
@@ -50,6 +51,9 @@ public record Trip(
         Objects.requireNonNull(status, "status is required");
         Objects.requireNonNull(metadata, "metadata is required");
         Objects.requireNonNull(operatingMode, "operatingMode is required");
+        // Defaulted rather than required, so every existing construction site — and every row written
+        // before V23 — reads as "assigned, nobody has answered yet", which is what it was.
+        acknowledgement = acknowledgement == null ? TripAcknowledgement.pending() : acknowledgement;
         tripNumber = requireText(tripNumber, "tripNumber", 40);
         purpose = requireText(purpose, "purpose", 500);
         origin = requireText(origin, "origin", 200);
@@ -65,7 +69,7 @@ public record Trip(
             RecordMetadata metadata) {
         return new Trip(id, tripNumber, null, null, siteCode, purpose, origin, destination, operatingMode,
                 plannedPeriod, null, null, TripStatus.PLANNED, null, null, null, null, null, null, null,
-                metadata);
+                TripAcknowledgement.pending(), metadata);
     }
 
     /**
@@ -78,9 +82,49 @@ public record Trip(
         Objects.requireNonNull(newVehicleId, "vehicleId is required");
         Objects.requireNonNull(newDriverId, "driverId is required");
         TripTransitionPolicy.requireTransition(status, TripStatus.ASSIGNED);
+        /*
+          Reassignment to a different driver resets the acknowledgement. Carrying the previous driver's
+          confirmation forward would show a dispatcher a trip confirmed by somebody who is no longer on
+          it — the one piece of information this feature exists to provide, reported wrongly.
+        */
+        TripAcknowledgement carried = newDriverId.equals(driverId)
+                ? acknowledgement
+                : TripAcknowledgement.pending();
         return copy(newVehicleId, newDriverId, plannedPeriod, actualStart, actualEnd, TripStatus.ASSIGNED,
                 statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer,
-                endOdometer, newMetadata);
+                endOdometer, carried, newMetadata);
+    }
+
+    /**
+     * Records the assigned driver's answer — confirm, or defer with a reason.
+     *
+     * <p>Deliberately does not move {@link TripStatus}: see {@link TripAcknowledgementState} for why
+     * the driver's answer and the trip's lifecycle are separate axes. A confirmed trip is still
+     * {@code ASSIGNED} and a deferred one still holds its vehicle.
+     *
+     * <p>Only an assigned trip can be answered for. Acknowledging a trip already in progress is
+     * meaningless — the driver is demonstrably on it — and acknowledging a completed or cancelled one
+     * would rewrite the record of a finished job.
+     */
+    public Trip acknowledge(TripAcknowledgement answer, RecordMetadata newMetadata) {
+        Objects.requireNonNull(answer, "acknowledgement is required");
+        if (status != TripStatus.ASSIGNED) {
+            throw new InvalidStateTransitionException(Map.of(
+                    "aggregate", "Trip",
+                    "fromStatus", status.name(),
+                    "toStatus", status.name(),
+                    "reason", "Only an assigned trip can be confirmed or deferred"));
+        }
+        if (driverId == null) {
+            throw new InvalidStateTransitionException(Map.of(
+                    "aggregate", "Trip",
+                    "fromStatus", status.name(),
+                    "toStatus", status.name(),
+                    "reason", "A trip with no assigned driver cannot be acknowledged"));
+        }
+        return copy(vehicleId, driverId, plannedPeriod, actualStart, actualEnd, status, statusBeforeHold,
+                holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer, endOdometer,
+                answer, newMetadata);
     }
 
     /**
@@ -175,10 +219,20 @@ public record Trip(
             Instant newActualEnd, TripStatus newStatus, TripStatus newStatusBeforeHold, String newHoldReason,
             String newCancellationReason, String newClosureReason, UUID newClosureEvidenceId,
             Long newStartOdometer, Long newEndOdometer, RecordMetadata newMetadata) {
+        return copy(newVehicleId, newDriverId, newPlannedPeriod, newActualStart, newActualEnd, newStatus,
+                newStatusBeforeHold, newHoldReason, newCancellationReason, newClosureReason, newClosureEvidenceId,
+                newStartOdometer, newEndOdometer, acknowledgement, newMetadata);
+    }
+
+    private Trip copy(UUID newVehicleId, UUID newDriverId, DateTimeRange newPlannedPeriod, Instant newActualStart,
+            Instant newActualEnd, TripStatus newStatus, TripStatus newStatusBeforeHold, String newHoldReason,
+            String newCancellationReason, String newClosureReason, UUID newClosureEvidenceId,
+            Long newStartOdometer, Long newEndOdometer, TripAcknowledgement newAcknowledgement,
+            RecordMetadata newMetadata) {
         return new Trip(id, tripNumber, newVehicleId, newDriverId, siteCode, purpose, origin, destination,
                 operatingMode, newPlannedPeriod, newActualStart, newActualEnd, newStatus, newStatusBeforeHold,
                 newHoldReason, newCancellationReason, newClosureReason, newClosureEvidenceId, newStartOdometer,
-                newEndOdometer, newMetadata);
+                newEndOdometer, newAcknowledgement, newMetadata);
     }
 
     private static String requireText(String value, String field, int maxLength) {

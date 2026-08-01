@@ -11,6 +11,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.UUID;
 
 import gh.edu.clet.sfl.assetvisibility.application.ports.AssetReferenceRepository;
@@ -75,6 +76,13 @@ class AssetVisibilityServiceTest {
         @Override
         public List<AssetReference> findAll(String siteCode) {
             return new ArrayList<>(assets.values());
+        }
+
+        @Override
+        public List<AssetReference> findAllInScope(Set<String> siteScopes) {
+            return assets.values().stream()
+                    .filter(asset -> siteScopes.contains(asset.siteCode()))
+                    .toList();
         }
 
         @Override

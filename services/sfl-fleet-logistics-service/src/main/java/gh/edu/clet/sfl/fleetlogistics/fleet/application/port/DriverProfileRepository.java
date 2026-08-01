@@ -22,6 +22,16 @@ public interface DriverProfileRepository {
 
     Optional<DriverProfileReference> findActiveByStaffReference(SiteCode siteCode, String staffReference);
 
+    /**
+     * The driver profile a signed-in identity is bound to, if any.
+     *
+     * <p>Not site-scoped, and deliberately: the profile carries its own site, and a person is one
+     * driver regardless of which site's list they happen to be looking at. Narrowing this by the
+     * actor's site scope would mean a driver whose scope was mis-set silently became a different
+     * driver — or nobody — rather than being refused.
+     */
+    Optional<DriverProfileReference> findActiveByPrincipalSubject(String principalSubject);
+
     Optional<DriverProfileReference> findActiveByLicenceNumber(SiteCode siteCode, String licenceNumber);
 
     DriverPage search(DriverSearchCriteria criteria, SiteScopeFilter scope);

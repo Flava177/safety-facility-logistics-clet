@@ -74,8 +74,8 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
                 VehicleCategory.PICKUP,5,site,"Transport","Fleet Manager",null,1000,false,Set.of(),manager,
                 SourceChannel.WEB,"vehicle-"+site));
         var driver = driverService.register(new RegisterDriverCommand("DRV-"+site,"Fuel Driver","LIC-"+site,
-                LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),site,"Transport",manager,
-                SourceChannel.WEB,"driver-"+site));
+                LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),site,"Transport","DRV-"+site,
+                manager,SourceChannel.WEB,"driver-"+site));
         if (withPolicy) {
             fuel.createPolicy(new FuelApplicationService.CreatePolicy(site,"Default",
                     Instant.now().minusSeconds(7L*24*3600),null,1,new BigDecimal("50"),null,null,new BigDecimal("80"),

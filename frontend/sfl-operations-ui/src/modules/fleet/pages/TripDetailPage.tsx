@@ -3,7 +3,9 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { TripResponse } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
+import { canAcknowledgeTrips, canManageTrips } from 'modules/fleet/api/access';
 import {
+  AcknowledgeTripDialog,
   AssignTripDialog,
   CancelTripDialog,
   CloseTripDialog,
@@ -24,7 +26,17 @@ import { formatDateTime, formatNumber, formatOdometer } from 'shared/components/
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 
-type DialogKey = 'assign' | 'start' | 'close' | 'cancel' | 'hold' | 'resume' | 'inspection' | null;
+type DialogKey =
+  | 'assign'
+  | 'start'
+  | 'close'
+  | 'cancel'
+  | 'hold'
+  | 'resume'
+  | 'inspection'
+  | 'confirm'
+  | 'defer'
+  | null;
 
 /** Which transitions the trip's current status permits — mirrors the service's transition policy. */
 const permitted = (trip: TripResponse) => ({
@@ -36,6 +48,27 @@ const permitted = (trip: TripResponse) => ({
   cancel: ['PLANNED', 'ASSIGNED', 'ON_HOLD'].includes(trip.status),
   inspect: ['PLANNED', 'ASSIGNED', 'IN_PROGRESS'].includes(trip.status),
 });
+
+/**
+ * Whether to offer the driver's own confirm/defer controls.
+ *
+ * <h2>Three conditions, and the middle one is the interesting one</h2>
+ *
+ * The permission is necessary and not sufficient. The service also requires the signed-in identity to
+ * be bound to the driver on this trip — so `canAcknowledgeTrips()` alone would put the button on
+ * every driver's screen for every trip they can open.
+ *
+ * The check for "is this mine" is `!canManageTrips()`, which reads oddly and is exactly right: a
+ * driver-only actor can only *load* a trip that is theirs, because the by-id read narrows to the
+ * driver bound to their sign-in and refuses anything else. So for an actor without the supervising
+ * permission, holding the trip in hand is proof it is theirs. A supervisor, who can load anybody's,
+ * is deliberately not offered the control — the service refuses them, because a record saying the
+ * driver confirmed must mean the driver confirmed.
+ *
+ * Status must be ASSIGNED: there is nothing to answer for on a trip already under way or finished.
+ */
+const answerable = (trip: TripResponse) =>
+  trip.status === 'ASSIGNED' && canAcknowledgeTrips() && !canManageTrips();
 
 /** A related record rendered as a navigable tile — the assignment's vehicle and driver. */
 const linkTile = 'block rounded-xl border border-gray-200 p-3 transition hover:border-brand-500';
@@ -170,6 +203,30 @@ const TripDetailPage = () => {
       >
         {trip.data && (
           <div className="space-y-5">
+            {answerable(trip.data) && (
+              <SectionCard
+                title="Your assignment"
+                subtitle="Tell the dispatcher whether you can take this trip"
+              >
+                {trip.data.acknowledgementState === 'PENDING' ? (
+                  <div className="flex flex-wrap items-center gap-2">
+                    <Button variant="primary" startIcon="check-circle" onClick={() => setDialog('confirm')}>
+                      Confirm
+                    </Button>
+                    <Button variant="outline" onClick={() => setDialog('defer')}>
+                      Defer with reason
+                    </Button>
+                  </div>
+                ) : (
+                  <Alert variant={trip.data.acknowledgementState === 'DEFERRED' ? 'warning' : 'success'}>
+                    {trip.data.acknowledgementState === 'DEFERRED'
+                      ? `You deferred this trip on ${formatDateTime(trip.data.acknowledgedAt)} — ${trip.data.acknowledgementReason}`
+                      : `You confirmed this trip on ${formatDateTime(trip.data.acknowledgedAt)}.`}
+                  </Alert>
+                )}
+              </SectionCard>
+            )}
+
             <SectionCard title="Actions" subtitle="Transitions permitted from the current status">
               <div className="flex flex-wrap items-center gap-2">
                 {permitted(trip.data).assign && (
@@ -483,6 +540,22 @@ const TripDetailPage = () => {
                 onClose={() => setDialog(null)}
                 onSaved={() => {
                   notifySuccess('Inspection recorded.');
+                  refreshAll();
+                }}
+              />
+            )}
+            {(dialog === 'confirm' || dialog === 'defer') && (
+              <AcknowledgeTripDialog
+                open
+                answer={dialog === 'defer' ? 'DEFERRED' : 'CONFIRMED'}
+                trip={trip.data}
+                onClose={() => setDialog(null)}
+                onSaved={() => {
+                  notifySuccess(
+                    dialog === 'defer'
+                      ? 'Deferred. The dispatcher has been told.'
+                      : 'Confirmed. The dispatcher has been told.',
+                  );
                   refreshAll();
                 }}
               />

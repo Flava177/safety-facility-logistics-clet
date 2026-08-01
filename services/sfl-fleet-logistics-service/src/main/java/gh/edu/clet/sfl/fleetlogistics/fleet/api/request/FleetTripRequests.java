@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.api.request;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DefectSeverity;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.InspectionType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -55,6 +56,31 @@ public final class FleetTripRequests {
         public enum HoldAction {
             HOLD,
             RESUME
+        }
+    }
+
+    /**
+     * {@code PATCH /api/v1/fleet/trips/{tripId}/acknowledgement}.
+     *
+     * <p>{@code answer} accepts {@code CONFIRMED} or {@code DEFERRED} only — {@code PENDING} is the
+     * state an assignment starts in, not an answer a driver can give, and allowing it would let a
+     * driver erase their own deferral and the reason with it.
+     *
+     * <p>The "a deferral needs a reason" rule is <em>not</em> expressed here as a bean-validation
+     * annotation. It is a cross-field rule, and enforcing it at the edge would mean the aggregate
+     * still had to enforce it for every other path — two implementations of one rule, which drift.
+     * {@code TripAcknowledgement} owns it; this layer only bounds the length.
+     */
+    public record AcknowledgeTrip(
+            @NotNull TripAcknowledgementState answer,
+            @Size(max = 1000) String reason,
+            Long expectedVersion) {
+
+        public AcknowledgeTrip {
+            if (answer == TripAcknowledgementState.PENDING) {
+                throw new IllegalArgumentException(
+                        "answer must be CONFIRMED or DEFERRED; PENDING is not an answer");
+            }
         }
     }
 

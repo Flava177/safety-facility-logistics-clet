@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.application.service;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AcknowledgeTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AssignTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CancelTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CloseTripCommand;
@@ -19,6 +20,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.VehicleRepository;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.workflow.FleetWorkflowRaiser;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.AssignmentConflictException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.OptimisticLockConflictException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ReadinessBlockedException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException;
@@ -33,6 +35,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ReadinessBlockerCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgement;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleInspection;
@@ -72,13 +76,15 @@ public class TripApplicationService {
     private final AuditPort auditPort;
     private final IntegrationEventPublisher eventPublisher;
     private final IdempotencyPort idempotency;
+    private final DriverScopeResolver driverScopes;
     private final Clock clock;
 
     public TripApplicationService(TripRepository trips, VehicleRepository vehicles,
             VehicleInspectionRepository inspections, DriverProfileRepository driverProfiles,
             FleetReadinessService readinessService,
             FleetWorkflowRaiser workflowRaiser, FleetAccessPolicy accessPolicy, AuditPort auditPort,
-            IntegrationEventPublisher eventPublisher, IdempotencyPort idempotency, Clock clock) {
+            IntegrationEventPublisher eventPublisher, IdempotencyPort idempotency,
+            DriverScopeResolver driverScopes, Clock clock) {
         this.trips = trips;
         this.vehicles = vehicles;
         this.inspections = inspections;
@@ -89,6 +95,7 @@ public class TripApplicationService {
         this.auditPort = auditPort;
         this.eventPublisher = eventPublisher;
         this.idempotency = idempotency;
+        this.driverScopes = driverScopes;
         this.clock = clock;
     }
 
@@ -238,6 +245,94 @@ public class TripApplicationService {
                 AuditAction.STATE_TRANSITION, RESOURCE_TYPE, started.id().toString(), auditImage(existing),
                 auditImage(started));
         return started;
+    }
+
+    /**
+     * SRS-SFL-S166-02: the assigned driver confirms the trip, or defers it with a reason.
+     *
+     * <h2>The record check is the whole point</h2>
+     *
+     * <p>{@code FLEET_TRIP_ACKNOWLEDGE} is held by every driver, so the permission alone would let any
+     * driver confirm or defer any trip in their site — which is worse than not having the feature: a
+     * dispatcher would be reading confirmations from people who are not driving. The permission says
+     * "you may answer for a trip"; {@link DriverScopeResolver} says <em>which</em> trip, and both have
+     * to pass.
+     *
+     * <p>A supervising actor is refused too, and deliberately. {@link DriverScope.Everything} means "no
+     * narrowing on reads", not "may answer on a driver's behalf" — a fleet manager confirming a trip
+     * for a driver produces a record that says the driver confirmed it, which is exactly the thing the
+     * dispatcher is relying on being true. If answering on behalf is ever needed it wants its own
+     * permission and its own wording in the audit trail.
+     */
+    @Transactional
+    public Trip acknowledge(AcknowledgeTripCommand command) {
+        Trip existing = requireTrip(command.tripId());
+        accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_ACKNOWLEDGE, existing.siteCode(),
+                RESOURCE_TYPE, existing.id().toString());
+        requireOwnAssignment(existing, command.actor());
+        requireExpectedVersion(existing, command.expectedVersion());
+
+        Instant now = clock.instant();
+        RecordMetadata metadata = existing.metadata().modifiedBy(command.actor().actorId(), now,
+                command.sourceChannel(), command.actor().correlationId());
+
+        TripAcknowledgement answer = command.answer() == TripAcknowledgementState.DEFERRED
+                ? TripAcknowledgement.deferredBy(command.actor().actorId(), command.reason(), now)
+                : TripAcknowledgement.confirmedBy(command.actor().actorId(), now);
+
+        Trip acknowledged = trips.save(existing.acknowledge(answer, metadata));
+
+        auditPort.record(command.actor(), command.sourceChannel(), acknowledged.siteCode(),
+                AuditAction.ACKNOWLEDGE, RESOURCE_TYPE, acknowledged.id().toString(), auditImage(existing),
+                auditImage(acknowledged));
+
+        FleetEventType eventType = command.answer() == TripAcknowledgementState.DEFERRED
+                ? FleetEventType.TRIP_DEFERRED
+                : FleetEventType.TRIP_ACKNOWLEDGED;
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("tripId", acknowledged.id().toString());
+        payload.put("tripNumber", acknowledged.tripNumber());
+        payload.put("driverId", String.valueOf(acknowledged.driverId()));
+        payload.put("answer", acknowledged.acknowledgement().state().name());
+        payload.put("answeredBy", command.actor().actorId());
+        if (acknowledged.acknowledgement().reason() != null) {
+            payload.put("reason", acknowledged.acknowledgement().reason());
+        }
+        eventPublisher.publish(eventType, RESOURCE_TYPE, acknowledged.id().toString(), acknowledged.siteCode(),
+                command.actor(), payload);
+        return acknowledged;
+    }
+
+    /**
+     * Refuses an actor a trip that is not assigned to them.
+     *
+     * <p>Resolved through the {@code principal_subject} binding rather than by comparing the driver's
+     * staff reference against the token subject — the comparison that could never be true once
+     * authentication was switched on. See {@link DriverScopeResolver}.
+     */
+    private void requireOwnAssignment(Trip trip, ActorContext actor) {
+        /*
+          Resolved as always-narrowed, deliberately. The permission-driven overload would ask "does this
+          actor hold a supervising permission?" — and there is no supervising permission for answering
+          on somebody's behalf, because nobody may. Passing FLEET_TRIP_ACKNOWLEDGE there would be worse
+          than useless: every driver holds it, so every driver would resolve as a supervisor and be
+          waved through with no binding at all, which is the exact opposite of the rule.
+        */
+        UUID boundDriverId = driverScopes.resolve(actor, true) instanceof DriverScope.Own own
+                ? own.driverId()
+                : null;
+        if (boundDriverId != null && boundDriverId.equals(trip.driverId())) {
+            return;
+        }
+        Map<String, Object> details = new LinkedHashMap<>();
+        details.put("requiredPermission", SflPermission.FLEET_TRIP_ACKNOWLEDGE.name());
+        details.put("siteCode", trip.siteCode().value());
+        details.put("resourceType", RESOURCE_TYPE);
+        details.put("resourceId", trip.id().toString());
+        details.put("reason", boundDriverId == null
+                ? "Your sign-in is not linked to a driver profile, so you cannot answer for a trip"
+                : "Only the driver assigned to this trip can confirm or defer it");
+        throw new FleetAuthorizationException(details);
     }
 
     /** SRS-SFL-S166-02: hold or resume. */

@@ -7,6 +7,8 @@ import static gh.edu.clet.sfl.fleetlogistics.fleet.support.FleetFixtures.metadat
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AcknowledgeTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AssignTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CancelTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CloseTripCommand;
@@ -32,6 +34,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.LicenceDetails;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleAvailabilityStatus;
@@ -89,8 +92,10 @@ class TripApplicationServiceTest {
 
         FleetReadinessService readiness = new FleetReadinessService(complianceDocuments, inspections, trips,
                 drivers, new FleetTestDoubles.FixedRuntimeConfiguration(), clock);
+        FleetAccessPolicy accessPolicy = new FleetAccessPolicy();
         service = new TripApplicationService(trips, vehicles, inspections, drivers, readiness, workflowRaiser,
-                new FleetAccessPolicy(), audit, events, new FleetTestDoubles.InMemoryIdempotencyPort(), clock);
+                accessPolicy, audit, events, new FleetTestDoubles.InMemoryIdempotencyPort(),
+                new DriverScopeResolver(drivers, accessPolicy), clock);
 
         vehicle = vehicles.save(FleetFixtures.vehicle());
         driver = drivers.save(eligibleDriver());
@@ -387,6 +392,115 @@ class TripApplicationServiceTest {
                 FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.MOBILE, idempotencyKey);
     }
 
+    // --- the driver's own answer (SRS-SFL-S166-02) ---------------------------------------
+
+    @Test
+    @DisplayName("the assigned driver confirms their trip without changing its status")
+    void assigned_driver_confirms() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        Trip confirmed = service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.CONFIRMED, null, null, boundDriverActor(), SourceChannel.MOBILE));
+
+        assertThat(confirmed.acknowledgement().state()).isEqualTo(TripAcknowledgementState.CONFIRMED);
+        assertThat(confirmed.acknowledgement().answeredBy()).isEqualTo(driver.staffReference());
+        // The point of a separate axis: confirming does not advance the lifecycle.
+        assertThat(confirmed.status()).isEqualTo(TripStatus.ASSIGNED);
+        assertThat(audit.hasRecord(AuditAction.ACKNOWLEDGE, "Trip")).isTrue();
+        assertThat(events.types()).contains(FleetEventType.TRIP_ACKNOWLEDGED);
+    }
+
+    @Test
+    @DisplayName("a deferral carries its reason, keeps the assignment, and is published separately")
+    void assigned_driver_defers_with_a_reason() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        Trip deferred = service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.DEFERRED, "Called to an examination centre that morning", null,
+                boundDriverActor(), SourceChannel.MOBILE));
+
+        assertThat(deferred.acknowledgement().state()).isEqualTo(TripAcknowledgementState.DEFERRED);
+        assertThat(deferred.acknowledgement().reason()).isEqualTo("Called to an examination centre that morning");
+        // Still theirs, still holding the vehicle. Deferring is a signal to a dispatcher, not a release.
+        assertThat(deferred.status()).isEqualTo(TripStatus.ASSIGNED);
+        assertThat(deferred.driverId()).isEqualTo(driver.id());
+        assertThat(events.types()).contains(FleetEventType.TRIP_DEFERRED);
+    }
+
+    @Test
+    @DisplayName("a deferral without a reason is refused")
+    void deferral_requires_a_reason() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThatThrownBy(() -> service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.DEFERRED, "   ", null, boundDriverActor(), SourceChannel.MOBILE)))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessageContaining("deferral reason is required");
+    }
+
+    @Test
+    @DisplayName("a driver cannot answer for a trip assigned to somebody else")
+    void another_drivers_trip_cannot_be_acknowledged() {
+        DriverProfileReference other = drivers.save(anotherEligibleDriver());
+        Trip trip = service.create(createCommand(vehicle.id(), other.id(), "idem-1"));
+
+        assertThatThrownBy(() -> service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.CONFIRMED, null, null, boundDriverActor(), SourceChannel.MOBILE)))
+                .isInstanceOf(FleetAuthorizationException.class);
+    }
+
+    /**
+     * The decision this pass was given: an unbound driver sees — and answers for — nothing.
+     *
+     * <p>The actor holds {@code FLEET_TRIP_ACKNOWLEDGE} and the trip's site, and is still refused,
+     * because no driver profile names their sign-in. Fail-closed: the alternative reading of "we do
+     * not know which driver you are" is "you may be any of them".
+     */
+    @Test
+    @DisplayName("a driver whose sign-in is bound to no profile cannot acknowledge at all")
+    void an_unbound_driver_is_refused() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        assertThatThrownBy(() -> service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.CONFIRMED, null, null,
+                FleetTestDoubles.driver("nobody-is-bound-to-this", "ACCRA"), SourceChannel.MOBILE)))
+                .isInstanceOf(FleetAuthorizationException.class)
+                .hasMessageContaining("not authorised");
+    }
+
+    @Test
+    @DisplayName("a fleet officer cannot answer on a driver's behalf")
+    void a_supervisor_cannot_acknowledge_for_a_driver() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+
+        // Holds FLEET_TRIP_MANAGE and every other trip power, and still may not produce a record
+        // saying the driver confirmed — which is the one fact a dispatcher relies on being true.
+        assertThatThrownBy(() -> service.acknowledge(new AcknowledgeTripCommand(trip.id(),
+                TripAcknowledgementState.CONFIRMED, null, null, FleetTestDoubles.fleetOfficer("ACCRA"),
+                SourceChannel.WEB)))
+                .isInstanceOf(FleetAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("reassignment to a different driver clears the previous driver's answer")
+    void reassignment_resets_the_acknowledgement() {
+        Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
+        service.acknowledge(new AcknowledgeTripCommand(trip.id(), TripAcknowledgementState.CONFIRMED, null,
+                null, boundDriverActor(), SourceChannel.MOBILE));
+
+        DriverProfileReference replacement = drivers.save(anotherEligibleDriver());
+        Trip reassigned = service.assign(new AssignTripCommand(trip.id(), vehicle.id(), replacement.id(),
+                "Original driver unavailable", null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThat(reassigned.acknowledgement().state()).isEqualTo(TripAcknowledgementState.PENDING);
+        assertThat(reassigned.acknowledgement().answeredBy()).isNull();
+    }
+
+    /** The driver fixture is bound to its own staff reference, which is what a header actor presents. */
+    private ActorContext boundDriverActor() {
+        return FleetTestDoubles.driver(driver.staffReference(), "ACCRA");
+    }
+
     private void giveVehicleFullCompliance() {
         giveCompliance(vehicle.id());
     }
@@ -417,13 +531,15 @@ class TripApplicationServiceTest {
         return DriverProfileReference.register(UUID.fromString("66666666-6666-6666-6666-666666666666"),
                 "CLET/HR/00456", "Ama Owusu",
                 new LicenceDetails("GHA-DL-1122334", LicenceClass.D, TODAY.plusYears(1)), TODAY.plusYears(1),
-                ACCRA, "Transportation & Logistics Unit", metadata());
+                ACCRA, "Transportation & Logistics Unit", "CLET/HR/00456", metadata());
     }
 
     private static DriverProfileReference driverWithLicenceExpiring(LocalDate expiry) {
         return DriverProfileReference.register(UUID.fromString("22222222-2222-2222-2222-222222222222"),
                 "CLET/HR/00123", "Kwame Mensah",
                 new LicenceDetails("GHA-DL-4477201", LicenceClass.D, expiry), TODAY.plusYears(1), ACCRA,
-                "Transportation & Logistics Unit", metadata());
+                // Bound to its own staff reference, which is what the header-authenticated actors in
+                // these tests present as their subject.
+                "Transportation & Logistics Unit", "CLET/HR/00123", metadata());
     }
 }

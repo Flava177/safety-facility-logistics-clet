@@ -5,6 +5,7 @@ import { OPERATING_MODES, OperatingMode, TRIP_STATUSES, humanise } from 'modules
 import { tripsApi } from 'modules/fleet/api/fleetApi';
 import { CreateTripDialog } from 'modules/fleet/dialogs/tripDialogs';
 import { defaultPageSize } from 'shared/api/config';
+import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -104,6 +105,39 @@ const TripQueuePage = () => {
       },
       { key: 'status', header: 'Status', width: 140, cell: (row) => <StatusChip value={row.status} /> },
       {
+        /*
+          A separate column from Status, not a variant of it. A dispatcher's question the morning a
+          vehicle is due out is "which of these has the driver not answered for", and folding the
+          answer into the status chip would make that question unanswerable at a glance — an assigned
+          trip and a confirmed one are both ASSIGNED.
+        */
+        key: 'acknowledgementState',
+        header: 'Driver',
+        width: 150,
+        cell: (row) =>
+          row.status === 'ASSIGNED' ? (
+            <StatusChip
+              value={row.acknowledgementState}
+              label={
+                row.acknowledgementState === 'CONFIRMED'
+                  ? 'Confirmed'
+                  : row.acknowledgementState === 'DEFERRED'
+                    ? 'Deferred'
+                    : 'Awaiting reply'
+              }
+              tone={
+                row.acknowledgementState === 'CONFIRMED'
+                  ? 'ready'
+                  : row.acknowledgementState === 'DEFERRED'
+                    ? 'blocked'
+                    : 'caution'
+              }
+            />
+          ) : (
+            <span className="text-gray-400">—</span>
+          ),
+      },
+      {
         key: 'vehicleId',
         header: 'Assignment',
         width: 140,
@@ -175,12 +209,26 @@ const TripQueuePage = () => {
           />
         </FilterBar>
 
+        {/*
+          Why the list is shorter than the site's, when it is. The server sends this on a narrowed
+          list — a driver sees their own trips — and sends nothing on an unnarrowed one. Showing it is
+          what stops a driver reading their own list as "the queue is nearly empty today", and what
+          tells an unbound driver why theirs is empty rather than leaving them at a blank screen.
+        */}
+        {query.data?.scopeNotice && (
+          <Alert variant="info" className="mb-3">
+            {query.data.scopeNotice}
+          </Alert>
+        )}
+
         <DataState
           loading={query.initialising}
           error={query.error}
           empty={(query.data?.content.length ?? 0) === 0 && !query.loading}
           emptyTitle="No trips match these filters"
-          emptyHint="Plan a trip to get a movement into the queue."
+          emptyHint={
+            query.data?.scopeNotice ?? 'Plan a trip to get a movement into the queue.'
+          }
           onRetry={query.refetch}
           minHeight={280}
         >

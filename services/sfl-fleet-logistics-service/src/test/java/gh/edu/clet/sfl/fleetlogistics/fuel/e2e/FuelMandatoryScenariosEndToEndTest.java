@@ -71,7 +71,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         ActorContext manager = new ActorContext(new SiteScopedPrincipal("fuel.manager","Fuel Manager",Set.of(SflRole.FLEET_MANAGER),Set.of(site),false),"fuel-e2e");
         Instant now = Instant.now();
         var vehicle = vehicleService.register(new RegisterVehicleCommand("GN-"+site,null,"Toyota","Hilux",2024,VehicleCategory.PICKUP,5,site,"Transport","Fleet Manager",null,1000,false,Set.of(),manager,SourceChannel.WEB,"vehicle-"+site));
-        var driver = driverService.register(new RegisterDriverCommand("DRV-"+site,"Fuel Driver","LIC-"+site,LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),site,"Transport",manager,SourceChannel.WEB,"driver-"+site));
+        var driver = driverService.register(new RegisterDriverCommand("DRV-"+site,"Fuel Driver","LIC-"+site,LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),site,"Transport","DRV-"+site,manager,SourceChannel.WEB,"driver-"+site));
         // effectiveFrom is wound a week back (the existing critical test uses now-60s) so backdated occurredAt scenarios such as the
         // missing-receipt grace test still resolve an applicable policy at reconcile time; every other field mirrors the critical test.
         fuel.createPolicy(new FuelApplicationService.CreatePolicy(site,"Default",now.minusSeconds(7L*24*3600),null,1,new BigDecimal("50"),new BigDecimal("100"),new BigDecimal("1000"),new BigDecimal("80"),null,null,500,true,24,new BigDecimal("400"),8,Set.of("DIESEL"),Set.of("CLET STATION"),manager,SourceChannel.WEB));
@@ -260,7 +260,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     @Test void driver_is_restricted_to_own_records() {
         Fixture f = newFixture();
         Instant now = Instant.now();
-        var driverB = driverService.register(new RegisterDriverCommand("DRV2-"+f.site(),"Fuel Driver B","LIC2-"+f.site(),LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),f.site(),"Transport",f.manager(),SourceChannel.WEB,"driver2-"+f.site()));
+        var driverB = driverService.register(new RegisterDriverCommand("DRV2-"+f.site(),"Fuel Driver B","LIC2-"+f.site(),LicenceClass.B,LocalDate.now().plusYears(2),LocalDate.now().plusYears(1),f.site(),"Transport","DRV2-"+f.site(),f.manager(),SourceChannel.WEB,"driver2-"+f.site()));
         // A FLEET_DRIVER-only actor whose subject is driver A's staff reference may not open a logbook for driver B.
         ActorContext driverA = new ActorContext(new SiteScopedPrincipal("DRV-"+f.site(),"Fuel Driver",Set.of(SflRole.FLEET_DRIVER),Set.of(f.site()),false),"driver-a");
         assertThatThrownBy(() -> fuel.createLogbook(new FuelApplicationService.CreateLogbook(f.site(),driverB.id(),f.vehicle().id(),null,LocalDate.now(),now,now.plusSeconds(3600),"HQ","Court",null,DriverLogbook.UseClassification.OFFICIAL,"Official delivery",null,1100,1150L,true,UUID.randomUUID(),driverA,SourceChannel.WEB)))

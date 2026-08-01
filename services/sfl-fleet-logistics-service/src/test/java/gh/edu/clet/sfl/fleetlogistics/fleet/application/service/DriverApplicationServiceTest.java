@@ -115,7 +115,7 @@ class DriverApplicationServiceTest {
     void reporting_viewer_cannot_register() {
         assertThatThrownBy(() -> service.register(new RegisterDriverCommand("CLET/HR/00123", "Kwame Mensah",
                 "GHA-DL-4477201", LicenceClass.C, TODAY.plusYears(1), TODAY.plusYears(1), "ACCRA",
-                "Transportation & Logistics Unit", FleetTestDoubles.reportingViewer("ACCRA"), SourceChannel.WEB,
+                "Transportation & Logistics Unit", null, FleetTestDoubles.reportingViewer("ACCRA"), SourceChannel.WEB,
                 "idem-1")))
                 .isInstanceOf(FleetAuthorizationException.class);
     }
@@ -125,7 +125,7 @@ class DriverApplicationServiceTest {
     void cross_site_registration_denied() {
         assertThatThrownBy(() -> service.register(new RegisterDriverCommand("CLET/HR/00123", "Kwame Mensah",
                 "GHA-DL-4477201", LicenceClass.C, TODAY.plusYears(1), TODAY.plusYears(1), "ACCRA",
-                "Transportation & Logistics Unit", FleetTestDoubles.fleetOfficer("KUMASI"), SourceChannel.WEB,
+                "Transportation & Logistics Unit", null, FleetTestDoubles.fleetOfficer("KUMASI"), SourceChannel.WEB,
                 "idem-1")))
                 .isInstanceOf(FleetAuthorizationException.class)
                 .hasMessage(FleetErrorCode.FLEET_UNAUTHORIZED_SCOPE.message());
@@ -214,7 +214,7 @@ class DriverApplicationServiceTest {
     private RegisterDriverCommand registerCommand(String staffReference, String licenceNumber,
             LocalDate licenceExpiry, String idempotencyKey) {
         return new RegisterDriverCommand(staffReference, "Kwame Mensah", licenceNumber, LicenceClass.C,
-                licenceExpiry, TODAY.plusYears(1), "ACCRA", "Transportation & Logistics Unit",
+                licenceExpiry, TODAY.plusYears(1), "ACCRA", "Transportation & Logistics Unit", staffReference,
                 FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB, idempotencyKey);
     }
 

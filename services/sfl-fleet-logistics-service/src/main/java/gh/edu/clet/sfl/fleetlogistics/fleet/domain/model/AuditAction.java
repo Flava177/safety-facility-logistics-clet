@@ -7,6 +7,8 @@ public enum AuditAction {
     STATE_TRANSITION,
     ASSIGN,
     REASSIGN,
+    /** The assigned driver confirmed or deferred. Not a STATE_TRANSITION: no status changed. */
+    ACKNOWLEDGE,
     HOLD,
     RESUME,
     ESCALATE,

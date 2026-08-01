@@ -28,6 +28,7 @@ public record DriverProfileReference(
         DriverLifecycleStatus lifecycleStatus,
         DriverEligibilityStatus eligibilityStatus,
         String suspensionReason,
+        String principalSubject,
         RecordMetadata metadata) {
 
     public DriverProfileReference {
@@ -43,14 +44,39 @@ public record DriverProfileReference(
         suspensionReason = suspensionReason == null || suspensionReason.isBlank()
                 ? null
                 : suspensionReason.strip();
+        // Not upper-cased, unlike staffReference. A subject claim is opaque and case-sensitive: Keycloak
+        // issues a lowercase UUID and folding it would break the match against the token it came from.
+        principalSubject = principalSubject == null || principalSubject.isBlank()
+                ? null
+                : requireText(principalSubject, "principalSubject", 160);
     }
 
     public static DriverProfileReference register(UUID id, String staffReference, String displayName,
             LicenceDetails licence, LocalDate medicalClearanceExpiresOn, SiteCode siteCode, String responsibleUnit,
-            RecordMetadata metadata) {
+            String principalSubject, RecordMetadata metadata) {
         return new DriverProfileReference(id, staffReference, displayName, licence, medicalClearanceExpiresOn,
                 siteCode, responsibleUnit, DriverLifecycleStatus.ACTIVE, DriverEligibilityStatus.ELIGIBLE, null,
-                metadata);
+                principalSubject, metadata);
+    }
+
+    /**
+     * Binds — or unbinds, with {@code null} — the identity that signs in as this driver.
+     *
+     * <p>Separate from {@link #updateDetails} because it is a different act with a different authority:
+     * correcting a licence class is fleet administration, while deciding whose sign-in maps to this
+     * profile determines which trips a person can see. The two are audited as different events and
+     * gated on different permissions.
+     */
+    public DriverProfileReference bindPrincipal(String newPrincipalSubject, RecordMetadata newMetadata) {
+        DriverLifecyclePolicy.requireEditable(lifecycleStatus);
+        return new DriverProfileReference(id, staffReference, displayName, licence, medicalClearanceExpiresOn,
+                siteCode, responsibleUnit, lifecycleStatus, eligibilityStatus, suspensionReason,
+                newPrincipalSubject, newMetadata);
+    }
+
+    /** Whether anybody signs in as this driver. An unbound profile is assignable but sees nothing. */
+    public boolean isBound() {
+        return principalSubject != null;
     }
 
     public DriverProfileReference updateDetails(String newDisplayName, LicenceDetails newLicence,
@@ -92,7 +118,7 @@ public record DriverProfileReference(
             String newSuspensionReason, RecordMetadata newMetadata) {
         return new DriverProfileReference(id, newStaffReference, newDisplayName, newLicence,
                 newMedicalClearanceExpiresOn, newSiteCode, newResponsibleUnit, newLifecycleStatus,
-                newEligibilityStatus, newSuspensionReason, newMetadata);
+                newEligibilityStatus, newSuspensionReason, principalSubject, newMetadata);
     }
 
     private static String requireText(String value, String field, int maxLength) {

@@ -29,6 +29,20 @@ interface DriverProfileJpaRepository extends JpaRepository<DriverProfileEntity, 
     Optional<DriverProfileEntity> findActiveByStaffReference(@Param("siteCode") String siteCode,
             @Param("staffReference") String staffReference);
 
+    /**
+     * The active profile bound to an identity.
+     *
+     * <p>Compared exactly, not folded through {@code upper()} like the staff reference beside it: a
+     * subject claim is an opaque identifier and case is part of it. Folding a Keycloak UUID would work
+     * by luck and a Zitadel or Entra subject would not survive it.
+     */
+    @Query("""
+            select d from DriverProfileEntity d
+            where d.principalSubject = :principalSubject
+              and d.lifecycleStatus <> gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverLifecycleStatus.ARCHIVED
+            """)
+    Optional<DriverProfileEntity> findActiveByPrincipalSubject(@Param("principalSubject") String principalSubject);
+
     @Query("""
             select d from DriverProfileEntity d
             where d.siteCode = :siteCode

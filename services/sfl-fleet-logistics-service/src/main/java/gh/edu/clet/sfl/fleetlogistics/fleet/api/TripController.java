@@ -9,6 +9,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.FleetWorkflowResponses.
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.FleetWorkflowResponses.TripResponse;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.PageResponse;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.ReadinessResponse;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AcknowledgeTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AssignTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CancelTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CloseTripCommand;
@@ -90,13 +91,34 @@ class TripController {
             @RequestParam(required = false) String sort,
             HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);
-        TripRepository.TripPage result = tripQueries.search(new TripRepository.TripSearchCriteria(siteCode,
+        // The driverId the caller supplied is a filter, not an authorisation input: for a driver-only
+        // actor the query service overrides it with their own. See TripQueryService.search.
+        TripQueryService.ScopedTrips scoped = tripQueries.search(new TripRepository.TripSearchCriteria(siteCode,
                 status, vehicleId, driverId, operatingMode, from, to, page, size, sort), actor);
+        TripRepository.TripPage result = scoped.page();
 
         return ApiResponse.ok(new PageResponse<>(
                 result.content().stream().map(mapper::toResponse).toList(), result.page(), result.size(),
                 result.totalElements(), result.totalPages(), result.page() == 0,
-                result.page() >= result.totalPages() - 1, result.sort()));
+                result.page() >= result.totalPages() - 1, result.sort(), scoped.scopeNotice()));
+    }
+
+    /**
+     * The assigned driver confirms the trip, or defers it with a reason (SRS-SFL-S166-02).
+     *
+     * <p>The only write on this controller a {@code FLEET_DRIVER} can reach. It is a PATCH on the trip
+     * rather than a POST to a sub-resource because it amends the assignment record rather than
+     * creating anything, and it is deliberately not part of {@code /assignment} — that endpoint
+     * requires {@code FLEET_TRIP_ASSIGN} and changes who the trip belongs to, which is the opposite of
+     * what this does.
+     */
+    @PatchMapping("/{tripId}/acknowledgement")
+    ApiResponse<TripResponse> acknowledge(@PathVariable UUID tripId,
+            @Valid @RequestBody FleetTripRequests.AcknowledgeTrip request, HttpServletRequest httpRequest) {
+        ActorContext actor = actorResolver.resolve(httpRequest);
+        return ApiResponse.ok(mapper.toResponse(tripService.acknowledge(new AcknowledgeTripCommand(tripId,
+                request.answer(), request.reason(), request.expectedVersion(), actor,
+                actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
     @GetMapping("/{tripId}")

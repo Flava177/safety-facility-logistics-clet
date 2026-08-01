@@ -613,6 +613,81 @@ export const HoldTripDialog = ({
   );
 };
 
+/**
+ * The assigned driver answers for their trip (SRS-SFL-S166-02).
+ *
+ * Confirming needs no dialog of its own — there is nothing to collect — but deferring does, because
+ * the reason is what a dispatcher acts on. Both are handled here so the two answers are written the
+ * same way and cannot drift apart.
+ *
+ * The reason field is required only when deferring, and the requirement is stated in the label as
+ * well as enforced: a driver who cannot take a trip is usually in a hurry, and a form that refuses on
+ * submit without having said why is a form that gets abandoned.
+ */
+export const AcknowledgeTripDialog = ({
+  open,
+  onClose,
+  onSaved,
+  trip,
+  answer,
+}: BaseProps & { trip: TripResponse; answer: 'CONFIRMED' | 'DEFERRED' }) => {
+  const deferring = answer === 'DEFERRED';
+  const form = useFleetForm({
+    initialValues: { reason: '' },
+    schema: {
+      reason: deferring
+        ? compose(required('A reason'), maxLength('Reason', 1000))
+        : maxLength('Reason', 1000),
+    },
+    onSubmit: async (values) => {
+      await tripsApi.acknowledge(trip.id, {
+        answer,
+        // Sent as null when confirming: the service drops a reason on a confirmation rather than
+        // storing it, and sending one anyway would imply it is kept.
+        reason: deferring ? values.reason.trim() : null,
+        expectedVersion: trip.version,
+      });
+      onSaved();
+      onClose();
+      form.reset();
+    },
+  });
+
+  return (
+    <FormDialog
+      open={open}
+      title={deferring ? 'Defer this trip' : 'Confirm this trip'}
+      description={trip.tripNumber}
+      submitLabel={deferring ? 'Defer with reason' : 'Confirm'}
+      submitting={form.submitting}
+      formError={form.formError}
+      onClose={onClose}
+      onSubmit={form.submit}
+    >
+      {deferring ? (
+        <>
+          <Alert variant="info">
+            The trip stays assigned to you and keeps its vehicle. Deferring tells the dispatcher you
+            cannot take it as scheduled — it does not release the trip.
+          </Alert>
+          <TextAreaInput
+            label="Why you cannot take this trip"
+            rows={3}
+            value={form.values.reason}
+            onChange={(value) => form.setValue('reason', value)}
+            {...form.fieldProps('reason')}
+          />
+        </>
+      ) : (
+        <p className="text-theme-sm text-gray-700">
+          Confirming tells the dispatcher you will take {trip.tripNumber} as scheduled. The trip stays
+          assigned; starting it is a separate step.
+        </p>
+      )}
+    </FormDialog>
+  );
+};
+
 export const CancelTripDialog = ({
   open,
   onClose,

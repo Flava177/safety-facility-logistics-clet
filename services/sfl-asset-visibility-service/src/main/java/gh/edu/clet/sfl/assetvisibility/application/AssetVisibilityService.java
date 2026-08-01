@@ -1,7 +1,10 @@
 package gh.edu.clet.sfl.assetvisibility.application;
 
 import java.time.Clock;
+import gh.edu.clet.sfl.common.security.SiteScopeGuc;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -72,14 +75,37 @@ public class AssetVisibilityService {
         return assets.findAll(siteCode);
     }
 
+    /**
+     * The register narrowed to the sites an actor holds.
+     *
+     * <p>The cross-site scope is {@code *}, matching {@code SiteScopeGuc.ALL_SITES} and
+     * {@code crossProgrammeRoles} — one spelling of "everywhere" across the platform rather than
+     * three. Anything else is filtered in SQL.
+     */
+    @Transactional(readOnly = true)
+    public List<AssetReference> findAllInScope(Set<String> siteScopes) {
+        if (siteScopes != null && siteScopes.contains(SiteScopeGuc.ALL_SITES)) {
+            return assets.findAll(null);
+        }
+        return assets.findAllInScope(siteScopes);
+    }
+
     @Transactional(readOnly = true)
     public List<AssetReference> findByLocation(String siteCode, LocationType locationType, String locationReference) {
         return assets.findByLocation(siteCode, locationType, locationReference);
     }
 
+    /**
+     * An asset that is not there is a 404, not a 400.
+     *
+     * <p>This threw {@link IllegalArgumentException} and so answered <strong>400</strong> — telling a
+     * client its request was malformed when the request was perfectly well-formed and the asset simply
+     * does not exist. A client cannot distinguish "you sent nonsense" from "that id is gone", and only
+     * one of those is worth retrying.
+     */
     private AssetReference requireAsset(UUID id) {
         return assets.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Asset was not found: " + id));
+                .orElseThrow(() -> new NoSuchElementException("Asset was not found: " + id));
     }
 
     private void record(String eventType, String aggregateType, AssetReference asset, String actor, String correlationId) {

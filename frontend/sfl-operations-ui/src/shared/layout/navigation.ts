@@ -1,6 +1,7 @@
 import { IconName } from 'shared/components/Icon';
 import { ProgrammeCode, SystemCode, entitledTo, entitledToSystem } from './programmes';
 import { permits } from './actorPermissions';
+import type { SflPermission } from './permissions';
 import { isPersona, PersonaCode } from './personas';
 
 /**
@@ -39,7 +40,7 @@ export interface NavItem {
    * landing page and met a 403 on arrival. Every code below was read off the service that enforces it,
    * not inferred from the name.
    */
-  permission?: string;
+  permission?: SflPermission;
   /**
    * Show this item only to a given persona.
    *
@@ -581,9 +582,17 @@ export const navSections: NavSection[] = [
         icon: 'driver',
         matchPrefix: fleetPaths.drivers,
         description: 'Licence standing and eligibility',
-        // A driver does NOT hold FLEET_DRIVER_READ. The register carries licence numbers, medical
-        // clearance dates and eligibility standing for every colleague, which is personnel data —
-        // being a driver is not a reason to read other drivers' records.
+        /*
+          A driver holds FLEET_DRIVER_READ and sees the list, the same way they see the vehicle
+          register: they work alongside these people and need to look them up. What they do not hold
+          is FLEET_DRIVER_MANAGE — so no registering, editing or retiring, including of themselves —
+          and no FLEET_DRIVER_SENSITIVE_READ, so licence numbers arrive masked from the service
+          rather than being hidden by this screen.
+
+          Medical clearance dates and eligibility standing are still visible to them, which is a
+          deliberate accepted trade rather than an oversight: the register is a working document for
+          people who cover each other's trips, and eligibility is why a colleague cannot.
+        */
         permission: 'FLEET_DRIVER_READ',
       },
     ],

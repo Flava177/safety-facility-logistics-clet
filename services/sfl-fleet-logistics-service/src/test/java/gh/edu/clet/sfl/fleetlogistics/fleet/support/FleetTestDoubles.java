@@ -23,6 +23,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditHashChain;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverLifecycleStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DriverProfileReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RegistrationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
@@ -312,6 +313,25 @@ public final class FleetTestDoubles {
                     .filter(driver -> driver.siteCode().equals(siteCode))
                     .filter(driver -> driver.staffReference().equalsIgnoreCase(staffReference.strip()))
                     .filter(driver -> driver.lifecycleStatus().isEditable())
+                    .findFirst();
+        }
+
+        /**
+         * Matched exactly and case-sensitively, unlike the staff reference above.
+         *
+         * <p>The production query does the same, and for a reason worth preserving in the double: a
+         * subject claim is an opaque identifier. Folding case here would let a test pass that the real
+         * repository would fail.
+         */
+        @Override
+        public Optional<DriverProfileReference> findActiveByPrincipalSubject(String principalSubject) {
+            if (principalSubject == null || principalSubject.isBlank()) {
+                return Optional.empty();
+            }
+            String subject = principalSubject.strip();
+            return store.values().stream()
+                    .filter(driver -> subject.equals(driver.principalSubject()))
+                    .filter(driver -> driver.lifecycleStatus() != DriverLifecycleStatus.ARCHIVED)
                     .findFirst();
         }
 

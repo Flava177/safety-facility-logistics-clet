@@ -314,6 +314,10 @@ export interface TripResponse {
   startOdometer: number | null;
   endOdometer: number | null;
   distanceCovered: number | null;
+  acknowledgementState: TripAcknowledgementState;
+  acknowledgementReason: string | null;
+  acknowledgedAt: string | null;
+  acknowledgedBy: string | null;
   createdBy: string | null;
   createdAt: string;
   lastModifiedBy: string | null;
@@ -328,6 +332,22 @@ export type TripStatusValue =
   | 'ON_HOLD'
   | 'COMPLETED'
   | 'CANCELLED';
+
+/**
+ * The assigned driver's answer, which is a separate axis from `status`.
+ *
+ * A confirmed trip and an unanswered one are both `ASSIGNED` — the lifecycle has not moved. Reading
+ * this off `status` is why it is not in that union: a dispatcher needs to see both facts at once.
+ */
+export type TripAcknowledgementState = 'PENDING' | 'CONFIRMED' | 'DEFERRED';
+
+export interface AcknowledgeTripRequest {
+  /** `PENDING` is rejected by the service: it is the starting state, not an answer. */
+  answer: Exclude<TripAcknowledgementState, 'PENDING'>;
+  /** Required when deferring, ignored when confirming. */
+  reason?: string | null;
+  expectedVersion?: number | null;
+}
 
 export interface CreateTripRequest {
   vehicleId?: string | null;

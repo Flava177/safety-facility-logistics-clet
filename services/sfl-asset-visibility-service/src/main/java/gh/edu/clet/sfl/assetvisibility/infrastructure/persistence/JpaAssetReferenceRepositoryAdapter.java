@@ -1,6 +1,8 @@
 package gh.edu.clet.sfl.assetvisibility.infrastructure.persistence;
 
 import java.util.List;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
@@ -40,6 +42,17 @@ class JpaAssetReferenceRepositoryAdapter implements AssetReferenceRepository {
                 ? assets.findAllByOrderBySiteCodeAscAssetCodeAsc().stream().map(AssetReferenceRecord::toDomain).toList()
                 : assets.findBySiteCodeOrderByAssetCodeAsc(normalize(siteCode)).stream()
                         .map(AssetReferenceRecord::toDomain).toList();
+    }
+
+    @Override
+    public List<AssetReference> findAllInScope(Set<String> siteCodes) {
+        if (siteCodes == null || siteCodes.isEmpty()) {
+            return List.of();
+        }
+        Set<String> normalised = siteCodes.stream().map(this::normalize)
+                .collect(Collectors.toUnmodifiableSet());
+        return assets.findBySiteCodeInOrderBySiteCodeAscAssetCodeAsc(normalised).stream()
+                .map(AssetReferenceRecord::toDomain).toList();
     }
 
     @Override

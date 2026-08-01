@@ -44,10 +44,21 @@ vi.mock('shared/layout/personas', () => ({
 
 const { entitledSections } = await import('./navigation');
 
-/** FLEET_DRIVER, transcribed from FleetPermissionMatrix and FuelPermissionMatrix. */
+/**
+ * FLEET_DRIVER, transcribed from `FleetPermissionMatrix` and `FuelPermissionMatrix`.
+ *
+ * Transcribed, therefore capable of drifting — and it did: `FLEET_DRIVER_READ` and
+ * `FLEET_TRIP_ACKNOWLEDGE` were granted in the Java matrix and this list went on asserting the
+ * driver's menu as if they had not been, so the suite stayed green while describing a role that no
+ * longer existed. There is no way to read the Java enum from vitest; the mitigation is that this
+ * list names its source in one place and the assertions below quote the reason for each entry, so a
+ * mismatch is visible to whoever changes the matrix.
+ */
 const DRIVER = [
   'FLEET_VEHICLE_READ',
+  'FLEET_DRIVER_READ',
   'FLEET_TRIP_READ',
+  'FLEET_TRIP_ACKNOWLEDGE',
   'FLEET_INSPECTION_RECORD',
   'FLEET_EVIDENCE_REGISTER',
   'FUEL_TRANSACTION_READ',
@@ -77,11 +88,16 @@ describe('what a driver is offered', () => {
     expect(labelsFor(['S166', 'S168'])).not.toContain('Workflow queue');
   });
 
-  it('does not offer the driver register', () => {
-    // Licence numbers, medical clearance dates and eligibility for every colleague. Being a driver
-    // is not a reason to read other drivers' records — FLEET_DRIVER_READ is not in their set.
+  it('offers the driver register, which they may read and not write', () => {
+    /*
+      Read-only, and the read is the point: a driver looks up the colleague covering their trip. The
+      write side is FLEET_DRIVER_MANAGE, which is absent from DRIVER above — so no registering,
+      editing or retiring, including of themselves — and licence numbers arrive masked because
+      FLEET_DRIVER_SENSITIVE_READ is absent too. Navigation grants sight of the page; it grants
+      nothing on it.
+    */
     holding(DRIVER);
-    expect(labelsFor(['S166', 'S168'])).not.toContain('Driver register');
+    expect(labelsFor(['S166', 'S168'])).toContain('Driver register');
   });
 
   it('does not offer any assurance screen', () => {
@@ -116,16 +132,30 @@ describe('what a driver is offered', () => {
     expect(labels).not.toContain('Fuel dashboard');
   });
 
-  it('offers exactly the four screens a driver can actually use', () => {
+  it('offers exactly the five screens a driver can actually use', () => {
     /*
-      The positive assertion, and the one that would catch an over-correction. Trips and the vehicle
-      register because they hold the read; logbooks because the service narrows them per record on
-      created_by; fuel transactions because they hold the read — and that last one is a known gap
-      rather than a decision, since the service does not narrow transactions per driver.
+      The positive assertion, and the one that would catch an over-correction — a tightening pass is
+      as capable of leaving a role unable to work as it is of leaving it able to see too much.
+
+      Each is here for a stated reason:
+        - Trips: their own, narrowed server-side to the driver bound to their sign-in, and the screen
+          where they confirm or defer.
+        - Vehicle register, Driver register: read, no write. They look up the vehicle they are taking
+          and the colleague covering for them.
+        - Driver logbooks: narrowed per record on created_by.
+        - Fuel transactions: narrowed per record on driver_id. This line previously carried a note
+          calling that a "known gap … the service does not narrow transactions per driver" — it did
+          not, and now does, in FuelApplicationService.transactions.
     */
     holding(DRIVER);
     expect(labelsFor(['S166', 'S168']).sort()).toEqual(
-      ['Driver logbooks', 'Fuel transactions', 'Trips & assignments', 'Vehicle register'].sort(),
+      [
+        'Driver logbooks',
+        'Driver register',
+        'Fuel transactions',
+        'Trips & assignments',
+        'Vehicle register',
+      ].sort(),
     );
   });
 });

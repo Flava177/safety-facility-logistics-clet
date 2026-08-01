@@ -16,6 +16,14 @@ public record RegisterDriverCommand(
         LocalDate medicalClearanceExpiresOn,
         String siteCode,
         String responsibleUnit,
+        /**
+         * The identity provider subject that will sign in as this driver, or null.
+         *
+         * <p>Optional, and left out of {@link #idempotencyPayload()} deliberately: binding a profile to
+         * a person is a correction that should be able to follow a registration, and including it here
+         * would make a re-send that adds the binding look like a different request.
+         */
+        String principalSubject,
         ActorContext actor,
         SourceChannel sourceChannel,
         String idempotencyKey) implements FleetCommand {

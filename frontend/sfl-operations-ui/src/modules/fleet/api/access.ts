@@ -43,6 +43,18 @@ export const canManageDrivers = (): boolean => permits('FLEET_DRIVER_MANAGE');
 
 /** Plan a trip. Assigning, closing and cancelling are separate grants below. */
 export const canManageTrips = (): boolean => permits('FLEET_TRIP_MANAGE');
+
+/**
+ * Confirm or defer a trip assigned to you.
+ *
+ * A driver's only write against the trip register, and the mirror image of the grants around it:
+ * `canManageTrips` is a dispatcher's power over anybody's trip, this is one person's answer about
+ * their own. The permission is necessary and not sufficient — the service also requires the
+ * signed-in identity to be the driver on that trip — so a screen must check
+ * {@link isMyTrip} as well before offering the control, or it offers every driver a button that
+ * refuses on every trip but one.
+ */
+export const canAcknowledgeTrips = (): boolean => permits('FLEET_TRIP_ACKNOWLEDGE');
 export const canAssignTrips = (): boolean => permits('FLEET_TRIP_ASSIGN');
 export const canCloseTrips = (): boolean => permits('FLEET_TRIP_CLOSE');
 export const canCancelTrips = (): boolean => permits('FLEET_TRIP_CANCEL');

@@ -56,6 +56,15 @@ class JpaDriverProfileRepositoryAdapter implements DriverProfileRepository {
 
     @Override
     @Transactional(readOnly = true)
+    public Optional<DriverProfileReference> findActiveByPrincipalSubject(String principalSubject) {
+        if (principalSubject == null || principalSubject.isBlank()) {
+            return Optional.empty();
+        }
+        return drivers.findActiveByPrincipalSubject(principalSubject.strip()).map(DriverProfileEntity::toDomain);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Optional<DriverProfileReference> findActiveByLicenceNumber(SiteCode siteCode, String licenceNumber) {
         return drivers.findActiveByLicenceNumber(siteCode.value(), licenceNumber)
                 .map(DriverProfileEntity::toDomain);

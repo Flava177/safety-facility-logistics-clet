@@ -92,6 +92,14 @@ public enum SflPermission {
     FLEET_TRIP_READ,
     FLEET_TRIP_MANAGE,
     FLEET_TRIP_ASSIGN,
+    /**
+     * Confirm or defer a trip assigned to you.
+     *
+     * <p>A driver's permission, and the only write in the fleet register they hold. Separate from
+     * {@code FLEET_TRIP_MANAGE} because it is not a dispatcher's power scoped down — it answers for
+     * one trip, the actor's own, and grants nothing over anybody else's.
+     */
+    FLEET_TRIP_ACKNOWLEDGE,
     FLEET_TRIP_CANCEL,
     FLEET_TRIP_CLOSE,
     FLEET_INSPECTION_RECORD,

@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.application.service;
 
 import gh.edu.clet.sfl.common.security.SflPermission;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.BindDriverPrincipalCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.RegisterDriverCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.UpdateDriverCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
@@ -93,6 +94,10 @@ public class DriverApplicationService {
                 command.medicalClearanceExpiresOn(),
                 site,
                 command.responsibleUnit(),
+                // The identity that will sign in as this driver, if it is known at registration. Null
+                // is the ordinary case — most driver references exist for people who never open SFL —
+                // and an unbound profile is assignable but shows its holder no trips of their own.
+                command.principalSubject(),
                 RecordMetadata.createdBy(command.actor().actorId(), now, command.sourceChannel(),
                         command.actor().correlationId()));
 
@@ -153,6 +158,63 @@ public class DriverApplicationService {
         if (existing.eligibilityStatus() != saved.eligibilityStatus()) {
             publishEligibilityChanged(command, existing, saved, assessment);
         }
+        return saved;
+    }
+
+    /**
+     * SRS-SFL-S166-01: links this driver profile to the identity that signs in as it.
+     *
+     * <h2>Why this exists at all</h2>
+     *
+     * <p>A driver's trip list is narrowed to the trips assigned to them, and until this binding is set
+     * the platform has no way to know which driver a signed-in person <em>is</em>. It used to guess, by
+     * comparing the driver's staff reference against the token's subject claim; that guess is always
+     * wrong under real authentication. See {@code DriverScopeResolver}.
+     *
+     * <h2>Two refusals worth noting</h2>
+     *
+     * <p>Binding a subject already bound to another profile is refused rather than moved, because a
+     * silent move revokes the first driver's access to their own records with nothing to show for it.
+     * The duplicate index enforces the same rule at the database, and this check exists to give the
+     * caller a usable error instead of a constraint violation.
+     *
+     * <p>A null or blank subject unbinds, which is the supported way to revoke access when somebody
+     * leaves. It is not an error — an unbound profile is still assignable, it just shows nobody
+     * anything.
+     */
+    @Transactional
+    public DriverProfileReference bindPrincipal(BindDriverPrincipalCommand command) {
+        DriverProfileReference existing = requireDriver(command.driverId());
+        accessPolicy.require(command.actor(), SflPermission.FLEET_DRIVER_MANAGE, existing.siteCode(),
+                RESOURCE_TYPE, existing.id().toString());
+        requireExpectedVersion(existing, command.expectedVersion());
+
+        String subject = command.principalSubject() == null || command.principalSubject().isBlank()
+                ? null
+                : command.principalSubject().strip();
+
+        if (subject != null) {
+            drivers.findActiveByPrincipalSubject(subject)
+                    .filter(bound -> !bound.id().equals(existing.id()))
+                    .ifPresent(bound -> {
+                        throw new DuplicateActiveIdentifierException(Map.of(
+                                "resourceType", RESOURCE_TYPE,
+                                "field", "principalSubject",
+                                "value", subject,
+                                "conflictingResourceId", bound.id().toString(),
+                                "reason", "That sign-in is already linked to driver "
+                                        + bound.staffReference()));
+                    });
+        }
+
+        Instant now = clock.instant();
+        RecordMetadata metadata = existing.metadata().modifiedBy(command.actor().actorId(), now,
+                command.sourceChannel(), command.actor().correlationId());
+
+        DriverProfileReference saved = drivers.save(existing.bindPrincipal(subject, metadata));
+
+        auditPort.record(command.actor(), command.sourceChannel(), saved.siteCode(), AuditAction.UPDATE,
+                RESOURCE_TYPE, saved.id().toString(), auditImage(existing), auditImage(saved));
         return saved;
     }
 

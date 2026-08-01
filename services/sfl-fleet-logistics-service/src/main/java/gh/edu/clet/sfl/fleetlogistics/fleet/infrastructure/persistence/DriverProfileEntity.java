@@ -63,6 +63,10 @@ public class DriverProfileEntity {
     @Column(name = "suspension_reason", length = 1000)
     private String suspensionReason;
 
+    /** The identity provider subject that signs in as this driver. Null means nobody does. */
+    @Column(name = "principal_subject", length = 160)
+    private String principalSubject;
+
     @Column(name = "created_by", nullable = false, length = 160)
     private String createdBy;
 
@@ -108,6 +112,7 @@ public class DriverProfileEntity {
         this.lifecycleStatus = driver.lifecycleStatus();
         this.eligibilityStatus = driver.eligibilityStatus();
         this.suspensionReason = driver.suspensionReason();
+        this.principalSubject = driver.principalSubject();
         this.createdBy = driver.metadata().createdBy();
         this.createdAt = driver.metadata().createdAt();
         this.lastModifiedBy = driver.metadata().lastModifiedBy();
@@ -120,6 +125,7 @@ public class DriverProfileEntity {
         return new DriverProfileReference(id, staffReference, displayName,
                 new LicenceDetails(licenceNumber, licenceClass, licenceExpiresOn), medicalClearanceExpiresOn,
                 SiteCode.of(siteCode), responsibleUnit, lifecycleStatus, eligibilityStatus, suspensionReason,
+                principalSubject,
                 RecordMetadata.rehydrate(createdBy, createdAt, lastModifiedBy, lastModifiedAt, version,
                         sourceChannel, auditCorrelationId));
     }
