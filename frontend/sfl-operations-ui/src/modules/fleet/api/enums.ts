@@ -106,16 +106,6 @@ export const COMPLIANCE_DOCUMENT_STATUSES = [
 ] as const;
 export type ComplianceDocumentStatus = (typeof COMPLIANCE_DOCUMENT_STATUSES)[number];
 
-export const RETENTION_CLASSES = [
-  'OPERATIONAL_SHORT',
-  'OPERATIONAL_STANDARD',
-  'COMPLIANCE',
-  'INCIDENT',
-  'STATUTORY',
-  'LEGAL_HOLD',
-] as const;
-export type RetentionClass = (typeof RETENTION_CLASSES)[number];
-
 export const EVIDENCE_RETENTION_CLASSES = [
   'OPERATIONAL_1_YEAR',
   'COMPLIANCE_7_YEARS',

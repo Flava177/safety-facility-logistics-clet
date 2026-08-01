@@ -296,6 +296,31 @@ class EmergencyMandatoryScenariosEndToEndTest extends EmergencyPostgresSupport {
                 .isInstanceOf(IllegalStateException.class);
     }
 
+    @Test void cancel_is_a_pre_send_operator_action_with_history_and_permissions() {
+        Fixture f = newFixture();
+        var t = template(f, false);
+        var a = audience(f, 2);
+        var draft = routineDraft(f, t.id(), a.id());
+
+        var cancelled = activations.cancel(draft.id(), "incident stood down before send", f.director(),
+                SourceChannel.WEB);
+
+        assertThat(cancelled.status()).isEqualTo(NotificationActivation.Status.CANCELLED);
+        assertThat(cancelled.closureReason()).isEqualTo("incident stood down before send");
+        assertThat(repository.findActivationHistory(cancelled.id()))
+                .anySatisfy(entry -> assertThat(entry.action()).isEqualTo("cancel"));
+
+        var live = activeRoutine(f);
+        assertThatThrownBy(() -> activations.cancel(live.id(), "too late", f.director(), SourceChannel.WEB))
+                .isInstanceOf(IllegalStateException.class);
+
+        var other = routineDraft(f, t.id(), a.id());
+        assertThatThrownBy(() -> activations.cancel(other.id(), "read-only actor", actor(f.site(), SflRole.AUDITOR),
+                SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
+                .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
+                        .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
+    }
+
     // 17
     @Test void activation_cannot_close_without_evidence() {
         Fixture f = newFixture();
@@ -306,6 +331,28 @@ class EmergencyMandatoryScenariosEndToEndTest extends EmergencyPostgresSupport {
                 f.director(), SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
                 .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
                         .isEqualTo(EmergencyErrorCode.EMERGENCY_CLOSURE_EVIDENCE_MISSING));
+    }
+
+    @Test void closed_activation_can_be_reopened_with_history_and_permissions() {
+        Fixture f = newFixture();
+        var a = activeRoutine(f);
+        activations.allClear(a.id(), f.director(), SourceChannel.WEB);
+        var closed = activations.close(a.id(), "resolved", new ActivationService.EvidenceMeta(null, null,
+                "evidence://closure", null,
+                gh.edu.clet.sfl.emergencynotification.domain.model.RetentionClass.INCIDENT_10_YEARS),
+                f.director(), SourceChannel.WEB);
+
+        assertThatThrownBy(() -> activations.reopen(closed.id(), "audit-only actor",
+                actor(f.site(), SflRole.AUDITOR), SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
+                .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
+                        .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
+
+        var reopened = activations.reopen(closed.id(), "follow-up communication required", f.director(),
+                SourceChannel.WEB);
+        assertThat(reopened.status()).isEqualTo(NotificationActivation.Status.REOPENED);
+        assertThat(reopened.closureReason()).isEqualTo("follow-up communication required");
+        assertThat(repository.findActivationHistory(reopened.id()))
+                .anySatisfy(entry -> assertThat(entry.action()).isEqualTo("reopen"));
     }
 
     // 18
@@ -358,17 +405,29 @@ class EmergencyMandatoryScenariosEndToEndTest extends EmergencyPostgresSupport {
     }
 
     // 23
-    @Test void degraded_mode_records_fallback_path_and_metadata() {
+    @Test void degraded_fallback_is_a_live_operator_action_using_the_recorded_gateway() {
         Fixture f = newFixture();
-        var t = template(f, true);
-        var a = audience(f, 2);
-        var draft = routineDraft(f, t.id(), a.id());
-        var meta = draft.metadata().modifiedBy("actor", Instant.now(), SourceChannel.EDGE, "corr");
-        var degraded = repository.saveActivation(draft.withDegradedFallback("EDGE_DIRECT", meta));
+        var live = activeRoutine(f);
+
+        var degraded = activations.degradedFallback(live.id(), "RECORDED_DIRECT_HANDOFF", f.director(),
+                SourceChannel.EDGE);
         var reloaded = repository.findActivation(degraded.id()).orElseThrow();
         assertThat(reloaded.degradedMode()).isTrue();
-        assertThat(reloaded.fallbackPath()).isEqualTo("EDGE_DIRECT");
+        assertThat(reloaded.fallbackPath()).isEqualTo("RECORDED_DIRECT_HANDOFF");
         assertThat(reloaded.mode()).isEqualTo(NotificationActivation.Mode.DEGRADED);
+        assertThat(repository.findChannels(reloaded.id())).isNotEmpty();
+        assertThat(repository.findActivationHistory(reloaded.id()))
+                .anySatisfy(entry -> assertThat(entry.action()).isEqualTo("degraded-fallback"));
+
+        var t = template(f, false);
+        var a = audience(f, 2);
+        var draft = routineDraft(f, t.id(), a.id());
+        assertThatThrownBy(() -> activations.degradedFallback(draft.id(), "draft path", f.director(),
+                SourceChannel.EDGE)).isInstanceOf(IllegalStateException.class);
+        assertThatThrownBy(() -> activations.degradedFallback(live.id(), "read-only actor",
+                actor(f.site(), SflRole.AUDITOR), SourceChannel.EDGE)).isInstanceOf(EmergencyException.class)
+                .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
+                        .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
     }
 
     // 24

@@ -214,8 +214,9 @@ them, and `scripts/dev/run-local.ps1`.
 The script is why this was worse than the "reads as live code" it was recorded as. It still launched the legacy
 app, and it had been *maintained* as recently as the authentication pass — its `SFL_SECURITY_ENABLED=false` line
 carries a comment explaining that the line became load-bearing after A1. So somebody had edited this file
-believing it was live. It pointed at port 8081 and a database `sfl_java` on 5434 that appears in no compose file
-in the repository, meaning it could not have worked for weeks.
+believing it was live. It pointed at a legacy Fleet runtime configuration that no longer matches the normalized
+Release 1 ports (`8093` app, `5443` PostgreSQL) or the current compose-backed database, meaning it could not have
+worked for weeks.
 
 Nothing in `services/` referenced the package, and `services/pom.xml` inherits from
 `spring-boot-starter-parent` directly rather than from the root pom, so the reactor was unaffected. History is

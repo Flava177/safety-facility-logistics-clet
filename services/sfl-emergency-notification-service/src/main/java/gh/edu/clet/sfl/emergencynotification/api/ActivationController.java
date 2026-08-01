@@ -105,9 +105,22 @@ public class ActivationController {
         return ApiResponse.ok(service.reject(id, r.reason(), actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
+    @PostMapping("/{id}/cancel")
+    public ApiResponse<NotificationActivation> cancel(@PathVariable UUID id, @Valid @RequestBody ReasonRequest r,
+            HttpServletRequest h) {
+        return ApiResponse.ok(service.cancel(id, r.reason(), actors.resolve(h), actors.resolveSourceChannel(h)));
+    }
+
     @PostMapping("/{id}/activate")
     public ApiResponse<NotificationActivation> activate(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.activate(id, actors.resolve(h), actors.resolveSourceChannel(h)));
+    }
+
+    @PostMapping("/{id}/degraded-fallback")
+    public ApiResponse<NotificationActivation> degradedFallback(@PathVariable UUID id,
+            @Valid @RequestBody FallbackRequest r, HttpServletRequest h) {
+        return ApiResponse.ok(service.degradedFallback(id, r.fallbackPath(), actors.resolve(h),
+                actors.resolveSourceChannel(h)));
     }
 
     @PostMapping("/{id}/after-action-approval")
@@ -132,6 +145,12 @@ public class ActivationController {
                 actors.resolveSourceChannel(h)));
     }
 
+    @PostMapping("/{id}/reopen")
+    public ApiResponse<NotificationActivation> reopen(@PathVariable UUID id, @Valid @RequestBody ReasonRequest r,
+            HttpServletRequest h) {
+        return ApiResponse.ok(service.reopen(id, r.reason(), actors.resolve(h), actors.resolveSourceChannel(h)));
+    }
+
     private ActivationService.CreateActivation command(CreateRequest r, HttpServletRequest h) {
         return new ActivationService.CreateActivation(r.siteCode(), r.scenarioId(), r.templateId(),
                 r.audienceGroupIds() == null ? List.of() : r.audienceGroupIds(),
@@ -145,6 +164,8 @@ public class ActivationController {
             String incidentReference) {}
 
     public record ReasonRequest(@NotBlank String reason) {}
+
+    public record FallbackRequest(@NotBlank String fallbackPath) {}
 
     public record JustificationRequest(@NotBlank String justification) {}
 

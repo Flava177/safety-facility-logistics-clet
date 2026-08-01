@@ -22,7 +22,15 @@ export interface Rule {
 }
 
 export const ACTIVATION_RULES: Record<
-  'submit' | 'approve' | 'reject' | 'activate' | 'allClear' | 'close',
+  | 'submit'
+  | 'approve'
+  | 'reject'
+  | 'cancel'
+  | 'activate'
+  | 'degradedFallback'
+  | 'allClear'
+  | 'close'
+  | 'reopen',
   Rule
 > = {
   submit: {
@@ -37,17 +45,36 @@ export const ACTIVATION_RULES: Record<
     from: ['PENDING_APPROVAL'],
     unavailable: 'Only an activation awaiting approval can be rejected.',
   },
+  cancel: {
+    from: ['DRAFT', 'PENDING_APPROVAL', 'APPROVED'],
+    unavailable: 'Only a draft, submitted or approved activation can be cancelled before it is sent.',
+  },
   activate: {
     from: ['APPROVED'],
     unavailable: 'An activation must be approved before it can be sent.',
+  },
+  degradedFallback: {
+    from: ['ACTIVE', 'BREAK_GLASS_ACTIVE', 'PARTIALLY_DELIVERED', 'ESCALATED'],
+    unavailable: 'Degraded fallback can only be recorded for a live broadcast.',
   },
   allClear: {
     from: ['ACTIVE', 'BREAK_GLASS_ACTIVE', 'PARTIALLY_DELIVERED', 'ESCALATED'],
     unavailable: 'An all-clear can only follow a live broadcast.',
   },
   close: {
-    from: ['ALL_CLEAR_PENDING', 'ACTIVE', 'BREAK_GLASS_ACTIVE', 'PARTIALLY_DELIVERED', 'ESCALATED'],
+    from: [
+      'ALL_CLEAR_PENDING',
+      'ACTIVE',
+      'BREAK_GLASS_ACTIVE',
+      'PARTIALLY_DELIVERED',
+      'ESCALATED',
+      'REOPENED',
+    ],
     unavailable: 'Only a live or all-clear activation can be closed.',
+  },
+  reopen: {
+    from: ['CLOSED'],
+    unavailable: 'Only a closed activation can be reopened.',
   },
 };
 

@@ -71,6 +71,9 @@ export const CreatePolicyDialog = ({
       receiptGraceHours: '24',
       materialityAmount: '',
       anomalySlaHours: '24',
+      costVarianceTolerance: '0.30',
+      repeatedPatternWindowHours: '720',
+      repeatedPatternThreshold: '3',
       allowedFuelProducts: '',
       approvedVendors: '',
     },
@@ -102,6 +105,18 @@ export const CreatePolicyDialog = ({
         nonNegativeNumber('Materiality amount'),
       ),
       anomalySlaHours: compose(required('Anomaly SLA'), integerAtLeast('Anomaly SLA', 1)),
+      costVarianceTolerance: compose(
+        required('Cost variance tolerance'),
+        nonNegativeNumber('Cost variance tolerance'),
+      ),
+      repeatedPatternWindowHours: compose(
+        required('Repeated-pattern window'),
+        integerAtLeast('Repeated-pattern window', 1),
+      ),
+      repeatedPatternThreshold: compose(
+        required('Repeated-pattern threshold'),
+        integerAtLeast('Repeated-pattern threshold', 1),
+      ),
     },
     crossFieldValidate: (values) => {
       const errors: Record<string, string> = {};
@@ -142,6 +157,9 @@ export const CreatePolicyDialog = ({
         receiptGraceHours: Number(values.receiptGraceHours),
         materialityAmount: Number(values.materialityAmount),
         anomalySlaHours: Number(values.anomalySlaHours),
+        costVarianceTolerance: Number(values.costVarianceTolerance),
+        repeatedPatternWindowHours: Number(values.repeatedPatternWindowHours),
+        repeatedPatternThreshold: Number(values.repeatedPatternThreshold),
         allowedFuelProducts: toSet(values.allowedFuelProducts),
         approvedVendors: toSet(values.approvedVendors),
       });
@@ -226,14 +244,14 @@ export const CreatePolicyDialog = ({
           step={0.001}
           value={form.values.dailyLimit}
           onChange={(value) => form.setValue('dailyLimit', value)}
-          {...form.fieldProps('dailyLimit', 'Recorded; not yet checked by reconciliation.')}
+          {...form.fieldProps('dailyLimit', 'Checked daily for vehicles, drivers and fuel cards.')}
         />
         <NumberInput
           label="Monthly limit"
           step={0.001}
           value={form.values.monthlyLimit}
           onChange={(value) => form.setValue('monthlyLimit', value)}
-          {...form.fieldProps('monthlyLimit', 'Recorded; not yet checked by reconciliation.')}
+          {...form.fieldProps('monthlyLimit', 'Checked monthly for vehicles, drivers and fuel cards.')}
         />
         <NumberInput
           label="Odometer jump tolerance"
@@ -284,6 +302,38 @@ export const CreatePolicyDialog = ({
           value={form.values.anomalySlaHours}
           onChange={(value) => form.setValue('anomalySlaHours', value)}
           {...form.fieldProps('anomalySlaHours', 'Time to resolve before the sweep escalates.')}
+        />
+        <NumberInput
+          label="Cost variance tolerance"
+          required
+          min={0}
+          step={0.01}
+          value={form.values.costVarianceTolerance}
+          onChange={(value) => form.setValue('costVarianceTolerance', value)}
+          {...form.fieldProps(
+            'costVarianceTolerance',
+            'Decimal tolerance, e.g. 0.30 means 30% from the previous unit price.',
+          )}
+        />
+        <NumberInput
+          label="Repeated-pattern window"
+          required
+          min={1}
+          suffix="hrs"
+          value={form.values.repeatedPatternWindowHours}
+          onChange={(value) => form.setValue('repeatedPatternWindowHours', value)}
+          {...form.fieldProps('repeatedPatternWindowHours', 'Look-back window for recent anomalies.')}
+        />
+        <NumberInput
+          label="Repeated-pattern threshold"
+          required
+          min={1}
+          value={form.values.repeatedPatternThreshold}
+          onChange={(value) => form.setValue('repeatedPatternThreshold', value)}
+          {...form.fieldProps(
+            'repeatedPatternThreshold',
+            'The next anomaly at or above this count triggers repeated-pattern handling.',
+          )}
         />
         <TextInput
           label="Allowed fuel products"

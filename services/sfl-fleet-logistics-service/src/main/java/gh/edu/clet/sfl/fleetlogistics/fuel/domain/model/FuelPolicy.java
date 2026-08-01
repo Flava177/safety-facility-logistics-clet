@@ -13,8 +13,13 @@ public record FuelPolicy(UUID id, SiteCode siteCode, String name, Instant effect
         int policyVersion, BigDecimal maxPerTransaction, BigDecimal dailyLimit, BigDecimal monthlyLimit,
         BigDecimal tankCapacity, BigDecimal minConsumption, BigDecimal maxConsumption,
         long odometerJumpTolerance, boolean receiptRequired, int receiptGraceHours, BigDecimal materialityAmount,
-        int anomalySlaHours, Set<String> allowedFuelProducts, Set<String> approvedVendors, Status status,
+        int anomalySlaHours, BigDecimal costVarianceTolerance, int repeatedPatternWindowHours,
+        int repeatedPatternThreshold, Set<String> allowedFuelProducts, Set<String> approvedVendors, Status status,
         RecordMetadata metadata) {
+
+    public static final BigDecimal DEFAULT_COST_VARIANCE_TOLERANCE = new BigDecimal("0.30");
+    public static final int DEFAULT_REPEATED_PATTERN_WINDOW_HOURS = 720;
+    public static final int DEFAULT_REPEATED_PATTERN_THRESHOLD = 3;
 
     public enum Status { ACTIVE, INACTIVE, ARCHIVED }
 
@@ -22,14 +27,30 @@ public record FuelPolicy(UUID id, SiteCode siteCode, String name, Instant effect
         Objects.requireNonNull(id); Objects.requireNonNull(siteCode); Objects.requireNonNull(effectiveFrom);
         Objects.requireNonNull(maxPerTransaction); Objects.requireNonNull(materialityAmount);
         Objects.requireNonNull(status); Objects.requireNonNull(metadata);
+        costVarianceTolerance = costVarianceTolerance == null ? DEFAULT_COST_VARIANCE_TOLERANCE : costVarianceTolerance;
         name = require(name, "name");
         if (effectiveTo != null && !effectiveTo.isAfter(effectiveFrom)) throw new IllegalArgumentException("effectiveTo must follow effectiveFrom");
         if (policyVersion < 1 || maxPerTransaction.signum() <= 0 || odometerJumpTolerance < 0
-                || receiptGraceHours < 0 || materialityAmount.signum() < 0 || anomalySlaHours < 1) {
+                || receiptGraceHours < 0 || materialityAmount.signum() < 0 || anomalySlaHours < 1
+                || costVarianceTolerance.signum() < 0 || repeatedPatternWindowHours < 1
+                || repeatedPatternThreshold < 1) {
             throw new IllegalArgumentException("fuel policy limits are invalid");
         }
         allowedFuelProducts = normalized(allowedFuelProducts);
         approvedVendors = normalized(approvedVendors);
+    }
+
+    public FuelPolicy(UUID id, SiteCode siteCode, String name, Instant effectiveFrom, Instant effectiveTo,
+            int policyVersion, BigDecimal maxPerTransaction, BigDecimal dailyLimit, BigDecimal monthlyLimit,
+            BigDecimal tankCapacity, BigDecimal minConsumption, BigDecimal maxConsumption,
+            long odometerJumpTolerance, boolean receiptRequired, int receiptGraceHours, BigDecimal materialityAmount,
+            int anomalySlaHours, Set<String> allowedFuelProducts, Set<String> approvedVendors, Status status,
+            RecordMetadata metadata) {
+        this(id, siteCode, name, effectiveFrom, effectiveTo, policyVersion, maxPerTransaction, dailyLimit,
+                monthlyLimit, tankCapacity, minConsumption, maxConsumption, odometerJumpTolerance, receiptRequired,
+                receiptGraceHours, materialityAmount, anomalySlaHours, DEFAULT_COST_VARIANCE_TOLERANCE,
+                DEFAULT_REPEATED_PATTERN_WINDOW_HOURS, DEFAULT_REPEATED_PATTERN_THRESHOLD, allowedFuelProducts,
+                approvedVendors, status, metadata);
     }
 
     public boolean appliesAt(Instant at) {

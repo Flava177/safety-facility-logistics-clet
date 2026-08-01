@@ -3,6 +3,7 @@ import type { QueryParams } from 'shared/api/types';
 import type {
   ActivationDeliveryDetail,
   ActivationHistoryEntry,
+  ActivationReasonRequest,
   ActivationSearchParams,
   ActivationStatusView,
   AudienceGroup,
@@ -14,6 +15,7 @@ import type {
   CreateRecipientZoneRequest,
   CreateScenarioRequest,
   CreateTemplateRequest,
+  DegradedFallbackRequest,
   DrillRun,
   DrillSearchParams,
   EmergencyDashboard,
@@ -37,7 +39,7 @@ import type { RecordLifecycle } from './enums';
  * actor headers, the same correlation id, the same `Idempotency-Key` on creates and the same
  * `ApiResponse` envelope.
  *
- * Thirty operations exist on the service. Twenty-eight are here. The two that are not are the
+ * S174 operator and integration operations exposed by the service are gathered here. The real
  * provider callbacks — `POST /provider-callbacks/{provider}/delivery-status` and
  * `/acknowledgements` — which require an HMAC signature over the raw body and a registered shared
  * secret. A browser cannot hold that secret, and a dashboard that posted delivery facts would be
@@ -203,12 +205,25 @@ export const activationsApi = {
       { service: 'emergency', idempotent: false },
     ),
 
+  cancel: (id: string, body: ActivationReasonRequest) =>
+    apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/cancel`, body, {
+      service: 'emergency',
+      idempotent: false,
+    }),
+
   /** The send. Fans out to every selected channel and stamps the fast-lane elapsed time. */
   activate: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/activate`, undefined, {
       service: 'emergency',
       idempotent: false,
     }),
+
+  degradedFallback: (id: string, body: DegradedFallbackRequest) =>
+    apiClient.post<NotificationActivation>(
+      `${BASE}/activations/${id}/degraded-fallback`,
+      body,
+      { service: 'emergency', idempotent: false },
+    ),
 
   afterActionApproval: (id: string, justification: string) =>
     apiClient.post<NotificationActivation>(
@@ -225,6 +240,12 @@ export const activationsApi = {
 
   close: (id: string, body: CloseActivationRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/close`, body, {
+      service: 'emergency',
+      idempotent: false,
+    }),
+
+  reopen: (id: string, body: ActivationReasonRequest) =>
+    apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/reopen`, body, {
       service: 'emergency',
       idempotent: false,
     }),

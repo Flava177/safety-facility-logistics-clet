@@ -82,6 +82,48 @@ class EmergencyDomainTest {
     }
 
     @Test
+    void cancel_is_only_available_before_the_broadcast_is_sent() {
+        var approved = activation(NotificationActivation.Mode.ROUTINE).submit(meta).approve("director", meta);
+
+        var cancelled = approved.cancel("incident stood down before send", meta);
+
+        assertThat(cancelled.status()).isEqualTo(NotificationActivation.Status.CANCELLED);
+        assertThat(cancelled.closureReason()).isEqualTo("incident stood down before send");
+        assertThatThrownBy(() -> approved.activate(meta).cancel("too late", meta))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("transition not allowed");
+    }
+
+    @Test
+    void closed_activation_can_be_reopened_with_a_reason() {
+        var closed = activation(NotificationActivation.Mode.ROUTINE).submit(meta).approve("d", meta).activate(meta)
+                .allClear(meta).close("resolved", "sent=2", "ack=1", UUID.randomUUID(), meta);
+
+        var reopened = closed.reopen("follow-up communication required", meta);
+
+        assertThat(reopened.status()).isEqualTo(NotificationActivation.Status.REOPENED);
+        assertThat(reopened.closureReason()).isEqualTo("follow-up communication required");
+        assertThatThrownBy(() -> activation(NotificationActivation.Mode.ROUTINE).reopen("not closed", meta))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("transition not allowed");
+    }
+
+    @Test
+    void degraded_fallback_is_only_valid_for_a_live_broadcast() {
+        var live = activation(NotificationActivation.Mode.ROUTINE).submit(meta).approve("d", meta).activate(meta);
+
+        var degraded = live.withDegradedFallback("RECORDED_DIRECT_HANDOFF", meta);
+
+        assertThat(degraded.degradedMode()).isTrue();
+        assertThat(degraded.mode()).isEqualTo(NotificationActivation.Mode.DEGRADED);
+        assertThat(degraded.fallbackPath()).isEqualTo("RECORDED_DIRECT_HANDOFF");
+        assertThatThrownBy(() -> activation(NotificationActivation.Mode.ROUTINE)
+                .withDegradedFallback("draft cannot fallback", meta))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("Only an active activation");
+    }
+
+    @Test
     void all_clear_is_only_valid_from_an_active_state() {
         assertThatThrownBy(() -> activation(NotificationActivation.Mode.ROUTINE).allClear(meta))
                 .isInstanceOf(IllegalStateException.class);

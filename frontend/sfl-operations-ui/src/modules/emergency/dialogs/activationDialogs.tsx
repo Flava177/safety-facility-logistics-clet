@@ -374,7 +374,104 @@ export const RejectActivationDialog = ({
   );
 };
 
-/** Stand down a live broadcast — `POST /activations/{id}/all-clear`. */
+/** Cancel a not-yet-sent activation with an auditable reason. */
+export const CancelActivationDialog = ({
+  open,
+  activation,
+  onClose,
+  onDone,
+}: ActivationActionProps) => {
+  const form = useFleetForm({
+    initialValues: { reason: '' },
+    schema: { reason: compose(required('Cancellation reason'), maxLength('Cancellation reason', 500)) },
+    onSubmit: async (values) => {
+      const cancelled = await activationsApi.cancel(activation.id, { reason: values.reason.trim() });
+      onDone(cancelled);
+      onClose();
+    },
+  });
+
+  return (
+    <FormDialog
+      open={open}
+      title={`Cancel ${activation.activationNumber}`}
+      description="Cancels an activation before any broadcast is sent."
+      submitLabel="Cancel activation"
+      submitting={form.submitting}
+      formError={form.formError}
+      destructive
+      onClose={onClose}
+      onSubmit={form.submit}
+    >
+      <TextAreaInput
+        label="Cancellation reason"
+        required
+        rows={4}
+        autoFocus
+        value={form.values.reason}
+        onChange={(value) => form.setValue('reason', value)}
+        {...form.fieldProps('reason')}
+      />
+      <Alert variant="warning" title="Only pre-send activations can be cancelled">
+        Once a broadcast is active, the operator path is all-clear, closure or degraded fallback —
+        not cancellation. That keeps the record honest about whether a message actually went out.
+      </Alert>
+    </FormDialog>
+  );
+};
+
+export const DegradedFallbackDialog = ({
+  open,
+  activation,
+  onClose,
+  onDone,
+}: ActivationActionProps) => {
+  const form = useFleetForm({
+    initialValues: { fallbackPath: 'RECORDED_DIRECT_HANDOFF' },
+    schema: {
+      fallbackPath: compose(required('Fallback path'), maxLength('Fallback path', 120)),
+    },
+    onSubmit: async (values) => {
+      const degraded = await activationsApi.degradedFallback(activation.id, {
+        fallbackPath: values.fallbackPath.trim().toUpperCase(),
+      });
+      onDone(degraded);
+      onClose();
+    },
+  });
+
+  return (
+    <FormDialog
+      open={open}
+      title={`Record degraded fallback for ${activation.activationNumber}`}
+      description="Records that the live broadcast fell back to a degraded/direct path using the recorded adapter."
+      submitLabel="Record fallback"
+      submitting={form.submitting}
+      formError={form.formError}
+      maxWidth="lg"
+      onClose={onClose}
+      onSubmit={form.submit}
+    >
+      <TextInput
+        label="Fallback path"
+        required
+        autoFocus
+        value={form.values.fallbackPath}
+        onChange={(value) => form.setValue('fallbackPath', value)}
+        {...form.fieldProps(
+          'fallbackPath',
+          'Example: RECORDED_DIRECT_HANDOFF, MANUAL_CALL_TREE, or SECURITY_RADIO_NET.',
+        )}
+      />
+      <Alert variant="info" title="No real vendor gateway is configured in Release 1">
+        This calls the recorded gateway with degraded mode enabled. Real outbound delivery remains
+        deferred for the later CLET Comms integration, but the activation, audit trail and channel
+        records still show the fallback decision.
+      </Alert>
+    </FormDialog>
+  );
+};
+
 export const AllClearDialog = ({ open, activation, onClose, onDone }: ActivationActionProps) => {
   const form = useFleetForm({
     initialValues: {},
@@ -483,6 +580,50 @@ export const AfterActionApprovalDialog = ({
  * `closureBlockers` lists all four separately, because the domain raises one message for the first
  * three together and an operator cannot tell from it which one is missing.
  */
+export const ReopenActivationDialog = ({
+  open,
+  activation,
+  onClose,
+  onDone,
+}: ActivationActionProps) => {
+  const form = useFleetForm({
+    initialValues: { reason: '' },
+    schema: { reason: compose(required('Reopen reason'), maxLength('Reopen reason', 500)) },
+    onSubmit: async (values) => {
+      const reopened = await activationsApi.reopen(activation.id, { reason: values.reason.trim() });
+      onDone(reopened);
+      onClose();
+    },
+  });
+
+  return (
+    <FormDialog
+      open={open}
+      title={`Reopen ${activation.activationNumber}`}
+      description="Reopens a closed activation so a follow-up correction or investigation can be recorded."
+      submitLabel="Reopen activation"
+      submitting={form.submitting}
+      formError={form.formError}
+      onClose={onClose}
+      onSubmit={form.submit}
+    >
+      <TextAreaInput
+        label="Reopen reason"
+        required
+        rows={4}
+        autoFocus
+        value={form.values.reason}
+        onChange={(value) => form.setValue('reason', value)}
+        {...form.fieldProps('reason')}
+      />
+      <Alert variant="info" title="Reopened records must be closed again">
+        The service puts the activation back into a reopened state. When the follow-up is complete,
+        close it again with a closure reason and evidence.
+      </Alert>
+    </FormDialog>
+  );
+};
+
 export const CloseActivationDialog = ({
   open,
   activation,

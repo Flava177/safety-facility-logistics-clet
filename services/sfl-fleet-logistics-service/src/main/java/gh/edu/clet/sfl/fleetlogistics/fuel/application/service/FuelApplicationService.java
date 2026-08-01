@@ -50,11 +50,6 @@ import org.springframework.transaction.annotation.Transactional;
 @Service
 public class FuelApplicationService {
     private static final AtomicLong NUMBERS=new AtomicLong();
-    /** Documented default cost-variance tolerance (30%) applied when a prior transaction exists; move to versioned policy when a dedicated column is added. */
-    private static final BigDecimal COST_VARIANCE_TOLERANCE=new BigDecimal("0.30");
-    /** Documented default look-back window (30 days) and count for repeated-anomaly pattern detection. */
-    private static final long REPEAT_WINDOW_SECONDS=30L*24*3600;
-    private static final long REPEAT_THRESHOLD=3;
     private final FuelRepository repository; private final FuelFleetReferencePort fleet; private final FuelAccessPolicy access;
     private final AuditPort audit; private final IntegrationEventPublisher events; private final IdempotencyPort idempotency; private final Clock clock;
     private final NotificationPort notifications; private final FinanceAuditVisibilityPort financeAudit; private final FuelOutboxAdminPort outboxAdmin;
@@ -65,7 +60,20 @@ public class FuelApplicationService {
     public FuelOutboxAdminPort.OutboxHealth integrationHealth(ActorContext actor){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");return outboxAdmin.health();}
     @Transactional public boolean replayIntegration(UUID messageId,ActorContext actor,SourceChannel channel){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");boolean requeued=outboxAdmin.replay(messageId);audit.record(actor,channel,SiteCode.of("SYSTEM"),AuditAction.INTEGRATION_REPLAYED,"FuelOutboxMessage",messageId.toString(),null,Map.of("requeued",requeued));return requeued;}
 
-    public record CreatePolicy(String siteCode,String name,Instant effectiveFrom,Instant effectiveTo,int policyVersion,BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,long odometerJumpTolerance,boolean receiptRequired,int receiptGraceHours,BigDecimal materialityAmount,int anomalySlaHours,Set<String> allowedFuelProducts,Set<String> approvedVendors,ActorContext actor,SourceChannel channel){}
+    public record CreatePolicy(String siteCode,String name,Instant effectiveFrom,Instant effectiveTo,int policyVersion,BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,long odometerJumpTolerance,boolean receiptRequired,int receiptGraceHours,BigDecimal materialityAmount,int anomalySlaHours,BigDecimal costVarianceTolerance,int repeatedPatternWindowHours,int repeatedPatternThreshold,Set<String> allowedFuelProducts,Set<String> approvedVendors,ActorContext actor,SourceChannel channel){
+        public CreatePolicy {
+            costVarianceTolerance = costVarianceTolerance == null ? FuelPolicy.DEFAULT_COST_VARIANCE_TOLERANCE : costVarianceTolerance;
+            repeatedPatternWindowHours = repeatedPatternWindowHours < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_WINDOW_HOURS : repeatedPatternWindowHours;
+            repeatedPatternThreshold = repeatedPatternThreshold < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_THRESHOLD : repeatedPatternThreshold;
+        }
+        public CreatePolicy(String siteCode,String name,Instant effectiveFrom,Instant effectiveTo,int policyVersion,BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,long odometerJumpTolerance,boolean receiptRequired,int receiptGraceHours,BigDecimal materialityAmount,int anomalySlaHours,Set<String> allowedFuelProducts,Set<String> approvedVendors,ActorContext actor,SourceChannel channel){
+            this(siteCode,name,effectiveFrom,effectiveTo,policyVersion,maxPerTransaction,dailyLimit,monthlyLimit,
+                    tankCapacity,minConsumption,maxConsumption,odometerJumpTolerance,receiptRequired,receiptGraceHours,
+                    materialityAmount,anomalySlaHours,FuelPolicy.DEFAULT_COST_VARIANCE_TOLERANCE,
+                    FuelPolicy.DEFAULT_REPEATED_PATTERN_WINDOW_HOURS,FuelPolicy.DEFAULT_REPEATED_PATTERN_THRESHOLD,
+                    allowedFuelProducts,approvedVendors,actor,channel);
+        }
+    }
     public record CaptureFuel(String siteCode,String providerTransactionId,String sourceSystem,UUID vehicleId,UUID driverId,UUID tripId,Instant occurredAt,String vendorReference,String stationReference,String fuelProduct,BigDecimal quantity,String quantityUnit,BigDecimal unitPrice,BigDecimal totalCost,String currency,String cardReference,long odometerReading,UUID receiptEvidenceId,String comments,String idempotencyKey,ActorContext actor,SourceChannel channel){}
     public record CreateLogbook(String siteCode,UUID driverId,UUID vehicleId,UUID tripId,LocalDate journeyDate,Instant startTime,Instant endTime,String origin,String destination,String routeNotes,DriverLogbook.UseClassification useClassification,String purpose,String passengerLoadNotes,long startOdometer,Long endOdometer,boolean declarationAccepted,UUID evidenceId,ActorContext actor,SourceChannel channel){}
 
@@ -94,11 +102,104 @@ public class FuelApplicationService {
                 .toList());
     }
 
-    private FuelPolicy persistPolicy(CreatePolicy c){Instant now=clock.instant();var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.name(),c.effectiveFrom(),c.effectiveTo(),c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.allowedFuelProducts(),c.approvedVendors(),FuelPolicy.Status.ACTIVE,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.savePolicy(p);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPolicy",saved.id().toString(),null,saved);return saved;}
+    private FuelPolicy persistPolicy(CreatePolicy c){Instant now=clock.instant();var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.name(),c.effectiveFrom(),c.effectiveTo(),c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.costVarianceTolerance(),c.repeatedPatternWindowHours(),c.repeatedPatternThreshold(),c.allowedFuelProducts(),c.approvedVendors(),FuelPolicy.Status.ACTIVE,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.savePolicy(p);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPolicy",saved.id().toString(),null,saved);return saved;}
 
     @Transactional public FuelTransaction capture(CaptureFuel c){SflPermission capturePermission=c.sourceSystem().equalsIgnoreCase("MANUAL")?SflPermission.FUEL_TRANSACTION_CAPTURE:access.has(c.actor(),SflPermission.FUEL_TRANSACTION_IMPORT)?SflPermission.FUEL_TRANSACTION_IMPORT:SflPermission.FUEL_INTEGRATION_INGEST;access.require(c.actor(),capturePermission,c.siteCode(),"FuelTransaction",null);String fp=idempotency.fingerprint(c);Optional<UUID> replay=idempotency.findExistingResult("capture-fuel",c.idempotencyKey(),fp);if(replay.isPresent())return transaction(replay.get(),c.actor());var duplicate=repository.findProviderTransaction(c.siteCode(),c.sourceSystem(),c.providerTransactionId());if(duplicate.isPresent())return duplicate.get();fleet.resolve(c.vehicleId(),c.driverId(),c.tripId(),SiteCode.of(c.siteCode()).value());Instant now=clock.instant();var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.providerTransactionId(),c.sourceSystem(),c.vehicleId(),c.driverId(),c.tripId(),c.occurredAt(),c.vendorReference(),c.stationReference(),c.fuelProduct(),c.quantity(),c.quantityUnit(),c.unitPrice(),c.totalCost(),Currency.getInstance(c.currency().toUpperCase()),c.cardReference(),c.odometerReading(),c.receiptEvidenceId(),c.comments(),FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,now,c.idempotencyKey(),RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.saveTransaction(tx);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelTransaction",saved.id().toString(),null,saved);events.publish(FleetEventType.FUEL_TRANSACTION_RECEIVED,"FuelTransaction",saved.id().toString(),saved.siteCode(),c.actor(),Map.of("transactionId",saved.id(),"vehicleId",saved.vehicleId(),"driverId",saved.driverId(),"quantity",saved.quantity(),"currency",saved.currency().getCurrencyCode()));idempotency.recordResult("capture-fuel",c.idempotencyKey(),fp,saved.id(),saved.siteCode().value(),c.actor().actorId());return saved;}
 
-    @Transactional public FuelTransaction reconcile(UUID id,ActorContext actor,SourceChannel channel){var before=transaction(id,actor);access.require(actor,SflPermission.FUEL_RECONCILIATION_RUN,before.siteCode().value(),"FuelTransaction",id.toString());var policy=repository.findApplicablePolicy(before.siteCode().value(),before.occurredAt()).orElseThrow(()->new IllegalStateException("No active fuel policy applies to this transaction"));var snapshot=fleet.resolve(before.vehicleId(),before.driverId(),before.tripId(),before.siteCode().value());Map<String,Object> rules=new LinkedHashMap<>();List<FuelAnomalyCase.Type> failures=new ArrayList<>();check(rules,failures,"MAX_PER_TRANSACTION",before.quantity().compareTo(policy.maxPerTransaction())<=0,FuelAnomalyCase.Type.LIMIT_EXCEEDED);if(policy.tankCapacity()!=null)check(rules,failures,"TANK_CAPACITY",before.quantity().compareTo(policy.tankCapacity())<=0,FuelAnomalyCase.Type.TANK_CAPACITY);check(rules,failures,"FUEL_PRODUCT",policy.allowsProduct(before.fuelProduct()),FuelAnomalyCase.Type.FUEL_PRODUCT);check(rules,failures,"APPROVED_VENDOR",policy.allowsVendor(before.vendorReference()),FuelAnomalyCase.Type.VENDOR);/* SRS-SFL-S168fuel-04. masked_card_reference was captured from V10 and meant nothing until there was a register to resolve it against; these three rules are what the register is for. A card is only checked when the provider sent a reference — a cash purchase legitimately has none. */if(before.maskedCardReference()!=null&&!before.maskedCardReference().isBlank()){var card=repository.findLiveCardByReference(before.siteCode().value(),before.maskedCardReference());check(rules,failures,"CARD_KNOWN",card.isPresent()&&card.get().usableOn(before.occurredAt().atZone(java.time.ZoneOffset.UTC).toLocalDate()),FuelAnomalyCase.Type.CARD_UNKNOWN);if(card.isPresent()){check(rules,failures,"CARD_VEHICLE_MATCH",!card.get().mismatchesVehicle(before.vehicleId()),FuelAnomalyCase.Type.CARD_VEHICLE_MISMATCH);if(card.get().perTransactionLimit()!=null)check(rules,failures,"CARD_TRANSACTION_LIMIT",before.totalCost()==null||before.totalCost().compareTo(card.get().perTransactionLimit())<=0,FuelAnomalyCase.Type.CARD_LIMIT_EXCEEDED);}}check(rules,failures,"DRIVER_ELIGIBLE","ELIGIBLE".equals(snapshot.driverEligibility()),FuelAnomalyCase.Type.DRIVER_INELIGIBLE);check(rules,failures,"VEHICLE_OPERATIONAL","ACTIVE".equals(snapshot.vehicleLifecycle())&&!"UNAVAILABLE".equals(snapshot.vehicleAvailability()),FuelAnomalyCase.Type.VEHICLE_UNAVAILABLE);check(rules,failures,"TRIP_MATCH",snapshot.tripMatches(),FuelAnomalyCase.Type.OUTSIDE_TRIP);check(rules,failures,"ODOMETER_NON_REGRESSION",before.odometerReading()>=snapshot.acceptedOdometer(),FuelAnomalyCase.Type.ODOMETER_REGRESSION);check(rules,failures,"ODOMETER_JUMP",before.odometerReading()-snapshot.acceptedOdometer()<=policy.odometerJumpTolerance(),FuelAnomalyCase.Type.ODOMETER_JUMP);boolean receiptOk=!policy.receiptRequired()||before.receiptEvidenceId()!=null||before.occurredAt().plusSeconds(policy.receiptGraceHours()*3600L).isAfter(clock.instant());check(rules,failures,"RECEIPT",receiptOk,FuelAnomalyCase.Type.MISSING_RECEIPT);var previous=repository.findPreviousTransaction(before.siteCode().value(),before.vehicleId(),before.occurredAt());BigDecimal consumption=null;if(previous.isPresent()){long km=before.odometerReading()-previous.get().odometerReading();if(km>0){consumption=before.quantity().divide(BigDecimal.valueOf(km),4,RoundingMode.HALF_UP);if(policy.minConsumption()!=null&&policy.maxConsumption()!=null)check(rules,failures,"CONSUMPTION_RANGE",consumption.compareTo(policy.minConsumption())>=0&&consumption.compareTo(policy.maxConsumption())<=0,FuelAnomalyCase.Type.ABNORMAL_CONSUMPTION);}if(previous.get().unitPrice().signum()>0){BigDecimal variance=before.unitPrice().subtract(previous.get().unitPrice()).abs().divide(previous.get().unitPrice(),4,RoundingMode.HALF_UP);check(rules,failures,"COST_VARIANCE",variance.compareTo(COST_VARIANCE_TOLERANCE)<=0,FuelAnomalyCase.Type.COST_VARIANCE);}}if(before.tripId()!=null){var logbook=repository.findLogbookForTrip(before.tripId());if(logbook.isPresent()&&logbook.get().endOdometer()!=null)check(rules,failures,"LOGBOOK_MATCH",Math.abs(before.odometerReading()-logbook.get().endOdometer())<=policy.odometerJumpTolerance(),FuelAnomalyCase.Type.LOGBOOK_MISMATCH);}long recentAnomalies=repository.countRecentAnomalies(List.of(before.siteCode().value()),before.vehicleId(),before.driverId(),clock.instant().minusSeconds(REPEAT_WINDOW_SECONDS));check(rules,failures,"REPEATED_PATTERN",recentAnomalies<REPEAT_THRESHOLD,FuelAnomalyCase.Type.UNUSUAL_PATTERN);Instant now=clock.instant();boolean passed=failures.isEmpty();var after=before.withStatus(passed?FuelTransaction.Status.RECONCILED:FuelTransaction.Status.EXCEPTION,before.metadata().modifiedBy(actor.actorId(),now,channel,actor.correlationId()));after=repository.saveTransaction(after);repository.saveReconciliation(UUID.randomUUID(),id,policy.id(),policy.policyVersion(),after.status().name(),consumption,now,actor.actorId(),rules,actor.correlationId());if(before.odometerReading()>=snapshot.acceptedOdometer()&&before.odometerReading()-snapshot.acceptedOdometer()<=policy.odometerJumpTolerance())fleet.acceptOdometer(before.vehicleId(),before.odometerReading(),before.occurredAt(),actor,channel);for(var failure:failures)createAnomaly(after,policy,failure,List.of(failure.name()),actor,channel);audit.record(actor,channel,after.siteCode(),AuditAction.STATE_TRANSITION,"FuelTransaction",id.toString(),before,after);events.publish(passed?FleetEventType.FUEL_TRANSACTION_RECONCILED:FleetEventType.FUEL_EXCEPTION_DETECTED,"FuelTransaction",id.toString(),after.siteCode(),actor,rules);return after;}
+    @Transactional public FuelTransaction reconcile(UUID id,ActorContext actor,SourceChannel channel){
+        var before=transaction(id,actor);
+        access.require(actor,SflPermission.FUEL_RECONCILIATION_RUN,before.siteCode().value(),"FuelTransaction",id.toString());
+        var policy=repository.findApplicablePolicy(before.siteCode().value(),before.occurredAt())
+                .orElseThrow(()->new IllegalStateException("No active fuel policy applies to this transaction"));
+        var snapshot=fleet.resolve(before.vehicleId(),before.driverId(),before.tripId(),before.siteCode().value());
+        Map<String,Object> rules=new LinkedHashMap<>();
+        List<FuelAnomalyCase.Type> failures=new ArrayList<>();
+        check(rules,failures,"MAX_PER_TRANSACTION",before.quantity().compareTo(policy.maxPerTransaction())<=0,
+                FuelAnomalyCase.Type.LIMIT_EXCEEDED,Map.of("threshold",policy.maxPerTransaction(),"observed",before.quantity()));
+        if(policy.tankCapacity()!=null)check(rules,failures,"TANK_CAPACITY",
+                before.quantity().compareTo(policy.tankCapacity())<=0,FuelAnomalyCase.Type.TANK_CAPACITY,
+                Map.of("threshold",policy.tankCapacity(),"observed",before.quantity()));
+        check(rules,failures,"FUEL_PRODUCT",policy.allowsProduct(before.fuelProduct()),FuelAnomalyCase.Type.FUEL_PRODUCT);
+        check(rules,failures,"APPROVED_VENDOR",policy.allowsVendor(before.vendorReference()),FuelAnomalyCase.Type.VENDOR);
+        checkPolicyRollingLimits(rules,failures,before,policy);
+        /*
+         * SRS-SFL-S168fuel-04. masked_card_reference was captured from V10 and meant nothing until
+         * there was a register to resolve it against. A card is only checked when the provider sent
+         * a reference; a cash purchase legitimately has none.
+         */
+        if(before.maskedCardReference()!=null&&!before.maskedCardReference().isBlank()){
+            var card=repository.findLiveCardByReference(before.siteCode().value(),before.maskedCardReference());
+            check(rules,failures,"CARD_KNOWN",
+                    card.isPresent()&&card.get().usableOn(before.occurredAt().atZone(java.time.ZoneOffset.UTC).toLocalDate()),
+                    FuelAnomalyCase.Type.CARD_UNKNOWN);
+            if(card.isPresent()){
+                var liveCard=card.get();
+                check(rules,failures,"CARD_VEHICLE_MATCH",!liveCard.mismatchesVehicle(before.vehicleId()),
+                        FuelAnomalyCase.Type.CARD_VEHICLE_MISMATCH);
+                if(liveCard.perTransactionLimit()!=null)check(rules,failures,"CARD_TRANSACTION_LIMIT",
+                        before.totalCost()==null||before.totalCost().compareTo(liveCard.perTransactionLimit())<=0,
+                        FuelAnomalyCase.Type.CARD_LIMIT_EXCEEDED,
+                        Map.of("threshold",liveCard.perTransactionLimit(),"observed",before.totalCost()));
+                checkCardRollingLimits(rules,failures,before,policy,liveCard);
+            }
+        }
+        check(rules,failures,"DRIVER_ELIGIBLE","ELIGIBLE".equals(snapshot.driverEligibility()),FuelAnomalyCase.Type.DRIVER_INELIGIBLE);
+        check(rules,failures,"VEHICLE_OPERATIONAL","ACTIVE".equals(snapshot.vehicleLifecycle())&&!"UNAVAILABLE".equals(snapshot.vehicleAvailability()),FuelAnomalyCase.Type.VEHICLE_UNAVAILABLE);
+        check(rules,failures,"TRIP_MATCH",snapshot.tripMatches(),FuelAnomalyCase.Type.OUTSIDE_TRIP);
+        check(rules,failures,"ODOMETER_NON_REGRESSION",before.odometerReading()>=snapshot.acceptedOdometer(),FuelAnomalyCase.Type.ODOMETER_REGRESSION);
+        check(rules,failures,"ODOMETER_JUMP",before.odometerReading()-snapshot.acceptedOdometer()<=policy.odometerJumpTolerance(),
+                FuelAnomalyCase.Type.ODOMETER_JUMP,Map.of("threshold",policy.odometerJumpTolerance(),
+                        "observed",before.odometerReading()-snapshot.acceptedOdometer()));
+        boolean receiptOk=!policy.receiptRequired()||before.receiptEvidenceId()!=null||before.occurredAt().plusSeconds(policy.receiptGraceHours()*3600L).isAfter(clock.instant());
+        check(rules,failures,"RECEIPT",receiptOk,FuelAnomalyCase.Type.MISSING_RECEIPT,
+                Map.of("receiptRequired",policy.receiptRequired(),"graceHours",policy.receiptGraceHours()));
+        var previous=repository.findPreviousTransaction(before.siteCode().value(),before.vehicleId(),before.occurredAt());
+        BigDecimal consumption=null;
+        if(previous.isPresent()){
+            long km=before.odometerReading()-previous.get().odometerReading();
+            if(km>0){
+                consumption=before.quantity().divide(BigDecimal.valueOf(km),4,RoundingMode.HALF_UP);
+                if(policy.minConsumption()!=null&&policy.maxConsumption()!=null)check(rules,failures,"CONSUMPTION_RANGE",
+                        consumption.compareTo(policy.minConsumption())>=0&&consumption.compareTo(policy.maxConsumption())<=0,
+                        FuelAnomalyCase.Type.ABNORMAL_CONSUMPTION,Map.of("min",policy.minConsumption(),
+                                "max",policy.maxConsumption(),"observed",consumption));
+            }
+            if(previous.get().unitPrice().signum()>0){
+                BigDecimal variance=before.unitPrice().subtract(previous.get().unitPrice()).abs()
+                        .divide(previous.get().unitPrice(),4,RoundingMode.HALF_UP);
+                check(rules,failures,"COST_VARIANCE",variance.compareTo(policy.costVarianceTolerance())<=0,
+                        FuelAnomalyCase.Type.COST_VARIANCE,Map.of("threshold",policy.costVarianceTolerance(),
+                                "observed",variance,"policyVersion",policy.policyVersion()));
+            }
+        }
+        if(before.tripId()!=null){
+            var logbook=repository.findLogbookForTrip(before.tripId());
+            if(logbook.isPresent()&&logbook.get().endOdometer()!=null)check(rules,failures,"LOGBOOK_MATCH",
+                    Math.abs(before.odometerReading()-logbook.get().endOdometer())<=policy.odometerJumpTolerance(),
+                    FuelAnomalyCase.Type.LOGBOOK_MISMATCH);
+        }
+        long recentAnomalies=repository.countRecentAnomalies(List.of(before.siteCode().value()),before.vehicleId(),
+                before.driverId(),clock.instant().minusSeconds(policy.repeatedPatternWindowHours()*3600L));
+        check(rules,failures,"REPEATED_PATTERN",recentAnomalies<policy.repeatedPatternThreshold(),
+                FuelAnomalyCase.Type.UNUSUAL_PATTERN,Map.of("threshold",policy.repeatedPatternThreshold(),
+                        "observed",recentAnomalies,"windowHours",policy.repeatedPatternWindowHours(),
+                        "policyVersion",policy.policyVersion()));
+        Instant now=clock.instant();
+        boolean passed=failures.isEmpty();
+        var after=before.withStatus(passed?FuelTransaction.Status.RECONCILED:FuelTransaction.Status.EXCEPTION,
+                before.metadata().modifiedBy(actor.actorId(),now,channel,actor.correlationId()));
+        after=repository.saveTransaction(after);
+        repository.saveReconciliation(UUID.randomUUID(),id,policy.id(),policy.policyVersion(),after.status().name(),
+                consumption,now,actor.actorId(),rules,actor.correlationId());
+        if(before.odometerReading()>=snapshot.acceptedOdometer()
+                &&before.odometerReading()-snapshot.acceptedOdometer()<=policy.odometerJumpTolerance())
+            fleet.acceptOdometer(before.vehicleId(),before.odometerReading(),before.occurredAt(),actor,channel);
+        for(var failure:failures)createAnomaly(after,policy,failure,List.of(failure.name()),actor,channel);
+        audit.record(actor,channel,after.siteCode(),AuditAction.STATE_TRANSITION,"FuelTransaction",id.toString(),before,after);
+        events.publish(passed?FleetEventType.FUEL_TRANSACTION_RECONCILED:FleetEventType.FUEL_EXCEPTION_DETECTED,
+                "FuelTransaction",id.toString(),after.siteCode(),actor,rules);
+        return after;
+    }
 
     @Transactional public DriverLogbook createLogbook(CreateLogbook c){access.require(c.actor(),SflPermission.FUEL_LOGBOOK_CREATE,c.siteCode(),"DriverLogbook",null);var refs=fleet.resolve(c.vehicleId(),c.driverId(),c.tripId(),SiteCode.of(c.siteCode()).value());access.requireOwnRecord(c.actor(),refs.driverStaffReference(),c.siteCode(),"DriverLogbook",null);Instant now=clock.instant();var l=new DriverLogbook(UUID.randomUUID(),number("LOG"),SiteCode.of(c.siteCode()),c.driverId(),c.vehicleId(),c.tripId(),c.journeyDate(),c.startTime(),c.endTime(),c.origin(),c.destination(),c.routeNotes(),c.useClassification(),c.purpose(),c.passengerLoadNotes(),c.startOdometer(),c.endOdometer(),c.declarationAccepted(),c.evidenceId(),DriverLogbook.Status.DRAFT,null,null,null,null,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.saveLogbook(l);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"DriverLogbook",saved.id().toString(),null,saved);return saved;}
     @Transactional public DriverLogbook transitionLogbook(UUID id,String action,String comment,ActorContext actor,SourceChannel channel){var before=logbook(id,actor);SflPermission permission=switch(action){case"submit"->SflPermission.FUEL_LOGBOOK_SUBMIT;case"reopen"->SflPermission.FUEL_LOGBOOK_REOPEN;default->SflPermission.FUEL_LOGBOOK_REVIEW;};access.require(actor,permission,before.siteCode().value(),"DriverLogbook",id.toString());access.requireOwnRecord(actor,before.metadata().createdBy(),before.siteCode().value(),"DriverLogbook",id.toString());var meta=before.metadata().modifiedBy(actor.actorId(),clock.instant(),channel,actor.correlationId());var after=switch(action){case"submit"->before.submit(clock.instant(),meta);case"review"->before.startReview(meta);case"return"->before.returned(comment,meta);case"approve"->before.approved(clock.instant(),comment,meta);case"reopen"->before.reopened(comment,meta);case"cancel"->before.cancelled(comment,meta);default->throw new IllegalArgumentException("Unknown logbook transition");};after=repository.saveLogbook(after);audit.record(actor,channel,after.siteCode(),AuditAction.STATE_TRANSITION,"DriverLogbook",id.toString(),before,after);FleetEventType event=switch(action){case"submit"->FleetEventType.DRIVER_LOGBOOK_SUBMITTED;case"return"->FleetEventType.DRIVER_LOGBOOK_RETURNED;case"approve"->FleetEventType.DRIVER_LOGBOOK_APPROVED;default->null;};if(event!=null)events.publish(event,"DriverLogbook",id.toString(),after.siteCode(),actor,Map.of("logbookId",id,"status",after.status()));notifyLogbook(action,after);return after;}
@@ -355,8 +456,77 @@ public class FuelApplicationService {
         return anomaly;
     }
 
+    private void checkPolicyRollingLimits(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,
+            FuelTransaction tx,FuelPolicy policy){
+        var periods=periods(tx.occurredAt());
+        if(policy.dailyLimit()!=null){
+            checkRollingLimit(rules,failures,"POLICY_DAILY_VEHICLE_LIMIT",policy.dailyLimit(),
+                    sumQuantity(tx,periods.dayStart(),periods.dayEnd(),tx.vehicleId(),null,null),
+                    FuelAnomalyCase.Type.DAILY_LIMIT_EXCEEDED,"vehicle","day");
+            checkRollingLimit(rules,failures,"POLICY_DAILY_DRIVER_LIMIT",policy.dailyLimit(),
+                    sumQuantity(tx,periods.dayStart(),periods.dayEnd(),null,tx.driverId(),null),
+                    FuelAnomalyCase.Type.DAILY_LIMIT_EXCEEDED,"driver","day");
+        }
+        if(policy.monthlyLimit()!=null){
+            checkRollingLimit(rules,failures,"POLICY_MONTHLY_VEHICLE_LIMIT",policy.monthlyLimit(),
+                    sumQuantity(tx,periods.monthStart(),periods.monthEnd(),tx.vehicleId(),null,null),
+                    FuelAnomalyCase.Type.MONTHLY_LIMIT_EXCEEDED,"vehicle","month");
+            checkRollingLimit(rules,failures,"POLICY_MONTHLY_DRIVER_LIMIT",policy.monthlyLimit(),
+                    sumQuantity(tx,periods.monthStart(),periods.monthEnd(),null,tx.driverId(),null),
+                    FuelAnomalyCase.Type.MONTHLY_LIMIT_EXCEEDED,"driver","month");
+        }
+    }
+
+    private void checkCardRollingLimits(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,
+            FuelTransaction tx,FuelPolicy policy,gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelCard card){
+        var periods=periods(tx.occurredAt());
+        BigDecimal daily=card.dailyLimit()==null?policy.dailyLimit():card.dailyLimit();
+        BigDecimal monthly=card.monthlyLimit()==null?policy.monthlyLimit():card.monthlyLimit();
+        String dailySource=card.dailyLimit()==null?"policy":"card";
+        String monthlySource=card.monthlyLimit()==null?"policy":"card";
+        if(daily!=null)checkRollingLimit(rules,failures,"CARD_DAILY_LIMIT",daily,
+                card.dailyLimit()==null
+                        ? sumQuantity(tx,periods.dayStart(),periods.dayEnd(),null,null,card.maskedReference())
+                        : sumCost(tx,periods.dayStart(),periods.dayEnd(),null,null,card.maskedReference()),
+                FuelAnomalyCase.Type.CARD_DAILY_LIMIT_EXCEEDED,"card:"+dailySource,"day");
+        if(monthly!=null)checkRollingLimit(rules,failures,"CARD_MONTHLY_LIMIT",monthly,
+                card.monthlyLimit()==null
+                        ? sumQuantity(tx,periods.monthStart(),periods.monthEnd(),null,null,card.maskedReference())
+                        : sumCost(tx,periods.monthStart(),periods.monthEnd(),null,null,card.maskedReference()),
+                FuelAnomalyCase.Type.CARD_MONTHLY_LIMIT_EXCEEDED,"card:"+monthlySource,"month");
+    }
+
+    private BigDecimal sumQuantity(FuelTransaction tx,Instant from,Instant to,UUID vehicleId,UUID driverId,
+            String card){
+        return repository.sumTransactionQuantity(new FuelRepository.SpendWindowQuery(tx.siteCode().value(),vehicleId,
+                driverId,card,from,to));
+    }
+
+    private BigDecimal sumCost(FuelTransaction tx,Instant from,Instant to,UUID vehicleId,UUID driverId,String card){
+        return repository.sumTransactionCost(new FuelRepository.SpendWindowQuery(tx.siteCode().value(),vehicleId,
+                driverId,card,from,to));
+    }
+
+    private void checkRollingLimit(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,String rule,
+            BigDecimal limit,BigDecimal observed,FuelAnomalyCase.Type type,String scope,String period){
+        check(rules,failures,rule,observed.compareTo(limit)<=0,type,
+                Map.of("threshold",limit,"observed",observed,"scope",scope,"period",period));
+    }
+
+    private static Periods periods(Instant at){
+        var day=at.atZone(java.time.ZoneOffset.UTC).toLocalDate();
+        var monthStart=day.withDayOfMonth(1);
+        return new Periods(day.atStartOfDay().toInstant(java.time.ZoneOffset.UTC),
+                day.plusDays(1).atStartOfDay().toInstant(java.time.ZoneOffset.UTC),
+                monthStart.atStartOfDay().toInstant(java.time.ZoneOffset.UTC),
+                monthStart.plusMonths(1).atStartOfDay().toInstant(java.time.ZoneOffset.UTC));
+    }
+
+    private record Periods(Instant dayStart,Instant dayEnd,Instant monthStart,Instant monthEnd){}
+
     private void createAnomaly(FuelTransaction tx,FuelPolicy p,FuelAnomalyCase.Type type,List<String> rules,ActorContext actor,SourceChannel channel){if(repository.findAnomaly(tx.id(),type).isPresent())return;Instant now=clock.instant();boolean material=tx.totalCost().compareTo(p.materialityAmount())>=0;var severity=material?FuelAnomalyCase.Severity.HIGH:FuelAnomalyCase.Severity.MEDIUM;var a=new FuelAnomalyCase(UUID.randomUUID(),number("ANM"),tx.siteCode(),tx.id(),null,tx.vehicleId(),tx.driverId(),tx.tripId(),type,severity,material,FuelAnomalyCase.Status.DETECTED,null,now.plusSeconds(p.anomalySlaHours()*3600L),null,null,null,null,0,rules,RecordMetadata.createdBy(actor.actorId(),now,channel,actor.correlationId()));a=repository.saveAnomaly(a);audit.record(actor,channel,a.siteCode(),AuditAction.CREATE,"FuelAnomalyCase",a.id().toString(),null,a);events.publish(FleetEventType.FUEL_EXCEPTION_DETECTED,"FuelAnomalyCase",a.id().toString(),a.siteCode(),actor,Map.of("anomalyId",a.id(),"type",a.type(),"material",a.material()));notifications.notifyRole(a.siteCode(),SflRole.FLEET_MANAGER,NotificationKind.WORK_ASSIGNED,a.anomalyNumber(),anomalyContext(a));if(material)financeAudit.surfaceMaterialException(a,actor);}
-    private static void check(Map<String,Object> results,List<FuelAnomalyCase.Type> failures,String rule,boolean passed,FuelAnomalyCase.Type type){results.put(rule,Map.of("passed",passed));if(!passed&&!failures.contains(type))failures.add(type);}
+    private static void check(Map<String,Object> results,List<FuelAnomalyCase.Type> failures,String rule,boolean passed,FuelAnomalyCase.Type type){check(results,failures,rule,passed,type,Map.of());}
+    private static void check(Map<String,Object> results,List<FuelAnomalyCase.Type> failures,String rule,boolean passed,FuelAnomalyCase.Type type,Map<String,Object> details){var outcome=new LinkedHashMap<String,Object>();outcome.put("passed",passed);outcome.putAll(details);results.put(rule,outcome);if(!passed&&!failures.contains(type))failures.add(type);}
     private static String number(String prefix){return prefix+"-"+Instant.now().toEpochMilli()+"-"+NUMBERS.incrementAndGet();}
     private static String csv(String value){return "\""+String.valueOf(value).replace("\"","\"\"")+"\"";}
 }

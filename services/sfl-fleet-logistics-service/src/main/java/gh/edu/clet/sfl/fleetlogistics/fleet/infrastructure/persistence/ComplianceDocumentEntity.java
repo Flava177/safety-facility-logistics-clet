@@ -3,8 +3,8 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.persistence;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import jakarta.persistence.Column;
@@ -57,7 +57,7 @@ public class ComplianceDocumentEntity {
 
     @Enumerated(EnumType.STRING)
     @Column(name = "retention_class", nullable = false, length = 40)
-    private RetentionClass retentionClass;
+    private EvidenceRetentionClass retentionClass;
 
     @Column(name = "created_by", nullable = false, length = 160)
     private String createdBy;

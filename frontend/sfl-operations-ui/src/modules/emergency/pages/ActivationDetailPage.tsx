@@ -22,7 +22,10 @@ import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
 import {
   AfterActionApprovalDialog,
   AllClearDialog,
+  CancelActivationDialog,
   CloseActivationDialog,
+  DegradedFallbackDialog,
+  ReopenActivationDialog,
   RejectActivationDialog,
   SendActivationDialog,
 } from 'modules/emergency/dialogs/activationDialogs';
@@ -62,10 +65,13 @@ const ActivationDetailPage = () => {
 
   const [working, setWorking] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [sending, setSending] = useState(false);
+  const [degrading, setDegrading] = useState(false);
   const [clearing, setClearing] = useState(false);
   const [approvingAfterAction, setApprovingAfterAction] = useState(false);
   const [closing, setClosing] = useState(false);
+  const [reopening, setReopening] = useState(false);
 
   const query = useApiQuery(
     (signal) => activationsApi.status(activationId, signal),
@@ -260,9 +266,23 @@ const ActivationDetailPage = () => {
                       Reject
                     </Button>
                   )}
+                  {canTransition(activation, 'cancel') && (
+                    <Button variant="outline" startIcon="close" onClick={() => setCancelling(true)}>
+                      Cancel
+                    </Button>
+                  )}
                   {canTransition(activation, 'activate') && (
                     <Button variant="danger" startIcon="megaphone" onClick={() => setSending(true)}>
                       Send broadcast
+                    </Button>
+                  )}
+                  {canTransition(activation, 'degradedFallback') && (
+                    <Button
+                      variant="outline"
+                      startIcon="alert-circle"
+                      onClick={() => setDegrading(true)}
+                    >
+                      Record degraded fallback
                     </Button>
                   )}
                   {canTransition(activation, 'allClear') && (
@@ -288,6 +308,11 @@ const ActivationDetailPage = () => {
                       Close activation
                     </Button>
                   )}
+                  {canTransition(activation, 'reopen') && (
+                    <Button variant="outline" startIcon="refresh" onClick={() => setReopening(true)}>
+                      Reopen
+                    </Button>
+                  )}
                   <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
                     Refresh
                   </Button>
@@ -301,6 +326,30 @@ const ActivationDetailPage = () => {
                   It has gone out and has not been stood down. Send the all-clear when the emergency
                   is over — that is what tells the record it is finished, and it is not the same as
                   closing it.
+                </Alert>
+              )}
+
+              {activation.degradedMode && (
+                <Alert variant="warning" title="Degraded fallback has been recorded">
+                  The recorded fallback path is{' '}
+                  <span className="font-mono text-theme-xs">
+                    {activation.fallbackPath ?? 'not specified'}
+                  </span>
+                  . Release 1 keeps this on the recorded adapter until the later CLET Comms
+                  integration provides real delivery.
+                </Alert>
+              )}
+
+              {activation.status === 'CANCELLED' && activation.closureReason && (
+                <Alert variant="info" title="This activation was cancelled before send">
+                  {activation.closureReason}
+                </Alert>
+              )}
+
+              {activation.status === 'REOPENED' && activation.closureReason && (
+                <Alert variant="warning" title="This activation was reopened">
+                  {activation.closureReason} Close it again with updated evidence when the follow-up
+                  is complete.
                 </Alert>
               )}
 
@@ -537,6 +586,18 @@ const ActivationDetailPage = () => {
               />
             )}
 
+            {cancelling && (
+              <CancelActivationDialog
+                open
+                activation={activation}
+                onClose={() => setCancelling(false)}
+                onDone={() => {
+                  notifySuccess('Activation cancelled before send.');
+                  query.refetch();
+                }}
+              />
+            )}
+
             {sending && (
               <SendActivationDialog
                 open
@@ -548,6 +609,18 @@ const ActivationDetailPage = () => {
                     'Broadcast sent.',
                     `Handed to ${sent.channels.length} channel${sent.channels.length === 1 ? '' : 's'} in ${formatElapsed(sent.fastLaneMillis)}.`,
                   );
+                  query.refetch();
+                }}
+              />
+            )}
+
+            {degrading && (
+              <DegradedFallbackDialog
+                open
+                activation={activation}
+                onClose={() => setDegrading(false)}
+                onDone={() => {
+                  notifySuccess('Degraded fallback recorded.');
                   query.refetch();
                 }}
               />
@@ -578,6 +651,18 @@ const ActivationDetailPage = () => {
                     'After-the-fact approval recorded.',
                     'This activation can now be closed.',
                   );
+                  query.refetch();
+                }}
+              />
+            )}
+
+            {reopening && (
+              <ReopenActivationDialog
+                open
+                activation={activation}
+                onClose={() => setReopening(false)}
+                onDone={() => {
+                  notifySuccess('Activation reopened.');
                   query.refetch();
                 }}
               />

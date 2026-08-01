@@ -1,7 +1,7 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.api.request;
 
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -21,5 +21,5 @@ public record RegisterComplianceDocumentRequest(
         @NotNull LocalDate issuedOn,
         @NotNull LocalDate expiresOn,
         UUID evidenceId,
-        @NotNull RetentionClass retentionClass) {
+        @NotNull EvidenceRetentionClass retentionClass) {
 }

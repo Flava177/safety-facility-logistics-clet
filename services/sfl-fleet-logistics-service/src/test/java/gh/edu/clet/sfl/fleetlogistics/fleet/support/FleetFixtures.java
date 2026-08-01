@@ -7,7 +7,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OdometerSource;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RegistrationNumber;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RestrictedUse;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ServiceOutcome;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ServiceType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
@@ -86,7 +86,7 @@ public final class FleetFixtures {
             LocalDate issuedOn, LocalDate expiresOn) {
         return ComplianceDocument.register(UUID.randomUUID(), vehicleId, ACCRA, type,
                 type.name() + "-REF-001", "DVLA Ghana", issuedOn, expiresOn, UUID.randomUUID(),
-                RetentionClass.COMPLIANCE, NOW, Duration.ofDays(30), metadata());
+                EvidenceRetentionClass.COMPLIANCE_7_YEARS, NOW, Duration.ofDays(30), metadata());
     }
 
     public static VehicleServiceRecord completedService(UUID vehicleId, LocalDate performedOn, long odometer,

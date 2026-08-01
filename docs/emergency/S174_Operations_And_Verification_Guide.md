@@ -72,14 +72,15 @@ $env:SFL_TEST_DB_PASSWORD='sfl'
 mvn -pl sfl-emergency-notification-service -am test
 ```
 
-Current local verification in this Codex session:
+Current local verification result:
 
 ```text
 S174 reactor: BUILD SUCCESS
-Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
+Tests run: 40, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 The PostgreSQL E2E scenarios ran against the supplied emergency notification Postgres container on `localhost:55445`.
+Release 1 uses the recorded outbound notification adapter; live delivery is deferred to the later CLET Comms integration.
 
 ## S166/S168/S171 regression gate
 
@@ -92,7 +93,7 @@ mvn -pl sfl-fleet-logistics-service -am `
   '-Dsurefire.failIfNoSpecifiedTests=false' test
 ```
 
-Current local result in this Codex session:
+Current local frontend result:
 
 ```text
 Full services reactor: BUILD SUCCESS

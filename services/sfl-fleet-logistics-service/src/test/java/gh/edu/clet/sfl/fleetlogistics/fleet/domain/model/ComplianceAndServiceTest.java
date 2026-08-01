@@ -133,7 +133,7 @@ class ComplianceAndServiceTest {
         private ComplianceDocument register(LocalDate issuedOn, LocalDate expiresOn) {
             return ComplianceDocument.register(UUID.randomUUID(), VEHICLE_ID, ACCRA,
                     ComplianceDocumentType.INSURANCE_CERTIFICATE, "INS-001", "SIC Insurance", issuedOn, expiresOn,
-                    UUID.randomUUID(), RetentionClass.COMPLIANCE, NOW, WARNING_WINDOW, metadata());
+                    UUID.randomUUID(), EvidenceRetentionClass.COMPLIANCE_7_YEARS, NOW, WARNING_WINDOW, metadata());
         }
     }
 

@@ -3,10 +3,13 @@ import { QueryParams } from 'shared/api/types';
 import {
   AnomalyActionRequest,
   AnomalySearchParams,
+  CardSearchParams,
   CaptureTransactionRequest,
   CreateLogbookRequest,
   CreatePolicyRequest,
   DriverLogbook,
+  FuelCard,
+  FuelCardTransitionRequest,
   FuelAnomalyCase,
   FuelAuditEvent,
   DailyFuelTotals,
@@ -21,6 +24,7 @@ import {
   ImportRowSearchParams,
   ImportSearchParams,
   IntegrationHealth,
+  IssueFuelCardRequest,
   LogbookSearchParams,
   LogbookTransitionRequest,
   OutboxHealth,
@@ -72,6 +76,30 @@ export const fuelPoliciesApi = {
    * period. The conflicting policies come back in the error's `details.conflictingPolicies`.
    */
   create: (body: CreatePolicyRequest) => apiClient.post<FuelPolicy>(`${BASE}/policies`, body),
+};
+
+/** Fuel card register. The wire payload is masked only — no full payment-card number is accepted. */
+export const fuelCardsApi = {
+  search: (params: CardSearchParams, signal?: AbortSignal) =>
+    apiClient.get<FuelPageResponse<FuelCard>>(
+      `${BASE}/cards`,
+      asQuery({ size: DEFAULT_PAGE_SIZE, ...params }),
+      signal,
+    ),
+
+  findById: (cardId: string, signal?: AbortSignal) =>
+    apiClient.get<FuelCard>(`${BASE}/cards/${cardId}`, undefined, signal),
+
+  issue: (body: IssueFuelCardRequest) => apiClient.post<FuelCard>(`${BASE}/cards`, body),
+
+  transition: (
+    cardId: string,
+    action: 'assign' | 'suspend' | 'reinstate' | 'cancel',
+    body: FuelCardTransitionRequest = {},
+  ) =>
+    apiClient.post<FuelCard>(`${BASE}/cards/${cardId}/${action}`, body, {
+      idempotent: false,
+    }),
 };
 
 export const fuelTransactionsApi = {

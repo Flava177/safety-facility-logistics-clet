@@ -48,7 +48,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.LicenceClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ReadinessBlockerCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ReadinessStatus;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
@@ -773,7 +773,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     private void addCompliance(Vehicle vehicle, ComplianceDocumentType type, LocalDate expiresOn, String site) {
         vehicles.registerComplianceDocument(new RegisterComplianceDocumentCommand(vehicle.id(), type,
                 type.name() + "-" + SEQUENCE.incrementAndGet(), "DVLA Ghana", today().minusMonths(6), expiresOn,
-                UUID.randomUUID(), RetentionClass.COMPLIANCE, officer(site), SourceChannel.WEB, uniqueKey()));
+                UUID.randomUUID(), EvidenceRetentionClass.COMPLIANCE_7_YEARS, officer(site), SourceChannel.WEB, uniqueKey()));
     }
 
     /** Enables the telematics source for this site and gives it a signing secret. */

@@ -20,7 +20,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ServiceOutcome;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ServiceType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
@@ -348,7 +348,7 @@ class VehicleApplicationServiceTest {
             LocalDate issuedOn, LocalDate expiresOn) {
         return new RegisterComplianceDocumentCommand(vehicle.id(), ComplianceDocumentType.INSURANCE_CERTIFICATE,
                 "INS-" + idempotencyKey, "SIC Insurance", issuedOn, expiresOn, java.util.UUID.randomUUID(),
-                RetentionClass.COMPLIANCE, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB,
+                EvidenceRetentionClass.COMPLIANCE_7_YEARS, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB,
                 idempotencyKey);
     }
 }
