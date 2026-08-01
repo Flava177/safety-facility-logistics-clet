@@ -109,6 +109,30 @@ const FuelPoliciesPage = () => {
         cell: (row) => formatNumber(row.maxPerTransaction),
       },
       {
+        key: 'rolling',
+        header: 'Rolling limits',
+        width: 180,
+        hideBelowLg: true,
+        cell: (row) => (
+          <CellStack
+            primary={`Daily ${row.dailyLimit === null ? 'not set' : formatNumber(row.dailyLimit)}`}
+            secondary={`Monthly ${row.monthlyLimit === null ? 'not set' : formatNumber(row.monthlyLimit)}`}
+          />
+        ),
+      },
+      {
+        key: 'pattern',
+        header: 'Pattern threshold',
+        width: 170,
+        hideBelowLg: true,
+        cell: (row) => (
+          <CellStack
+            primary={`${row.repeatedPatternThreshold} cases`}
+            secondary={`${row.repeatedPatternWindowHours}h window`}
+          />
+        ),
+      },
+      {
         key: 'sla',
         header: 'Anomaly SLA',
         width: 120,

@@ -120,6 +120,7 @@ describe('what a driver is offered', () => {
     const labels = labelsFor(['S166', 'S168']);
     expect(labels).not.toContain('Fuel policies');
     expect(labels).not.toContain('Provider integration');
+    expect(labels).not.toContain('Fuel cards');
     expect(labels).not.toContain('Reconciliation');
     expect(labels).not.toContain('Anomaly cases');
     expect(labels).not.toContain('CSV imports');
@@ -172,6 +173,7 @@ describe('what a fleet manager is offered', () => {
       'FLEET_COMPLIANCE_MANAGE',
       'FLEET_EVIDENCE_READ',
       'FUEL_REPORT_READ',
+      'FUEL_CARD_READ',
       'FUEL_POLICY_READ',
       'FUEL_ANOMALY_READ',
     ]);
@@ -180,6 +182,7 @@ describe('what a fleet manager is offered', () => {
     expect(labels).toContain('Workflow queue');
     expect(labels).toContain('Driver register');
     expect(labels).toContain('Compliance & service');
+    expect(labels).toContain('Fuel cards');
     expect(labels).toContain('Fuel policies');
   });
 });

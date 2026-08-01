@@ -130,6 +130,16 @@ public class ActivationService {
     }
 
     @Transactional
+    public NotificationActivation cancel(UUID id, String reason, ActorContext actor, SourceChannel channel) {
+        var before = activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_CREATE);
+        var cancelled = before.cancel(reason, meta(before, actor, channel));
+        var after = transition(before, cancelled, "cancel", actor, channel, cancelled.closureReason());
+        events.publish(EmergencyEventType.EMERGENCY_ACTIVATION_CANCELLED, "NotificationActivation", id.toString(),
+                after.siteCode().value(), actor, Map.of("activationId", id, "reason", after.closureReason()));
+        return after;
+    }
+
+    @Transactional
     public NotificationActivation activate(UUID id, ActorContext actor, SourceChannel channel) {
         var before = activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_SEND);
         long start = clock.millis();
@@ -141,6 +151,19 @@ public class ActivationService {
         events.publish(EmergencyEventType.EMERGENCY_NOTIFICATION_ACTIVATED, "NotificationActivation", id.toString(),
                 after.siteCode().value(), actor, Map.of("activationId", id, "channels", channelNames(after),
                         "mode", after.mode()));
+        return after;
+    }
+
+    @Transactional
+    public NotificationActivation degradedFallback(UUID id, String fallbackPath, ActorContext actor,
+            SourceChannel channel) {
+        var before = activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_SEND);
+        var degraded = before.withDegradedFallback(fallbackPath, meta(before, actor, channel));
+        degraded = fanOut(degraded, true, actor, channel);
+        var after = transition(before, degraded, "degraded-fallback", actor, channel, degraded.fallbackPath());
+        events.publish(EmergencyEventType.EMERGENCY_DEGRADED_FALLBACK_RECORDED, "NotificationActivation",
+                id.toString(), after.siteCode().value(), actor, Map.of("activationId", id, "fallbackPath",
+                        after.fallbackPath(), "channels", channelNames(after)));
         return after;
     }
 
@@ -244,7 +267,17 @@ public class ActivationService {
         var after = transition(before, before.close(reason, deliverySummary, ackSummary, evidenceId,
                 meta(before, actor, channel)), "close", actor, channel);
         events.publish(EmergencyEventType.EMERGENCY_ACTIVATION_CLOSED, "NotificationActivation", id.toString(),
-                after.siteCode().value(), actor, Map.of("activationId", id, "closureReason", reason));
+                        after.siteCode().value(), actor, Map.of("activationId", id, "closureReason", reason));
+        return after;
+    }
+
+    @Transactional
+    public NotificationActivation reopen(UUID id, String reason, ActorContext actor, SourceChannel channel) {
+        var before = activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_SEND);
+        var reopened = before.reopen(reason, meta(before, actor, channel));
+        var after = transition(before, reopened, "reopen", actor, channel, reopened.closureReason());
+        events.publish(EmergencyEventType.EMERGENCY_ACTIVATION_REOPENED, "NotificationActivation", id.toString(),
+                after.siteCode().value(), actor, Map.of("activationId", id, "reason", after.closureReason()));
         return after;
     }
 
@@ -365,15 +398,25 @@ public class ActivationService {
 
     private NotificationActivation transition(NotificationActivation before, NotificationActivation after,
             String action, ActorContext actor, SourceChannel channel) {
+        return transition(before, after, action, actor, channel, null);
+    }
+
+    private NotificationActivation transition(NotificationActivation before, NotificationActivation after,
+            String action, ActorContext actor, SourceChannel channel, String comment) {
         var saved = repository.saveActivation(after);
-        history(saved, before.status().name(), action, actor);
+        history(saved, before.status().name(), action, actor, comment);
         audit.record(actor, channel, saved.siteCode().value(), "STATE_TRANSITION", "NotificationActivation",
                 saved.id().toString(), before, saved, null);
         return saved;
     }
 
     private void history(NotificationActivation a, String fromStatus, String action, ActorContext actor) {
-        repository.saveActivationHistory(a.id(), fromStatus, a.status().name(), action, actor.actorId(), null,
+        history(a, fromStatus, action, actor, null);
+    }
+
+    private void history(NotificationActivation a, String fromStatus, String action, ActorContext actor,
+            String comment) {
+        repository.saveActivationHistory(a.id(), fromStatus, a.status().name(), action, actor.actorId(), comment,
                 clock.instant(), actor.correlationId());
     }
 

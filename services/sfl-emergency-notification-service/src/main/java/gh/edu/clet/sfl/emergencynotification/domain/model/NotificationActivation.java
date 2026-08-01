@@ -129,7 +129,7 @@ public record NotificationActivation(UUID id, String activationNumber, SiteCode 
     public NotificationActivation close(String reason, String deliverySummary, String ackSummary, UUID evidenceId,
             RecordMetadata changed) {
         requireState(Status.ALL_CLEAR_PENDING, Status.ACTIVE, Status.PARTIALLY_DELIVERED, Status.ESCALATED,
-                Status.BREAK_GLASS_ACTIVE);
+                Status.BREAK_GLASS_ACTIVE, Status.REOPENED);
         if (reason == null || reason.isBlank() || deliverySummary == null || deliverySummary.isBlank()
                 || ackSummary == null || ackSummary.isBlank() || evidenceId == null) {
             throw new IllegalStateException("closure reason, delivery/acknowledgement summary and evidence are required");
@@ -148,6 +148,9 @@ public record NotificationActivation(UUID id, String activationNumber, SiteCode 
     }
 
     public NotificationActivation withDegradedFallback(String fallbackPath, RecordMetadata changed) {
+        if (!active()) {
+            throw new IllegalStateException("Only an active activation can enter degraded fallback");
+        }
         return copy(b -> { b.degradedMode = true; b.mode = Mode.DEGRADED;
             b.fallbackPath = require(fallbackPath, "fallbackPath"); }, changed);
     }

@@ -107,7 +107,7 @@ proves it. Anything that cannot be traced to a row here is out of S166 scope.
 | Audit integrity replay / check | `AuditIntegrityService.verifyChain` + `GET /api/v1/fleet/audit/integrity-check` | `AuditIntegrityServiceTest`, `AuditChainTamperingIT` |
 | Critical compliance alert on integrity failure | `AuditIntegrityService` publishes `sfl.ftlmp.fleet-audit-integrity-failed.v1` | `AuditIntegrityServiceTest.failure_raises_critical_alert` |
 | No normal application role may update or delete audit records | No update/delete methods on `AuditRecordRepository`; DB trigger `fleet_audit_records_no_mutation` | `AuditAppendOnlyIT` |
-| Retention class, legal hold, export recipient/approval | `RetentionClass`, `EvidenceReference.legalHold`, `EvidenceExportRequest` | `EvidenceExportRequestTest` |
+| Retention class, legal hold, export recipient/approval | `EvidenceRetentionClass`, `EvidenceReference.legalHold`, `EvidenceExportRequest`; compliance documents use the same canonical vocabulary after migration V25 | `EvidenceExportRequestTest`, compliance document regression tests |
 
 ### 4.1 Error states
 

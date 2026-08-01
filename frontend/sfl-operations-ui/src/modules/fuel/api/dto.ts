@@ -6,6 +6,7 @@ import {
   FuelPolicyStatus,
   FuelTransactionLifecycle,
   FuelTransactionStatus,
+  FuelCardStatus,
   LogbookStatus,
   LogbookUseClassification,
 } from './enums';
@@ -109,6 +110,9 @@ export interface FuelPolicy {
   receiptGraceHours: number;
   materialityAmount: number;
   anomalySlaHours: number;
+  costVarianceTolerance: number;
+  repeatedPatternWindowHours: number;
+  repeatedPatternThreshold: number;
   allowedFuelProducts: string[];
   approvedVendors: string[];
   status: FuelPolicyStatus;
@@ -217,8 +221,30 @@ export interface CreatePolicyRequest {
   receiptGraceHours: number;
   materialityAmount: number;
   anomalySlaHours: number;
+  costVarianceTolerance: number;
+  repeatedPatternWindowHours: number;
+  repeatedPatternThreshold: number;
   allowedFuelProducts: string[];
   approvedVendors: string[];
+}
+
+export interface FuelCard {
+  id: string;
+  siteCode: SiteCodeValue;
+  /** Already masked by the backend; the UI never accepts or displays a full card number. */
+  maskedReference: string;
+  provider: string;
+  vehicleId: string | null;
+  driverId: string | null;
+  status: FuelCardStatus;
+  issuedOn: string;
+  expiresOn: string | null;
+  dailyLimit: number | null;
+  monthlyLimit: number | null;
+  perTransactionLimit: number | null;
+  suspensionReason: string | null;
+  notes: string | null;
+  metadata: RecordMetadata;
 }
 
 export interface CaptureTransactionRequest {
@@ -329,6 +355,34 @@ export interface PolicySearchParams extends FuelPageParams {
   status?: FuelPolicyStatus | '';
   /** An interval test, not a status: an active policy whose period has not started is not in force. */
   inForceOnly?: boolean;
+}
+
+export interface CardSearchParams extends FuelPageParams {
+  siteCode: string;
+  status?: FuelCardStatus | '';
+  vehicleId?: string;
+  driverId?: string;
+  maskedReference?: string;
+}
+
+export interface IssueFuelCardRequest {
+  siteCode: string;
+  maskedReference: string;
+  provider: string;
+  vehicleId?: string | null;
+  driverId?: string | null;
+  issuedOn?: string | null;
+  expiresOn?: string | null;
+  dailyLimit?: number | null;
+  monthlyLimit?: number | null;
+  perTransactionLimit?: number | null;
+  notes?: string | null;
+}
+
+export interface FuelCardTransitionRequest {
+  reason?: string | null;
+  vehicleId?: string | null;
+  driverId?: string | null;
 }
 
 export interface ImportSearchParams extends FuelPageParams {

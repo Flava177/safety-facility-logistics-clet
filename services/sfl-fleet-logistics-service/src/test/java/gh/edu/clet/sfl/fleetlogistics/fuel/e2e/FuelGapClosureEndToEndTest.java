@@ -24,6 +24,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleCategory;
 import gh.edu.clet.sfl.fleetlogistics.fleet.e2e.FleetPostgresSupport;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelCardService;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelImportService;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyProcessedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOverlapException;
@@ -35,6 +36,7 @@ import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
 import org.junit.jupiter.api.Test;
@@ -56,6 +58,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
     @Autowired VehicleApplicationService vehicleService;
     @Autowired DriverApplicationService driverService;
     @Autowired FuelApplicationService fuel;
+    @Autowired FuelCardService cards;
     @Autowired FuelImportService imports;
     @Autowired FuelRepository repository;
     @Autowired AuditPort audit;
@@ -86,9 +89,14 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
     }
 
     private FuelTransaction capture(Fixture f, String provider, BigDecimal litres, long reading) {
+        return capture(f, provider, litres, new BigDecimal("10"), reading, null, Instant.now());
+    }
+
+    private FuelTransaction capture(Fixture f, String provider, BigDecimal litres, BigDecimal unitPrice,
+            long reading, String cardReference, Instant occurredAt) {
         return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),
-                f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",litres,"LITRE",
-                new BigDecimal("10"),null,"GHS","1234567890",reading,UUID.randomUUID(),null,
+                f.driver().id(),null,occurredAt,"CLET STATION","PUMP-1","DIESEL",litres,"LITRE",
+                unitPrice,null,"GHS",cardReference,reading,UUID.randomUUID(),null,
                 "tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 
@@ -116,6 +124,85 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
         fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB);
         fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB);
         assertThat(fuel.reconciliations(tx.id(),f.manager())).hasSize(2);
+    }
+
+    /** Release 1 gap closure: daily and monthly policy limits are evaluated, not merely stored. */
+    @Test void daily_and_monthly_policy_limits_are_evaluated_during_reconciliation() {
+        Fixture f = newFixture(false);
+        fuel.createPolicy(new FuelApplicationService.CreatePolicy(f.site(),"Rolling policy",
+                Instant.now().minusSeconds(3600),null,7,new BigDecimal("200"),new BigDecimal("30"),
+                new BigDecimal("1000"),null,null,null,500,true,24,new BigDecimal("400"),8,
+                new BigDecimal("0.30"),720,3,Set.of("DIESEL"),Set.of("CLET STATION"),f.manager(),
+                SourceChannel.WEB));
+
+        Instant at = Instant.now().minusSeconds(60);
+        fuel.reconcile(capture(f,"ROLLING-A",new BigDecimal("20"),new BigDecimal("10"),1100,null,at).id(),
+                f.manager(),SourceChannel.WEB);
+        var overDaily = capture(f,"ROLLING-B",new BigDecimal("15"),new BigDecimal("10"),1120,null,
+                at.plusSeconds(30));
+        fuel.reconcile(overDaily.id(),f.manager(),SourceChannel.WEB);
+
+        var latest = fuel.reconciliations(overDaily.id(),f.manager()).get(0);
+        assertThat(latest.failedRules()).contains("POLICY_DAILY_VEHICLE_LIMIT","POLICY_DAILY_DRIVER_LIMIT");
+        assertThat(ruleResult(latest.ruleResults(),"POLICY_DAILY_VEHICLE_LIMIT"))
+                .containsEntry("scope","vehicle")
+                .containsEntry("period","day");
+        assertThat(fuel.anomalies(f.site(),null,FuelAnomalyCase.Type.DAILY_LIMIT_EXCEEDED,null,null,null,null,null,
+                null,overDaily.id(),page(0,25),f.manager()).content()).isNotEmpty();
+    }
+
+    /** Release 1 gap closure: fuel-card daily/monthly ceilings feed the same reconciliation run. */
+    @Test void card_rolling_limits_are_evaluated_during_reconciliation() {
+        Fixture f = newFixture(false);
+        fuel.createPolicy(new FuelApplicationService.CreatePolicy(f.site(),"Card fallback policy",
+                Instant.now().minusSeconds(3600),null,8,new BigDecimal("200"),new BigDecimal("900"),
+                new BigDecimal("5000"),null,null,null,500,true,24,new BigDecimal("400"),8,
+                new BigDecimal("0.30"),720,3,Set.of("DIESEL"),Set.of("CLET STATION"),f.manager(),
+                SourceChannel.WEB));
+        cards.issue(new FuelCardService.IssueCard(f.site(),"****1234","CLET FUEL CARDS",f.vehicle().id(),
+                f.driver().id(),LocalDate.now().minusDays(1),null,new BigDecimal("250"),new BigDecimal("1000"),
+                new BigDecimal("500"),null,f.manager(),SourceChannel.WEB));
+
+        Instant at = Instant.now().minusSeconds(60);
+        fuel.reconcile(capture(f,"CARD-A",new BigDecimal("20"),new BigDecimal("10"),1100,"****1234",at).id(),
+                f.manager(),SourceChannel.WEB);
+        var overCardDaily = capture(f,"CARD-B",new BigDecimal("6"),new BigDecimal("10"),1110,"****1234",
+                at.plusSeconds(30));
+        fuel.reconcile(overCardDaily.id(),f.manager(),SourceChannel.WEB);
+
+        var latest = fuel.reconciliations(overCardDaily.id(),f.manager()).get(0);
+        assertThat(latest.failedRules()).contains("CARD_DAILY_LIMIT");
+        assertThat(ruleResult(latest.ruleResults(),"CARD_DAILY_LIMIT"))
+                .containsEntry("scope","card:card")
+                .containsEntry("period","day");
+        assertThat(fuel.anomalies(f.site(),null,FuelAnomalyCase.Type.CARD_DAILY_LIMIT_EXCEEDED,null,null,null,null,
+                null,null,overCardDaily.id(),page(0,25),f.manager()).content()).isNotEmpty();
+    }
+
+    /** Release 1 gap closure: variance and repeated-pattern thresholds are policy-versioned facts. */
+    @Test void variance_and_repeated_pattern_thresholds_are_recorded_from_the_policy_version() {
+        Fixture f = newFixture(false);
+        fuel.createPolicy(new FuelApplicationService.CreatePolicy(f.site(),"Versioned anomaly thresholds",
+                Instant.now().minusSeconds(3600),null,9,new BigDecimal("200"),null,null,null,null,null,500,
+                true,24,new BigDecimal("400"),8,new BigDecimal("0.05"),12,2,Set.of("DIESEL"),
+                Set.of("CLET STATION"),f.manager(),SourceChannel.WEB));
+
+        Instant at = Instant.now().minusSeconds(120);
+        fuel.reconcile(capture(f,"VARIANCE-A",new BigDecimal("20"),new BigDecimal("10.00"),1100,null,at).id(),
+                f.manager(),SourceChannel.WEB);
+        var varied = capture(f,"VARIANCE-B",new BigDecimal("20"),new BigDecimal("10.60"),1120,null,
+                at.plusSeconds(60));
+        fuel.reconcile(varied.id(),f.manager(),SourceChannel.WEB);
+
+        var latest = fuel.reconciliations(varied.id(),f.manager()).get(0);
+        assertThat(latest.failedRules()).contains("COST_VARIANCE");
+        assertThat(ruleResult(latest.ruleResults(),"COST_VARIANCE"))
+                .containsEntry("policyVersion",9);
+        assertThat(ruleResult(latest.ruleResults(),"COST_VARIANCE").get("threshold").toString())
+                .isEqualTo("0.05");
+        assertThat(ruleResult(latest.ruleResults(),"REPEATED_PATTERN"))
+                .containsEntry("threshold",2)
+                .containsEntry("windowHours",12);
     }
 
     /** Gap 2: the batch and its rows are written on every upload and were readable from none of it. */
@@ -386,5 +473,12 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
                 Set.of(SflRole.FLEET_MANAGER),Set.of("SOMEWHERE-ELSE"),false),"fuel-gap-e2e");
         assertThatThrownBy(() -> fuel.history("FuelTransaction",tx.id(),outsider))
                 .isInstanceOf(gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException.class);
+    }
+
+    @SuppressWarnings("unchecked")
+    private Map<String,Object> ruleResult(Map<String,Object> results, String rule) {
+        Object value = results.get(rule);
+        assertThat(value).as("rule result for %s",rule).isInstanceOf(Map.class);
+        return (Map<String,Object>) value;
     }
 }

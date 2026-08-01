@@ -174,6 +174,7 @@ export const fuelPaths = {
   reconciliation: '/fuel/reconciliation',
   anomalies: '/fuel/anomalies',
   anomalyDetail: (anomalyId: string) => `/fuel/anomalies/${anomalyId}`,
+  cards: '/fuel/cards',
   imports: '/fuel/imports',
   policies: '/fuel/policies',
   policyDetail: (policyId: string) => `/fuel/policies/${policyId}`,
@@ -649,10 +650,8 @@ export const navSections: NavSection[] = [
         icon: 'coins',
         matchPrefix: fuelPaths.transactions,
         description: 'Captured, imported and provider transactions',
-        // A driver holds this and the service does **not** narrow transactions per driver, so they
-        // see every fill at their site. That is a real gap, not a decision: it is recorded in
-        // `S168_Fuel_UI_Gap_Report.md` and the driver's own page labels the panel "recorded at this
-        // site" rather than "mine" so the screen never claims otherwise.
+        // Driver-only actors are narrowed by FuelApplicationService.transactions, so this register
+        // can be safely shown to drivers without leaking colleagues' fills.
         permission: 'FUEL_TRANSACTION_READ',
       },
       {
@@ -679,6 +678,14 @@ export const navSections: NavSection[] = [
         matchPrefix: fuelPaths.anomalies,
         description: 'Exception queue, explanation and closure',
         permission: 'FUEL_ANOMALY_READ',
+      },
+      {
+        label: 'Fuel cards',
+        to: fuelPaths.cards,
+        icon: 'shield-lock',
+        matchPrefix: fuelPaths.cards,
+        description: 'Masked card register, assignments and card limits',
+        permission: 'FUEL_CARD_READ',
       },
       {
         label: 'CSV imports',

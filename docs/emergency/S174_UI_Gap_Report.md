@@ -1,6 +1,6 @@
 # S174 Emergency Mass Notification — Frontend Gap Register
 
-**Status (29 July 2026): ten of twelve gaps closed.**
+**Status (1 August 2026): eleven of twelve gaps closed. The only remaining item is open by design.**
 
 | # | Gap | Status |
 | --- | --- | --- |
@@ -10,7 +10,7 @@
 | 4 | History written on every transition, never readable | **Closed** — `GET /activations/{id}/history` off `activation_history` |
 | 5 | Only templates had a detail endpoint | **Closed** — scenario, audience group and recipient zone detail added |
 | 6 | Master data could not be corrected or retired | **Closed** — `PATCH /audience-groups/{id}` and `PATCH /{resource}/{id}/lifecycle` |
-| 7 | `cancel`, `escalate`, `reopen`, `withDegradedFallback` have no endpoint | **Open** — see below |
+| 7 | `cancel`, `reopen`, `withDegradedFallback` have no endpoint | **Closed** — controller, service and UI actions added; `escalate` remains a scheduled SLA outcome |
 | 8 | No per-recipient delivery or acknowledgement read | **Closed** — `GET /activations/{id}/delivery` |
 | 9 | `RecordMetadata` differs between services | **Open by design** — recorded so nobody "fixes" it into a shared type |
 | 10 | The dashboards address two origins | **Closed in the previous round** |
@@ -37,13 +37,14 @@ group sized at zero sent to nobody and reported a completely successful broadcas
 now. The **name** deliberately is not: closed activations cite this group, and renaming it would
 rewrite what they say they were sent to.
 
-### Gap 7 — still open, and why
+### Gap 7 — closed in the Release 1 demo build
 
-`cancel`, `reopen` and `withDegradedFallback` remain unexposed. Adding them is not the hard part;
-deciding what they mean operationally is. A cancelled activation and a rejected one are different
-records to an auditor, and `reopen` on a closed activation raises a question about closure evidence
-that nobody has answered yet. The register keeps this rather than the endpoints being added on a
-guess. `escalate` is reachable through the scheduled SLA sweep and does not need a manual door.
+`cancel`, `reopen` and `withDegradedFallback` are now exposed through the activation controller and
+the activation detail screen. Each path carries permissions, state guards, history/audit recording
+and E2E coverage. `cancel` is pre-send only; `withDegradedFallback` is live-activation-only and still
+uses the recorded adapter; `reopen` is allowed from `CLOSED` so operators can attach corrected
+evidence and close again. `escalate` remains reachable through the scheduled SLA sweep and does not
+need a manual door.
 
 ### Gap 9 — open by design
 
@@ -189,29 +190,29 @@ appearing to have been missed.
 
 ---
 
-## Gap 7 — Five domain transitions have no endpoint
+## Gap 7 — operator transitions now exposed
 
-`NotificationActivation` implements these and nothing exposes them:
+`NotificationActivation` implements these transitions; Release 1 exposes the operator-safe ones:
 
 | Transition | Effect | Reachable? |
 | --- | --- | --- |
-| `cancel(reason)` | `DRAFT`/`PENDING_APPROVAL`/`APPROVED` → `CANCELLED` | No |
+| `cancel(reason)` | `DRAFT`/`PENDING_APPROVAL`/`APPROVED` → `CANCELLED` | Yes — `POST /activations/{id}/cancel` |
 | `escalate(reason)` | live → `ESCALATED`, increments `escalationLevel` | Only via the scheduled acknowledgement sweep |
-| `reopen(reason)` | `CLOSED` → `REOPENED` | No |
-| `withDegradedFallback(path)` | sets `DEGRADED` mode and the fallback path | No |
+| `reopen(reason)` | `CLOSED` → `REOPENED` | Yes — `POST /activations/{id}/reopen` |
+| `withDegradedFallback(path)` | sets `DEGRADED` mode and the fallback path | Yes — `POST /activations/{id}/degraded-fallback` |
 | `markPartiallyDelivered()` | → `PARTIALLY_DELIVERED` | Only via a provider delivery callback |
 
-`ACTIVATING` and `FAILED` are declared on the status enum and set by nothing at all.
+`ACTIVATING` and `FAILED` remain non-operator states; they are not dashboard actions.
 
-**The practical consequence.** A draft composed in error cannot be cancelled — it stays in the
-register forever as an open activation, because `activationOpen()` counts anything not closed,
-cancelled or rejected. Submitting it and rejecting it is the only way to dispose of one, which puts
-a broadcast in front of an approver purely to throw it away.
+**The practical consequence now.** A draft composed in error can be cancelled before send with an
+auditable reason. A closed activation can be reopened for corrected evidence and then closed again.
+A live activation can record degraded fallback routing without pretending a real vendor gateway
+sent the message.
 
 **What the dashboards do.** The status filter offers the whole enum, because a stored record can
 hold any of these and a filter that could not find one would be worse than useless. Statuses that
 this dashboard cannot produce are labelled "(set elsewhere)" in the dropdown, and
-`OPERATOR_REACHABLE_STATUSES` in `enums.ts` records which is which.
+`OPERATOR_REACHABLE_STATUSES` in `enums.ts` records which states are usable by operators.
 
 ---
 

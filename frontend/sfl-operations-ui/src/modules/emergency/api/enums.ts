@@ -41,13 +41,13 @@ export const ACTIVATION_STATUSES = [
 export type ActivationStatus = (typeof ACTIVATION_STATUSES)[number];
 
 /**
- * The statuses an activation can actually be *put into* through this dashboard.
+ * The activation states the dashboard exposes in filters and operator workflows.
  *
- * `ACTIVATING` and `FAILED` have no transition that produces them and no endpoint that sets them;
+ * `ACTIVATING` and `FAILED` have no operator endpoint;
  * `PARTIALLY_DELIVERED` is set by provider delivery callbacks; `ESCALATED` only by the scheduled
- * acknowledgement sweep; `CANCELLED` and `REOPENED` exist on the domain record but are not exposed
- * by any controller. They stay in `ACTIVATION_STATUSES` because a stored record may hold them and
- * the filter must be able to find it — see gaps 1 and 2 in the register.
+ * acknowledgement sweep. `CANCELLED` and `REOPENED` are now first-class operator outcomes in the
+ * Release 1 demo build, so a stored record may hold them and
+ * the filter must be able to find them.
  */
 export const OPERATOR_REACHABLE_STATUSES: readonly ActivationStatus[] = [
   'DRAFT',
@@ -58,6 +58,8 @@ export const OPERATOR_REACHABLE_STATUSES: readonly ActivationStatus[] = [
   'BREAK_GLASS_ACTIVE',
   'ALL_CLEAR_PENDING',
   'CLOSED',
+  'CANCELLED',
+  'REOPENED',
 ];
 
 /** `ChannelStatus` — the aggregate standing of one channel of one activation. */

@@ -73,6 +73,7 @@ export const canImportFuel = (): boolean => permits('FUEL_TRANSACTION_IMPORT');
 export const canManageFuelPolicies = (): boolean => permits('FUEL_POLICY_MANAGE');
 export const canManageAnomalies = (): boolean => permits('FUEL_ANOMALY_MANAGE');
 export const canRunReconciliation = (): boolean => permits('FUEL_RECONCILIATION_RUN');
+export const canManageFuelCards = (): boolean => permits('FUEL_CARD_MANAGE');
 
 /**
  * Create a logbook. A driver holds this — it is their own journey record.

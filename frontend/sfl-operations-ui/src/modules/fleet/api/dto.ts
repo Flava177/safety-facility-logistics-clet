@@ -17,7 +17,6 @@ import {
   OperatingMode,
   ReadinessBlockerCode,
   ReadinessStatus,
-  RetentionClass,
   ServiceOutcome,
   ServiceType,
   VehicleAvailabilityStatus,
@@ -145,7 +144,7 @@ export interface ComplianceDocumentResponse {
   daysUntilExpiry: number;
   status: ComplianceDocumentStatus;
   evidenceId: string | null;
-  retentionClass: RetentionClass;
+  retentionClass: EvidenceRetentionClass;
   createdAt: string;
   createdBy: string | null;
   version: number;
@@ -158,7 +157,7 @@ export interface RegisterComplianceDocumentRequest {
   issuedOn: string;
   expiresOn: string;
   evidenceId?: string | null;
-  retentionClass: RetentionClass;
+  retentionClass: EvidenceRetentionClass;
 }
 
 export interface ServiceRecordResponse {

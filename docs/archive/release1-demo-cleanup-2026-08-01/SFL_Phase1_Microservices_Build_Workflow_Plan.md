@@ -346,7 +346,7 @@ Cross-service workflows should be implemented as sagas/process managers. They sh
 
 ## 12. Prompt Template for Future Build Tasks
 
-Use this template when asking Codex to build each feature.
+Use this template when requesting each feature build.
 
 ```text
 Build [EPIC-ID] for [service-name].

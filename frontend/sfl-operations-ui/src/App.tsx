@@ -79,6 +79,7 @@ const DriverLogbookDetailPage = lazy(() => import('modules/fuel/pages/DriverLogb
 const FuelReconciliationPage = lazy(() => import('modules/fuel/pages/FuelReconciliationPage'));
 const FuelAnomaliesPage = lazy(() => import('modules/fuel/pages/FuelAnomaliesPage'));
 const FuelAnomalyDetailPage = lazy(() => import('modules/fuel/pages/FuelAnomalyDetailPage'));
+const FuelCardsPage = lazy(() => import('modules/fuel/pages/FuelCardsPage'));
 const FuelImportsPage = lazy(() => import('modules/fuel/pages/FuelImportsPage'));
 const FuelPoliciesPage = lazy(() => import('modules/fuel/pages/FuelPoliciesPage'));
 const FuelPolicyDetailPage = lazy(() => import('modules/fuel/pages/FuelPolicyDetailPage'));
@@ -295,6 +296,7 @@ const App = () => {
                 <Route index element={<FuelAnomaliesPage />} />
                 <Route path=":anomalyId" element={<FuelAnomalyDetailPage />} />
               </Route>
+              <Route path="cards" element={<FuelCardsPage />} />
               <Route path="imports" element={<FuelImportsPage />} />
               <Route path="policies">
                 <Route index element={<FuelPoliciesPage />} />

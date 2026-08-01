@@ -12,7 +12,7 @@ S174 is implemented and ready for review as a separate deployable Spring Boot se
 | Requirement | Status | Primary implementation area |
 |---|---:|---|
 | `SRS-SFL-S174-01` Operational records | Done | Templates, scenarios, audience groups, recipient zones, site scope, duplicate-active checks |
-| `SRS-SFL-S174-02` Workflow | Done | Routine approval-before-send, break-glass send-without-preapproval, all-clear, closure gates |
+| `SRS-SFL-S174-02` Workflow | Done | Routine approval-before-send, break-glass send-without-preapproval, cancel, degraded fallback routing, all-clear, closure and reopen gates |
 | `SRS-SFL-S174-03` Evidence and audit | Done | Evidence references, retention class checks, append-only audit hash chain |
 | `SRS-SFL-S174-04` Secure integrations | Done | Provider callbacks, HMAC validation, secure inbox, idempotency, outbox replay/dead-letter, recorded adapters |
 | `SRS-SFL-S174-05` Dashboards and reports | Done | Dashboard freshness/reconciliation, drill runs, activation CSV export |
@@ -24,7 +24,7 @@ S174 is implemented and ready for review as a separate deployable Spring Boot se
 | ADR and planning docs | Done | ADR 0004 plus API inventory, domain model, event contracts, gap report, migration plan, test plan and RTM |
 | Service scaffold | Done | Boot 4.1, Java 17, OpenAPI, development actor headers, static page at `/emergency/` |
 | Persistence | Done | Flyway migrations V1-V8 for service foundation, records, activations, delivery, acknowledgements, evidence, audit, dashboard, runtime defaults and command idempotency |
-| Application workflow | Done | Activation lifecycle, provider callbacks, break-glass, after-action approval, all-clear, closure, dashboards, drills and sweeps |
+| Application workflow | Done | Activation lifecycle, provider callbacks, break-glass, cancellation, degraded fallback, after-action approval, all-clear, closure, reopen, dashboards, drills and sweeps |
 | Integration catalog | Done | S174 events added to `docs/integration/event-catalog.md` |
 | Deployment packaging | Done | Service module registered in `services/pom.xml`, Dockerfile added, microservices compose entry added on host port `8095`, local DB compose added as `compose.emergency-db.yml` |
 
@@ -38,6 +38,9 @@ S174 is implemented and ready for review as a separate deployable Spring Boot se
 - `/api/v1/emergency/recipient-zones`
 - `/api/v1/emergency/activations`
 - `/api/v1/emergency/activations/break-glass`
+- `/api/v1/emergency/activations/{id}/cancel`
+- `/api/v1/emergency/activations/{id}/degraded-fallback`
+- `/api/v1/emergency/activations/{id}/reopen`
 - `/api/v1/emergency/provider-callbacks/{provider}/delivery-status`
 - `/api/v1/emergency/provider-callbacks/{provider}/acknowledgements`
 - `/api/v1/emergency/integrations/health`
@@ -58,9 +61,9 @@ mvn -pl sfl-safety-security-service -am test
 Current local result:
 
 ```text
-S174 reactor against supplied Postgres: BUILD SUCCESS; Tests run: 35, Failures: 0, Errors: 0, Skipped: 0
-Full services reactor: BUILD SUCCESS; Surefire reports: tests=452, failures=0, errors=0, skipped=1
-Safety-security service has no local tests yet; it compiles in the full services reactor
+S174 reactor against supplied Postgres: BUILD SUCCESS; Tests run: 40, Failures: 0, Errors: 0, Skipped: 0
+Release 1 changed-service backend gate: sfl-service-common + sfl-fleet-logistics-service + sfl-emergency-notification-service = 466 tests, 0 failures, 0 errors, 0 skips
+Frontend SFL Operations UI: 156 tests, 0 failures; production build clean
 ```
 
 The PostgreSQL-backed S174 E2E suite ran against the supplied emergency notification E2E database on `localhost:55445`.
@@ -69,6 +72,7 @@ The remaining skipped test is an existing Docker/Testcontainers-gated probe outs
 Command idempotency is implemented for activation creation and break-glass creation so retried requests do not
 double-create or double-send. Provider callbacks remain idempotent through the secure inbox and delivery/ack
 unique keys. Transition POSTs are state guarded and audited, but they do not yet replay stored response bodies.
+Real outbound notification delivery remains intentionally deferred to the later CLET Comms integration; Release 1 uses the recorded outbound adapter.
 
 ## Review checklist
 

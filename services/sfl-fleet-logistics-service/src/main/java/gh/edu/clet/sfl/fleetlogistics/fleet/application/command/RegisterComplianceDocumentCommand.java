@@ -2,7 +2,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.application.command;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import java.time.LocalDate;
 import java.util.Map;
@@ -22,7 +22,7 @@ public record RegisterComplianceDocumentCommand(
         LocalDate issuedOn,
         LocalDate expiresOn,
         UUID evidenceId,
-        RetentionClass retentionClass,
+        EvidenceRetentionClass retentionClass,
         ActorContext actor,
         SourceChannel sourceChannel,
         String idempotencyKey) implements FleetCommand {

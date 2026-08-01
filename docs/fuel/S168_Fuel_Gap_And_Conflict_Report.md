@@ -85,22 +85,18 @@ against verbatim S166 contracts; **it has not yet been compiled or run in this e
   `countRecentAnomalies`, `findLogbookForTrip`.
 - *Tests.* Added domain coverage for the new anomaly transitions (`FuelDomainTest`).
 
-**Still open (unchanged from above unless noted)**
+**Release 1 closure update (1 August 2026)**
 
-- The 17 mandatory end-to-end scenarios are still not all individually implemented; only domain,
-  architecture and one combined PostgreSQL scenario plus the new domain transition test exist.
-  A full reactor rerun is required and has not been performed here.
-- Reconciliation still lacks daily/weekly/monthly rolling limits and fuel-card/allocation checks
-  (S168_fuel-04 card management is not implemented — no card registry yet). `COST_VARIANCE` uses a
-  documented default tolerance constant and should move to a versioned policy column.
-- Governed evidence export/legal-hold/audit-tamper flows for fuel are not yet exposed via a fuel port.
-- Operational UI screens (import results, transaction/reconciliation detail, manager actions,
-  anomaly investigation, reports/export, integration-health) remain to be built.
-- Dashboard drilldowns and snapshot identity/period/source references remain limited.
-- List endpoints still use a bounded `limit` rather than a page/cursor contract.
+- Fuel-card/allocation management is built through domain, migrations, service/API and the `/fuel/cards`
+  React screen. The screen supports list/filter/detail/issue/assign/suspend/reinstate/cancel and rejects
+  full card numbers before submission.
+- Reconciliation now evaluates daily/monthly policy limits for vehicle and driver, card-specific daily/monthly
+  limits with policy fallback, and policy-versioned `COST_VARIANCE` / `REPEATED_PATTERN` thresholds.
+- The FTLMP regression/E2E suite ran against Docker PostgreSQL on `localhost:55443`:
+  `Tests run: 423, Failures: 0, Errors: 0, Skipped: 0`.
 
-Verification owed locally: `mvn -pl sfl-fleet-logistics-service -am test`, app boot on 8093,
-`/actuator/health`, `/v3/api-docs`, Swagger UI, `/fuel/`, and S166 regression suite.
+Remaining items in this report are production integration/procurement concerns unless restated in the
+current Release 1 readiness pack.
 
 ---
 

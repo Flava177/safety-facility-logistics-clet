@@ -170,6 +170,25 @@ public interface FuelRepository {
 
     FuelPage<FuelTransaction> findTransactions(TransactionQuery query);
 
+    /**
+     * Total active transaction quantity in a time window for a scoped actor/entity.
+     *
+     * <p>Used by site policy daily/monthly ceilings. The transaction being evaluated is already
+     * stored before reconciliation starts, so the sum naturally includes it.
+     */
+    BigDecimal sumTransactionQuantity(SpendWindowQuery query);
+
+    /**
+     * Total active transaction cost in a time window for a scoped card.
+     *
+     * <p>Used by explicit fuel-card spend ceilings.
+     */
+    BigDecimal sumTransactionCost(SpendWindowQuery query);
+
+    record SpendWindowQuery(String siteCode, UUID vehicleId, UUID driverId, String maskedCardReference,
+            Instant fromInclusive, Instant toExclusive) {
+    }
+
     /** Most recent active transaction for the vehicle strictly before {@code before}. */
     Optional<FuelTransaction> findPreviousTransaction(String siteCode, UUID vehicleId, Instant before);
 

@@ -148,7 +148,7 @@ BUILD SUCCESS
 The current full fleet verification result is:
 
 ```text
-Tests run: 326, Failures: 0, Errors: 0, Skipped: 1
+Tests run: 423, Failures: 0, Errors: 0, Skipped: 0
 ```
 
 The skipped test is the older Testcontainers auto-detection probe. The critical E2E suite uses

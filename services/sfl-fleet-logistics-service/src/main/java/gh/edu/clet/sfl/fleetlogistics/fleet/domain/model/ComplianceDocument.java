@@ -28,7 +28,7 @@ public record ComplianceDocument(
         LocalDate expiresOn,
         ComplianceDocumentStatus status,
         UUID evidenceId,
-        RetentionClass retentionClass,
+        EvidenceRetentionClass retentionClass,
         RecordMetadata metadata) {
 
     /** Ghana operates on UTC+00:00 with no daylight saving; expiry is judged in local calendar days. */
@@ -53,7 +53,7 @@ public record ComplianceDocument(
 
     public static ComplianceDocument register(UUID id, UUID vehicleId, SiteCode siteCode,
             ComplianceDocumentType documentType, String documentReference, String issuingAuthority,
-            LocalDate issuedOn, LocalDate expiresOn, UUID evidenceId, RetentionClass retentionClass,
+            LocalDate issuedOn, LocalDate expiresOn, UUID evidenceId, EvidenceRetentionClass retentionClass,
             Instant now, java.time.Duration warningWindow, RecordMetadata metadata) {
         ComplianceDocumentStatus status = statusFor(expiresOn, now, warningWindow);
         return new ComplianceDocument(id, vehicleId, siteCode, documentType, documentReference, issuingAuthority,

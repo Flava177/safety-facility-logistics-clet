@@ -36,7 +36,7 @@ public class FuelPolicyController {
      * Creates a policy, refused with {@code FUEL_POLICY_PERIOD_OVERLAP} when an active policy for
      * the site already covers part of the same period.
      */
-    @PostMapping public ResponseEntity<ApiResponse<FuelPolicy>> create(@Valid @RequestBody PolicyRequest r,HttpServletRequest h){var p=service.createPolicy(new FuelApplicationService.CreatePolicy(r.siteCode(),r.name(),r.effectiveFrom(),r.effectiveTo(),r.policyVersion(),r.maxPerTransaction(),r.dailyLimit(),r.monthlyLimit(),r.tankCapacity(),r.minConsumption(),r.maxConsumption(),r.odometerJumpTolerance(),r.receiptRequired(),r.receiptGraceHours(),r.materialityAmount(),r.anomalySlaHours(),r.allowedFuelProducts(),r.approvedVendors(),actors.resolve(h),actors.resolveSourceChannel(h)));return ResponseEntity.created(URI.create("/api/v1/fuel/policies/"+p.id())).body(ApiResponse.ok(p));}
+    @PostMapping public ResponseEntity<ApiResponse<FuelPolicy>> create(@Valid @RequestBody PolicyRequest r,HttpServletRequest h){var p=service.createPolicy(new FuelApplicationService.CreatePolicy(r.siteCode(),r.name(),r.effectiveFrom(),r.effectiveTo(),r.policyVersion(),r.maxPerTransaction(),r.dailyLimit(),r.monthlyLimit(),r.tankCapacity(),r.minConsumption(),r.maxConsumption(),r.odometerJumpTolerance(),r.receiptRequired(),r.receiptGraceHours(),r.materialityAmount(),r.anomalySlaHours(),r.costVarianceTolerance(),r.repeatedPatternWindowHours(),r.repeatedPatternThreshold(),r.allowedFuelProducts(),r.approvedVendors(),actors.resolve(h),actors.resolveSourceChannel(h)));return ResponseEntity.created(URI.create("/api/v1/fuel/policies/"+p.id())).body(ApiResponse.ok(p));}
 
     /**
      * Paged policy register.
@@ -65,5 +65,5 @@ public class FuelPolicyController {
         return ApiResponse.ok(service.history("FuelPolicy",id,actors.resolve(h)));
     }
 
-    public record PolicyRequest(@NotBlank String siteCode,@NotBlank String name,@NotNull Instant effectiveFrom,Instant effectiveTo,@Positive int policyVersion,@NotNull @Positive BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,@PositiveOrZero long odometerJumpTolerance,boolean receiptRequired,@PositiveOrZero int receiptGraceHours,@NotNull @PositiveOrZero BigDecimal materialityAmount,@Positive int anomalySlaHours,Set<String> allowedFuelProducts,Set<String> approvedVendors){}
+    public record PolicyRequest(@NotBlank String siteCode,@NotBlank String name,@NotNull Instant effectiveFrom,Instant effectiveTo,@Positive int policyVersion,@NotNull @Positive BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,@PositiveOrZero long odometerJumpTolerance,boolean receiptRequired,@PositiveOrZero int receiptGraceHours,@NotNull @PositiveOrZero BigDecimal materialityAmount,@Positive int anomalySlaHours,@PositiveOrZero BigDecimal costVarianceTolerance,@PositiveOrZero int repeatedPatternWindowHours,@PositiveOrZero int repeatedPatternThreshold,Set<String> allowedFuelProducts,Set<String> approvedVendors){}
 }

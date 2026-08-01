@@ -234,6 +234,14 @@ export interface CloseActivationRequest {
   retentionClass?: RetentionClass | null;
 }
 
+export interface ActivationReasonRequest {
+  reason: string;
+}
+
+export interface DegradedFallbackRequest {
+  fallbackPath: string;
+}
+
 export interface CreateTemplateRequest {
   siteCode: string;
   templateCode?: string | null;

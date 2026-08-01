@@ -12,7 +12,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocumentType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.FleetWorkflowType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RetentionClass;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowPriority;
@@ -74,7 +74,7 @@ class ComplianceServiceSweepServiceTest {
         compliance.save(ComplianceDocument.register(UUID.randomUUID(), vehicle.id(), ACCRA,
                 ComplianceDocumentType.INSURANCE_CERTIFICATE, "INS-2026-001", "NIC",
                 FleetFixtures.TODAY.minusMonths(3), FleetFixtures.TODAY.plusDays(10), UUID.randomUUID(),
-                RetentionClass.COMPLIANCE, NOW, Duration.ofDays(1), FleetFixtures.metadata()));
+                EvidenceRetentionClass.COMPLIANCE_7_YEARS, NOW, Duration.ofDays(1), FleetFixtures.metadata()));
         serviceRecords.save(FleetFixtures.completedService(vehicle.id(), LocalDate.parse("2025-07-01"),
                 40_000, LocalDate.parse("2026-07-01"), 43_000L));
 

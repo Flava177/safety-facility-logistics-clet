@@ -33,7 +33,7 @@ Package: `gh.edu.clet.sfl.fleetlogistics.fleet.domain`
 (make/model/year/category/capacity) · `OdometerReading` (`value`, `unit`, `source`, `recordedAt`) ·
 `DateTimeRange` (assignment period, half-open `[start, end)`) · `LicenceDetails` · `RecordMetadata`
 (`createdBy/At`, `lastModifiedBy/At`, `version`, `sourceChannel`, `auditCorrelationId`) · `EvidenceHash` ·
-`RetentionClass` · `ReadinessAssessment` · `ReadinessBlocker` (`code`, `message`, `severity`) ·
+`EvidenceRetentionClass` · `ReadinessAssessment` · `ReadinessBlocker` (`code`, `message`, `severity`) ·
 `EligibilityAssessment` · `SlaTarget` · `OperatingMode`.
 
 `RecordMetadata` is present on every operational aggregate and supplies the `SRS-SFL-S166-01`

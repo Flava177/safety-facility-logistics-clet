@@ -2,10 +2,10 @@ import { VehicleResponse } from 'modules/fleet/api/dto';
 import {
   COMPLIANCE_DOCUMENT_TYPES,
   ComplianceDocumentType,
+  EVIDENCE_RETENTION_CLASSES,
+  EvidenceRetentionClass,
   MANDATORY_COMPLIANCE_DOCUMENT_TYPES,
   OPERATING_MODES,
-  RETENTION_CLASSES,
-  RetentionClass,
   SERVICE_OUTCOMES,
   SERVICE_TYPES,
   ServiceOutcome,
@@ -313,7 +313,7 @@ export const RegisterComplianceDocumentDialog = ({
       issuedOn: todayIsoDate(),
       expiresOn: '',
       evidenceId: '',
-      retentionClass: 'COMPLIANCE' as RetentionClass,
+      retentionClass: 'COMPLIANCE_7_YEARS' as EvidenceRetentionClass,
     },
     schema: {
       documentType: required('Document type'),
@@ -389,9 +389,12 @@ export const RegisterComplianceDocumentDialog = ({
           label="Retention class"
           required
           value={form.values.retentionClass}
-          options={RETENTION_CLASSES}
+          options={EVIDENCE_RETENTION_CLASSES}
           onChange={(value) =>
-            form.setValue('retentionClass', (value || 'COMPLIANCE') as RetentionClass)
+            form.setValue(
+              'retentionClass',
+              (value || 'COMPLIANCE_7_YEARS') as EvidenceRetentionClass,
+            )
           }
           {...form.fieldProps('retentionClass')}
         />

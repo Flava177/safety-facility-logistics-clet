@@ -40,6 +40,9 @@ export type FuelTransactionLifecycle = (typeof FUEL_TRANSACTION_LIFECYCLES)[numb
 export const FUEL_POLICY_STATUSES = ['ACTIVE', 'INACTIVE', 'ARCHIVED'] as const;
 export type FuelPolicyStatus = (typeof FUEL_POLICY_STATUSES)[number];
 
+export const FUEL_CARD_STATUSES = ['ACTIVE', 'SUSPENDED', 'CANCELLED'] as const;
+export type FuelCardStatus = (typeof FUEL_CARD_STATUSES)[number];
+
 export const LOGBOOK_STATUSES = [
   'DRAFT',
   'SUBMITTED',
@@ -73,6 +76,13 @@ export const ANOMALY_TYPES = [
   'UNUSUAL_PATTERN',
   'MISSING_LOGBOOK',
   'COST_VARIANCE',
+  'DAILY_LIMIT_EXCEEDED',
+  'MONTHLY_LIMIT_EXCEEDED',
+  'CARD_UNKNOWN',
+  'CARD_VEHICLE_MISMATCH',
+  'CARD_LIMIT_EXCEEDED',
+  'CARD_DAILY_LIMIT_EXCEEDED',
+  'CARD_MONTHLY_LIMIT_EXCEEDED',
 ] as const;
 export type AnomalyType = (typeof ANOMALY_TYPES)[number];
 
@@ -110,6 +120,15 @@ export const RECONCILIATION_RULES = [
   'TANK_CAPACITY',
   'FUEL_PRODUCT',
   'APPROVED_VENDOR',
+  'POLICY_DAILY_VEHICLE_LIMIT',
+  'POLICY_DAILY_DRIVER_LIMIT',
+  'POLICY_MONTHLY_VEHICLE_LIMIT',
+  'POLICY_MONTHLY_DRIVER_LIMIT',
+  'CARD_KNOWN',
+  'CARD_VEHICLE_MATCH',
+  'CARD_TRANSACTION_LIMIT',
+  'CARD_DAILY_LIMIT',
+  'CARD_MONTHLY_LIMIT',
   'DRIVER_ELIGIBLE',
   'VEHICLE_OPERATIONAL',
   'TRIP_MATCH',
@@ -129,6 +148,15 @@ export const RULE_ANOMALY_TYPE: Record<ReconciliationRule, AnomalyType> = {
   TANK_CAPACITY: 'TANK_CAPACITY',
   FUEL_PRODUCT: 'FUEL_PRODUCT',
   APPROVED_VENDOR: 'VENDOR',
+  POLICY_DAILY_VEHICLE_LIMIT: 'DAILY_LIMIT_EXCEEDED',
+  POLICY_DAILY_DRIVER_LIMIT: 'DAILY_LIMIT_EXCEEDED',
+  POLICY_MONTHLY_VEHICLE_LIMIT: 'MONTHLY_LIMIT_EXCEEDED',
+  POLICY_MONTHLY_DRIVER_LIMIT: 'MONTHLY_LIMIT_EXCEEDED',
+  CARD_KNOWN: 'CARD_UNKNOWN',
+  CARD_VEHICLE_MATCH: 'CARD_VEHICLE_MISMATCH',
+  CARD_TRANSACTION_LIMIT: 'CARD_LIMIT_EXCEEDED',
+  CARD_DAILY_LIMIT: 'CARD_DAILY_LIMIT_EXCEEDED',
+  CARD_MONTHLY_LIMIT: 'CARD_MONTHLY_LIMIT_EXCEEDED',
   DRIVER_ELIGIBLE: 'DRIVER_INELIGIBLE',
   VEHICLE_OPERATIONAL: 'VEHICLE_UNAVAILABLE',
   TRIP_MATCH: 'OUTSIDE_TRIP',
@@ -147,6 +175,15 @@ export const RULE_DESCRIPTIONS: Record<ReconciliationRule, string> = {
   TANK_CAPACITY: 'Quantity does not exceed the tank capacity the policy records.',
   FUEL_PRODUCT: 'The product dispensed is one the policy allows.',
   APPROVED_VENDOR: 'The vendor is on the policy’s approved list.',
+  POLICY_DAILY_VEHICLE_LIMIT: 'Vehicle spend remains within the policy daily limit.',
+  POLICY_DAILY_DRIVER_LIMIT: 'Driver spend remains within the policy daily limit.',
+  POLICY_MONTHLY_VEHICLE_LIMIT: 'Vehicle spend remains within the policy monthly limit.',
+  POLICY_MONTHLY_DRIVER_LIMIT: 'Driver spend remains within the policy monthly limit.',
+  CARD_KNOWN: 'A masked fuel-card reference resolves to a live issued card.',
+  CARD_VEHICLE_MATCH: 'The card is assigned to the vehicle that was filled.',
+  CARD_TRANSACTION_LIMIT: 'The transaction spend is within the card transaction limit.',
+  CARD_DAILY_LIMIT: 'Card spend remains within its daily limit, or the policy fallback.',
+  CARD_MONTHLY_LIMIT: 'Card spend remains within its monthly limit, or the policy fallback.',
   DRIVER_ELIGIBLE: 'The driver was eligible at the time of the transaction.',
   VEHICLE_OPERATIONAL: 'The vehicle was active and not marked unavailable.',
   TRIP_MATCH: 'The transaction falls inside the trip it was booked against.',
@@ -154,9 +191,9 @@ export const RULE_DESCRIPTIONS: Record<ReconciliationRule, string> = {
   ODOMETER_JUMP: 'The reading advances by no more than the policy’s jump tolerance.',
   RECEIPT: 'A receipt is present, or the policy’s grace period has not yet elapsed.',
   CONSUMPTION_RANGE: 'Consumption since the previous transaction is inside the policy range.',
-  COST_VARIANCE: 'Unit price is within 30% of the previous transaction for this vehicle.',
+  COST_VARIANCE: 'Unit price variance is within the versioned policy threshold.',
   LOGBOOK_MATCH: 'The reading agrees with the trip’s driver logbook.',
-  REPEATED_PATTERN: 'Fewer than three anomalies for this vehicle or driver in the last 30 days.',
+  REPEATED_PATTERN: 'Recent anomalies remain below the policy repeated-pattern threshold.',
 };
 
 /** Rule names the service records for anomalies it raises outside reconciliation. */

@@ -15,7 +15,7 @@
 | 9 | Documented filters the controllers do not accept | `DOC` | `severity` added to `GET /workflow-items`; `complianceExpiringBefore` answered by the new compliance search; the undocumented ones documented |
 | 10 | Compliance only reachable per vehicle | `WORKAROUND` | `GET /vehicles/compliance-documents?documentType=&status=&expiringBefore=&size=` |
 | 11 | Drilldown indicators are a fixed set of four | noted | Documented in the inventory, so a reader knows which four are clickable and that a fifth returns an empty list rather than a 404 |
-| 12 | `RetentionClass` vs `EvidenceRetentionClass` | noted | **Left as it is** — see below |
+| 12 | `RetentionClass` vs `EvidenceRetentionClass` | noted | **Closed** — `EvidenceRetentionClass` is canonical; migration V25 maps older compliance-document values |
 
 ### Gap 4 — what it was blocking
 
@@ -31,15 +31,13 @@ With no search, every closure dialog asked an operator to paste an evidence refe
 somewhere else. `EvidenceRepository.findByRelatedRecord` had answered that question since the service
 was built and nothing exposed it. A trip or workflow closure can offer a picker now.
 
-### Gap 12 — deliberately not resolved
+### Gap 12 — closed with migration compatibility
 
-Two retention vocabularies still coexist: `RetentionClass` on compliance documents
-(`OPERATIONAL_SHORT` … `LEGAL_HOLD`) and `EvidenceRetentionClass` on evidence
-(`OPERATIONAL_1_YEAR` … `LEGAL_HOLD`). Merging them is a **records-management decision with a
-migration behind it**, not a code change: existing rows carry the old values, and choosing which
-vocabulary survives decides how long already-filed evidence is kept. That is not a call to make from
-a gap register. `RetentionClass`'s own Javadoc already flags its periods as an unconfirmed assumption
-(gap report C-08); it should be settled with compliance before go-live.
+`EvidenceRetentionClass` is canonical for Release 1 fleet evidence and compliance documents:
+`OPERATIONAL_1_YEAR`, `COMPLIANCE_7_YEARS`, `INCIDENT_10_YEARS`, `LEGAL_HOLD`. Migration V25 maps
+older compliance-document values onto that vocabulary so already-filed rows keep an explicit meaning.
+Compliance/DPO still need to ratify the production retention schedule before retention automation is
+turned on, but the code no longer presents two different vocabularies to an operator.
 
 ## A compliance defect found by exercising a role, and fixed
 
@@ -338,17 +336,14 @@ non-interactive, so the UI never implies a drilldown that would silently return 
 
 ---
 
-## 12. `RetentionClass` vs `EvidenceRetentionClass` — noted
+## 12. `RetentionClass` vs `EvidenceRetentionClass` — closed
 
-Compliance documents take `RetentionClass` (`OPERATIONAL_SHORT`, `OPERATIONAL_STANDARD`,
-`COMPLIANCE`, `INCIDENT`, `STATUTORY`, `LEGAL_HOLD`) while evidence records take
-`EvidenceRetentionClass` (`OPERATIONAL_1_YEAR`, `COMPLIANCE_7_YEARS`, `INCIDENT_10_YEARS`,
-`LEGAL_HOLD`). Two retention vocabularies with different periods coexist for the same governance
-concern; `RetentionClass`'s Javadoc already flags the periods as an unconfirmed assumption
-(gap report C-08).
+Compliance documents and evidence records now both take `EvidenceRetentionClass`
+(`OPERATIONAL_1_YEAR`, `COMPLIANCE_7_YEARS`, `INCIDENT_10_YEARS`, `LEGAL_HOLD`). Migration V25 maps
+the old `RetentionClass` values to the canonical Release 1 vocabulary.
 
-**UI position:** each form offers its own enum. Worth resolving before go-live so an auditor is not
-shown two different retention answers for the same evidence.
+**UI position:** the compliance-document form uses the same enum as evidence forms, so an auditor is
+not shown two different retention answers for the same governance concern.
 
 ---
 

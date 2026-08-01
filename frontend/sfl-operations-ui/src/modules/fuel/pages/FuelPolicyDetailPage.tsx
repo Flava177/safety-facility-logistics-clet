@@ -153,6 +153,18 @@ const FuelPolicyDetailPage = () => {
                             : formatNumber(policy.monthlyLimit),
                       },
                       {
+                        label: 'Cost variance tolerance',
+                        value: `${formatNumber(policy.costVarianceTolerance * 100)}%`,
+                      },
+                      {
+                        label: 'Repeated-pattern window',
+                        value: `${formatNumber(policy.repeatedPatternWindowHours)} hours`,
+                      },
+                      {
+                        label: 'Repeated-pattern threshold',
+                        value: `${formatNumber(policy.repeatedPatternThreshold)} anomalies`,
+                      },
+                      {
                         label: 'Materiality amount',
                         value: formatNumber(policy.materialityAmount),
                       },
@@ -161,8 +173,9 @@ const FuelPolicyDetailPage = () => {
                   />
                   <p className="mt-3 text-theme-xs text-gray-600">
                     The consumption rule only runs when both bounds are set and a previous
-                    transaction exists for the vehicle. The daily and monthly limits are stored but
-                    the current reconciliation routine does not read them.
+                    transaction exists for the vehicle. Daily and monthly limits are evaluated for
+                    the vehicle, driver and fuel card, and the cost-variance and repeated-pattern
+                    checks are versioned policy values recorded with each reconciliation.
                   </p>
                 </SectionCard>
 

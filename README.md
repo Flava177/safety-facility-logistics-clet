@@ -1,6 +1,6 @@
 # SFL Java Backend
 
-This repository is being realigned to the updated SFL SRS and Phase 1 microservices workflow plan.
+This repository is being realigned to the updated SFL SRS and the Release 1 demo baseline.
 
 The active target architecture is five deployable Spring Boot microservices. The original Phase 1 workplan
 started with four deployables, and S174 is recorded as a controlled deviation in ADR 0004 because emergency
@@ -9,9 +9,22 @@ notification needs independent availability, callback, retry, degraded-mode and 
 - `services/sfl-facilities-service` for S152, S153 and S159.
 - `services/sfl-safety-security-service` for S160, S160a, S161, S162, S162a and S163.
 - `services/sfl-fleet-logistics-service` as the service artifact for S166 Fleet and Vehicle Management, with
-  S168_fuel and S171 treated as separate future modules under the same technical boundary.
+  S168_fuel Fuel Management and Driver Logbooks and S171 Courier/Dispatch implemented as separate modules
+  under the same technical boundary.
 - `services/sfl-asset-visibility-service` for AVAMP-Lite and future S168 asset tagging/RFID/barcode inventory.
 - `services/sfl-emergency-notification-service` for S174 Emergency Mass Notification.
+
+## Release 1 demo scope
+
+Release 1 is closed as a **7-system demo build**, not as the full 13-system Phase 1:
+
+- Built and demoable: S152 CAFM/IWMS, S153 CMMS, S159 Room & Resource Booking, S166 Fleet & Vehicle
+  Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom/Courier & Dispatch and
+  S174 Emergency Mass Notification.
+- Excluded from the demo: S160 Visitor Management, S160a Access Control, S161 CCTV/VMS, S162 Intrusion,
+  S162a Fire/Life Safety and S163 HSE Incident/Near-Miss.
+- S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
+  later integration with the external Comms system.
 
 The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` — a second application at the repository root that the root `pom.xml` still compiled — **was removed on 1 August 2026**, once its IFIMP vertical slice had been fully superseded by `services/sfl-facilities-service`. It read as live code to anyone opening the repository, and a dev script still launched it against a database that no longer exists. Its history is preserved on the `archive/java-migration-snapshot-2026-07-21` and `archive/pre-java-cleanup-2026-07-21` branches, and on `master`.
 
@@ -70,13 +83,19 @@ errors that look like defects and are residue. Drop and recreate it if that happ
 
 ## Source Documents
 
-- `docs/System Mappings and SRS/SFL_SRS.docx`
-- `docs/System Mappings and SRS/SFL_Phase1_Microservices_Build_Workflow_Plan.md`
 - `docs/System Mappings and SRS/CLET_Comprehensive_Digital_System_Mapping_v2.docx`
+- `C:\Users\Daniel Adjei\Documents\CLET\Projects\SRS\CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx`
+- `docs/SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md`
+- `docs/architecture/microservices-realignment.md`
+- `docs/adr/`
+- `docs/runbooks/`
 - `docs/System Mappings and SRS/CLET_Cluster9_FSL_System_Architecture_Document_FULLY_INTEGRATED.docx`
 - `docs/System Mappings and SRS/SFL_Phase1_System_Architecture_Implementation_Guide_v2.md`
 
-The parent mapping document remains the source of truth for system IDs, Cluster 9 scope and phase classification. The microservices workflow plan is the source of truth for implementation architecture.
+The parent mapping document remains the source of truth for system IDs, Cluster 9 scope and phase
+classification. The Cluster 9 SFL Phase 1 SRS remains the requirement source. The Release 1 workflow
+review/readiness pack is the current implementation handoff for what is built, excluded, demoable and
+still deferred.
 
 ## Build Foundation
 
