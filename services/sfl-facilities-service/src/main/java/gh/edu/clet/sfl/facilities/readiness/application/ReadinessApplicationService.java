@@ -587,6 +587,36 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                 latest.isPresent());
     }
 
+    /**
+     * One space's current readiness, checked against <em>that space's</em> site.
+     *
+     * <h2>The hole this closes</h2>
+     *
+     * <p>{@code GET /readiness/rooms/{roomId}} authorised itself by calling {@link #blockers} with a
+     * null site code and discarding the result, on the reasoning that the blockers are the data being
+     * returned. They are not: the response comes from {@link #evaluate}, which takes no actor and
+     * filters nothing.
+     *
+     * <p>A null site code takes {@code requireRequestedSite} down to {@code requireAnySiteScope} —
+     * "you hold at least one site, somewhere" — so the room's own site was never compared to the
+     * caller's scopes. An actor scoped only to Kumasi, holding nothing but
+     * {@code FACILITIES_READINESS_READ}, could read an Accra room's readiness status, score and
+     * blocker summary by pasting a room id. That is the by-id scope skip A0 found in fuel, in a
+     * different module.
+     *
+     * <p>Resolving the room first and checking {@code room.siteCode()} is what every sibling read on
+     * this controller already does. A missing room is a 404 before any of it, so this does not become
+     * a way to enumerate room ids.
+     */
+    @Transactional(readOnly = true)
+    public ReadinessOutcome roomReadiness(UUID roomId, ActorContext actor, SourceChannel channel) {
+        FacilityRoom room = facilities.findRoom(roomId)
+                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("FacilityRoom", roomId));
+        authorization.require(actor, SflPermission.FACILITIES_READINESS_READ, room.siteCode(), channel,
+                "FacilityRoom", roomId.toString());
+        return evaluate(roomId);
+    }
+
     /** Writes a derived outcome back onto the space, unless nothing changed. */
     private void applyOutcome(FacilityRoom room, ReadinessOutcome outcome, ActorContext actor,
             SourceChannel channel, Instant at) {

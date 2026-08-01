@@ -185,6 +185,26 @@ public class PreventiveMaintenanceService {
      */
     @Transactional
     public List<WorkOrder> generateDueWorkOrders(ActorContext systemActor, LocalDate today) {
+        /*
+          Gated here rather than at the controller, because there are two callers with very different
+          trust: the scheduler, whose principal is SFL_ADMIN scoped to every site, and
+          `POST /maintenance/schedules/runs`, which is reachable by any authenticated caller.
+
+          It had no check at all. The parameter is named `systemActor` and the method was written for
+          the scheduler, where the trust boundary is implicit; the HTTP verb was added afterwards and
+          inherited an assumption that no longer held. The effect was that anybody who could obtain a
+          token — a driver, a requester, a vendor technician — could raise preventive work orders
+          across the entire estate and read every one of them back in the response.
+
+          The sweep is deliberately estate-wide (`generationBatchSize(null)`, no site filter), which is
+          right for a scheduler and is exactly why a site check is not the control here: the permission
+          is. FACILITIES_PM_SCHEDULE_MANAGE is held by the roles that own the schedules this generates
+          from, and by the scheduler's own principal, so behaviour is unchanged for both intended
+          callers.
+        */
+        authorization.require(systemActor, SflPermission.FACILITIES_PM_SCHEDULE_MANAGE, SourceChannel.SYSTEM,
+                "PreventiveMaintenanceSchedule", null, null);
+
         int batch = configuration.generationBatchSize(null);
         List<PreventiveMaintenanceSchedule> due = maintenance.findSchedulesDueForGeneration(today, batch);
         List<WorkOrder> generated = new ArrayList<>();

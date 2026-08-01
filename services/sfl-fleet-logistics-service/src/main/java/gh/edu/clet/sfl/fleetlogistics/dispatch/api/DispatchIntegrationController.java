@@ -3,6 +3,8 @@ package gh.edu.clet.sfl.fleetlogistics.dispatch.api;
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.CarrierStatusPort;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchOutboxAdminPort;
+import gh.edu.clet.sfl.common.security.SflPermission;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchAccessPolicy;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchExceptionService;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchScanService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
@@ -39,16 +41,18 @@ public class DispatchIntegrationController {
     private final DispatchExceptionService exceptions;
     private final CarrierStatusPort carriers;
     private final FleetActorResolver actors;
+    private final DispatchAccessPolicy access;
     private final ObjectMapper json;
 
     public DispatchIntegrationController(FleetIntegrationApplicationService inbox, DispatchScanService scans,
             DispatchExceptionService exceptions, CarrierStatusPort carriers, FleetActorResolver actors,
-            ObjectMapper json) {
+            DispatchAccessPolicy access, ObjectMapper json) {
         this.inbox = inbox;
         this.scans = scans;
         this.exceptions = exceptions;
         this.carriers = carriers;
         this.actors = actors;
+        this.access = access;
         this.json = json;
     }
 
@@ -80,11 +84,30 @@ public class DispatchIntegrationController {
         return ApiResponse.ok(result);
     }
 
+    /**
+     * A carrier reporting movement against a dispatch.
+     *
+     * <p><strong>This had no check of any kind</strong> — no permission, and, unlike
+     * {@link #scannerEvent} directly above it, no HMAC signature and no pass through the integration
+     * inbox. Any authenticated caller holding no dispatch permission and scoped to no site could post
+     * carrier status for any {@code dispatchId} at any site. The impact today is bounded because
+     * {@code RecordedCarrierStatusAdapter} only logs, which is exactly why it was missed: nothing
+     * broke. It is still the wrong shape, and the day that adapter persists anything it becomes a
+     * write path with no gate at all.
+     *
+     * <p>Gated on {@code DISPATCH_INTEGRATION_INGEST}, the same permission its sibling requires. The
+     * HMAC path is deliberately not added here as well: this endpoint does not go through the inbox,
+     * so there is no stored signature to verify against, and bolting one on without the inbox's
+     * replay and duplicate handling would be the appearance of a control rather than one. That is
+     * recorded as the remaining gap rather than papered over.
+     */
     @PostMapping("/carriers/{carrier}/status")
     public ApiResponse<Map<String, Object>> carrierStatus(@PathVariable String carrier,
             @RequestBody CarrierStatusRequest r, HttpServletRequest h) {
+        var actor = actors.resolve(h);
+        access.requirePermission(actor, SflPermission.DISPATCH_INTEGRATION_INGEST, "CarrierStatus");
         carriers.recordCarrierStatus(r.dispatchId(), carrier, r.status(),
-                r.occurredAt() == null ? Instant.now() : r.occurredAt(), actors.resolve(h), SourceChannel.INTEGRATION);
+                r.occurredAt() == null ? Instant.now() : r.occurredAt(), actor, SourceChannel.INTEGRATION);
         return ApiResponse.ok(Map.of("dispatchId", r.dispatchId(), "carrier", carrier, "status", r.status()));
     }
 

@@ -1,7 +1,9 @@
 package gh.edu.clet.sfl.facilities.maintenance.application;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization;
 import gh.edu.clet.sfl.facilities.maintenance.application.ports.MaintenanceRepository;
 import gh.edu.clet.sfl.facilities.maintenance.application.ports.NotificationPort;
 import gh.edu.clet.sfl.facilities.maintenance.application.ports.NotificationPort.NotificationKind;
@@ -61,16 +63,19 @@ public class MaintenanceEscalationService {
     private final FacilityFaultService faults;
     private final WorkOrderApplicationService workOrders;
     private final NotificationPort notifications;
+    private final FacilitiesAuthorization authorization;
     private final Clock clock;
 
     public MaintenanceEscalationService(MaintenanceRepository maintenance,
             MaintenanceConfiguration configuration, FacilityFaultService faults,
-            WorkOrderApplicationService workOrders, NotificationPort notifications, Clock clock) {
+            WorkOrderApplicationService workOrders, NotificationPort notifications,
+            FacilitiesAuthorization authorization, Clock clock) {
         this.maintenance = maintenance;
         this.configuration = configuration;
         this.faults = faults;
         this.workOrders = workOrders;
         this.notifications = notifications;
+        this.authorization = authorization;
         this.clock = clock;
     }
 
@@ -84,6 +89,32 @@ public class MaintenanceEscalationService {
      */
     @Transactional
     public EscalationSweep sweep(ActorContext systemActor) {
+        /*
+          Gated here, not at the controller, for the same reason as
+          `PreventiveMaintenanceService.generateDueWorkOrders`: the scheduler and
+          `POST /maintenance/escalations/runs` call the same method, and only one of them is trusted.
+
+          This one is worse than the schedule sweep it sits beside. It had no check, it is estate-wide,
+          and it does not merely write — it notifies. Any authenticated caller could raise the
+          escalation level on every overdue fault and work order across every site, attributed to
+          themselves in the audit trail, and page the maintenance supervisor at each of those sites.
+          Repeatable at will, which makes it a way to make escalations meaningless: the fastest route
+          to an ignored escalation is a stream of them.
+
+          FACILITIES_PM_SCHEDULE_MANAGE, and not the FACILITIES_WORK_ORDER_UPDATE this first reached
+          for. Update is the permission a technician holds to progress the job in front of them —
+          correct for one work order, far too broad for a control that moves every overdue item in the
+          estate and pages a supervisor at every affected site. The technician who holds Update is
+          precisely the person who should not be able to declare everybody's work late.
+
+          PM_SCHEDULE_MANAGE is held by FACILITIES_MANAGER and IFIMP_MAINTENANCE_SUPERVISOR and by
+          neither IFIMP_TECHNICIAN nor VENDOR_TECHNICIAN, which is the line this needs. It is the same
+          grant the schedule sweep beside it requires, so "may drive maintenance across the estate" is
+          one permission rather than two that can drift apart.
+        */
+        authorization.require(systemActor, SflPermission.FACILITIES_PM_SCHEDULE_MANAGE,
+                SourceChannel.SCHEDULER, "MaintenanceEscalation", null, null);
+
         Instant now = clock.instant();
         Map<String, SlaPolicy> policies = new HashMap<>();
         int faultsEscalated = 0;

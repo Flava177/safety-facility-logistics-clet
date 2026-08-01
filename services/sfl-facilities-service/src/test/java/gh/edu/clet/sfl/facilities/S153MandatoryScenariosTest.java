@@ -144,7 +144,7 @@ class S153MandatoryScenariosTest {
                 authorization, audit, idempotency, outbox, clock);
         notifications = new RecordingNotifications();
         escalation = new MaintenanceEscalationService(maintenance, maintenanceConfiguration, faults,
-                workOrders, notifications, clock);
+                workOrders, notifications, authorization, clock);
         disposal = new EvidenceDisposalService(maintenance, audit, outbox, clock);
 
         manager = TestDoubles.actor("manager", Set.of(SflRole.FACILITIES_MANAGER), "MAIN");
@@ -386,6 +386,81 @@ class S153MandatoryScenariosTest {
     }
 
     // =========================================================================================
+
+    /**
+     * The two estate-wide sweeps, and who may run them.
+     *
+     * <h2>Why these tests exist</h2>
+     *
+     * <p>Both sweeps were written for the scheduler, where the trust boundary is implicit, and both
+     * were later given an HTTP verb — {@code POST /maintenance/schedules/runs} and
+     * {@code POST /maintenance/escalations/runs}. Neither gained a check. So any actor who could
+     * obtain a token could raise preventive work orders across every site, and escalate every overdue
+     * fault and work order across every site, attributed to themselves, paging the maintenance
+     * supervisor at each one. Repeatable at will.
+     *
+     * <p>The requester is the sharpest case: a lecturer reporting a broken projector, holding
+     * {@code FACILITIES_FAULT_REPORT} and nothing else, scoped to one site.
+     */
+    @Nested
+    @DisplayName("Estate-wide sweeps are not open to everyone who can sign in")
+    class SweepAuthorisation {
+
+        @Test
+        void a_requester_cannot_generate_preventive_work_orders_across_the_estate() {
+            assertThatThrownBy(() -> preventive.generateDueWorkOrders(requester, TODAY))
+                    .isInstanceOf(FacilitiesException.UnauthorizedScopeException.class);
+            assertThat(audit.recorded(AuditAction.AUTHORIZATION_DENIED)).isTrue();
+        }
+
+        @Test
+        void a_requester_cannot_force_an_escalation_sweep() {
+            assertThatThrownBy(() -> escalation.sweep(requester))
+                    .isInstanceOf(FacilitiesException.UnauthorizedScopeException.class);
+            assertThat(audit.recorded(AuditAction.AUTHORIZATION_DENIED)).isTrue();
+        }
+
+        /**
+         * The test that corrected the fix.
+         *
+         * <p>The escalation sweep was first gated on {@code FACILITIES_WORK_ORDER_UPDATE}, on the
+         * reasoning that escalating moves a work order's state. This test failed: a technician holds
+         * Update, because it is what lets them progress the job in front of them. That is exactly the
+         * distinction that matters — doing the work is not the authority to declare, estate-wide, that
+         * everybody's work is late and to page a supervisor at every site about it. Both sweeps now
+         * require {@code FACILITIES_PM_SCHEDULE_MANAGE}, which technicians do not hold.
+         */
+        @Test
+        void a_technician_cannot_run_either_sweep() {
+            assertThatThrownBy(() -> preventive.generateDueWorkOrders(technician, TODAY))
+                    .isInstanceOf(FacilitiesException.UnauthorizedScopeException.class);
+            assertThatThrownBy(() -> escalation.sweep(technician))
+                    .isInstanceOf(FacilitiesException.UnauthorizedScopeException.class);
+        }
+
+        @Test
+        void a_supervisor_may_run_both() {
+            // IFIMP_MAINTENANCE_SUPERVISOR is the role the on-demand endpoints exist for.
+            assertThat(preventive.generateDueWorkOrders(supervisor, TODAY)).isEmpty();
+            assertThat(escalation.sweep(supervisor).total()).isZero();
+        }
+
+        @Test
+        void the_scheduler_is_unaffected() {
+            // The other half: gating these must not break the caller they were written for. The
+            // scheduler's principal is SFL_ADMIN scoped to every site, so both still run.
+            assertThat(preventive.generateDueWorkOrders(system, TODAY)).isEmpty();
+            assertThat(escalation.sweep(system).total()).isZero();
+        }
+
+        @Test
+        void a_facilities_manager_may_still_run_both_by_hand() {
+            // The stated purpose of the HTTP endpoints — "what the scheduler does, on demand" — has to
+            // keep working for the role that operates the estate.
+            assertThat(preventive.generateDueWorkOrders(manager, TODAY)).isEmpty();
+            assertThat(escalation.sweep(manager).total()).isZero();
+        }
+    }
 
     @Nested
     @DisplayName("S153-02. SLA escalation")

@@ -301,6 +301,31 @@ class S152MandatoryScenariosTest {
                     .hasMessageContaining("1 critical blocker(s) remain open");
         }
 
+        /**
+         * The by-id read that pasting a room UUID used to win.
+         *
+         * <p>{@code GET /readiness/rooms/{roomId}} authorised itself by calling the blocker search
+         * with a null site code and throwing the result away. A null site code takes the site check
+         * down to "you hold at least one site, somewhere", and the response came from
+         * {@code evaluate(roomId)}, which takes no actor and filters nothing. So a manager scoped to
+         * Kumasi could read an Accra hall's readiness status, score and blocker summary.
+         */
+        @Test
+        void reading_another_sites_room_readiness_by_id_is_refused() {
+            submit(false, true, true);
+
+            assertThatThrownBy(() -> readiness.roomReadiness(hall.id(), otherSiteManager, SourceChannel.WEB))
+                    .isInstanceOf(FacilitiesException.class);
+        }
+
+        @Test
+        void a_manager_reads_their_own_sites_room_readiness() {
+            // The other half: the check must not refuse the caller it exists to serve.
+            submit(false, true, true);
+
+            assertThat(readiness.roomReadiness(hall.id(), manager, SourceChannel.WEB)).isNotNull();
+        }
+
         @Test
         void scenario_7_resolving_the_blocker_returns_the_space_to_ready() {
             submit(false, true, true);
