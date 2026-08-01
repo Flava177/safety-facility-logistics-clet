@@ -34,18 +34,32 @@ that the screen is unreliable.
 
 ## 2. Not built, and why
 
-### 2.1 No file upload anywhere
+### 2.1 No file upload — but the digest is no longer typed
 
-`AttachEvidenceDialog` asks for a storage reference and a SHA-256, not a file. That is the
-architecture standard — evidence is stored **by reference**, the bytes live in the document and
-object-storage service — and it is the reason the hash is meaningful at all: if the stored object no
-longer hashes to the recorded value, it changed after CLET accepted it.
+**Updated.** `AttachEvidenceDialog` now takes the file, and still uploads nothing.
 
-The consequence is real and worth stating plainly: **there is no way to attach evidence from this
-dashboard alone.** Somebody must upload to document storage first and bring back the reference and
-the digest. Until that service has a browser-facing upload endpoint the dashboard can call, this is a
-two-step job. It is a genuine usability gap, not a design flourish, and it belongs to whoever builds
-the document-storage integration.
+Evidence is stored **by reference**: the bytes live in the document and object-storage service, and
+this service records where they landed and what they hashed to. That is the architecture standard, it
+has not changed, and it is the reason the hash is meaningful at all — if the stored object no longer
+hashes to the recorded value, it changed after CLET accepted it.
+
+What changed is **who computes the digest**. Choosing the file fills the name, the media type, the
+size and the SHA-256, because the browser has the bytes and `crypto.subtle` can hash them. Before
+this, a technician standing in a plant room with a photograph had to obtain a digest from somewhere
+else and type sixty-four hexadecimal characters into a form. Nobody does that correctly, and a
+mistyped digest is the one error in this system that surfaces years later — during an integrity
+check, on evidence nobody can now re-hash — as a **false report that the file was tampered with**.
+
+Three cases still fall back to typing, each with the reason on the field: a file over 64 MB (Web
+Crypto cannot stream, so the file is read whole and the cap is what stops a mis-selected video
+freezing a site laptop), a browser without Web Crypto, and a dashboard served over plain HTTP.
+Somebody re-recording evidence from a paper trail has a digest and no file, and that has always been
+legitimate.
+
+**What remains a genuine gap:** the storage reference is still typed, because it is what the document
+service gives back and this dashboard cannot call it. Attaching evidence is still a two-step job —
+upload there, record here — and the remaining half belongs to whoever builds that integration. The
+half that was error-prone is closed.
 
 ### 2.2 Editing a schedule or a vendor
 

@@ -1,7 +1,7 @@
 import { ImportResult } from 'modules/fuel/api/dto';
 import { CSV_OPTIONAL_HEADERS, CSV_REQUIRED_HEADERS } from 'modules/fuel/api/enums';
 import { fuelImportsApi } from 'modules/fuel/api/fuelApi';
-import FileField from 'modules/fuel/components/FileField';
+import FileField from 'shared/components/FileField';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';

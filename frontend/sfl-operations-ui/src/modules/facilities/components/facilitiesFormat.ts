@@ -239,3 +239,27 @@ export const evidenceGap = (attached: number, required: number): string =>
 /** An escalation level, or empty at zero. Level is not a status; it is how many times it has been raised. */
 export const escalationLabel = (level: number): string =>
   level > 0 ? `Escalated · level ${level}` : '';
+
+/**
+ * How a floor names itself in a list.
+ *
+ * `B1 · Basement`, `GF · Ground`, `L2 · Second`. The code leads because it is what appears on signage
+ * and on a work order, and the level follows because it is what the list is sorted by — a reader
+ * scanning for "two floors up" is looking for the number, and a reader who has been told to go to GF
+ * is looking for the code.
+ *
+ * A null level is a **mezzanine** and says so rather than showing nothing. The column is nullable
+ * precisely because a mezzanine sits between two floors and has no honest number, and a blank cell
+ * reads as missing data instead of as the answer.
+ */
+export const floorLabel = (levelNumber: number | null, floorCode: string): string => {
+  if (levelNumber === null) {
+    return `${floorCode} · no level`;
+  }
+  if (levelNumber === 0) {
+    return `${floorCode} · ground`;
+  }
+  return levelNumber < 0
+    ? `${floorCode} · basement ${Math.abs(levelNumber)}`
+    : `${floorCode} · level ${levelNumber}`;
+};

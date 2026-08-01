@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   assetStatusTone,
+  floorLabel,
   humaniseCode,
   orDash,
   readinessTone,
@@ -84,5 +85,31 @@ describe('value formatting', () => {
   it('says "never" for a space that has not been assessed', () => {
     // The word matters: "—" would read as missing data rather than as a fact about the space.
     expect(relativeTime(null)).toBe('never');
+  });
+});
+
+describe('floorLabel', () => {
+  it('names a basement as a basement rather than as level minus one', () => {
+    // The column is signed because basements are below ground, and "level -1" is not how anybody
+    // asks for one.
+    expect(floorLabel(-1, 'B1')).toBe('B1 · basement 1');
+    expect(floorLabel(-2, 'B2')).toBe('B2 · basement 2');
+  });
+
+  it('calls zero the ground floor', () => {
+    expect(floorLabel(0, 'GF')).toBe('GF · ground');
+  });
+
+  it('says a mezzanine has no level rather than leaving it blank', () => {
+    /*
+      The column is nullable precisely because a mezzanine sits between two floors and has no honest
+      number. A blank cell reads as missing data instead of as the answer — and a client that showed
+      null as 0 would file every mezzanine at ground level.
+    */
+    expect(floorLabel(null, 'MEZZ')).toBe('MEZZ · no level');
+  });
+
+  it('leads with the code, which is what is on the signage', () => {
+    expect(floorLabel(2, 'L2')).toBe('L2 · level 2');
   });
 });

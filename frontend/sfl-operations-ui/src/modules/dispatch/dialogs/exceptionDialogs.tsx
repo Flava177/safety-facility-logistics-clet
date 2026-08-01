@@ -2,7 +2,7 @@ import { DispatchExceptionCase } from 'modules/dispatch/api/dto';
 import { ExceptionAction, dispatchExceptionsApi, scanImportsApi } from 'modules/dispatch/api/dispatchApi';
 import { SCAN_CSV_HEADERS } from 'modules/dispatch/api/enums';
 import { EXCEPTION_RULES, exceptionClosureBlockers } from 'modules/dispatch/api/workflow';
-import FileField from 'modules/fuel/components/FileField';
+import FileField from 'shared/components/FileField';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';

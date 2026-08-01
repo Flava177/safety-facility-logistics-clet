@@ -11,9 +11,10 @@ import StatusChip from 'shared/components/StatusChip';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
-import type { Building } from '../api/dto';
-import { changeOperatingMode, getSite, listBuildings } from '../api/facilitiesApi';
-import { changeOperatingModeAction } from '../api/workflow';
+import type { Building, CreateBuildingRequest } from '../api/dto';
+import { changeOperatingMode, createBuilding, getSite, listBuildings } from '../api/facilitiesApi';
+import { canManageSpaces, changeOperatingModeAction } from '../api/workflow';
+import CreateBuildingDialog from '../dialogs/CreateBuildingDialog';
 import OperatingModeDialog from '../dialogs/OperatingModeDialog';
 import { formatDateTime, humaniseCode, orDash } from '../components/facilitiesFormat';
 
@@ -30,6 +31,7 @@ const SiteDetailPage = () => {
   const navigate = useNavigate();
   const notify = useNotifier();
   const [changingMode, setChangingMode] = useState(false);
+  const [addingBuilding, setAddingBuilding] = useState(false);
 
   const site = useApiQuery((signal) => getSite(siteId, signal), [siteId]);
   const buildings = useApiQuery(
@@ -137,7 +139,17 @@ const SiteDetailPage = () => {
                 />
               </SectionCard>
 
-              <SectionCard title="Buildings" subtitle="What stands on this site">
+              <SectionCard
+                title="Buildings"
+                subtitle="What stands on this site. Open one for its floors and what is on them."
+                actions={
+                  canManageSpaces() ? (
+                    <Button size="sm" variant="outline" startIcon="plus" onClick={() => setAddingBuilding(true)}>
+                      Register a building
+                    </Button>
+                  ) : undefined
+                }
+              >
                 <DataState
                   loading={buildings.loading}
                   error={buildings.error}
@@ -148,6 +160,7 @@ const SiteDetailPage = () => {
                     rows={buildings.data ?? []}
                     columns={columns}
                     getRowId={(building) => building.id}
+                    onRowClick={(building) => navigate(facilitiesPaths.buildingDetail(building.id))}
                     emptyMessage="No buildings are registered on this site."
                     dense
                   />
@@ -190,6 +203,22 @@ const SiteDetailPage = () => {
                 : 'Centre returned to routine operations.',
             );
             site.refetch();
+          }}
+        />
+      )}
+
+      {addingBuilding && site.data && (
+        <CreateBuildingDialog
+          site={site.data}
+          existingBuildings={buildings.data ?? []}
+          onClose={() => setAddingBuilding(false)}
+          onSubmit={async (request: CreateBuildingRequest) => {
+            const created = await createBuilding(request);
+            setAddingBuilding(false);
+            notify.notifySuccess(`${created.buildingCode} registered.`);
+            // Straight to it: a building with no floors holds nothing, and adding one is the
+            // next thing whoever just created it came to do.
+            navigate(facilitiesPaths.buildingDetail(created.id));
           }}
         />
       )}
