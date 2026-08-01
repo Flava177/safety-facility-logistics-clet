@@ -28,9 +28,19 @@ architecture exists to prevent.
 
 ## What is not covered, and must be before go-live
 
-- **Authentication is off.** `SFL_SECURITY_ENABLED` defaults to `false` in every service, so every API
-  is currently unauthenticated. None of these runbooks assumes a token, and all of them will need a
-  section on credential handling once it is on. Tracked as A1 in `docs/prompts/`.
+- **Authentication is on by default as of 1 August 2026 (A1).** `SFL_SECURITY_ENABLED` now defaults
+  to `true`, and the filter chain that opens everything requires the property to be *explicitly*
+  `false` — absent no longer means open. The compose stack runs Keycloak with the `sfl` realm
+  imported. The local development scripts set the variable to `false` deliberately and log a warning
+  on every startup when they do.
+
+  Two consequences for these runbooks: a service that will not start may now be failing to reach its
+  issuer rather than its database, and any `curl` in anger needs a bearer token. Obtain one against
+  the realm:
+
+  ```
+  curl -s -d client_id=sfl-operations-ui -d username=<user> -d password=password        -d grant_type=password        http://localhost:8080/realms/sfl/protocol/openid-connect/token | jq -r .access_token
+  ```
 - **No vendor gateway for S174.** Emergency notification cannot actually deliver a message, so there
   is no "the SMS provider is down" procedure to write yet.
 - **The SSEMP cluster does not exist.** S160, S160a, S161, S162, S162a and S163 have no service to

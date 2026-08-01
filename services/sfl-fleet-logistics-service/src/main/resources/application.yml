@@ -55,8 +55,12 @@ sfl:
     schema: fleet_logistics
     owns: "S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, and S171 Mailroom / Courier and Dispatch Tracking"
   security:
-    # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
-    enabled: ${SFL_SECURITY_ENABLED:false}
+    # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
+    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
+    # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
+    # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
+    enabled: ${SFL_SECURITY_ENABLED:true}
   fleet:
     # true opens Swagger and the operations dashboard in a browser once the service is ready.
     # The local start script sets it; it stays false for servers and CI.

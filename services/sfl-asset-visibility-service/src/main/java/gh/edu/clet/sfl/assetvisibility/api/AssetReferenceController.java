@@ -12,6 +12,7 @@ import gh.edu.clet.sfl.assetvisibility.application.RegisterAssetCommand;
 import gh.edu.clet.sfl.assetvisibility.domain.AssetCategory;
 import gh.edu.clet.sfl.assetvisibility.domain.AssetReference;
 import gh.edu.clet.sfl.assetvisibility.domain.LocationType;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -33,14 +34,18 @@ public class AssetReferenceController {
 
     private final AssetVisibilityService service;
 
-    public AssetReferenceController(AssetVisibilityService service) {
+    private final AssetVisibilityActorResolver actors;
+
+    public AssetReferenceController(AssetVisibilityService service, AssetVisibilityActorResolver actors) {
         this.service = service;
+        this.actors = actors;
     }
 
     @PostMapping
     public ResponseEntity<AssetReference> register(@Valid @RequestBody RegisterAssetRequest request,
-            @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String actor,
-            @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
+            HttpServletRequest http) {
+        String actor = actors.resolveActor(http);
+        String correlationId = actors.resolveCorrelationId(http);
         AssetReference result = service.register(new RegisterAssetCommand(request.assetCode(), request.name(),
                 request.category(), request.siteCode(), request.locationType(), request.locationReference(),
                 request.custodianReference(), request.externalReference(), actor, correlationId));
@@ -65,24 +70,27 @@ public class AssetReferenceController {
 
     @PatchMapping("/{assetId}/location")
     public AssetReference move(@PathVariable UUID assetId, @Valid @RequestBody MoveAssetRequest request,
-            @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String actor,
-            @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
+            HttpServletRequest http) {
+        String actor = actors.resolveActor(http);
+        String correlationId = actors.resolveCorrelationId(http);
         return service.move(new MoveAssetCommand(assetId, request.locationType(), request.locationReference(), actor,
                 correlationId));
     }
 
     @PatchMapping("/{assetId}/custody")
     public AssetReference assignCustody(@PathVariable UUID assetId, @Valid @RequestBody AssignCustodyRequest request,
-            @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String actor,
-            @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
+            HttpServletRequest http) {
+        String actor = actors.resolveActor(http);
+        String correlationId = actors.resolveCorrelationId(http);
         return service.assignCustody(new AssignCustodyCommand(assetId, request.custodianReference(), actor,
                 correlationId));
     }
 
     @PatchMapping("/{assetId}/evidence")
     public AssetReference linkEvidence(@PathVariable UUID assetId, @Valid @RequestBody LinkEvidenceRequest request,
-            @RequestHeader(name = "X-SFL-User", defaultValue = "development-user") String actor,
-            @RequestHeader(name = "X-Correlation-ID", required = false) String correlationId) {
+            HttpServletRequest http) {
+        String actor = actors.resolveActor(http);
+        String correlationId = actors.resolveCorrelationId(http);
         return service.linkEvidence(new LinkEvidenceCommand(assetId, request.evidenceReference(), actor,
                 correlationId));
     }

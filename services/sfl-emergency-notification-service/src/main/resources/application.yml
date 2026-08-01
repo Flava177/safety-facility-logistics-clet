@@ -44,8 +44,12 @@ sfl:
     schema: emergency_notification
     owns: "S174 Emergency Mass Notification System (SFL.SSEMP / Emergency Communications)"
   security:
-    # false uses the X-SFL-* development actor headers; true enables the OIDC/JWT resource server.
-    enabled: ${SFL_SECURITY_ENABLED:false}
+    # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
+    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
+    # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
+    # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
+    enabled: ${SFL_SECURITY_ENABLED:true}
   emergency:
     # Outbound provider delivery uses a self-contained transactional outbox with a recorded local sink
     # (no broker required for Phase 1); failed deliveries dead-letter and are replayable.

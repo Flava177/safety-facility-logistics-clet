@@ -1,6 +1,10 @@
 # ADR 0007 — Row-Level Security: the mechanism is chosen, the implementation is deferred
 
 - Status: **Accepted**, 31 July 2026. Decision taken; implementation scheduled, not built.
+- **Unblocked 1 August 2026:** A1 landed, so the precondition this ADR names — "until the actor is a
+  verified JWT principal rather than an `X-SFL-*` header, RLS would be enforcing scopes asserted by
+  the caller, which is theatre" — no longer holds. The `site_scopes` claim the policies will read is
+  now issued by the realm and consumed by every actor resolver. This is the next thing to build.
 - Date: 2026-07-31
 - Deciders: SFL platform / DTI Cluster 9 architect. **Requires DTI platform sign-off on §Decision
   before the first migration is written.**

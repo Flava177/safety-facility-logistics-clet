@@ -44,4 +44,9 @@ sfl:
     schema: asset_visibility
     owns: "Asset visibility service for AVAMP-Lite and future S168"
   security:
-    enabled: ${SFL_SECURITY_ENABLED:false}
+    # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
+    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
+    # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
+    # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
+    enabled: ${SFL_SECURITY_ENABLED:true}

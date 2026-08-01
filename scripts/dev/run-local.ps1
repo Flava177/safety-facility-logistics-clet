@@ -24,6 +24,8 @@ $env:SPRING_PROFILES_ACTIVE = $Profile
 $env:SFL_DB_URL = $DbUrl
 $env:SFL_DB_USERNAME = $DbUsername
 $env:SFL_PORT = $Port
+# Load-bearing since A1: absent now means SECURE. Removing this line makes the service demand a
+# token, which is correct everywhere except a developer laptop with no Keycloak running.
 $env:SFL_SECURITY_ENABLED = "false"
 
 Write-Host "Starting SFL Spring Boot on http://localhost:$Port with profile '$Profile'..."

@@ -44,7 +44,12 @@ sfl:
     schema: facilities
     owns: "Facilities service for S152, S153 and S159"
   security:
-    enabled: ${SFL_SECURITY_ENABLED:false}
+    # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
+    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
+    # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
+    # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
+    enabled: ${SFL_SECURITY_ENABLED:true}
   facilities:
     messaging:
       # `local` records delivery without a broker and is the single-node default. Any environment with a

@@ -39,7 +39,7 @@ build against `docs/phase-1-system-classification.md`, where four of the six are
 | **A4** event rename | ✅ done — 48 literals + AVAMP, validated at the write path, catalogue synced |
 | **A5** runbooks | ✅ done — four, in `docs/runbooks/` |
 | **A6** RLS decision | ✅ done — [ADR 0007](../adr/0007-row-level-security-deferred-with-a-named-mechanism.md); implementation sequenced after A1 |
-| **A1** authentication | ⏸ deferred at the user's instruction |
+| **A1** authentication | ✅ done — secure by default, Keycloak realm imported, JWT chain tested |
 | **B** per-system gaps | 🟡 partial — S166 **C-18 audit chain fixed** (see below); the rest outstanding |
 
 > **C-18 is the most serious defect found in this sequence.** The fleet audit hash chain — the evidence
@@ -60,7 +60,7 @@ Section B is the bulk of it, and it is not started beyond C-18:
 | **S168 fuel-card registry** — `SRS-SFL-S168fuel-04` has no code at all | New aggregate, migration, API, screens |
 | S153 escalation consumer, disposal sweep, response-SLA track, file upload | A contained pass each |
 | S152 inbound webhook verification, floors screen | Small; webhook waits on A1 |
-| A1 authentication (deferred) — and ADR 0007 sequences RLS behind it | A pass |
+| **A6 RLS implementation** — now unblocked by A1; ADR 0007 names the mechanism | A pass |
 
 **S174's CSV truncation was already fixed** before this sequence began; the entry for it in the
 original Prompt 1 was stale and is corrected here rather than "fixed" again.

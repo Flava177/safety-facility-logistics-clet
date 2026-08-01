@@ -57,6 +57,14 @@ length `CHECK`, never a change to the entity.
 candidates and, finding two with no `@Autowired`, looks for a no-arg one and fails. This kept
 `sfl-facilities-service` from starting at all for an entire build pass while 135 unit tests were green.
 
+**The issuer is unreachable.** New since A1, and the likeliest new cause of a service that will not
+start. `sfl.security.enabled` now defaults to `true`, so the resource server tries to resolve
+`${SFL_IAM_ISSUER}` — and if Keycloak is not up, or is up without the `sfl` realm imported, the
+context fails. Check `http://<keycloak>:8080/realms/sfl` returns 200 before suspecting the service.
+In compose, Keycloak is health-gated on exactly that URL for this reason. A developer laptop with no
+Keycloak should set `SFL_SECURITY_ENABLED=false` explicitly; the startup log says so loudly when it
+takes that path.
+
 **A misconfigured transport.** Since the IFIMP drainer landed, selecting
 `sfl.facilities.messaging.transport=rabbitmq` without a `RabbitTemplate` fails at startup **on
 purpose** — the alternative is a service that runs and silently drops every integration event. The
