@@ -236,10 +236,10 @@ For each service: **current state → target packages → aggregates → API-fir
 |---|---|---|
 | `/api/v1/fleet/vehicles` (+ compliance, readiness) | POST/GET/PATCH | S166-01 |
 | `/api/v1/fleet/trips` (+ `/{id}/assignment`, `/{id}/closure`) | POST/PATCH | S166-02 |
-| `/api/v1/integrations/webhooks/telematics` (inbound) · `/fleet/vehicles/{id}/movement` | POST/GET | S166-03 |
-| `/api/v1/fleet/emergency-logistics` | POST | S166-04 |
-| `/api/v1/fleet/drivers` (+ licence/eligibility) | POST/GET | S166-05 |
-| `/api/v1/fleet/trips/{id}/inspections` | POST | S166-06 |
+| `/api/v1/integrations/webhooks/telematics` (inbound) · `/fleet/vehicles/{id}/movement` | POST/GET | S166-04 + S166-05 |
+| `/api/v1/fleet/emergency-logistics` | POST | *not implemented — see C-12* |
+| `/api/v1/fleet/drivers` (+ licence/eligibility) | POST/GET | S166-01 |
+| `/api/v1/fleet/trips/{id}/inspections` | POST | S166-01 + S166-02 |
 | `/api/v1/integrations/webhooks/fuel` (inbound) · `/fuel/transactions` | POST/GET | S168_fuel-01 |
 | `/api/v1/fuel/reconciliation` · `/exceptions` (+ `/{id}/decision`) | GET/PATCH | S168_fuel-02/03 |
 | `/api/v1/fuel/cards` · `/analytics` | POST/GET | S168_fuel-04/05 |
@@ -248,6 +248,21 @@ For each service: **current state → target packages → aggregates → API-fir
 | `/api/v1/integrations/webhooks/courier` · `/logistics/scans` | POST | S171-04 |
 | `/api/v1/logistics/inbound-mail` | POST/GET | S171-05 |
 | `/api/v1/fleet/dashboards/*` · `/logistics/dashboards/*` | GET | PLAT-07 |
+
+> **Corrected 1 Aug 2026 (S166 C-02).** Four rows above mapped endpoints to SRS ordinals rather than to
+> SRS *semantics*, and one cited a requirement that does not exist. The formal SRS defines exactly five
+> S166 requirements — `SRS-SFL-S166-01` … `-05` — and their titles decide the mapping:
+>
+> - **S166-03 is Capture Evidence and Audit Trail**, not telematics. Telematics ingest is an S166-04
+>   integration and its stale-data indicator is S166-05.
+> - **S166-04 is Integrate with Related Systems**, not emergency logistics. That endpoint is unbuilt
+>   (**C-12**) and its home is an owner decision, so it claims no requirement here.
+> - **S166-05 is Expose Dashboards and Reports**, not the driver register. A driver is an operational
+>   record, which is S166-01 — the requirement text names "vehicles, drivers, assignments".
+> - **S166-06 does not exist.** Inspections are S166-01 (the register maintains "service status,
+>   availability") plus S166-02 (the pre-trip inspection is the evidence-bearing workflow step).
+>
+> Traced in `docs/fleet/S166_Requirement_Traceability_Matrix.md`, which is authoritative for S166.
 
 **Vendor adapters:** `TelematicsPort` (Phase-2-ready seam), `FuelProviderPort`, `CourierCarrierPort`/`ScannerPort` (optional).
 **Events published:** `sfl.ftlmp.vehicle-created/readiness-changed/vehicle-location-received.v1`, `dispatch-created/received.v1`, `fuel-transaction-received/fuel-exception-detected.v1`.
@@ -394,7 +409,7 @@ The living backlog. Every `SRS-SFL-*` maps to a service, a primary endpoint/slic
 | S162a-01..05 | safety-security/lifesafety | W3 |
 | S163-01..06 | safety-security/hse | W4 |
 | S174-01..06 | safety-security/emergencycomms | W3 |
-| S166-01..06 | fleet-logistics/fleet | W5 |
+| S166-01..05 | fleet-logistics/fleet | W5 |
 | S168_fuel-01..05 | fleet-logistics/fuel | W5 |
 | S171-01..06 | fleet-logistics/courier | W5 |
 | PLAT-01..08 | common + all services | R0 (01–05), W6 (06–08) |

@@ -40,7 +40,12 @@ Workplan §4.3 table versus the SRS requirement titles:
 | `/api/v1/fleet/trips/{id}/inspections` | S166-06 | does not exist | `S166-01` + `S166-02` — see **C-01** |
 
 **Resolution.** Endpoints are traced by SRS requirement *semantics*, not by the workplan's ordinal positions.
-**Owner action:** correct the workplan §4.3 table.
+
+**Owner action — DONE, 1 Aug 2026.** The workplan's endpoint table now carries the mappings in the
+right-hand column above, with a note stating each of the four corrections and why. `/fleet/emergency-logistics`
+deliberately claims **no** requirement rather than a plausible one: it is unbuilt (**C-12**) and its home is
+still an owner decision, so asserting a trace would manufacture coverage that does not exist. The §15
+backlog range `S166-01..06` is now `S166-01..05`.
 
 ---
 
@@ -186,10 +191,16 @@ for emergency-only/restricted-use vehicles.
 
 ---
 
-## C-13 — SRS filename referenced by `solution.md` does not exist *(documentation defect)*
+## C-13 — SRS filename referenced by `solution.md` does not exist *(documentation defect)* — **CLOSED 1 Aug 2026**
 
-`solution.md` cites `docs/System Mappings and SRS/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx`. The file on disk is
-`docs/System Mappings and SRS/SFL_SRS.docx`. No functional impact; recorded so the reference can be corrected.
+`solution.md` cited `docs/System Mappings and SRS/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx`; the file on disk is
+`docs/System Mappings and SRS/SFL_SRS.docx`. Corrected in `solution.md` and in the go-live readiness pack, which
+carried the same name twice — once as its authoritative baseline and once in its source table, both with a `.pdf`
+extension that never existed either.
+
+The reason this was worth chasing for a filename: `solution.md` opens by naming the SRS as *the contract*, and the
+readiness pack names it as the baseline the Registrar's recommendation rests on. A citation that resolves to nothing
+is the one kind of documentation defect that undermines the document containing it.
 
 ---
 

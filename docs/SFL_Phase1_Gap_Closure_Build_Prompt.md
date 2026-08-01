@@ -20,10 +20,10 @@ pattern the next module copies is the finished one rather than the one with hole
 >    §12. It is the record of what four modules already learned; do not rediscover it.
 > 2. The four gap registers. **These are the specification for this round** — every gap is numbered,
 >    evidenced and has a "to close" note:
->    - `docs/fleet/S166_Frontend_Gap_Register.md` — 12 gaps
->    - `docs/fuel/S168_Fuel_Frontend_Gap_Register.md` — 13 gaps, 11 already closed
->    - `docs/dispatch/S171_Dispatch_Frontend_Gap_Register.md` — 8 gaps
->    - `docs/emergency/S174_Emergency_Frontend_Gap_Register.md` — 12 gaps
+>    - `docs/fleet/S166_UI_Gap_Report.md` — 12 gaps
+>    - `docs/fuel/S168_Fuel_UI_Gap_Report.md` — 13 gaps, 11 already closed
+>    - `docs/dispatch/S171_UI_Gap_Report.md` — 8 gaps
+>    - `docs/emergency/S174_UI_Gap_Report.md` — 12 gaps
 > 3. `docs/architecture/microservices-realignment.md` and `docs/adr/0005-*` — the programme, system
 >    and service map, and the navigation rule.
 >

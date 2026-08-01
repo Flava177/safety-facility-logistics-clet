@@ -58,7 +58,7 @@ import {
  *
  * Paths were taken from the controllers, not from the API inventory document — several inventory
  * entries do not match the implementation. The mismatches are listed in
- * `docs/fleet/S166_Frontend_Gap_Register.md`; nothing here calls an endpoint that does not exist.
+ * `docs/fleet/S166_UI_Gap_Report.md`; nothing here calls an endpoint that does not exist.
  */
 
 const BASE = '/api/v1/fleet';
