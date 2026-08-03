@@ -44,11 +44,15 @@ end-to-end one, as local Docker containers.
 | `sfl-asset-visibility-service`       | `sfl_asset_visibility_service`       | `5444` | `sfl_asset_visibility_service_e2e`       | `55444` |
 | `sfl-emergency-notification-service` | `sfl_emergency_notification_service` | `5445` | `sfl_emergency_notification_service_e2e` | `55445` |
 
-Start them all:
+All ten are `postgres:16-bookworm`, user `sfl`, password `sfl`, database named per the table. Start
+them all:
 
 ```powershell
 docker compose -f compose.service-dbs.yml up -d
 ```
+
+`.\start-backend.ps1` at the repository root does this and then starts the services, so it is the
+one command for a working local system.
 
 For single-service work, use `compose.facilities-db.yml`, `compose.safety-security-db.yml`,
 `compose.fleet-db.yml`, `compose.asset-visibility-db.yml` or `compose.emergency-db.yml`.
@@ -118,7 +122,17 @@ ignored.
 
 ## Migrations
 
-Flyway, with `ddl-auto: validate`. Two rules:
+**There is no migration command to run.** Flyway is enabled in every service and runs on startup,
+against whichever database that service is pointed at. Bring the containers up, start the service,
+and the schema is built and brought up to date before it finishes booting. Current counts: 27 in
+fleet, 14 in facilities, 8 in emergency, 2 in asset-visibility, 1 in safety-security.
+
+`ddl-auto: validate` is the check on that. Hibernate compares the schema Flyway produced against the
+entity mappings, and a service that disagrees with its own database **refuses to start** rather than
+running against a schema it half-fits. A boot failure right after adding a migration is almost
+always this, and it is telling you something true.
+
+Two rules when writing one:
 
 - Use `VARCHAR(n)` with a length `CHECK`, never `CHAR(n)` — Hibernate rejects the latter at schema
   validation, and the failure does not name the column.
