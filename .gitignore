@@ -445,3 +445,22 @@ tmp/
 # Local scratch and design binaries — the .fig lives in Figma, not in git
 COMMIT_MSG_*.txt
 *.fig
+
+# Documentation stays on the working machine.
+# The SRS, ADRs, per-system design notes, gap reports, runbooks and the implementation log are
+# working documents, not deliverables of this repository. Three curated guides are tracked and
+# re-included below; everything else in Markdown is local.
+*.md
+!/README.md
+!/services/README.md
+!/frontend/sfl-operations-ui/README.md
+
+# The docs tree, including the SRS binaries, which do not belong in git at all.
+docs/
+
+# Assistant and agent scratch â€” never committed.
+.agents/
+.codex/
+.claude/
+CLAUDE.md
+AGENTS.md
