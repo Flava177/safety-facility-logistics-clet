@@ -4,7 +4,10 @@ import { DriverResponse } from 'modules/fleet/api/dto';
 import { describeDriverEligibility } from 'modules/fleet/api/driverEligibility';
 import { VEHICLE_CATEGORIES, VehicleCategory, humanise } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi } from 'modules/fleet/api/fleetApi';
-import { UpdateDriverDialog } from 'modules/fleet/dialogs/driverDialogs';
+import {
+  BindDriverPrincipalDialog,
+  UpdateDriverDialog,
+} from 'modules/fleet/dialogs/driverDialogs';
 import Alert from 'shared/components/Alert';
 import BlockerList from 'shared/components/BlockerList';
 import Button from 'shared/components/Button';
@@ -18,6 +21,7 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatDaysRemaining } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageDrivers } from '../api/access';
 
 /**
  * Why this driver's status is what it is, read off the record itself.
@@ -59,6 +63,7 @@ const DriverDetailPage = () => {
   const { notifySuccess } = useNotifier();
   const [category, setCategory] = useState<VehicleCategory | ''>('');
   const [editOpen, setEditOpen] = useState(false);
+  const [bindOpen, setBindOpen] = useState(false);
 
   const driver = useApiQuery((signal) => driversApi.findById(driverId, signal), [driverId]);
   const eligibility = useApiQuery(
@@ -97,6 +102,11 @@ const DriverDetailPage = () => {
             <Button variant="primary" startIcon="edit" onClick={() => setEditOpen(true)}>
               Update driver
             </Button>
+            {canManageDrivers() && (
+              <Button variant="outline" startIcon="link" onClick={() => setBindOpen(true)}>
+                Link login
+              </Button>
+            )}
           </>
         }
         meta={
@@ -186,6 +196,10 @@ const DriverDetailPage = () => {
                     },
                     { label: 'Site', value: driver.data.siteCode },
                     { label: 'Responsible unit', value: driver.data.responsibleUnit },
+                    {
+                      label: 'Driver login linked',
+                      value: driver.data.principalLinked ? 'Yes' : 'No',
+                    },
                     { label: 'Suspension reason', value: driver.data.suspensionReason ?? '—' },
                     { label: 'Record version', value: driver.data.version },
                   ]}
@@ -262,6 +276,17 @@ const DriverDetailPage = () => {
                   notifySuccess('Driver updated.');
                   driver.refetch();
                   eligibility.refetch();
+                }}
+              />
+            )}
+            {bindOpen && (
+              <BindDriverPrincipalDialog
+                open
+                driver={driver.data}
+                onClose={() => setBindOpen(false)}
+                onSaved={() => {
+                  notifySuccess('Driver login link updated.');
+                  driver.refetch();
                 }}
               />
             )}

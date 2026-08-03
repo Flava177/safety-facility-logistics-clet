@@ -122,7 +122,12 @@ describe('FuelCardsPage', () => {
     await user.click(screen.getByRole('button', { name: /issue card/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /issue a fuel card/i });
-    await user.type(within(dialog).getByLabelText(/^masked reference/i), '1234567890123456');
+    // The field opens pre-filled with a generated demo reference, so it has to be cleared
+    // first — otherwise this types a full card number onto a valid mask and the rejection
+    // proves nothing.
+    const maskedReference = within(dialog).getByLabelText(/^masked reference/i);
+    await user.clear(maskedReference);
+    await user.type(maskedReference, '1234567890123456');
     await user.click(within(dialog).getByRole('button', { name: /^issue card$/i }));
 
     expect(
@@ -140,7 +145,13 @@ describe('FuelCardsPage', () => {
     await user.click(screen.getByRole('button', { name: /issue card/i }));
 
     const dialog = await screen.findByRole('dialog', { name: /issue a fuel card/i });
-    await user.type(within(dialog).getByLabelText(/^masked reference/i), '****9876');
+    const maskedReference = within(dialog).getByLabelText(/^masked reference/i);
+    await user.clear(maskedReference);
+    await user.type(maskedReference, '****9876');
+    // Provider is the shared listbox, not a native select, and it opens through a portal —
+    // so the options are queried from the document, not from inside the dialog.
+    await user.click(within(dialog).getByRole('combobox', { name: /^provider/i }));
+    await user.click(await screen.findByRole('option', { name: 'TotalEnergies Ghana' }));
     await user.click(within(dialog).getByRole('button', { name: /^issue card$/i }));
 
     await waitFor(() =>
@@ -148,7 +159,7 @@ describe('FuelCardsPage', () => {
         expect.objectContaining({
           siteCode: 'CLET-HQ',
           maskedReference: '****9876',
-          provider: 'CLET FUEL CARDS',
+          provider: 'TOTALENERGIES GHANA',
           vehicleId: null,
           driverId: null,
         }),

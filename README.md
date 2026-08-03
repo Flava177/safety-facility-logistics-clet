@@ -1,103 +1,91 @@
-# SFL Java Backend
+# CLET Cluster 9 — Safety, Facilities & Logistics
 
-This repository is being realigned to the updated SFL SRS and the Release 1 demo baseline.
+The SFL Directorate platform for the Centre for Language and Educational Technology (CLET).
+Phase 1 covers thirteen Fast-Track systems across four programmes:
 
-The active target architecture is five deployable Spring Boot microservices. The original Phase 1 workplan
-started with four deployables, and S174 is recorded as a controlled deviation in ADR 0004 because emergency
-notification needs independent availability, callback, retry, degraded-mode and blast-radius behavior.
+| Programme  | What it covers                                   |
+| ---------- | ------------------------------------------------ |
+| **IFIMP**  | Integrated Facilities & Infrastructure Management |
+| **SSEMP**  | Safety, Security & Emergency Management          |
+| **FTLMP**  | Fleet, Transport & Logistics Management          |
+| **AVAMP**  | Asset Visibility & Asset Management (Lite)       |
 
-- `services/sfl-facilities-service` for S152, S153 and S159.
-- `services/sfl-safety-security-service` for S160, S160a, S161, S162, S162a and S163.
-- `services/sfl-fleet-logistics-service` as the service artifact for S166 Fleet and Vehicle Management, with
-  S168_fuel Fuel Management and Driver Logbooks and S171 Courier/Dispatch implemented as separate modules
-  under the same technical boundary.
-- `services/sfl-asset-visibility-service` for AVAMP-Lite and future S168 asset tagging/RFID/barcode inventory.
-- `services/sfl-emergency-notification-service` for S174 Emergency Mass Notification.
+Five deployable Spring Boot services and one React dashboard. Each service owns its own schema,
+its own migrations and its own API boundary — services talk through APIs and events, never through
+each other's tables.
 
-## Release 1 demo scope
+## Release 1 scope
 
-Release 1 is closed as a **7-system demo build**, not as the full 13-system Phase 1:
+Release 1 is closed as a **7-system demo build**, not the full 13-system Phase 1.
 
-- Built and demoable: S152 CAFM/IWMS, S153 CMMS, S159 Room & Resource Booking, S166 Fleet & Vehicle
-  Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom/Courier & Dispatch and
-  S174 Emergency Mass Notification.
-- Excluded from the demo: S160 Visitor Management, S160a Access Control, S161 CCTV/VMS, S162 Intrusion,
-  S162a Fire/Life Safety and S163 HSE Incident/Near-Miss.
-- S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
-  later integration with the external Comms system.
+**Built and demoable**
 
-The previous .NET implementation has been removed from this project. The older single Spring Boot app under `src/main` — a second application at the repository root that the root `pom.xml` still compiled — **was removed on 1 August 2026**, once its IFIMP vertical slice had been fully superseded by `services/sfl-facilities-service`. It read as live code to anyone opening the repository, and a dev script still launched it against a database that no longer exists. Its history is preserved on the `archive/java-migration-snapshot-2026-07-21` and `archive/pre-java-cleanup-2026-07-21` branches, and on `master`.
+| System | What                              |
+| ------ | --------------------------------- |
+| S152   | Facility management — CAFM / IWMS |
+| S153   | Maintenance management — CMMS     |
+| S159   | Room & resource booking           |
+| S166   | Fleet & vehicle management        |
+| S168   | Fuel management & driver logbooks |
+| S171   | Mailroom, courier & dispatch      |
+| S174   | Emergency mass notification       |
 
-## Running Fleet & Vehicle Management locally
+**Not in the demo** — S160 visitor management, S160a access control, S161 CCTV/VMS,
+S162 intrusion, S162a fire & life safety, S163 HSE incident and near-miss.
 
-One command starts the databases, builds the SFL Operations dashboard and runs the Fleet service,
-which then serves the API, Swagger and the dashboard together on port 8093:
+S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
+integration with the external Comms system.
+
+## Layout
+
+```
+services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
+  sfl-facilities-service             IFIMP  — S152, S153, S159             :8091
+  sfl-safety-security-service        SSEMP  — scaffold only                :8092
+  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171; serves /ui :8093
+  sfl-asset-visibility-service       AVAMP-Lite                            :8094
+  sfl-emergency-notification-service S174                                  :8095
+  sfl-service-common                 Shared kernel — principal, RBAC, error and event envelopes
+frontend/sfl-operations-ui           React 19 · TypeScript · Vite — the only user interface
+scripts/                             Local development helpers
+deploy/                              Deployment assets
+```
+
+S174 is a separate deployable rather than a module of another service because emergency
+notification needs independent availability, callback, retry, degraded-mode and blast-radius
+behaviour.
+
+## Quick start
+
+One command starts the databases, builds the dashboard and runs the Fleet service, which then
+serves the API, Swagger and the dashboard together on port 8093:
 
 ```powershell
 .\start-fleet.ps1
 ```
 
-| URL                                     | What               |
-| --------------------------------------- | ------------------ |
+| URL                                     | What                 |
+| --------------------------------------- | -------------------- |
 | <http://localhost:8093/ui/>             | Operations dashboard |
-| <http://localhost:8093/swagger-ui.html> | Swagger UI         |
-| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON       |
+| <http://localhost:8093/swagger-ui.html> | Swagger UI           |
+| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON         |
 
 `http://localhost:8093/` redirects to the dashboard. There is no sign-in step locally
-(`sfl.security.enabled=false`); the dashboard sends the `X-SFL-*` actor headers instead.
+(`sfl.security.enabled=false`); the dashboard sends `X-SFL-*` actor headers instead.
 
-For front-end work with hot reload, use `.\scripts\dev\run-fleet-dev.ps1`, which runs the service
-on 8093 and the dashboard on 5005. Details are in `frontend/sfl-operations-ui/README.md`.
-
-## Environment
-
-Two things that have each cost somebody an afternoon.
-
-**Java 17, and the machine default may not be it.** The reactor needs 17+. This machine's `PATH` has
-carried `C:\Program Files\Zulu\zulu-11\bin`, and Maven picks that up silently and fails with errors
-that do not mention the JDK. The supported JDK is:
+Useful switches:
 
 ```powershell
-$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
+.\start-fleet.ps1 -RebuildUi      # rebuild the dashboard after front-end changes
+.\start-fleet.ps1 -SkipDb         # databases already running
+.\start-fleet.ps1 -SkipUiBuild    # API only
+.\start-fleet.ps1 -NoBrowser      # don't open browser tabs
 ```
 
-**The "Invalid VCS root mapping" warning on project open.** `.idea/vcs.xml` acquires a Git root
-mapping for `frontend/sfl-operations-ui`, which is neither a repository nor a submodule — it is a
-directory inside this one. Remove the second `<mapping>` line, leaving only the project-root mapping.
-`.idea/` is gitignored, so this recurs for every person who opens the project; it is recorded here so
-nobody diagnoses it twice.
+For front-end work with hot reload, `.\scripts\dev\run-fleet-dev.ps1` runs the service on 8093 and
+Vite on 5005.
 
-**Running the tests the way CI does.** A plain `mvnw test` **skips** the end-to-end suites and reports
-green — 119 tests skipped at the last count. The suites are gated on three environment variables, and
-CI fails the build if anything skipped. To reproduce CI locally, start the databases and set:
-
-```powershell
-$env:SFL_FACILITIES_TEST_DB_URL = 'jdbc:postgresql://localhost:55441/sfl_facilities_migration_test'
-$env:SFL_FLEET_LOGISTICS_TEST_DB_URL = 'jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e'
-$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL = 'jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
-```
-
-The facilities one points at a **dedicated, empty** database on purpose: the migration suite asserts a
-genesis audit hash of all zeros, so running it against a database with any history fails with four
-errors that look like defects and are residue. Drop and recreate it if that happens.
-
-## Source Documents
-
-- `docs/System Mappings and SRS/CLET_Comprehensive_Digital_System_Mapping_v2.docx`
-- `C:\Users\Daniel Adjei\Documents\CLET\Projects\SRS\CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx`
-- `docs/SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md`
-- `docs/architecture/microservices-realignment.md`
-- `docs/adr/`
-- `docs/runbooks/`
-- `docs/System Mappings and SRS/CLET_Cluster9_FSL_System_Architecture_Document_FULLY_INTEGRATED.docx`
-- `docs/System Mappings and SRS/SFL_Phase1_System_Architecture_Implementation_Guide_v2.md`
-
-The parent mapping document remains the source of truth for system IDs, Cluster 9 scope and phase
-classification. The Cluster 9 SFL Phase 1 SRS remains the requirement source. The Release 1 workflow
-review/readiness pack is the current implementation handoff for what is built, excluded, demoable and
-still deferred.
-
-## Build Foundation
+## Build and test
 
 ```powershell
 docker compose -f compose.service-dbs.yml up -d
@@ -105,48 +93,56 @@ cd services
 ..\mvnw.cmd test
 ```
 
-## Local Service Databases
+Details for each half are in [`services/README.md`](services/README.md) and
+[`frontend/sfl-operations-ui/README.md`](frontend/sfl-operations-ui/README.md).
 
-Each deployable owns a separate PostgreSQL database boundary. Start the local runtime and E2E databases with:
+## Environment
 
-```powershell
-docker compose -f compose.service-dbs.yml up -d
-```
+Three things that have each cost somebody an afternoon.
 
-For single-service work, use `compose.facilities-db.yml`, `compose.safety-security-db.yml`,
-`compose.fleet-db.yml`, `compose.asset-visibility-db.yml` or `compose.emergency-db.yml`.
-
-| Service | Runtime DB | Runtime port | E2E DB | E2E port |
-|---|---|---:|---|---:|
-| `sfl-facilities-service` | `sfl_facilities_service` | `5441` | `sfl_facilities_service_e2e` | `55441` |
-| `sfl-safety-security-service` | `sfl_safety_security_service` | `5442` | `sfl_safety_security_service_e2e` | `55442` |
-| `sfl-fleet-logistics-service` | `sfl__fleet_vehicle_service` | `5443` | `sfl__fleet_vehicle_service_e2e` | `55443` |
-| `sfl-asset-visibility-service` | `sfl_asset_visibility_service` | `5444` | `sfl_asset_visibility_service_e2e` | `55444` |
-| `sfl-emergency-notification-service` | `sfl_emergency_notification_service` | `5445` | `sfl_emergency_notification_service_e2e` | `55445` |
-
-## S174 Emergency Notification
-
-Local S174 entry points:
-
-- Service: `services/sfl-emergency-notification-service`
-- Port: `8095`
-- `http://localhost:8095/emergency/` redirects to the dashboard's emergency screens. Configure the
-  target with `sfl.dashboard.base-url` — only the fleet service packages the bundle. See
-  [ADR 0006](docs/adr/0006-one-dashboard-and-the-retirement-of-the-per-service-pages.md)
-- Swagger UI: `http://localhost:8095/swagger-ui.html`
-- OpenAPI JSON: `http://localhost:8095/v3/api-docs`
-- Health: `http://localhost:8095/actuator/health`
-
-Local database support:
+**Java 17, and the machine default may not be it.** The reactor needs 17+. This machine's `PATH`
+has carried `C:\Program Files\Zulu\zulu-11\bin`, and Maven picks that up silently and fails with
+errors that never mention the JDK:
 
 ```powershell
-docker compose -f compose.service-dbs.yml up -d
-cd services
-mvn -pl sfl-emergency-notification-service -am test
+$env:JAVA_HOME = 'C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot'
 ```
 
-Each service owns its database schema, outbox, inbox, package boundary and deployable artifact. Shared ecosystem services such as IAM, API gateway, notification, audit/evidence, integration gateway/event broker, reporting and document/object storage are integrated through adapters and are not duplicated inside SFL services.
+**A plain `mvnw test` skips the end-to-end suites and still reports green.** The suites are gated on
+three environment variables, and CI fails the build if anything skipped. To reproduce CI locally,
+start the databases and set:
 
-## Build vs Buy Rule
+```powershell
+$env:SFL_FACILITIES_TEST_DB_URL = 'jdbc:postgresql://localhost:55441/sfl_facilities_migration_test'
+$env:SFL_FLEET_LOGISTICS_TEST_DB_URL = 'jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e'
+$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL = 'jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
+```
 
-Build CLET-owned workflow, governance, records, APIs, dashboards, audit/evidence references and integration adapters. Buy or integrate specialist platforms/hardware such as CCTV/VMS, access-control devices, biometric readers, fire/life-safety panels, intrusion panels, SMS/voice/signage providers, fuel provider feeds, GPS/telematics and RFID/barcode devices.
+The facilities one points at a **dedicated, empty** database on purpose: the migration suite asserts
+a genesis audit hash of all zeros, so running it against a database with any history fails with four
+errors that look like defects and are residue. Drop and recreate it if that happens.
+
+**The "Invalid VCS root mapping" warning on project open.** `.idea/vcs.xml` acquires a Git root
+mapping for `frontend/sfl-operations-ui`, which is neither a repository nor a submodule — it is a
+directory inside this one. Remove the second `<mapping>` line, leaving only the project-root
+mapping. `.idea/` is gitignored, so this recurs for everyone who opens the project.
+
+## Build vs buy
+
+Build CLET-owned workflow, governance, records, APIs, dashboards, audit and evidence references, and
+integration adapters.
+
+Buy or integrate specialist platforms and hardware: CCTV/VMS, access-control devices, biometric
+readers, fire and life-safety panels, intrusion panels, SMS/voice/signage providers, fuel provider
+feeds, GPS/telematics, and RFID/barcode devices.
+
+Shared ecosystem services — IAM, API gateway, notification, audit and evidence, integration gateway
+and event broker, reporting, document and object storage — are integrated through adapters and are
+not duplicated inside SFL services.
+
+## A note on documentation
+
+The SRS, the architecture decision records, the per-system design notes, gap reports and runbooks
+are maintained outside this repository. The requirement source of truth is the Cluster 9 SFL Phase 1
+SRS; the parent CLET digital system mapping remains authoritative for system IDs, Cluster 9 scope
+and phase classification.

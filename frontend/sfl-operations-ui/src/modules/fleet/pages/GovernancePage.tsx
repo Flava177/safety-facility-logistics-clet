@@ -15,6 +15,7 @@ import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FileField from 'shared/components/FileField';
 import FormDialog from 'shared/components/FormDialog';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
@@ -30,6 +31,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
+import { canRequestEvidenceExport } from '../api/access';
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
 
@@ -38,6 +40,30 @@ interface AuditRow {
   key: string;
   record: AuditEventResponse;
 }
+
+const evidenceStorageReference = (
+  siteCode: string,
+  relatedRecordType: string,
+  relatedRecordId: string,
+  fileName: string,
+): string => {
+  const safeFile = fileName.replace(/[^\w.\-() ]+/g, '_').trim().replace(/\s+/g, '-') || 'evidence';
+  const safeType =
+    relatedRecordType.replace(/[^\w.-]+/g, '_').trim().toLowerCase() || 'record';
+  const safeRecord =
+    relatedRecordId.replace(/[^\w.-]+/g, '_').trim().slice(0, 120) || 'reference';
+  return `local-demo://fleet-evidence/${siteCode.toUpperCase()}/${safeType}/${safeRecord}/${Date.now()}-${safeFile}`;
+};
+
+const sha256Hex = async (file: File): Promise<string> => {
+  if (!globalThis.crypto?.subtle) {
+    throw FleetApiError.transport('This browser cannot compute the SHA-256 evidence hash.');
+  }
+  const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
+  return Array.from(new Uint8Array(digest))
+    .map((byte) => byte.toString(16).padStart(2, '0'))
+    .join('');
+};
 
 /**
  * Evidence and audit governance.
@@ -52,6 +78,7 @@ interface AuditRow {
  */
 const GovernancePage = () => {
   const { notifyError, notifySuccess } = useNotifier();
+  const canExportEvidence = canRequestEvidenceExport();
   const [tab, setTab] = useState<TabKey>('evidence');
   const [lookupId, setLookupId] = useState('');
   const [recordType, setRecordType] = useState('');
@@ -345,9 +372,11 @@ const GovernancePage = () => {
                       >
                         Record access
                       </Button>
-                      <Button size="sm" variant="primary" onClick={() => setExportOpen(true)}>
-                        Request export
-                      </Button>
+                      {canExportEvidence && (
+                        <Button size="sm" variant="primary" onClick={() => setExportOpen(true)}>
+                          Request export
+                        </Button>
+                      )}
                     </>
                   }
                 >
@@ -486,13 +515,10 @@ const RegisterEvidenceDialog = ({
   const form = useFleetForm({
     initialValues: {
       siteCode: defaultSite,
-      relatedRecordType: '',
+      relatedRecordType: 'VEHICLE',
       relatedRecordId: '',
-      evidenceType: '',
-      fileName: '',
-      contentType: 'application/pdf',
-      storageReference: '',
-      sha256Hash: '',
+      evidenceType: 'COMPLIANCE_DOCUMENT',
+      evidenceFile: null as File | null,
       retentionClass: 'OPERATIONAL_1_YEAR' as EvidenceRetentionClass,
     },
     schema: {
@@ -500,22 +526,33 @@ const RegisterEvidenceDialog = ({
       relatedRecordType: required('Related record type'),
       relatedRecordId: required('Related record ID'),
       evidenceType: required('Evidence type'),
-      fileName: required('File name'),
-      contentType: required('Content type'),
-      storageReference: required('Storage reference'),
-      sha256Hash: required('SHA-256 hash'),
+      evidenceFile: required('Evidence file'),
       retentionClass: required('Retention class'),
     },
     onSubmit: async (values) => {
+      if (!values.evidenceFile) {
+        throw FleetApiError.transport('Choose an evidence file before registering.');
+      }
+      const relatedRecordType = values.relatedRecordType.trim();
+      const relatedRecordId = values.relatedRecordId.trim();
+      const fileName = values.evidenceFile.name;
+      const contentType = values.evidenceFile.type || 'application/octet-stream';
+      const storageReference = evidenceStorageReference(
+        values.siteCode,
+        relatedRecordType,
+        relatedRecordId,
+        fileName,
+      );
+      const sha256Hash = await sha256Hex(values.evidenceFile);
       const created = await evidenceApi.register({
         siteCode: values.siteCode.trim().toUpperCase(),
-        relatedRecordType: values.relatedRecordType.trim(),
-        relatedRecordId: values.relatedRecordId.trim(),
+        relatedRecordType,
+        relatedRecordId,
         evidenceType: values.evidenceType.trim(),
-        fileName: values.fileName.trim(),
-        contentType: values.contentType.trim(),
-        storageReference: values.storageReference.trim(),
-        sha256Hash: values.sha256Hash.trim(),
+        fileName,
+        contentType,
+        storageReference,
+        sha256Hash,
         retentionClass: values.retentionClass,
       });
       onSaved(created);
@@ -528,7 +565,7 @@ const RegisterEvidenceDialog = ({
     <FormDialog
       open={open}
       title="Register an evidence reference"
-      description="The service stores a reference and a hash, not the file itself. A retention class is mandatory."
+      description="Choose the file and the dashboard records the filename, content type and SHA-256 hash automatically. This demo stores a metadata reference, not the file content."
       submitLabel="Register evidence"
       submitting={form.submitting}
       formError={form.formError}
@@ -580,35 +617,24 @@ const RegisterEvidenceDialog = ({
           onChange={(value) => form.setValue('evidenceType', value)}
           {...form.fieldProps('evidenceType')}
         />
-        <TextInput
-          label="File name"
-          required
-          value={form.values.fileName}
-          onChange={(value) => form.setValue('fileName', value)}
-          {...form.fieldProps('fileName')}
-        />
-        <TextInput
-          label="Content type"
-          required
-          value={form.values.contentType}
-          onChange={(value) => form.setValue('contentType', value)}
-          {...form.fieldProps('contentType')}
-        />
-        <TextInput
-          label="Storage reference"
-          required
-          value={form.values.storageReference}
-          onChange={(value) => form.setValue('storageReference', value)}
-          {...form.fieldProps('storageReference')}
-        />
+        <div className="sm:col-span-2">
+          <FileField
+            label="Evidence file"
+            required
+            value={form.values.evidenceFile}
+            accept=".pdf,.png,.jpg,.jpeg,.doc,.docx,.xlsx,.csv,text/csv,application/pdf,image/png,image/jpeg"
+            onChange={(file) => form.setValue('evidenceFile', file)}
+            {...form.fieldProps(
+              'evidenceFile',
+              'Upload or choose the supporting file; the file name, content type, storage reference and SHA-256 hash are captured for you.',
+            )}
+          />
+        </div>
       </div>
-      <TextInput
-        label="SHA-256 hash"
-        required
-        value={form.values.sha256Hash}
-        onChange={(value) => form.setValue('sha256Hash', value)}
-        {...form.fieldProps('sha256Hash')}
-      />
+      <Alert variant="info">
+        The evidence file stays wherever your document store will later keep it. For this Release 1
+        demo, Fleet records the tamper-evident reference, retention class and hash chain entry.
+      </Alert>
     </FormDialog>
   );
 };

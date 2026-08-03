@@ -217,6 +217,7 @@ export interface DriverResponse {
   lifecycleStatus: DriverLifecycleStatus;
   eligibilityStatus: DriverEligibilityStatus;
   suspensionReason: string | null;
+  principalLinked: boolean;
   createdBy: string | null;
   createdAt: string;
   lastModifiedBy: string | null;
@@ -233,6 +234,7 @@ export interface RegisterDriverRequest {
   medicalClearanceExpiresOn?: string | null;
   siteCode: string;
   responsibleUnit: string;
+  principalSubject?: string | null;
 }
 
 export interface UpdateDriverRequest {
@@ -244,6 +246,11 @@ export interface UpdateDriverRequest {
   responsibleUnit: string;
   targetLifecycleStatus?: DriverLifecycleStatus | null;
   lifecycleReason?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface BindDriverPrincipalRequest {
+  principalSubject?: string | null;
   expectedVersion?: number | null;
 }
 

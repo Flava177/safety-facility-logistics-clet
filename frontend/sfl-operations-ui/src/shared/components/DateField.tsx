@@ -76,6 +76,8 @@ const Picker = ({
   // Held in a ref so changing the handler never tears down and rebuilds the calendar.
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  const onBlurRef = useRef(onBlur);
+  onBlurRef.current = onBlur;
 
   useEffect(() => {
     if (!inputRef.current) {
@@ -89,10 +91,15 @@ const Picker = ({
       dateFormat: withTime ? DATE_TIME_FORMAT : DATE_FORMAT,
       altInput: true,
       altFormat: withTime ? 'd M Y  H:i' : 'd M Y',
-      altInputClass: cn(controlClasses, error && errorClasses),
+      altInputClass: controlClasses,
       allowInput: false,
       monthSelectorType: 'static',
-      onChange: (_dates: Date[], dateString: string) => onChangeRef.current(dateString),
+      onChange: (_dates: Date[], dateString: string) => {
+        onChangeRef.current(dateString);
+        // Selecting from the calendar is a completed field interaction. Mark it as touched
+        // immediately so stale "required" errors clear on the first click, not after a second pass.
+        onBlurRef.current?.();
+      },
     }) as Instance;
 
     instanceRef.current = instance;
@@ -101,7 +108,7 @@ const Picker = ({
       instanceRef.current = null;
     };
     // The calendar is created once per field; value, bounds and styling are pushed in below.
-  }, [withTime, error]);
+  }, [withTime]);
 
   // Keep the calendar in step with form state that changed elsewhere (reset, prefill, clear).
   useEffect(() => {
@@ -134,12 +141,19 @@ const Picker = ({
       altInput.disabled = Boolean(disabled);
       altInput.placeholder = placeholder ?? (withTime ? 'Select date and time' : 'Select date');
       altInput.id = id;
-      if (onBlur) {
-        altInput.onblur = () => onBlur();
-      }
+      altInput.onblur = () => onBlurRef.current?.();
       /* eslint-enable react-hooks/immutability */
     }
-  }, [disabled, placeholder, withTime, id, onBlur]);
+  }, [disabled, placeholder, withTime, id]);
+
+  useEffect(() => {
+    const altInput = instanceRef.current?.altInput;
+    if (altInput) {
+      /* eslint-disable react-hooks/immutability */
+      altInput.className = cn(controlClasses, error && errorClasses);
+      /* eslint-enable react-hooks/immutability */
+    }
+  }, [error]);
 
   return (
     <FieldShell

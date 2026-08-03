@@ -238,9 +238,16 @@ npm run test          # vitest run
 npm run test:watch
 ```
 
-73 tests today, covering system entitlement per role, the S152 readiness rules, the S153 closure
-evidence gate and work-order transition table, the formatting helpers, and the facilities
-dashboard's loading / error / stale / restricted-drilldown states.
+156 tests today, covering system entitlement per role, the S152 readiness rules, the S153 closure
+evidence gate and work-order transition table, the S168 fuel-card masking rules and lifecycle
+transitions, the formatting helpers, and the facilities dashboard's loading / error / stale /
+restricted-drilldown states.
+
+Two things about writing tests against the shared components. `Select` is an ARIA listbox, not a
+native `<select>` — `selectOptions` will not drive it. Click the `combobox` and then the `option`,
+and query the option from `screen` rather than from inside the dialog, because the list opens
+through a portal. And jsdom has no layout, so `scrollIntoView` is stubbed in `src/test/setup.ts`;
+without it every test that opens a listbox fails with an error about scrolling.
 
 ### Data-fetching contract
 
@@ -282,8 +289,8 @@ buttons disable while a request is in flight.
 
 ## Fleet endpoints integrated
 
-Taken from the controllers, not from the API inventory document — see
-`docs/fleet/S166_UI_Gap_Report.md` for where the two disagree.
+Taken from the controllers, which are the authority — where the API inventory note and the code
+disagree, the code is what the dashboard was built against.
 
 | Area         | Endpoints                                                                                                                                                                                                                                                   |
 | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |

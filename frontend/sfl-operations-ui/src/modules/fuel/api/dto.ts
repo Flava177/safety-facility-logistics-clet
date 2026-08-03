@@ -293,6 +293,8 @@ export interface CreateLogbookRequest {
   evidenceId: string | null;
 }
 
+export type UpdateLogbookRequest = CreateLogbookRequest;
+
 /** `DriverLogbookController.TransitionRequest`. */
 export interface LogbookTransitionRequest {
   comment: string | null;

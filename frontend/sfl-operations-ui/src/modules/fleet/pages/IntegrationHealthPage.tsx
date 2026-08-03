@@ -16,6 +16,7 @@ import { EnumSelect, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canReplayIntegration } from '../api/access';
 
 /** How many messages the inbox search asks for. The service clamps at 500. */
 const SEARCH_LIMIT = 100;
@@ -38,6 +39,7 @@ const SEARCH_LIMIT = 100;
  */
 const IntegrationHealthPage = () => {
   const { notifyError, notifySuccess } = useNotifier();
+  const canReplay = canReplayIntegration();
   const [sourceSystem, setSourceSystem] = useState('');
   const [status, setStatus] = useState<IntegrationMessageStatus | ''>('');
   const [eventType, setEventType] = useState('');
@@ -49,16 +51,18 @@ const IntegrationHealthPage = () => {
 
   const messages = useApiQuery(
     (signal) =>
-      integrationsApi.messages(
-        {
-          sourceSystem: sourceSystem.trim() || undefined,
-          status: status || undefined,
-          eventType: eventType.trim() || undefined,
-          size: SEARCH_LIMIT,
-        },
-        signal,
-      ),
-    [sourceSystem, status, eventType],
+      canReplay
+        ? integrationsApi.messages(
+            {
+              sourceSystem: sourceSystem.trim() || undefined,
+              status: status || undefined,
+              eventType: eventType.trim() || undefined,
+              size: SEARCH_LIMIT,
+            },
+            signal,
+          )
+        : Promise.resolve(undefined),
+    [canReplay, sourceSystem, status, eventType],
   );
 
   // Pulled out as locals because they are the stable half of the query objects, and the memoised
@@ -68,8 +72,10 @@ const IntegrationHealthPage = () => {
 
   const refreshAll = useCallback(() => {
     refetchHealth();
-    refetchMessages();
-  }, [refetchHealth, refetchMessages]);
+    if (canReplay) {
+      refetchMessages();
+    }
+  }, [canReplay, refetchHealth, refetchMessages]);
 
   /**
    * Shared by the row action and the replay-by-id card, so both report the same way.
@@ -217,14 +223,16 @@ const IntegrationHealthPage = () => {
                     {health.data.deadLetterMessages === 1 ? '' : 's'} require replay or operator
                     review. Until they are cleared, vehicle movement data may be stale.
                   </span>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    onClick={() => setStatus('DEAD_LETTER')}
-                    disabled={status === 'DEAD_LETTER'}
-                  >
-                    Show them
-                  </Button>
+                  {canReplay && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => setStatus('DEAD_LETTER')}
+                      disabled={status === 'DEAD_LETTER'}
+                    >
+                      Show them
+                    </Button>
+                  )}
                 </div>
               </Alert>
             )}
@@ -253,7 +261,9 @@ const IntegrationHealthPage = () => {
               />
             </div>
 
-            <SectionCard title="Inbound messages" subtitle="Newest first" flush>
+            {canReplay ? (
+              <>
+                <SectionCard title="Inbound messages" subtitle="Newest first" flush>
               <FilterBar
                 onReset={() => {
                   setSourceSystem('');
@@ -310,9 +320,9 @@ const IntegrationHealthPage = () => {
                   </p>
                 )}
               </DataState>
-            </SectionCard>
+                </SectionCard>
 
-            <SectionCard
+                <SectionCard
               title="Replay by message identifier"
               subtitle="For an identifier that came from a log or an incident note rather than the list above"
             >
@@ -334,7 +344,20 @@ const IntegrationHealthPage = () => {
                   Replay
                 </Button>
               </div>
-            </SectionCard>
+                </SectionCard>
+              </>
+            ) : (
+              <SectionCard
+                title="Integration inbox and replay"
+                subtitle="Privileged controls are hidden for the current Fleet Manager demo role"
+              >
+                <Alert variant="info">
+                  Your role can view integration health counters. Message inbox search and replay are
+                  restricted to integration support/admin users, so this page no longer calls those
+                  protected endpoints during the manager demo.
+                </Alert>
+              </SectionCard>
+            )}
           </div>
         )}
       </DataState>

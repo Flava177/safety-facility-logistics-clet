@@ -31,6 +31,7 @@ import {
   PolicySearchParams,
   ReplayResult,
   TransactionSearchParams,
+  UpdateLogbookRequest,
   VoidTransactionRequest,
 } from './dto';
 
@@ -190,6 +191,11 @@ export const driverLogbooksApi = {
     apiClient.get<FuelAuditEvent[]>(`${BASE}/logbooks/${logbookId}/history`, undefined, signal),
 
   create: (body: CreateLogbookRequest) => apiClient.post<DriverLogbook>(`${BASE}/logbooks`, body),
+
+  update: (logbookId: string, body: UpdateLogbookRequest) =>
+    apiClient.patch<DriverLogbook>(`${BASE}/logbooks/${logbookId}`, body, {
+      idempotent: false,
+    }),
 
   /**
    * One path serves all six transitions.

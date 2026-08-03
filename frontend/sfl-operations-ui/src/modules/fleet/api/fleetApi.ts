@@ -4,6 +4,7 @@ import {
   AcknowledgeTripRequest,
   AssignTripRequest,
   AssignmentPreviewParams,
+  BindDriverPrincipalRequest,
   AuditChainVerificationResponse,
   AuditEventResponse,
   AuditSearchParams,
@@ -169,6 +170,9 @@ export const driversApi = {
 
   update: (driverId: string, body: UpdateDriverRequest) =>
     apiClient.patch<DriverResponse>(`${BASE}/drivers/${driverId}`, body),
+
+  bindPrincipal: (driverId: string, body: BindDriverPrincipalRequest) =>
+    apiClient.patch<DriverResponse>(`${BASE}/drivers/${driverId}/principal`, body),
 
   /**
    * Eligibility, optionally against a vehicle category and a period end.

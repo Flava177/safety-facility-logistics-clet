@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.domain.model;
 
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RetentionClassMissingException;
 import java.time.Instant;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -32,7 +33,10 @@ public record EvidenceReference(
         fileName = requireText(fileName, "fileName");
         contentType = requireText(contentType, "contentType");
         storageReference = requireText(storageReference, "storageReference");
-        sha256Hash = requireText(sha256Hash, "sha256Hash");
+        sha256Hash = requireText(sha256Hash, "sha256Hash").toLowerCase(Locale.ROOT);
+        if (!sha256Hash.matches("^[a-f0-9]{64}$")) {
+            throw new IllegalArgumentException("sha256Hash must be a 64-character SHA-256 hex digest");
+        }
         if (retentionClass == null) {
             throw new RetentionClassMissingException(Map.of(
                     "resourceType", "EvidenceReference",
