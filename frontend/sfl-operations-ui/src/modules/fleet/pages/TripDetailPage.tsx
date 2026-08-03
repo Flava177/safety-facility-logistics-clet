@@ -3,7 +3,14 @@ import { Link, useNavigate, useParams } from 'react-router';
 import { TripResponse } from 'modules/fleet/api/dto';
 import { humanise } from 'modules/fleet/api/enums';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
-import { canAcknowledgeTrips, canManageTrips } from 'modules/fleet/api/access';
+import {
+  canAcknowledgeTrips,
+  canAssignTrips,
+  canCancelTrips,
+  canCloseTrips,
+  canManageTrips,
+  canRecordInspections,
+} from 'modules/fleet/api/access';
 import {
   AcknowledgeTripDialog,
   AssignTripDialog,
@@ -85,6 +92,13 @@ const TripDetailPage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
   const [dialog, setDialog] = useState<DialogKey>(null);
+  const tripActions = {
+    assign: canAssignTrips(),
+    manage: canManageTrips(),
+    close: canCloseTrips(),
+    cancel: canCancelTrips(),
+    inspect: canRecordInspections(),
+  };
 
   const trip = useApiQuery((signal) => tripsApi.findById(tripId, signal), [tripId]);
   const inspections = useApiQuery((signal) => tripsApi.inspections(tripId, signal), [tripId]);
@@ -229,37 +243,37 @@ const TripDetailPage = () => {
 
             <SectionCard title="Actions" subtitle="Transitions permitted from the current status">
               <div className="flex flex-wrap items-center gap-2">
-                {permitted(trip.data).assign && (
+                {permitted(trip.data).assign && tripActions.assign && (
                   <Button variant="primary" onClick={() => setDialog('assign')}>
                     {trip.data.vehicleId ? 'Reassign' : 'Assign vehicle & driver'}
                   </Button>
                 )}
-                {permitted(trip.data).inspect && (
+                {permitted(trip.data).inspect && tripActions.inspect && (
                   <Button variant="outline" startIcon="clipboard" onClick={() => setDialog('inspection')}>
                     Record inspection
                   </Button>
                 )}
-                {permitted(trip.data).start && (
+                {permitted(trip.data).start && tripActions.manage && (
                   <Button variant="accent" startIcon="play" onClick={() => setDialog('start')}>
                     Start trip
                   </Button>
                 )}
-                {permitted(trip.data).hold && (
+                {permitted(trip.data).hold && tripActions.manage && (
                   <Button variant="outline" startIcon="stop" onClick={() => setDialog('hold')}>
                     Place on hold
                   </Button>
                 )}
-                {permitted(trip.data).resume && (
+                {permitted(trip.data).resume && tripActions.manage && (
                   <Button variant="outline" startIcon="play" onClick={() => setDialog('resume')}>
                     Resume
                   </Button>
                 )}
-                {permitted(trip.data).close && (
+                {permitted(trip.data).close && tripActions.close && (
                   <Button variant="primary" startIcon="flag" onClick={() => setDialog('close')}>
                     Close trip
                   </Button>
                 )}
-                {permitted(trip.data).cancel && (
+                {permitted(trip.data).cancel && tripActions.cancel && (
                   <Button variant="danger" startIcon="close" onClick={() => setDialog('cancel')}>
                     Cancel trip
                   </Button>

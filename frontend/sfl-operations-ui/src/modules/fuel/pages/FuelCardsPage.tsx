@@ -20,7 +20,14 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, NumberInput, TextAreaInput, TextInput } from 'shared/components/fields';
+import {
+  EnumSelect,
+  NumberInput,
+  SelectInput,
+  TextAreaInput,
+  TextInput,
+  type SelectOption,
+} from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber, todayIsoDate } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
@@ -43,6 +50,21 @@ const maskedCard = (value: unknown): string | undefined => {
 };
 
 const asNumber = (value: string): number | null => (value === '' ? null : Number(value));
+
+const GHANA_FUEL_CARD_PROVIDERS: SelectOption[] = [
+  { value: 'GOIL GHANA', label: 'GOIL Ghana' },
+  { value: 'TOTALENERGIES GHANA', label: 'TotalEnergies Ghana' },
+  { value: 'SHELL / VIVO ENERGY GHANA', label: 'Shell / Vivo Energy Ghana' },
+  { value: 'PUMA ENERGY GHANA', label: 'Puma Energy Ghana' },
+  { value: 'STAR OIL GHANA', label: 'Star Oil Ghana' },
+  { value: 'ZEN PETROLEUM', label: 'Zen Petroleum' },
+  { value: 'ENGEN GHANA', label: 'Engen Ghana' },
+  { value: 'ALLIED OIL GHANA', label: 'Allied Oil Ghana' },
+  { value: 'FRIMPS OIL', label: 'Frimps Oil' },
+  { value: 'CLET FUEL CARDS', label: 'CLET Fuel Cards / internal demo' },
+];
+
+const demoMaskedReference = (): string => `****${String(Date.now()).slice(-4)}`;
 
 /**
  * S168 fuel-card register.
@@ -376,8 +398,8 @@ const IssueCardDialog = ({ open, defaultSiteCode, onClose, onSaved }: IssueCardD
   const form = useFleetForm({
     initialValues: {
       siteCode: defaultSiteCode,
-      maskedReference: '',
-      provider: 'CLET FUEL CARDS',
+      maskedReference: demoMaskedReference(),
+      provider: 'GOIL GHANA',
       vehicleId: '',
       driverId: '',
       issuedOn: todayIsoDate(),
@@ -423,7 +445,7 @@ const IssueCardDialog = ({ open, defaultSiteCode, onClose, onSaved }: IssueCardD
     <FormDialog
       open={open}
       title="Issue a fuel card"
-      description="Creates a card register row from the provider-masked reference. Never type a full card number here."
+      description="Creates a card register row from a safe masked reference. Never type a full card number here."
       submitLabel="Issue card"
       submitting={form.submitting}
       formError={form.formError}
@@ -432,8 +454,9 @@ const IssueCardDialog = ({ open, defaultSiteCode, onClose, onSaved }: IssueCardD
       onSubmit={form.submit}
     >
       <Alert variant="info" title="Masked references only">
-        Use the masked form that appears on provider transactions, for example ****1234. If a full
-        number is pasted, the form refuses it before it can leave the browser.
+        Live card references come from the fuel-card provider feed, already masked. For this demo,
+        use the generated value below, for example ****1234. Full card numbers are refused before
+        they leave the browser.
       </Alert>
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -443,19 +466,32 @@ const IssueCardDialog = ({ open, defaultSiteCode, onClose, onSaved }: IssueCardD
           onChange={(value) => form.setValues({ siteCode: value, vehicleId: '', driverId: '' })}
           {...form.fieldProps('siteCode')}
         />
-        <TextInput
-          label="Masked reference"
-          required
-          placeholder="****1234"
-          value={form.values.maskedReference}
-          onChange={(value) => form.setValue('maskedReference', value)}
-          {...form.fieldProps('maskedReference')}
-        />
-        <TextInput
+        <div>
+          <TextInput
+            label="Masked reference"
+            required
+            placeholder="****1234"
+            value={form.values.maskedReference}
+            onChange={(value) => form.setValue('maskedReference', value)}
+            {...form.fieldProps('maskedReference')}
+          />
+          <Button
+            type="button"
+            size="sm"
+            variant="ghost"
+            className="mt-1"
+            startIcon="refresh"
+            onClick={() => form.setValue('maskedReference', demoMaskedReference())}
+          >
+            Generate demo reference
+          </Button>
+        </div>
+        <SelectInput
           label="Provider"
           required
           value={form.values.provider}
           onChange={(value) => form.setValue('provider', value)}
+          options={GHANA_FUEL_CARD_PROVIDERS}
           {...form.fieldProps('provider')}
         />
         <DateField

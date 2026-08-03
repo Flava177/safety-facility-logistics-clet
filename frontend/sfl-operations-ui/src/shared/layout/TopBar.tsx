@@ -195,9 +195,8 @@ const TopBar = () => {
                 */}
                 {session ? (
                   <p className="mt-3 border-t border-gray-200 pt-3 text-theme-xs leading-relaxed text-gray-600">
-                    Signed in as <strong>{session.email ?? session.username}</strong>. Requests carry
-                    your access token, and the roles above are read from it rather than from this
-                    browser.
+                    Signed in as <strong>{session.email ?? session.username}</strong>. Your portal
+                    and available actions are based on the roles shown above.
                   </p>
                 ) : (
                   <p className="mt-3 border-t border-gray-200 pt-3 text-theme-xs leading-relaxed text-gray-600">

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useMemo, useRef, useState } from 'react';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
 import { FieldValidator } from './validators';
 
@@ -50,6 +50,7 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
   const { initialValues, schema, crossFieldValidate, onSubmit } = options;
 
   const [values, setValuesState] = useState<T>(initialValues);
+  const valuesRef = useRef<T>(initialValues);
   const [errors, setErrors] = useState<FieldErrors<T>>({});
   const [touched, setTouched] = useState<Partial<Record<keyof T & string, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -77,7 +78,8 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
 
   const setValue = useCallback(
     <K extends keyof T & string>(field: K, value: T[K]) => {
-      const next = { ...values, [field]: value } as T;
+      const next = { ...valuesRef.current, [field]: value } as T;
+      valuesRef.current = next;
       setValuesState(next);
       // Clear the field's error as soon as it becomes valid; never introduce a new one mid-typing.
       setErrors((currentErrors) => {
@@ -88,18 +90,20 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
         return rest as FieldErrors<T>;
       });
     },
-    [runValidation, values],
+    [runValidation],
   );
 
   const setValues = useCallback((patch: Partial<T>) => {
-    setValuesState((current) => ({ ...current, ...patch }));
+    const next = { ...valuesRef.current, ...patch };
+    valuesRef.current = next;
+    setValuesState(next);
   }, []);
 
   const blur = useCallback(
     (field: keyof T & string) => {
       setTouched((current) => ({ ...current, [field]: true }));
       setErrors((current) => {
-        const message = runValidation(values)[field];
+        const message = runValidation(valuesRef.current)[field];
         if (!message) {
           const { [field]: _removed, ...rest } = current;
           return rest as FieldErrors<T>;
@@ -107,20 +111,21 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
         return { ...current, [field]: message };
       });
     },
-    [runValidation, values],
+    [runValidation],
   );
 
   const validateAll = useCallback(() => {
-    const next = runValidation(values);
+    const currentValues = valuesRef.current;
+    const next = runValidation(currentValues);
     setErrors(next);
     setTouched(
-      (Object.keys(values) as (keyof T & string)[]).reduce(
+      (Object.keys(currentValues) as (keyof T & string)[]).reduce(
         (accumulator, field) => ({ ...accumulator, [field]: true }),
         {},
       ),
     );
     return Object.keys(next).length === 0;
-  }, [runValidation, values]);
+  }, [runValidation]);
 
   const submit = useCallback(async () => {
     setFormError(undefined);
@@ -129,12 +134,12 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
     }
     setSubmitting(true);
     try {
-      await onSubmit(values);
+      await onSubmit(valuesRef.current);
       return true;
     } catch (cause) {
       if (isFleetApiError(cause)) {
         const mapped = cause.toFieldErrorMap();
-        const known = Object.keys(mapped).filter((field) => field in values);
+        const known = Object.keys(mapped).filter((field) => field in valuesRef.current);
         if (known.length > 0) {
           setErrors((current) => ({
             ...current,
@@ -150,11 +155,13 @@ export function useFleetForm<T extends object>(options: FleetFormOptions<T>): Fl
     } finally {
       setSubmitting(false);
     }
-  }, [onSubmit, validateAll, values]);
+  }, [onSubmit, validateAll]);
 
   const reset = useCallback(
     (next?: T) => {
-      setValuesState(next ?? initialValues);
+      const replacement = next ?? initialValues;
+      valuesRef.current = replacement;
+      setValuesState(replacement);
       setErrors({});
       setTouched({});
       setFormError(undefined);

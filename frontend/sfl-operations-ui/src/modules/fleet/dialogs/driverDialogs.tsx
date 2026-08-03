@@ -66,8 +66,11 @@ export const RegisterDriverDialog = ({
       responsibleUnit: compose(required('Responsible unit'), maxLength('Responsible unit', 160)),
     },
     onSubmit: async (values) => {
+      const staffReference = values.staffReference.trim();
+      const principalSubject =
+        staffReference.toLowerCase() === 'kwame.driver' ? 'kwame.driver' : null;
       await driversApi.register({
-        staffReference: values.staffReference.trim(),
+        staffReference,
         displayName: values.displayName.trim(),
         licenceNumber: values.licenceNumber.trim(),
         licenceClass: values.licenceClass as LicenceClass,
@@ -75,6 +78,7 @@ export const RegisterDriverDialog = ({
         medicalClearanceExpiresOn: values.medicalClearanceExpiresOn || null,
         siteCode: values.siteCode.trim().toUpperCase(),
         responsibleUnit: values.responsibleUnit.trim(),
+        principalSubject,
       });
       onSaved();
       onClose();
@@ -158,6 +162,60 @@ export const RegisterDriverDialog = ({
           {...form.fieldProps('responsibleUnit')}
         />
       </div>
+    </FormDialog>
+  );
+};
+
+/* ---------------------------------------------------------------------------------------------
+ * Bind a driver to the sign-in they use — PATCH /api/v1/fleet/drivers/{id}/principal
+ * ------------------------------------------------------------------------------------------- */
+
+export const BindDriverPrincipalDialog = ({
+  open,
+  onClose,
+  onSaved,
+  driver,
+}: BaseProps & { driver: DriverResponse }) => {
+  const form = useFleetForm({
+    initialValues: {
+      principalSubject:
+        driver.staffReference.toLowerCase() === 'kwame.driver' ? 'kwame.driver' : '',
+    },
+    schema: {
+      principalSubject: maxLength('Driver login username', 160),
+    },
+    onSubmit: async (values) => {
+      await driversApi.bindPrincipal(driver.id, {
+        principalSubject: values.principalSubject.trim() || null,
+        expectedVersion: driver.version,
+      });
+      onSaved();
+      onClose();
+    },
+  });
+
+  return (
+    <FormDialog
+      open={open}
+      title={`Link sign-in for ${driver.displayName}`}
+      description="Links this driver profile to the account that should see its assigned trips in My driving day."
+      submitLabel={form.values.principalSubject.trim() ? 'Link login' : 'Unlink login'}
+      submitting={form.submitting}
+      formError={form.formError}
+      maxWidth="sm"
+      onClose={onClose}
+      onSubmit={form.submit}
+    >
+      <TextInput
+        label="Driver login username"
+        value={form.values.principalSubject}
+        onChange={(value) => form.setValue('principalSubject', value)}
+        placeholder="kwame.driver"
+        {...form.fieldProps(
+          'principalSubject',
+          'For the seeded Driver portal, enter kwame.driver. Leave blank only to unlink this profile.',
+        )}
+      />
     </FormDialog>
   );
 };

@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef } from 'react';
 import { DriverLogbook } from 'modules/fuel/api/dto';
 import { LOGBOOK_USE_CLASSIFICATIONS, LogbookUseClassification } from 'modules/fuel/api/enums';
 import { LogbookTransition, driverLogbooksApi } from 'modules/fuel/api/fuelApi';
@@ -11,6 +12,7 @@ import {
   TripSelect,
   VehicleSelect,
 } from 'modules/fuel/components/FleetReferenceSelect';
+import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
@@ -25,14 +27,50 @@ import {
   required,
   validDateTime,
 } from 'shared/validation/validators';
+import { readSession } from 'shared/auth/session';
+import { useApiQuery } from 'shared/hooks/useApiQuery';
+import { isPersona } from 'shared/layout/personas';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
+const REFERENCE_WINDOW = 200;
+
+const toDateInput = (value: string | null | undefined): string => {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return [
+    date.getFullYear(),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+};
+
+const toDateTimeInput = (value: string | null | undefined): string => {
+  if (!value) {
+    return '';
+  }
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) {
+    return '';
+  }
+  return `${toDateInput(value)}T${String(date.getHours()).padStart(2, '0')}:${String(
+    date.getMinutes(),
+  ).padStart(2, '0')}`;
+};
+
+const normalise = (value: string | null | undefined): string =>
+  (value ?? '').trim().toLowerCase();
 
 interface CreateLogbookDialogProps {
   open: boolean;
   onClose: () => void;
   onSaved: (logbook: DriverLogbook) => void;
   defaultSiteCode: string;
+  logbook?: DriverLogbook;
 }
 
 /**
@@ -53,26 +91,35 @@ export const CreateLogbookDialog = ({
   onClose,
   onSaved,
   defaultSiteCode,
+  logbook,
 }: CreateLogbookDialogProps) => {
+  const editing = Boolean(logbook);
+  const session = readSession();
+  const driverOnly = isPersona('driver');
+  const appliedTripRef = useRef<string | null>(null);
+
   const form = useFleetForm({
     initialValues: {
-      siteCode: defaultSiteCode,
-      driverId: '',
-      vehicleId: '',
-      tripId: '',
-      journeyDate: '',
-      startTime: '',
-      endTime: '',
-      origin: '',
-      destination: '',
-      routeNotes: '',
-      useClassification: 'OFFICIAL' as LogbookUseClassification,
-      purpose: '',
-      passengerLoadNotes: '',
-      startOdometer: '',
-      endOdometer: '',
-      declarationAccepted: false,
-      evidenceId: '',
+      siteCode: logbook?.siteCode.value ?? defaultSiteCode,
+      driverId: logbook?.driverId ?? '',
+      vehicleId: logbook?.vehicleId ?? '',
+      tripId: logbook?.tripId ?? '',
+      journeyDate: logbook?.journeyDate ?? '',
+      startTime: toDateTimeInput(logbook?.startTime),
+      endTime: toDateTimeInput(logbook?.endTime),
+      origin: logbook?.origin ?? '',
+      destination: logbook?.destination ?? '',
+      routeNotes: logbook?.routeNotes ?? '',
+      useClassification: logbook?.useClassification ?? ('OFFICIAL' as LogbookUseClassification),
+      purpose: logbook?.purpose ?? '',
+      passengerLoadNotes: logbook?.passengerLoadNotes ?? '',
+      startOdometer: logbook ? String(logbook.startOdometer) : '',
+      endOdometer:
+        logbook?.endOdometer === null || logbook?.endOdometer === undefined
+          ? ''
+          : String(logbook.endOdometer),
+      declarationAccepted: logbook?.declarationAccepted ?? false,
+      evidenceId: logbook?.evidenceId ?? '',
     },
     schema: {
       siteCode: required('Site code'),
@@ -111,7 +158,7 @@ export const CreateLogbookDialog = ({
       return errors;
     },
     onSubmit: async (values) => {
-      const saved = await driverLogbooksApi.create({
+      const payload = {
         siteCode: values.siteCode.trim().toUpperCase(),
         driverId: values.driverId,
         vehicleId: values.vehicleId,
@@ -129,11 +176,100 @@ export const CreateLogbookDialog = ({
         endOdometer: values.endOdometer === '' ? null : Number(values.endOdometer),
         declarationAccepted: values.declarationAccepted,
         evidenceId: values.evidenceId.trim() || null,
-      });
+      };
+      const saved = editing && logbook
+        ? await driverLogbooksApi.update(logbook.id, payload)
+        : await driverLogbooksApi.create(payload);
       onSaved(saved);
       onClose();
     },
   });
+
+  const drivers = useApiQuery(
+    (signal) =>
+      driverOnly && form.values.siteCode
+        ? driversApi.search({ siteCode: form.values.siteCode, size: REFERENCE_WINDOW }, signal)
+        : Promise.resolve(undefined),
+    [driverOnly, form.values.siteCode],
+  );
+
+  const ownDriver = useMemo(() => {
+    if (!driverOnly || !session) {
+      return null;
+    }
+    const username = normalise(session.username);
+    const displayName = normalise(session.displayName);
+    return (
+      (drivers.data?.content ?? []).find(
+        (driver) =>
+          normalise(driver.staffReference) === username ||
+          normalise(driver.displayName) === displayName,
+      ) ?? null
+    );
+  }, [driverOnly, drivers.data, session]);
+
+  useEffect(() => {
+    if (driverOnly && ownDriver && form.values.driverId !== ownDriver.id) {
+      form.setValue('driverId', ownDriver.id);
+    }
+    // Form helpers are intentionally omitted: they are tied to validation closures and would cause
+    // this pre-fill effect to re-run on every value change instead of only when the resolved driver
+    // changes.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [driverOnly, ownDriver?.id, form.values.driverId]);
+
+  const trip = useApiQuery(
+    (signal) =>
+      form.values.tripId
+        ? tripsApi.findById(form.values.tripId, signal)
+        : Promise.resolve(undefined),
+    [form.values.tripId],
+  );
+
+  const vehicle = useApiQuery(
+    (signal) =>
+      trip.data?.vehicleId
+        ? vehiclesApi.findById(trip.data.vehicleId, signal)
+        : Promise.resolve(undefined),
+    [trip.data?.vehicleId],
+  );
+
+  useEffect(() => {
+    const selectedTrip = trip.data;
+    if (!selectedTrip || appliedTripRef.current === selectedTrip.id) {
+      return;
+    }
+    appliedTripRef.current = selectedTrip.id;
+    form.setValues({
+      siteCode: selectedTrip.siteCode,
+      driverId: selectedTrip.driverId ?? form.values.driverId,
+      vehicleId: selectedTrip.vehicleId ?? form.values.vehicleId,
+      journeyDate: toDateInput(selectedTrip.actualStart ?? selectedTrip.plannedStart),
+      startTime: toDateTimeInput(selectedTrip.actualStart ?? selectedTrip.plannedStart),
+      endTime: toDateTimeInput(selectedTrip.actualEnd ?? selectedTrip.plannedEnd),
+      origin: selectedTrip.origin,
+      destination: selectedTrip.destination,
+      purpose: selectedTrip.purpose,
+      useClassification:
+        selectedTrip.operatingMode === 'EMERGENCY' ? 'OPERATIONAL' : 'OFFICIAL',
+      startOdometer:
+        selectedTrip.startOdometer === null || selectedTrip.startOdometer === undefined
+          ? form.values.startOdometer
+          : String(selectedTrip.startOdometer),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trip.data?.id]);
+
+  useEffect(() => {
+    if (
+      !form.values.startOdometer &&
+      vehicle.data?.odometerValue !== null &&
+      vehicle.data?.odometerValue !== undefined
+    ) {
+      form.setValue('startOdometer', String(vehicle.data.odometerValue));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [form.values.startOdometer, vehicle.data?.odometerValue]);
 
   const incomplete =
     !form.values.endTime || form.values.endOdometer === '' || !form.values.declarationAccepted;
@@ -141,9 +277,13 @@ export const CreateLogbookDialog = ({
   return (
     <FormDialog
       open={open}
-      title="Create a driver logbook"
-      description="Created as a draft. It can be completed and submitted later."
-      submitLabel="Create draft"
+      title={editing ? 'Complete driver logbook draft' : 'Create a driver logbook'}
+      description={
+        editing
+          ? 'Update the draft details, accept the declaration, then submit it for review.'
+          : 'Created as a draft. Select a trip to pre-fill the journey, then complete actual readings.'
+      }
+      submitLabel={editing ? 'Save draft' : 'Create draft'}
       submitting={form.submitting}
       formError={form.formError}
       maxWidth="lg"
@@ -166,13 +306,29 @@ export const CreateLogbookDialog = ({
           onChange={(value) => form.setValue('journeyDate', value)}
           {...form.fieldProps('journeyDate')}
         />
-        <DriverSelect
-          required
-          siteCode={form.values.siteCode}
-          value={form.values.driverId}
-          onChange={(value) => form.setValue('driverId', value)}
-          {...form.fieldProps('driverId')}
-        />
+        {driverOnly ? (
+          <TextInput
+            label="Driver"
+            required
+            disabled
+            value={ownDriver?.displayName ?? session?.displayName ?? 'Signed-in driver'}
+            onChange={() => undefined}
+            {...form.fieldProps(
+              'driverId',
+              ownDriver
+                ? `Auto-filled from your signed-in driver profile: ${ownDriver.displayName}.`
+                : 'Auto-filled from your signed-in driver profile.',
+            )}
+          />
+        ) : (
+          <DriverSelect
+            required
+            siteCode={form.values.siteCode}
+            value={form.values.driverId}
+            onChange={(value) => form.setValue('driverId', value)}
+            {...form.fieldProps('driverId')}
+          />
+        )}
         <VehicleSelect
           required
           siteCode={form.values.siteCode}
@@ -238,7 +394,7 @@ export const CreateLogbookDialog = ({
           onChange={(value) => form.setValue('tripId', value)}
           {...form.fieldProps(
             'tripId',
-            'Optional. A completed trip with no logbook raises an anomaly.',
+            'Select the assigned trip to fill vehicle, route, date, times, purpose and odometer.',
           )}
         />
       </div>
@@ -387,10 +543,7 @@ export const LogbookTransitionDialog = ({
               <li key={blocker}>{blocker}</li>
             ))}
           </ul>
-          <p className="mt-2">
-            A draft cannot be edited from this dashboard — the fuel service exposes no logbook update
-            endpoint — so this record has to be cancelled and recreated with the missing detail.
-          </p>
+          <p className="mt-2">Complete the draft first, save it, then submit it for review.</p>
         </Alert>
       )}
 

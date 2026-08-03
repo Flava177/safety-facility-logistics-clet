@@ -35,6 +35,16 @@ public record DriverLogbook(UUID id, String logbookNumber, SiteCode siteCode, UU
         Status next = status == Status.RETURNED ? Status.RESUBMITTED : Status.SUBMITTED;
         return copy(next, reviewComment, "Submitted", now, null, changed);
     }
+    public DriverLogbook amend(UUID driverId, UUID vehicleId, UUID tripId, LocalDate journeyDate, Instant startTime,
+            Instant endTime, String origin, String destination, String routeNotes, UseClassification useClassification,
+            String purpose, String passengerLoadNotes, long startOdometer, Long endOdometer,
+            boolean declarationAccepted, UUID evidenceId, RecordMetadata changed) {
+        requireState(Status.DRAFT, Status.RETURNED, Status.REOPENED);
+        return new DriverLogbook(id, logbookNumber, siteCode, driverId, vehicleId, tripId, journeyDate, startTime,
+                endTime, origin, destination, routeNotes, useClassification, purpose, passengerLoadNotes,
+                startOdometer, endOdometer, declarationAccepted, evidenceId, status, reviewComment,
+                "Draft amended", submittedAt, approvedAt, changed);
+    }
     public DriverLogbook startReview(RecordMetadata changed) { requireState(Status.SUBMITTED, Status.RESUBMITTED); return copy(Status.UNDER_REVIEW, reviewComment, "Review started", submittedAt, null, changed); }
     public DriverLogbook returned(String comment, RecordMetadata changed) { requireState(Status.UNDER_REVIEW); return copy(Status.RETURNED, require(comment,"reviewComment"), "Correction requested", submittedAt, null, changed); }
     public DriverLogbook approved(Instant now, String comment, RecordMetadata changed) { requireState(Status.UNDER_REVIEW); return copy(Status.APPROVED, comment, "Approved", submittedAt, now, changed); }

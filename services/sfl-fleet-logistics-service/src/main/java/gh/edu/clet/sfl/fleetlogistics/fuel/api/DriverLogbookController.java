@@ -27,6 +27,8 @@ public class DriverLogbookController {
 
     @PostMapping public ResponseEntity<ApiResponse<DriverLogbook>> create(@Valid @RequestBody LogbookRequest r,HttpServletRequest h){var l=service.createLogbook(new FuelApplicationService.CreateLogbook(r.siteCode(),r.driverId(),r.vehicleId(),r.tripId(),r.journeyDate(),r.startTime(),r.endTime(),r.origin(),r.destination(),r.routeNotes(),r.useClassification(),r.purpose(),r.passengerLoadNotes(),r.startOdometer(),r.endOdometer(),r.declarationAccepted(),r.evidenceId(),actors.resolve(h),actors.resolveSourceChannel(h)));return ResponseEntity.created(URI.create("/api/v1/fuel/logbooks/"+l.id())).body(ApiResponse.ok(l));}
 
+    @PatchMapping("/{id}") public ApiResponse<DriverLogbook> update(@PathVariable UUID id,@Valid @RequestBody LogbookRequest r,HttpServletRequest h){return ApiResponse.ok(service.updateLogbook(id,new FuelApplicationService.UpdateLogbook(r.driverId(),r.vehicleId(),r.tripId(),r.journeyDate(),r.startTime(),r.endTime(),r.origin(),r.destination(),r.routeNotes(),r.useClassification(),r.purpose(),r.passengerLoadNotes(),r.startOdometer(),r.endOdometer(),r.declarationAccepted(),r.evidenceId(),actors.resolve(h),actors.resolveSourceChannel(h))));}
+
     /**
      * Paged, filtered logbook register.
      *

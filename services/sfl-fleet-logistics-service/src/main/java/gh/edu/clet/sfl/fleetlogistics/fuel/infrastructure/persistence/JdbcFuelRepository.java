@@ -267,7 +267,20 @@ public class JdbcFuelRepository implements FuelRepository {
     /* ------------------------------------------------------------------------------ logbooks */
 
     @Override public DriverLogbook saveLogbook(DriverLogbook l) {
-        int updated=jdbc.update("UPDATE fleet_logistics.driver_logbooks SET status=?,review_comment=?,transition_reason=?,submitted_at=?,approved_at=?,evidence_id=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?",l.status().name(),l.reviewComment(),l.transitionReason(),ts(l.submittedAt()),ts(l.approvedAt()),l.evidenceId(),l.metadata().lastModifiedBy(),ts(l.metadata().lastModifiedAt()),l.metadata().sourceChannel().name(),l.metadata().auditCorrelationId(),l.id(),l.metadata().version());
+        int updated=jdbc.update("""
+            UPDATE fleet_logistics.driver_logbooks
+               SET driver_id=?,vehicle_id=?,trip_id=?,journey_date=?,start_time=?,end_time=?,origin=?,
+                   destination=?,route_notes=?,use_classification=?,purpose=?,passenger_load_notes=?,
+                   start_odometer=?,end_odometer=?,declaration_accepted=?,evidence_id=?,status=?,
+                   review_comment=?,transition_reason=?,submitted_at=?,approved_at=?,last_modified_by=?,
+                   last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1
+             WHERE id=? AND version=?
+            """,l.driverId(),l.vehicleId(),l.tripId(),l.journeyDate(),ts(l.startTime()),ts(l.endTime()),
+                l.origin(),l.destination(),l.routeNotes(),l.useClassification().name(),l.purpose(),
+                l.passengerLoadNotes(),l.startOdometer(),l.endOdometer(),l.declarationAccepted(),l.evidenceId(),
+                l.status().name(),l.reviewComment(),l.transitionReason(),ts(l.submittedAt()),ts(l.approvedAt()),
+                l.metadata().lastModifiedBy(),ts(l.metadata().lastModifiedAt()),l.metadata().sourceChannel().name(),
+                l.metadata().auditCorrelationId(),l.id(),l.metadata().version());
         if(updated==0&&findLogbook(l.id()).isEmpty()) jdbc.update("""
             INSERT INTO fleet_logistics.driver_logbooks (id,logbook_number,site_code,driver_id,vehicle_id,trip_id,journey_date,start_time,end_time,origin,destination,route_notes,use_classification,purpose,passenger_load_notes,start_odometer,end_odometer,declaration_accepted,evidence_id,status,review_comment,transition_reason,submitted_at,approved_at,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)

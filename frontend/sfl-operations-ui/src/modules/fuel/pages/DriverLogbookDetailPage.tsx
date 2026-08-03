@@ -7,7 +7,7 @@ import {
   logbookSubmissionBlockers,
   logbookTransitionAllowed,
 } from 'modules/fuel/api/workflow';
-import { LogbookTransitionDialog } from 'modules/fuel/dialogs/logbookDialogs';
+import { CreateLogbookDialog, LogbookTransitionDialog } from 'modules/fuel/dialogs/logbookDialogs';
 import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
@@ -57,6 +57,7 @@ const DriverLogbookDetailPage = () => {
   const navigate = useNavigate();
   const { notifySuccess, notifyError } = useNotifier();
   const [dialog, setDialog] = useState<LogbookTransition | null>(null);
+  const [completingDraft, setCompletingDraft] = useState(false);
   const [working, setWorking] = useState(false);
 
   const logbook = useApiQuery(
@@ -161,8 +162,9 @@ const DriverLogbookDetailPage = () => {
               <div className="flex flex-wrap items-center gap-2">
                 {TRANSITION_ORDER.filter((transition) =>
                   logbookTransitionAllowed(record, transition),
-                ).map((transition) =>
-                  transition === 'review' ? (
+                ).map((transition) => {
+                  const blockedSubmit = transition === 'submit' && submissionBlockers.length > 0;
+                  return transition === 'review' ? (
                     <Button
                       key={transition}
                       variant="primary"
@@ -175,16 +177,18 @@ const DriverLogbookDetailPage = () => {
                   ) : (
                     <Button
                       key={transition}
-                      variant={buttonVariant(transition)}
-                      startIcon={buttonIcon(transition)}
-                      onClick={() => setDialog(transition)}
+                      variant={blockedSubmit ? 'outline' : buttonVariant(transition)}
+                      startIcon={blockedSubmit ? 'edit' : buttonIcon(transition)}
+                      onClick={() => (blockedSubmit ? setCompletingDraft(true) : setDialog(transition))}
                     >
-                      {transition === 'submit' && record.status === 'RETURNED'
+                      {blockedSubmit
+                        ? 'Complete draft'
+                        : transition === 'submit' && record.status === 'RETURNED'
                         ? 'Resubmit'
                         : LOGBOOK_RULES[transition].label}
                     </Button>
-                  ),
-                )}
+                  );
+                })}
                 <Button
                   variant="ghost"
                   startIcon="truck"
@@ -220,10 +224,11 @@ const DriverLogbookDetailPage = () => {
                       <li key={blocker}>{blocker}</li>
                     ))}
                   </ul>
-                  <p className="mt-2">
-                    The fuel service exposes no logbook update endpoint, so a draft missing this
-                    detail has to be cancelled and recreated.
-                  </p>
+                  <div className="mt-3">
+                    <Button size="sm" startIcon="edit" onClick={() => setCompletingDraft(true)}>
+                      Complete draft
+                    </Button>
+                  </div>
                 </Alert>
               )}
 
@@ -369,6 +374,21 @@ const DriverLogbookDetailPage = () => {
                 onClose={() => setDialog(null)}
                 onSaved={() => {
                   notifySuccess(CONFIRMATIONS[dialog]);
+                  refreshAll();
+                }}
+              />
+            )}
+
+            {completingDraft && (
+              <CreateLogbookDialog
+                open
+                logbook={record}
+                defaultSiteCode={siteOf(record.siteCode)}
+                onClose={() => setCompletingDraft(false)}
+                onSaved={() => {
+                  notifySuccess(
+                    'Logbook draft updated. You can submit it when all blockers are cleared.',
+                  );
                   refreshAll();
                 }}
               />

@@ -58,6 +58,7 @@ export const canAcknowledgeTrips = (): boolean => permits('FLEET_TRIP_ACKNOWLEDG
 export const canAssignTrips = (): boolean => permits('FLEET_TRIP_ASSIGN');
 export const canCloseTrips = (): boolean => permits('FLEET_TRIP_CLOSE');
 export const canCancelTrips = (): boolean => permits('FLEET_TRIP_CANCEL');
+export const canRecordInspections = (): boolean => permits('FLEET_INSPECTION_RECORD');
 
 export const canManageWorkflow = (): boolean => permits('FLEET_WORKFLOW_MANAGE');
 export const canManageCompliance = (): boolean => permits('FLEET_COMPLIANCE_MANAGE');

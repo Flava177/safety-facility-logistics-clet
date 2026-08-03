@@ -40,3 +40,13 @@ if (!window.ResizeObserver) {
     disconnect() {}
   } as unknown as typeof ResizeObserver;
 }
+
+/**
+ * jsdom has no layout, so it ships no `scrollIntoView`. The shared Select keeps the highlighted
+ * row in view when the list opens, which means every test that opens a listbox would otherwise
+ * die on "node?.scrollIntoView is not a function" — a failure about scrolling, in tests that are
+ * about choosing an option.
+ */
+if (!Element.prototype.scrollIntoView) {
+  Element.prototype.scrollIntoView = function scrollIntoView() {};
+}
