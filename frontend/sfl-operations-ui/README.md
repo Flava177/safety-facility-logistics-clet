@@ -26,50 +26,54 @@ to the SFL palette:
 
 ---
 
+## A standalone application
+
+This dashboard used to be packaged into `sfl-fleet-logistics-service` and served from `/ui` on the
+service's own origin. It is not any more. The backend serves no user interface at all, and this is
+now one client of its APIs — deployed on its own, replaceable without touching a service.
+
+Two things follow from that, and both are easy to trip over:
+
+**Every API call is cross-origin, so CORS applies to all of it.** Same-origin serving used to make
+that invisible. Each service reads `SFL_CORS_ALLOWED_ORIGINS`; `http://localhost:5005` is in the
+defaults, so `npm run dev` works out of the box, but any other port needs adding. The symptom of
+getting this wrong is distinctive: the screen fails in the browser while the same request succeeds
+from `curl`.
+
+**The API base URLs are baked in at build time.** Vite inlines them, so pointing the bundle at
+another environment means rebuilding it, not re-deploying it.
+
 ## Running it
 
-There is no sign-in step in local development: `sfl.security.enabled` is `false`, so the service
-accepts the `X-SFL-*` actor headers this dashboard sends.
+There is no sign-in step in local development: `sfl.security.enabled` is `false`, so the services
+accept the `X-SFL-*` actor headers this dashboard sends.
 
-### One command — service and dashboard together (recommended)
+### Dashboard and backend together — hot reload (recommended)
 
 From the repository root:
-
-```powershell
-cd "C:\Users\Daniel Adjei\Documents\CLET\Projects\SFL\SFL"
-.\start-fleet.ps1
-```
-
-That loads the SFL environment, starts the service databases, builds this dashboard if it has not been
-built yet, runs the Fleet service, and opens two browser tabs when it is ready:
-
-| URL                                     | What                |
-| --------------------------------------- | ------------------- |
-| <http://localhost:8093/ui/>             | Operations dashboard |
-| <http://localhost:8093/swagger-ui.html> | Swagger UI          |
-| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON        |
-
-`http://localhost:8093/` redirects to the dashboard. One process serves the API and the UI, so the
-dashboard calls the API same-origin and CORS never comes into it.
-
-Useful switches:
-
-```powershell
-.\start-fleet.ps1 -RebuildUi      # rebuild the dashboard after front-end changes
-.\start-fleet.ps1 -SkipDb         # databases already running
-.\start-fleet.ps1 -SkipUiBuild    # API only, don't touch the dashboard
-.\start-fleet.ps1 -NoBrowser      # don't open browser tabs
-```
-
-### Front-end work — hot reload
 
 ```powershell
 .\scripts\dev\run-fleet-dev.ps1
 ```
 
-The service runs in its own window on 8093 and Vite serves the dashboard on
-<http://localhost:5005> with hot module replacement. The service already allows `localhost:5005`
-as a CORS origin.
+The Fleet service runs in its own window on 8093 and Vite serves this dashboard on
+<http://localhost:5005> with hot module replacement.
+
+| URL                                     | What                 |
+| --------------------------------------- | -------------------- |
+| <http://localhost:5005>                 | Operations dashboard |
+| <http://localhost:8093/swagger-ui.html> | Swagger UI           |
+| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON         |
+
+### Backend on its own
+
+```powershell
+.\start-backend.ps1
+```
+
+Starts the databases and the facilities, fleet and emergency services — 8091, 8093 and 8095 — with
+no front end. Add `-UiOrigin http://localhost:<port>` if you are running this dashboard somewhere
+other than 5005.
 
 ### Doing it by hand
 
@@ -80,12 +84,8 @@ docker compose -f compose.service-dbs.yml up -d
 
 cd services
 mvn -pl sfl-fleet-logistics-service -am test          # optional
-mvn -pl sfl-fleet-logistics-service -Pui spring-boot:run
+mvn -pl sfl-fleet-logistics-service spring-boot:run
 ```
-
-`-Pui` builds this dashboard with a project-local Node install before starting the service. Without
-it, Maven copies whatever is already in `frontend/sfl-operations-ui/dist`; if nothing has been
-built, the service starts normally and logs how to build the dashboard.
 
 Front-end only:
 
@@ -125,10 +125,14 @@ The avatar shows a badge while an override is in force, and **Clear and reload**
 
 ### How the dashboard is mounted
 
-`npm run build` emits the bundle under the `/ui/` base (see `.env.production`) and Maven copies
-`dist/` into the service's `static/ui`. `FleetWebConfiguration` serves it with a single-page
-fallback, so refreshing on `/ui/fleet/vehicles` works. React Router takes its basename from
-`import.meta.env.BASE_URL`, so the mount point is configured in exactly one place.
+`npm run build` emits `dist/` mounted at `/`, ready to be served by any static host — nginx, a CDN,
+`npm run preview`, whatever you like. Serve it with a single-page fallback so a refresh on
+`/fleet/vehicles` resolves rather than 404ing; that used to be the service's job and is now the
+host's.
+
+React Router takes its basename from `import.meta.env.BASE_URL`, so if you serve the bundle under a
+path prefix, set `VITE_BASENAME` and rebuild — the mount point stays configured in exactly one
+place.
 
 ---
 
@@ -136,9 +140,10 @@ fallback, so refreshing on `/ui/fleet/vehicles` works. React Router takes its ba
 
 Copy `.env.example` to `.env` and adjust. Vite reads these at build time.
 
-`.env.production` is loaded by `npm run build` only. It clears `VITE_FLEET_API_BASE_URL` so the
-embedded bundle calls the API on its own origin, and sets `VITE_BASE_PATH=/ui/`. Leave both alone
-unless you are deploying the dashboard somewhere other than the Fleet service.
+`.env.production` is loaded by `npm run build` only. All three API base URLs are set there as
+explicit cross-origin addresses pointing at localhost. **Change them for any deployment that is not
+a developer machine** — they are inlined into the bundle, so a wrong value is a rebuild, not a
+config change.
 
 | Variable                  | Default                 | Purpose                                            |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
@@ -151,7 +156,7 @@ unless you are deploying the dashboard somewhere other than the Fleet service.
 | `VITE_SFL_SITES`          | `CLET-HQ`               | Sent as `X-SFL-Sites` (comma-separated)            |
 | `VITE_FLEET_DEV_FALLBACK` | `false`                 | Reserved switch for clearly-labelled dev fallbacks |
 | `VITE_APP_PORT`           | `5005`                  | Dev/preview server port                            |
-| `VITE_BASE_PATH`          | `/ui/` in builds        | Mount point of the bundle inside the service       |
+| `VITE_BASENAME`           | `/`                     | Path prefix the bundle is served under             |
 
 ### Request headers
 
@@ -318,9 +323,9 @@ disagree, the code is what the dashboard was built against.
 
 ## Manual verification checklist
 
-1. Run `.\start-fleet.ps1` from the repository root. Swagger and the dashboard open by themselves.
-2. `http://localhost:8093/` redirects to `/ui/` and the dashboard renders indicators, charts and
-   the snapshot freshness chip.
+1. Run `.\scripts\dev\run-fleet-dev.ps1` from the repository root.
+2. <http://localhost:5005> renders indicators, charts and the snapshot freshness chip — which also
+   proves the cross-origin calls to 8093 are getting through CORS.
 3. Vehicle and driver registers load, filter and page against the server.
 4. Vehicle, driver, trip and workflow detail screens open from their registers.
 5. Create and transition dialogs show inline errors before submit — try an empty registration

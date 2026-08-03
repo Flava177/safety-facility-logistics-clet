@@ -55,8 +55,11 @@ class FleetSecurityConfiguration {
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests
-                        .requestMatchers("/", "/index.html", "/assets/**", "/ui", "/ui/**", "/fleet/**", "/fuel/**",
-                                "/dispatch/**", "/sfl-logo.png", "/favicon.ico").permitAll()
+                        // "/" is only the redirect to the Swagger page. The dashboard, its assets and
+                        // the retired /fleet, /fuel and /dispatch pages were all permitted here while
+                        // this service served a UI; it no longer does, so anonymous access to static
+                        // content went with them rather than being left open out of habit.
+                        .requestMatchers("/", "/favicon.ico").permitAll()
                         .requestMatchers("/swagger-ui.html", "/swagger-ui/**", "/v3/api-docs/**").permitAll()
                         .requestMatchers("/actuator/health/**", "/actuator/info", "/api/v1/system/info").permitAll()
                         .requestMatchers("/api/v1/integrations/webhooks/**").permitAll()

@@ -42,11 +42,12 @@ integration with the external Comms system.
 services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
   sfl-facilities-service             IFIMP  — S152, S153, S159             :8091
   sfl-safety-security-service        SSEMP  — scaffold only                :8092
-  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171; serves /ui :8093
+  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171             :8093
   sfl-asset-visibility-service       AVAMP-Lite                            :8094
   sfl-emergency-notification-service S174                                  :8095
   sfl-service-common                 Shared kernel — principal, RBAC, error and event envelopes
-frontend/sfl-operations-ui           React 19 · TypeScript · Vite — the only user interface
+frontend/sfl-operations-ui           React 19 · TypeScript · Vite — a client of the APIs, built
+                                     and deployed separately from the services
 scripts/                             Local development helpers
 deploy/                              Deployment assets
 ```
@@ -55,35 +56,71 @@ S174 is a separate deployable rather than a module of another service because em
 notification needs independent availability, callback, retry, degraded-mode and blast-radius
 behaviour.
 
+## The backend serves no user interface
+
+The services expose APIs. Nothing more. There is no bundled dashboard, no static pages, and no
+service that redirects a browser into one.
+
+That is deliberate, so a front end can be replaced without touching the backend. The React
+dashboard in `frontend/sfl-operations-ui` is one client of these APIs rather than part of them, and
+anything that speaks HTTP can take its place.
+
+The one thing this costs you: **CORS is now load-bearing.** While the dashboard was served from a
+service origin, the browser never had to be persuaded to allow the calls. A UI on its own origin
+does. Every service reads `SFL_CORS_ALLOWED_ORIGINS`, and a front end whose origin is not in that
+list fails in the browser while every equivalent `curl` succeeds — a genuinely confusing way to lose
+an afternoon.
+
 ## Quick start
 
-One command starts the databases, builds the dashboard and runs the Fleet service, which then
-serves the API, Swagger and the dashboard together on port 8093:
+One command starts the databases and the backend services, each in its own window:
 
 ```powershell
-.\start-fleet.ps1
+.\start-backend.ps1
 ```
 
-| URL                                     | What                 |
-| --------------------------------------- | -------------------- |
-| <http://localhost:8093/ui/>             | Operations dashboard |
-| <http://localhost:8093/swagger-ui.html> | Swagger UI           |
-| <http://localhost:8093/v3/api-docs>     | OpenAPI JSON         |
+| Service      | Port   | Systems                                |
+| ------------ | ------ | -------------------------------------- |
+| `facilities` | `8091` | S152 CAFM/IWMS, S153 CMMS, S159 booking |
+| `fleet`      | `8093` | S166 fleet, S168 fuel, S171 dispatch    |
+| `emergency`  | `8095` | S174 emergency notification             |
 
-`http://localhost:8093/` redirects to the dashboard. There is no sign-in step locally
-(`sfl.security.enabled=false`); the dashboard sends `X-SFL-*` actor headers instead.
+Each one serves `/api/v1` for its API, `/swagger-ui.html` for the docs, `/v3/api-docs` for the
+OpenAPI document and `/actuator/health` for health. `/` redirects to the Swagger page.
+
+There is no sign-in step locally (`sfl.security.enabled=false`); a client sends `X-SFL-*` actor
+headers instead.
 
 Useful switches:
 
 ```powershell
-.\start-fleet.ps1 -RebuildUi      # rebuild the dashboard after front-end changes
-.\start-fleet.ps1 -SkipDb         # databases already running
-.\start-fleet.ps1 -SkipUiBuild    # API only
-.\start-fleet.ps1 -NoBrowser      # don't open browser tabs
+.\start-backend.ps1 -Services fleet              # one service
+.\start-backend.ps1 -Services all                # all five
+.\start-backend.ps1 -SkipDb                      # databases already running
+.\start-backend.ps1 -UiOrigin http://localhost:4200   # let your front end through CORS
+.\start-backend.ps1 -Secure                      # require authentication
 ```
 
-For front-end work with hot reload, `.\scripts\dev\run-fleet-dev.ps1` runs the service on 8093 and
-Vite on 5005.
+## Plugging in a user interface
+
+Point it at the ports above and make sure the backend allows its origin:
+
+```powershell
+.\start-backend.ps1 -UiOrigin http://localhost:4200
+```
+
+Every request needs the actor headers the services read — `X-SFL-User`, `X-SFL-Display-Name`,
+`X-SFL-Roles`, `X-SFL-Sites` — plus `X-Correlation-ID` on every call and `Idempotency-Key` on
+state-creating POSTs. Read `X-Correlation-ID` back off responses and put it in error messages; it is
+the only thing that ties a failure on screen to a line in a service log.
+
+To run the existing React dashboard against the backend, with hot reload:
+
+```powershell
+.\scripts\dev\run-fleet-dev.ps1
+```
+
+That serves it on <http://localhost:5005>, which is already an allowed origin.
 
 ## Build and test
 

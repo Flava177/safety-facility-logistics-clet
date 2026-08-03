@@ -1,17 +1,20 @@
 <#
 .SYNOPSIS
-    Runs the Fleet service and the SFL Operations UI dev server side by side, with hot reload.
+    Runs the Fleet service and the SFL Operations UI side by side, with hot reload.
 
 .DESCRIPTION
-    Use this while working on the front end. The Spring Boot service runs in its own window on 8093
-    and Vite serves the dashboard on 5005 with hot module replacement, so a save is reflected in the
-    browser immediately - no rebuild, no restart.
+    Use this while working on the reference front end. The Spring Boot service runs in its own
+    window on 8093 and Vite serves the dashboard on 5005 with hot module replacement.
 
         http://localhost:5005                 dashboard (hot reload)
         http://localhost:8093/swagger-ui.html Swagger UI
 
-    The service already allows http://localhost:5005 as a CORS origin. For the bundled
-    single-process experience, use .\start-fleet.ps1 at the repository root instead.
+    Two separate processes is now the only arrangement — the service does not bundle a UI, and this
+    dashboard is one client of the API rather than part of it. It reaches the service cross-origin,
+    which works because 5005 is in the service's default allowed CORS origins.
+
+    For the backend on its own, with no front end at all, use .\start-backend.ps1 at the repository
+    root.
 
 .PARAMETER SkipDb
     Do not run docker compose - use when the databases are already up.

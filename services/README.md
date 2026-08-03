@@ -12,10 +12,24 @@ Java 17 · Spring Boot 4.1 · Maven multi-module. Five deployables plus a shared
 | `sfl-service-common`                 | —          | Shared kernel    | —      |
 
 `sfl-safety-security-service` is a scaffold — one class and a migration. Nothing is built behind it.
-`sfl-fleet-logistics-service` additionally packages and serves the React dashboard at `/ui`.
 
 `sfl-service-common` is the shared kernel: the actor principal, RBAC, and the error and event
 envelopes. It is a library, not a service.
+
+## These services serve no user interface
+
+Every one of them is API-only. `sfl-fleet-logistics-service` used to build the React dashboard with
+a project-local Node install, copy it into `static/ui` and serve it; the facilities and emergency
+services served pages of their own and later redirected into it. All of that is gone — the Node
+toolchain, the `-Pui` profile, the resource copying, the SPA fallback resolver and the static pages.
+A clean `package` now produces a jar with no static content in it at all.
+
+The reason is replaceability: a front end can be swapped without touching a service. It also means
+**CORS is the entire contract with the UI**, where before it was a development convenience. Each
+service reads `sfl.cors.allowed-origins` (`SFL_CORS_ALLOWED_ORIGINS`), defaulting to the usual local
+front-end ports. Set it explicitly per deployment. A UI whose origin is missing fails in the browser
+while every equivalent `curl` succeeds, so the services log their allowed origins on startup —
+that turns a silent rejection into a one-line diagnosis.
 
 ## Databases
 
@@ -50,9 +64,8 @@ From `services/`, with `JAVA_HOME` pointing at JDK 17:
 ..\mvnw.cmd -pl sfl-fleet-logistics-service -am spring-boot:run
 ```
 
-`-Pui` on the fleet service builds the dashboard with a project-local Node install before starting.
-Without it, Maven copies whatever is already in `frontend/sfl-operations-ui/dist`; if nothing has
-been built, the service starts normally and logs how to build it.
+Node is not involved in any of these. From the repository root, `.\start-backend.ps1` starts the
+databases and the services together.
 
 **Two things about running the tests.**
 

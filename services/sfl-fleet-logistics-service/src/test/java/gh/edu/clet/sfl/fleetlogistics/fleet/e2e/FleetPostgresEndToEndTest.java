@@ -58,17 +58,19 @@ class FleetPostgresEndToEndTest extends FleetPostgresSupport {
 
         HttpClient client = HttpClient.newHttpClient();
 
-        // `/fleet` used to serve a page of its own; ADR 0006 retired it. The notice page is asserted
-        // on rather than the redirect, because the redirect is registered only when the dashboard
-        // bundle has been copied in and this test must pass either way. What matters both ways is
-        // that the route names where the screens went instead of dead-ending.
-        String page = client.send(HttpRequest.newBuilder()
-                        .uri(URI.create("http://localhost:" + port + "/fleet/index.html"))
-                        .GET()
-                        .build(), HttpResponse.BodyHandlers.ofString())
-                .body();
-        assertThat(page).contains("/ui/fleet");
-        assertThat(page).contains("has moved to the SFL Operations dashboard");
+        // The service serves no user interface. `/fleet` and `/ui` were both pages here once, and a
+        // half-removed UI is worse than either — a stale bundle that still resolves looks like a
+        // working screen and hides that the real front end never loaded. Asserting they are gone is
+        // what keeps the separation from quietly growing back.
+        for (String retired : new String[] {"/fleet/index.html", "/ui/", "/ui/index.html"}) {
+            HttpResponse<String> response = client.send(HttpRequest.newBuilder()
+                            .uri(URI.create("http://localhost:" + port + retired))
+                            .GET()
+                            .build(), HttpResponse.BodyHandlers.ofString());
+            assertThat(response.statusCode())
+                    .as("%s must not be served — this backend is API-only", retired)
+                    .isEqualTo(404);
+        }
 
         String dashboard = client.send(HttpRequest.newBuilder()
                         .uri(URI.create("http://localhost:" + port

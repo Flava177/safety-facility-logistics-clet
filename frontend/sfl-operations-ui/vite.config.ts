@@ -6,16 +6,18 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 /**
  * Build configuration for the SFL Operations dashboards.
  *
- * `base` is the single source of truth for where the bundle is mounted. The production build is
- * served by the Fleet service from `/ui/`, so every asset URL and the router basename are derived
- * from it rather than being repeated in three places.
+ * `base` is the single source of truth for where the bundle is mounted. This dashboard used to be
+ * packaged into the Fleet service and served from `/ui/`; it is now a standalone application that
+ * talks to the services over HTTP, so it mounts at the root and `VITE_BASENAME` overrides that for
+ * anyone serving it under a path prefix. Every asset URL and the router basename derive from this
+ * rather than being repeated in three places.
  *
  * `emptyOutDir` is deliberate: a build must never leave a previous bundle's assets behind, because
  * a stale file that still resolves is far harder to spot than a missing one.
  */
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, '.', '');
-  const base = mode === 'production' ? env.VITE_BASENAME || '/ui/' : '/';
+  const base = mode === 'production' ? env.VITE_BASENAME || '/' : '/';
 
   return {
     plugins: [react(), tailwindcss(), tsconfigPaths()],

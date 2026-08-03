@@ -49,8 +49,14 @@ management:
 
 sfl:
   cors:
-    # Origins allowed to call /api/** and /actuator/**. 5005 is the SFL Operations UI dev server.
-    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8093,http://localhost:8094,http://localhost:5005,http://localhost:5173,http://localhost:3000}
+    # Origins allowed to call /api/** and /actuator/**.
+    #
+    # This service no longer serves a UI, so every front end is cross-origin and this list is the
+    # only thing that lets one through. The sibling service ports that used to be here (8091, 8093,
+    # 8094) were for services serving pages at each other; nothing does that now. What is left are
+    # the ports a front end actually runs on in development — 5005 for the SFL Operations UI, then
+    # Vite, CRA, Angular and a generic dev server. Set SFL_CORS_ALLOWED_ORIGINS per deployment.
+    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:5005,http://localhost:5173,http://localhost:3000,http://localhost:4200,http://localhost:8080}
   service-boundary:
     schema: fleet_logistics
     owns: "S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, and S171 Mailroom / Courier and Dispatch Tracking"
@@ -62,8 +68,8 @@ sfl:
     # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
     enabled: ${SFL_SECURITY_ENABLED:true}
   fleet:
-    # true opens Swagger and the operations dashboard in a browser once the service is ready.
-    # The local start script sets it; it stays false for servers and CI.
+    # true opens the Swagger page in a browser once the service is ready. There is no dashboard to
+    # open any more. The local start script sets it; it stays false for servers and CI.
     open-browser: ${SFL_FLEET_OPEN_BROWSER:false}
     messaging:
       # local    — events are delivered to the in-process transport and logged (no broker provisioned).
