@@ -32,6 +32,7 @@ import { fleetPaths } from 'shared/layout/navigation';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
 import { canRequestEvidenceExport } from '../api/access';
+import { evidenceStorageReference, sha256Hex } from 'shared/evidence/fileEvidence';
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
 
@@ -41,29 +42,6 @@ interface AuditRow {
   record: AuditEventResponse;
 }
 
-const evidenceStorageReference = (
-  siteCode: string,
-  relatedRecordType: string,
-  relatedRecordId: string,
-  fileName: string,
-): string => {
-  const safeFile = fileName.replace(/[^\w.\-() ]+/g, '_').trim().replace(/\s+/g, '-') || 'evidence';
-  const safeType =
-    relatedRecordType.replace(/[^\w.-]+/g, '_').trim().toLowerCase() || 'record';
-  const safeRecord =
-    relatedRecordId.replace(/[^\w.-]+/g, '_').trim().slice(0, 120) || 'reference';
-  return `local-demo://fleet-evidence/${siteCode.toUpperCase()}/${safeType}/${safeRecord}/${Date.now()}-${safeFile}`;
-};
-
-const sha256Hex = async (file: File): Promise<string> => {
-  if (!globalThis.crypto?.subtle) {
-    throw FleetApiError.transport('This browser cannot compute the SHA-256 evidence hash.');
-  }
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-};
 
 /**
  * Evidence and audit governance.
@@ -515,7 +493,11 @@ const RegisterEvidenceDialog = ({
   const form = useFleetForm({
     initialValues: {
       siteCode: defaultSite,
-      relatedRecordType: 'VEHICLE',
+      // 'Vehicle', not 'VEHICLE'. The store matches the record type exactly, and every backend
+      // path files under PascalCase entity names — Trip, Vehicle, ComplianceDocument. Evidence
+      // registered under the old default was invisible to every picker that searches for 'Vehicle',
+      // which is precisely the lookup this dialog exists to feed.
+      relatedRecordType: 'Vehicle',
       relatedRecordId: '',
       evidenceType: 'COMPLIANCE_DOCUMENT',
       evidenceFile: null as File | null,

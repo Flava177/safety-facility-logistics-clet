@@ -8,6 +8,10 @@ import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { TextAreaInput, TextInput } from 'shared/components/fields';
 import { humanise } from 'modules/fleet/api/enums';
+// One evidence store serves the whole FTLMP service — a dispatch case's evidence is written into
+// the same table as a trip's, by RecordedDispatchEvidenceAdapter. Same reuse as `humanise` above.
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
 import { ScanImportBatch } from 'modules/dispatch/api/dto';
@@ -119,16 +123,26 @@ export const ExceptionActionDialog = ({
           />
         ))}
 
+      {/*
+        The case itself holds no evidence — dispatch files evidence against the records a case points
+        at. `CourierItem` is the only link with a single unambiguous record type; a dispatch-level
+        case spreads its evidence across CustodyHandover, DispatchReceipt and ReturnReconciliation,
+        and the search takes one type, so those fall through to the text field rather than showing a
+        list that is quietly missing two thirds of the evidence.
+      */}
       {(needsEvidence || action === 'explain') && (
-        <TextInput
-          label="Evidence reference"
+        <EvidenceSelect
+          label="Evidence"
           required={needsEvidence}
+          search={searchEvidenceChoices}
+          relatedRecordType={exceptionCase.courierItemId ? 'CourierItem' : null}
+          relatedRecordId={exceptionCase.courierItemId}
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
           {...form.fieldProps(
             'evidenceId',
             needsEvidence
-              ? 'Register the closure evidence first, then paste its identifier.'
+              ? 'Anything filed against this case is offered here.'
               : 'Optional. Attach what the explanation refers to.',
           )}
         />

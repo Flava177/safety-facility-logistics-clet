@@ -30,6 +30,7 @@ import {
 import { readSession } from 'shared/auth/session';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { isPersona } from 'shared/layout/personas';
+import { useRecentValues } from 'shared/hooks/useRecentValues';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 const REFERENCE_WINDOW = 200;
@@ -97,6 +98,14 @@ export const CreateLogbookDialog = ({
   const session = readSession();
   const driverOnly = isPersona('driver');
   const appliedTripRef = useRef<string | null>(null);
+
+  // Scoped to the site: a manager holding four centres should not be offered one centre's
+  // routes while filing against another.
+  const { values: recentOrigins, remember: rememberOrigin } = useRecentValues('origin', logbook?.siteCode.value ?? defaultSiteCode);
+  const { values: recentDestinations, remember: rememberDestination } = useRecentValues(
+    'destination',
+    logbook?.siteCode.value ?? defaultSiteCode,
+  );
 
   const form = useFleetForm({
     initialValues: {
@@ -180,6 +189,8 @@ export const CreateLogbookDialog = ({
       const saved = editing && logbook
         ? await driverLogbooksApi.update(logbook.id, payload)
         : await driverLogbooksApi.create(payload);
+      rememberOrigin(values.origin);
+      rememberDestination(values.destination);
       onSaved(saved);
       onClose();
     },
@@ -299,6 +310,21 @@ export const CreateLogbookDialog = ({
           }
           {...form.fieldProps('siteCode')}
         />
+        {/*
+          Second field, not eleventh. It was below use classification, which meant an operator had
+          already typed origin, destination, purpose, times and odometer by hand before reaching the
+          control that would have filled all six from the trip. The shortcut has to be offered before
+          the work, not after it.
+        */}
+        <TripSelect
+          siteCode={form.values.siteCode}
+          value={form.values.tripId}
+          onChange={(value) => form.setValue('tripId', value)}
+          {...form.fieldProps(
+            'tripId',
+            'Fills vehicle, route, date, times, purpose and odometer from the assigned trip.',
+          )}
+        />
         <DateField
           label="Journey date"
           required
@@ -352,6 +378,7 @@ export const CreateLogbookDialog = ({
         <TextInput
           label="Origin"
           required
+          suggestions={recentOrigins}
           value={form.values.origin}
           onChange={(value) => form.setValue('origin', value)}
           {...form.fieldProps('origin')}
@@ -359,6 +386,7 @@ export const CreateLogbookDialog = ({
         <TextInput
           label="Destination"
           required
+          suggestions={recentDestinations}
           value={form.values.destination}
           onChange={(value) => form.setValue('destination', value)}
           {...form.fieldProps('destination')}
@@ -387,15 +415,6 @@ export const CreateLogbookDialog = ({
             form.setValue('useClassification', (value || 'OFFICIAL') as LogbookUseClassification)
           }
           {...form.fieldProps('useClassification')}
-        />
-        <TripSelect
-          siteCode={form.values.siteCode}
-          value={form.values.tripId}
-          onChange={(value) => form.setValue('tripId', value)}
-          {...form.fieldProps(
-            'tripId',
-            'Select the assigned trip to fill vehicle, route, date, times, purpose and odometer.',
-          )}
         />
       </div>
 

@@ -99,6 +99,14 @@ export interface TextInputProps extends CommonProps {
   /** Passed through so a sign-in form can ask for `current-password` and `username`. */
   autoComplete?: string;
   name?: string;
+  /**
+   * Values offered as you type, without constraining what may be entered.
+   *
+   * A native `<datalist>` rather than a combobox on purpose: origin and destination are free text by
+   * contract, so anything that *restricted* the field to previous answers would be wrong the first
+   * time a driver goes somewhere new. This only removes the retyping.
+   */
+  suggestions?: string[];
 }
 
 export const TextInput = ({
@@ -117,8 +125,10 @@ export const TextInput = ({
   type = 'text',
   autoComplete,
   name,
+  suggestions,
 }: TextInputProps) => {
   const id = useId();
+  const listId = suggestions && suggestions.length > 0 ? `${id}-suggestions` : undefined;
   return (
     <FieldShell
       id={id}
@@ -133,6 +143,7 @@ export const TextInput = ({
         type={type}
         name={name}
         autoComplete={autoComplete}
+        list={listId}
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
@@ -144,6 +155,13 @@ export const TextInput = ({
         onBlur={onBlur}
         className={cn(controlBase, controlTone(error))}
       />
+      {listId && (
+        <datalist id={listId}>
+          {suggestions?.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+      )}
     </FieldShell>
   );
 };

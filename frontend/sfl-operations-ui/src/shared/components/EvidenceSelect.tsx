@@ -1,5 +1,4 @@
 import { useMemo, useState } from 'react';
-import { evidenceApi } from 'modules/fleet/api/fleetApi';
 import Button from 'shared/components/Button';
 import { SelectInput, TextInput, type SelectOption } from 'shared/components/fields';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -14,18 +13,48 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
  * closing a workflow item, where evidence is mandatory and the service refuses the close without it.
  *
  * `GET /evidence?relatedRecordType=&relatedRecordId=` is the whole fix. The record is the only thing
- * an operator reliably knows, and it is what a workflow item already carries.
+ * an operator reliably knows, and it is what every one of these dialogs already has in hand.
  *
  * **The text field does not go away.** Evidence filed against a different record is a legitimate
  * reference — a site-wide certificate closes a dozen items and belongs to none of them — so the
  * picker offers what it found and gets out of the way when the answer is somewhere else. It also
  * falls back to the text field when the record has no evidence at all, which is the state an
  * operator is in the first time they close anything.
+ *
+ * <h2>Why it lives in `shared` and takes a `search` function</h2>
+ *
+ * It was written in `modules/fleet` and used by exactly one dialog, while eight others kept asking
+ * for the paste. Moving it here is what let the rest adopt it: dispatch needs it too, and a dispatch
+ * dialog reaching into `modules/fleet` for an API client is a module boundary crossed for no reason.
+ * Injecting the search keeps this component ignorant of which service answers — the FTLMP evidence
+ * store happens to serve fleet, fuel and dispatch alike, and a future module with its own store
+ * passes its own function rather than forcing a change here.
+ *
+ * `search` is deliberately **not** a dependency of the query. Callers pass a module-level function;
+ * an inline arrow would re-fetch on every render.
  */
+
+/** The shape the picker needs. Any module's evidence response maps onto this. */
+export interface EvidenceChoice {
+  id: string;
+  /** What the operator recognises. Falls back to the storage reference when a name is absent. */
+  fileName: string;
+  evidenceType: string;
+  legalHold?: boolean;
+}
+
+export type EvidenceSearch = (
+  relatedRecordType: string,
+  relatedRecordId: string,
+  signal?: AbortSignal,
+) => Promise<EvidenceChoice[]>;
+
 interface EvidenceSelectProps {
   /** Both are needed to query. Either being absent means the picker cannot run, not that it failed. */
   relatedRecordType: string | null;
   relatedRecordId: string | null;
+  /** Must be stable across renders — a module-level function, not an inline arrow. */
+  search: EvidenceSearch;
   value: string;
   onChange: (value: string) => void;
   label?: string;
@@ -40,6 +69,7 @@ interface EvidenceSelectProps {
 export const EvidenceSelect = ({
   relatedRecordType,
   relatedRecordId,
+  search,
   value,
   onChange,
   label = 'Evidence reference',
@@ -55,7 +85,7 @@ export const EvidenceSelect = ({
   const evidence = useApiQuery(
     (signal) =>
       relatedRecordType && relatedRecordId
-        ? evidenceApi.search({ relatedRecordType, relatedRecordId }, signal)
+        ? search(relatedRecordType, relatedRecordId, signal)
         : Promise.resolve(undefined),
     [relatedRecordType, relatedRecordId],
   );
@@ -115,8 +145,7 @@ export const EvidenceSelect = ({
         onBlur={onBlur}
         disabled={disabled}
         helperText={
-          helperText ??
-          `${options.length} filed against this ${relatedRecordType.toLowerCase()}.`
+          helperText ?? `${options.length} filed against this ${relatedRecordType.toLowerCase()}.`
         }
       />
       <Button

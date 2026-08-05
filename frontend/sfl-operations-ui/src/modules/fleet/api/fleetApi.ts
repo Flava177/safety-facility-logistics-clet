@@ -54,6 +54,7 @@ import {
   WorkflowItemResponse,
   WorkflowSearchParams,
 } from './dto';
+import type { EvidenceSearch } from 'shared/components/EvidenceSelect';
 
 /**
  * Typed client for the S166 Fleet & Vehicle Management API.
@@ -289,6 +290,33 @@ export const workflowApi = {
       signal,
     ),
 };
+
+/**
+ * The FTLMP evidence store, in the shape {@link EvidenceSelect} wants.
+ *
+ * <p>One store serves fleet, fuel and dispatch — a dispatch exception's closure evidence is written
+ * into the same `EvidenceReference` table as a trip's, by `RecordedDispatchEvidenceAdapter`. So this
+ * is the search function every FTLMP dialog passes to the picker, and dispatch importing it is the
+ * same cross-module reuse it already does for `EVIDENCE_RETENTION_CLASSES` and `humanise`.
+ *
+ * <p>Declared at module level rather than inline at each call site because the picker treats it as a
+ * stable reference; an arrow created during render would re-fetch on every keystroke.
+ */
+export const searchEvidenceChoices: EvidenceSearch = (
+  relatedRecordType,
+  relatedRecordId,
+  signal,
+) =>
+  evidenceApi
+    .search({ relatedRecordType, relatedRecordId }, signal)
+    .then((found) =>
+      (found ?? []).map((reference) => ({
+        id: reference.id,
+        fileName: reference.fileName,
+        evidenceType: reference.evidenceType,
+        legalHold: reference.legalHold,
+      })),
+    );
 
 export const evidenceApi = {
   /**

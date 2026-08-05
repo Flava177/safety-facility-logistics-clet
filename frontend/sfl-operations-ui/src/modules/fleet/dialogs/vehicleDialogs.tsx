@@ -32,6 +32,8 @@ import {
   odometerNotBelow,
   required,
 } from 'shared/validation/validators';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 
 interface BaseDialogProps {
   open: boolean;
@@ -41,6 +43,8 @@ interface BaseDialogProps {
 
 /** Two columns from `sm` up: these forms are field-dense and read badly as one long stack. */
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
+const sectionHeading =
+  'border-t border-gray-200 pt-4 text-theme-sm font-semibold text-brand-900';
 
 /* ---------------------------------------------------------------------------------------------
  * Register a vehicle — POST /api/v1/fleet/vehicles
@@ -117,6 +121,11 @@ export const RegisterVehicleDialog = ({
     },
   });
 
+  /** Any error on a field that lives inside "More details" — see the note on the element itself. */
+  const moreDetailsHasError = (
+    ['vin', 'capacity', 'initialOdometer', 'acquisitionReference'] as const
+  ).some((field) => Boolean(form.errors[field]));
+
   return (
     <FormDialog
       open={open}
@@ -129,6 +138,17 @@ export const RegisterVehicleDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
+      {/*
+        Thirteen fields in one grid, ten of them required, is the form this dialog used to be. It is
+        now three groups: what the vehicle *is*, who *answers for it*, and the rest.
+
+        Only fields that are optional or carry a defensible default sit behind the disclosure, which
+        is the rule that makes hiding a required field safe — capacity defaults to 5 and the odometer
+        to 0, so the form submits correctly without it ever being opened. Manufacture year stays
+        visible despite having a default, because "this year" is a guess about a real vehicle and a
+        wrong year submitted unseen is worse than one more field on the page.
+      */}
+      <h3 className={sectionHeading}>Identity</h3>
       <div className={twoColumn}>
         <TextInput
           label="Registration number"
@@ -137,11 +157,13 @@ export const RegisterVehicleDialog = ({
           onChange={(value) => form.setValue('registrationNumber', value)}
           {...form.fieldProps('registrationNumber')}
         />
-        <TextInput
-          label="VIN"
-          value={form.values.vin}
-          onChange={(value) => form.setValue('vin', value)}
-          {...form.fieldProps('vin')}
+        <EnumSelect
+          label="Category"
+          required
+          value={form.values.category}
+          options={VEHICLE_CATEGORIES}
+          onChange={(value) => form.setValue('category', value)}
+          {...form.fieldProps('category')}
         />
         <TextInput
           label="Make"
@@ -165,30 +187,10 @@ export const RegisterVehicleDialog = ({
           onChange={(value) => form.setValue('manufactureYear', value)}
           {...form.fieldProps('manufactureYear')}
         />
-        <EnumSelect
-          label="Category"
-          required
-          value={form.values.category}
-          options={VEHICLE_CATEGORIES}
-          onChange={(value) => form.setValue('category', value)}
-          {...form.fieldProps('category')}
-        />
-        <NumberInput
-          label="Capacity"
-          required
-          min={1}
-          value={form.values.capacity}
-          onChange={(value) => form.setValue('capacity', value)}
-          {...form.fieldProps('capacity')}
-        />
-        <NumberInput
-          label="Initial odometer"
-          required
-          suffix="km"
-          value={form.values.initialOdometer}
-          onChange={(value) => form.setValue('initialOdometer', value)}
-          {...form.fieldProps('initialOdometer')}
-        />
+      </div>
+
+      <h3 className={sectionHeading}>Who answers for it</h3>
+      <div className={twoColumn}>
         <SiteSelect
           required
           value={form.values.siteCode}
@@ -200,29 +202,70 @@ export const RegisterVehicleDialog = ({
           required
           value={form.values.responsibleUnit}
           onChange={(value) => form.setValue('responsibleUnit', value)}
-          {...form.fieldProps('responsibleUnit')}
+          {...form.fieldProps('responsibleUnit', 'The unit the vehicle belongs to — Transport, Estates.')}
         />
         <TextInput
           label="Operational owner"
           required
           value={form.values.operationalOwner}
           onChange={(value) => form.setValue('operationalOwner', value)}
-          {...form.fieldProps('operationalOwner')}
-        />
-        <TextInput
-          label="Acquisition reference"
-          value={form.values.acquisitionReference}
-          onChange={(value) => form.setValue('acquisitionReference', value)}
-          {...form.fieldProps('acquisitionReference')}
-        />
-        <EnumSelect
-          label="Emergency use only"
-          value={form.values.emergencyOnly}
-          options={['false', 'true'] as const}
-          onChange={(value) => form.setValue('emergencyOnly', value || 'false')}
-          renderOptionLabel={(option) => (option === 'true' ? 'Yes' : 'No')}
+          {...form.fieldProps('operationalOwner', 'The named person accountable for it day to day.')}
         />
       </div>
+
+      {/*
+        Forced open when anything inside it is in error. A required field failing validation while
+        hidden is the one failure mode progressive disclosure introduces: the operator sees "fix the
+        errors" and no error anywhere on screen.
+      */}
+      <details
+        className="rounded-lg border border-gray-200 px-4 py-3"
+        open={moreDetailsHasError}
+      >
+        <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
+          More details
+          <span className="ml-1 font-normal text-gray-500">
+            — VIN, capacity, opening odometer, acquisition, emergency use
+          </span>
+        </summary>
+        <div className={`mt-4 ${twoColumn}`}>
+          <TextInput
+            label="VIN"
+            value={form.values.vin}
+            onChange={(value) => form.setValue('vin', value)}
+            {...form.fieldProps('vin')}
+          />
+          <NumberInput
+            label="Capacity"
+            required
+            min={1}
+            value={form.values.capacity}
+            onChange={(value) => form.setValue('capacity', value)}
+            {...form.fieldProps('capacity', 'Seats, including the driver.')}
+          />
+          <NumberInput
+            label="Initial odometer"
+            required
+            suffix="km"
+            value={form.values.initialOdometer}
+            onChange={(value) => form.setValue('initialOdometer', value)}
+            {...form.fieldProps('initialOdometer', 'The reading on the day it joins the register.')}
+          />
+          <TextInput
+            label="Acquisition reference"
+            value={form.values.acquisitionReference}
+            onChange={(value) => form.setValue('acquisitionReference', value)}
+            {...form.fieldProps('acquisitionReference')}
+          />
+          <EnumSelect
+            label="Emergency use only"
+            value={form.values.emergencyOnly}
+            options={['false', 'true'] as const}
+            onChange={(value) => form.setValue('emergencyOnly', value || 'false')}
+            renderOptionLabel={(option) => (option === 'true' ? 'Yes' : 'No')}
+          />
+        </div>
+      </details>
     </FormDialog>
   );
 };
@@ -412,14 +455,14 @@ export const RegisterComplianceDocumentDialog = ({
           onChange={(value) => form.setValue('expiresOn', value)}
           {...form.fieldProps('expiresOn')}
         />
-        <TextInput
-          label="Evidence reference ID"
+        <EvidenceSelect
+          label="Evidence"
+          search={searchEvidenceChoices}
+          relatedRecordType="Vehicle"
+          relatedRecordId={vehicleId}
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
-          {...form.fieldProps(
-            'evidenceId',
-            'Optional. Register the evidence first under Evidence & audit.',
-          )}
+          {...form.fieldProps('evidenceId', 'Optional. The certificate or permit itself.')}
         />
       </div>
 
@@ -570,11 +613,14 @@ export const RecordServiceDialog = ({
           onChange={(value) => form.setValue('providerReference', value)}
           {...form.fieldProps('providerReference')}
         />
-        <TextInput
-          label="Evidence reference ID"
+        <EvidenceSelect
+          label="Evidence"
+          search={searchEvidenceChoices}
+          relatedRecordType="Vehicle"
+          relatedRecordId={vehicleId}
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
-          {...form.fieldProps('evidenceId')}
+          {...form.fieldProps('evidenceId', 'Optional. The job card or invoice.')}
         />
       </div>
       <TextAreaInput
@@ -666,15 +712,15 @@ export const CorrectOdometerDialog = ({ open, onClose, onSaved, vehicle }: Odome
         onChange={(value) => form.setValue('reason', value)}
         {...form.fieldProps('reason')}
       />
-      <TextInput
-        label="Evidence reference ID"
+      <EvidenceSelect
+        label="Evidence"
         required
+        search={searchEvidenceChoices}
+        relatedRecordType="Vehicle"
+        relatedRecordId={vehicle.id}
         value={form.values.evidenceId}
         onChange={(value) => form.setValue('evidenceId', value)}
-        {...form.fieldProps(
-          'evidenceId',
-          'Register the supporting evidence under Evidence & audit first.',
-        )}
+        {...form.fieldProps('evidenceId', 'What shows the true reading — a photograph of the dial, or the service record that corrected it.')}
       />
     </FormDialog>
   );

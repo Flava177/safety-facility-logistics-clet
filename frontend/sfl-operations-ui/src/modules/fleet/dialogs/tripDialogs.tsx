@@ -34,6 +34,9 @@ import {
   odometerNotBelow,
   required,
 } from 'shared/validation/validators';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
+import { useRecentValues } from 'shared/hooks/useRecentValues';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -144,6 +147,14 @@ export const CreateTripDialog = ({
   onSaved,
   defaultSiteCode,
 }: BaseProps & { defaultSiteCode: string }) => {
+  // Scoped to the site: a manager holding four centres should not be offered one centre's
+  // routes while filing against another.
+  const { values: recentOrigins, remember: rememberOrigin } = useRecentValues('origin', defaultSiteCode);
+  const { values: recentDestinations, remember: rememberDestination } = useRecentValues(
+    'destination',
+    defaultSiteCode,
+  );
+
   const form = useFleetForm({
     initialValues: {
       siteCode: defaultSiteCode,
@@ -186,6 +197,10 @@ export const CreateTripDialog = ({
         vehicleId: values.vehicleId || null,
         driverId: values.driverId || null,
       });
+      // After the service accepted it, never before: a refused submit must not teach the field a
+      // value the platform rejected.
+      rememberOrigin(values.origin);
+      rememberDestination(values.destination);
       onSaved();
       onClose();
       form.reset();
@@ -199,7 +214,7 @@ export const CreateTripDialog = ({
     <FormDialog
       open={open}
       title="Plan a trip"
-      description="A trip may be planned first and assigned later. Supplying both a vehicle and a driver assigns it immediately."
+      description="Planned first, crewed later — or assign a vehicle and driver now and it is assigned immediately."
       submitLabel="Create trip"
       submitting={form.submitting}
       // An immediate assignment carries the same readiness policy the assignment endpoint applies.
@@ -229,6 +244,7 @@ export const CreateTripDialog = ({
         <TextInput
           label="Origin"
           required
+          suggestions={recentOrigins}
           value={form.values.origin}
           onChange={(value) => form.setValue('origin', value)}
           {...form.fieldProps('origin')}
@@ -236,6 +252,7 @@ export const CreateTripDialog = ({
         <TextInput
           label="Destination"
           required
+          suggestions={recentDestinations}
           value={form.values.destination}
           onChange={(value) => form.setValue('destination', value)}
           {...form.fieldProps('destination')}
@@ -265,9 +282,25 @@ export const CreateTripDialog = ({
         {...form.fieldProps('purpose')}
       />
 
-      <h3 className={sectionHeading}>Assignment (optional)</h3>
+      {/*
+        Assignment is genuinely optional — a trip may be planned now and crewed later, which is the
+        common case — but it was presented as two more fields on the same wall, so every planner met
+        eight fields when five would do. Behind a disclosure it stays one click away and stops
+        reading like something that must be answered.
 
-      <div className={twoColumn}>
+        `open` when either is already set: reopening the dialog on a part-filled form must never hide
+        a value the operator has chosen, or they cannot see what they are about to submit.
+      */}
+      <details
+        className="rounded-lg border border-gray-200 px-4 py-3"
+        open={Boolean(form.values.vehicleId || form.values.driverId)}
+      >
+        <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
+          Assign a vehicle and driver now
+          <span className="ml-1 font-normal text-gray-500">— optional, can be done later</span>
+        </summary>
+
+      <div className={`mt-4 ${twoColumn}`}>
         <SelectInput
           label="Vehicle"
           value={form.values.vehicleId}
@@ -313,6 +346,7 @@ export const CreateTripDialog = ({
           onPermitsAssignmentChange={setAssignmentPermitted}
         />
       )}
+      </details>
     </FormDialog>
   );
 };
@@ -531,8 +565,9 @@ export const CloseTripDialog = ({
       onSubmit={form.submit}
     >
       <Alert variant="info">
-        Register the closure evidence under Evidence &amp; audit first, then paste its reference ID
-        here. Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING.
+        Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING. Anything already
+        filed against this trip is offered below; register it under Evidence &amp; audit first if the
+        list is empty.
       </Alert>
       <NumberInput
         label="End odometer (km)"
@@ -546,9 +581,12 @@ export const CloseTripDialog = ({
             : undefined,
         )}
       />
-      <TextInput
-        label="Closure evidence reference ID"
+      <EvidenceSelect
+        label="Closure evidence"
         required
+        search={searchEvidenceChoices}
+        relatedRecordType="Trip"
+        relatedRecordId={trip.id}
         value={form.values.closureEvidenceId}
         onChange={(value) => form.setValue('closureEvidenceId', value)}
         {...form.fieldProps('closureEvidenceId')}
@@ -845,8 +883,11 @@ export const RecordInspectionDialog = ({
           onChange={(value) => form.setValue('odometerReading', value)}
           {...form.fieldProps('odometerReading')}
         />
-        <TextInput
-          label="Evidence reference ID"
+        <EvidenceSelect
+          label="Evidence"
+          search={searchEvidenceChoices}
+          relatedRecordType="Trip"
+          relatedRecordId={trip.id}
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
           {...form.fieldProps('evidenceId', 'Optional for a trip inspection.')}

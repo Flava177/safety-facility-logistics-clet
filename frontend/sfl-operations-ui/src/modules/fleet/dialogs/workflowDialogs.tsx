@@ -10,13 +10,14 @@ import {
   WorkflowSeverity,
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
-import { EvidenceSelect } from 'modules/fleet/components/EvidenceSelect';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { EnumSelect, TextAreaInput, TextInput } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -250,6 +251,7 @@ export const CloseWorkflowItemDialog = ({
       <EvidenceSelect
         label="Closure evidence"
         required
+        search={searchEvidenceChoices}
         relatedRecordType={item.relatedRecordType}
         relatedRecordId={item.relatedRecordId}
         value={form.values.closureEvidenceId}

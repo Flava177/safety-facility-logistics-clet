@@ -19,6 +19,8 @@ import {
 } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, nonNegativeInteger, required } from 'shared/validation/validators';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 
 /**
  * A standalone periodic inspection — the one that has no trip.
@@ -158,8 +160,11 @@ export const RecordStandaloneInspectionDialog = ({
         />
       </div>
 
-      <TextInput
-        label="Evidence reference ID"
+      <EvidenceSelect
+        label="Evidence"
+        search={searchEvidenceChoices}
+        relatedRecordType="Vehicle"
+        relatedRecordId={vehicle.id}
         value={form.values.evidenceId}
         onChange={(value) => form.setValue('evidenceId', value)}
         {...form.fieldProps('evidenceId', 'Optional. The inspection sheet, if one was filed.')}
