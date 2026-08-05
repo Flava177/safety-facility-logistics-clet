@@ -48,20 +48,24 @@ export interface SflActorConfig {
 export const fleetApiBaseUrl = readOptionalEnv('VITE_FLEET_API_BASE_URL', 'http://localhost:8093');
 
 /**
- * Base URL of the Emergency Notification service.
+ * Base URL of the Safety, Security & Emergency service (SSEMP).
  *
- * S174 is a **separate service on a separate port** — `sfl-emergency-notification-service`, port
- * 8095, its own schema and its own permission matrix. Fleet, fuel and dispatch all live in
- * `sfl-fleet-logistics-service`, so this is the first time the dashboards talk to two services, and
- * it is why the API client takes a base URL per call rather than reading one global.
+ * `sfl-safety-security-service`, port **8092**. It serves `/api/v1/emergency/**` for S174 and will
+ * serve S160-S163 from the same origin as they are built — one base URL for a whole programme
+ * rather than for one system.
  *
- * The emergency service allows `http://localhost:8093` (the bundled dashboard's origin) and
+ * S174 was its own deployable on 8095 until the platform was consolidated to three services. The
+ * API paths did not move, so nothing in `emergencyApi.ts` changed; only the origin did. That is the
+ * property worth preserving in any future consolidation — a path is a contract, a port is a
+ * deployment detail.
+ *
+ * The service allows `http://localhost:8093` (the bundled dashboard's origin) and
  * `http://localhost:5005` (`npm run dev`), so both work over CORS without a proxy. Behind a
  * gateway this becomes a same-origin path prefix and nothing else changes.
  */
-export const emergencyApiBaseUrl = readOptionalEnv(
-  'VITE_EMERGENCY_API_BASE_URL',
-  'http://localhost:8095',
+export const safetySecurityApiBaseUrl = readOptionalEnv(
+  'VITE_SAFETY_SECURITY_API_BASE_URL',
+  'http://localhost:8092',
 );
 
 /**

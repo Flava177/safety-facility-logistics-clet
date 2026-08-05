@@ -11,13 +11,23 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        # The FTLMP deployable owns two schemas and Hibernate takes one default. It is
+        # `fleet_logistics`, which S166, S168_fuel and S171 all map into without qualification.
+        # AVAMP's two entities carry an explicit @Table(schema = "asset_visibility") and so resolve
+        # correctly regardless — which is what made folding the deployable in a move rather than a
+        # rewrite. Anything added to `asset_visibility` later must annotate it the same way; relying
+        # on the default would silently create the table in the wrong schema and `ddl-auto: validate`
+        # would then fail at startup rather than at review.
         default_schema: fleet_logistics
         jdbc:
           time_zone: UTC
   flyway:
     enabled: true
+    # History lives in `fleet_logistics`; both schemas are declared so Flyway creates and manages
+    # each. One interleaved sequence — V1-V26 are fleet, fuel and dispatch, V27-V28 are AVAMP's,
+    # renumbered when the asset-visibility deployable was folded in.
     default-schema: fleet_logistics
-    schemas: fleet_logistics
+    schemas: fleet_logistics,asset_visibility
     locations: classpath:db/migration
   rabbitmq:
     host: ${SFL_RABBITMQ_HOST:localhost}
@@ -50,10 +60,10 @@ management:
 sfl:
   cors:
     # Origins allowed to call /api/** and /actuator/**. 5005 is the SFL Operations UI dev server.
-    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8093,http://localhost:8094,http://localhost:5005,http://localhost:5173,http://localhost:3000}
+    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8092,http://localhost:8093,http://localhost:5005,http://localhost:5173,http://localhost:3000}
   service-boundary:
-    schema: fleet_logistics
-    owns: "S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, and S171 Mailroom / Courier and Dispatch Tracking"
+    schema: fleet_logistics,asset_visibility
+    owns: "Fleet, Transport, Assets & Logistics Management Platform (SFL.FTLMP) — S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom / Courier and Dispatch Tracking, and the AVAMP-Lite asset and device reference layer"
   security:
     # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
     # everything also carried `matchIfMissing = true` — so an environment that simply forgot the

@@ -51,15 +51,18 @@ let granted: Set<string> | null = null;
 
 interface Source {
   path: string;
-  service?: 'emergency' | 'facilities';
+  service?: 'safetySecurity' | 'facilities';
 }
 
+// One entry per deployable, and the count is the point: three platforms, three sources. S174 used
+// to answer from a fourth on 8092's behalf; it now answers from the SSEMP service itself, so the
+// path is unchanged and only the origin moved.
 const SOURCES: Source[] = [
-  // Fleet, fuel and dispatch — three matrices, one deployable, one answer.
+  // FTLMP — fleet, fuel, dispatch and AVAMP assets. Four matrices, one deployable, one answer.
   { path: '/api/v1/fleet/actor/permissions' },
-  // S174 is its own deployable with its own matrix (ADR 0004), so it answers separately.
-  { path: '/api/v1/emergency/actor/permissions', service: 'emergency' },
-  // S152, S153 and S159 — the IFIMP deployable, one matrix in `shared` answering for all three.
+  // SSEMP — S174's matrix today, joined by S160-S163 as they are built.
+  { path: '/api/v1/emergency/actor/permissions', service: 'safetySecurity' },
+  // IFIMP — S152, S153 and S159, one matrix in `shared` answering for all three.
   { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
 ];
 

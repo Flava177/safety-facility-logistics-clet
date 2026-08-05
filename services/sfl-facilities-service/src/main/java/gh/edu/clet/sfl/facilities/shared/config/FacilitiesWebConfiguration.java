@@ -30,19 +30,21 @@ class FacilitiesWebConfiguration {
      * <p>The two that matter for the operations dashboard are <strong>8093</strong> and
      * <strong>5005</strong>, and neither was here before S152 had a UI. The dashboard bundle is served
      * by {@code sfl-fleet-logistics-service} on 8093 and calls this service across origins, exactly as
-     * it does the emergency service on 8095; {@code npm run dev} serves it from 5005. Without both, a
+     * it does the SSEMP service on 8092; {@code npm run dev} serves it from 5005. Without both, a
      * screen fails in a browser while every equivalent curl succeeds — which is a genuinely confusing
      * way to lose an afternoon.
      *
-     * <p>8091 and 8094 are kept for the service's own static page and the asset-visibility service;
-     * 5173 and 3000 for a default Vite or CRA port.
+     * <p>8091 is kept for the service's own static page and 8092 for SSEMP; 5173 and 3000 for a
+     * default Vite or CRA port. 8094 and 8095 were dropped when the asset-visibility and emergency
+     * deployables were folded into FTLMP and SSEMP — nothing listens on them now, and an origin list
+     * that names a dead port is a list nobody trusts to be current.
      */
     @Bean
     WebMvcConfigurer facilitiesCorsConfigurer(
             // Where the SFL Operations dashboard is served. This service does not package the bundle.
             @Value("${sfl.dashboard.base-url:http://localhost:8093/ui}") String dashboardBaseUrl,
             @Value("${sfl.cors.allowed-origins:"
-                    + "http://localhost:8091,http://localhost:8093,http://localhost:8094,"
+                    + "http://localhost:8091,http://localhost:8092,http://localhost:8093,"
                     + "http://localhost:5005,http://localhost:5173,http://localhost:3000}")
             String allowedOrigins) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))

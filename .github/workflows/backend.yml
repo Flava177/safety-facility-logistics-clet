@@ -45,13 +45,13 @@ jobs:
           --health-cmd "pg_isready -U sfl"
           --health-interval 10s --health-timeout 5s --health-retries 10
 
-      emergency-db:
+      safety-security-db:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: sfl
           POSTGRES_PASSWORD: sfl
-          POSTGRES_DB: sfl_emergency_notification_service_e2e
-        ports: ['55445:5432']
+          POSTGRES_DB: sfl_safety_security_service_e2e
+        ports: ['55442:5432']
         options: >-
           --health-cmd "pg_isready -U sfl"
           --health-interval 10s --health-timeout 5s --health-retries 10
@@ -59,7 +59,7 @@ jobs:
     env:
       SFL_FACILITIES_TEST_DB_URL: jdbc:postgresql://localhost:55441/sfl_facilities_migration_test
       SFL_FLEET_LOGISTICS_TEST_DB_URL: jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e
-      SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL: jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e
+      SFL_SAFETY_SECURITY_TEST_DB_URL: jdbc:postgresql://localhost:55442/sfl_safety_security_service_e2e
       SFL_TEST_DB_USERNAME: sfl
       SFL_TEST_DB_PASSWORD: sfl
 
@@ -84,7 +84,7 @@ jobs:
       # module nothing can tell you about. Prefer `-pl` listing every module over a shorter list.
       - name: Build and test
         working-directory: services
-        run: ../mvnw -B clean test -pl sfl-service-common,sfl-facilities-service,sfl-safety-security-service,sfl-fleet-logistics-service,sfl-emergency-notification-service,sfl-asset-visibility-service
+        run: ../mvnw -B clean test -pl sfl-service-common,sfl-facilities-service,sfl-safety-security-service,sfl-fleet-logistics-service
         shell: bash
 
       # Compiling is not starting. The two defects above survived a green build precisely because
@@ -94,8 +94,7 @@ jobs:
         working-directory: services
         shell: bash
         run: |
-          for m in sfl-facilities-service sfl-safety-security-service sfl-fleet-logistics-service \
-                   sfl-asset-visibility-service sfl-emergency-notification-service; do
+          for m in sfl-facilities-service sfl-safety-security-service sfl-fleet-logistics-service; do
             main=$(find "$m/src/main/java" -name '*Application.java' | head -1)
             if [ -z "$main" ]; then
               echo "::error::$m has no @SpringBootApplication class — it cannot start."

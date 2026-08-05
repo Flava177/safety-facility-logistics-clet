@@ -41,7 +41,7 @@ class FleetWebConfiguration {
 
     @Bean
     WebMvcConfigurer fleetCorsConfigurer(
-            @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8093,http://localhost:8094,"
+            @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8092,http://localhost:8093,"
                     + "http://localhost:5005,http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::strip)

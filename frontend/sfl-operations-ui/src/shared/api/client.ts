@@ -1,7 +1,7 @@
 import { readSession } from 'shared/auth/session';
 import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
-import { emergencyApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
+import { safetySecurityApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
 
 /**
  * The single HTTP entry point for every SFL service call.
@@ -54,30 +54,38 @@ export const buildQueryString = (params?: QueryParams): string => {
 };
 
 /**
- * Which SFL service a call is addressed to.
+ * Which SFL service a call is addressed to. Three platforms, three values.
  *
- * `fleet` covers the fleet, fuel and dispatch modules — one service, one origin. `emergency` is
- * the separate S174 notification service. `facilities` is the IFIMP service: S152 today, S153 and
- * S159 behind the same origin later. Named rather than passed as a raw URL so a module cannot
- * quietly point at something that is not an SFL service.
+ * - `fleet` — FTLMP: the fleet, fuel, dispatch and AVAMP asset modules.
+ * - `safetySecurity` — SSEMP: S174 emergency notification today, S160–S163 as they are built.
+ * - `facilities` — IFIMP: S152, S153 and S159.
+ *
+ * Named rather than passed as a raw URL so a module cannot quietly point at something that is not
+ * an SFL service.
+ *
+ * <p>This value was `emergency` while S174 had a deployable of its own. It names the *service*, not
+ * the API surface — the origin, the display name and the port in the "could not reach" message are
+ * all deployable facts — so leaving it as `emergency` after the merge would have meant a key saying
+ * one thing and the port beside it saying another. That is precisely the half-rename that costs
+ * somebody an afternoon later.
  */
-export type SflService = 'fleet' | 'emergency' | 'facilities';
+export type SflService = 'fleet' | 'safetySecurity' | 'facilities';
 
 const serviceOrigins: Record<SflService, string> = {
   fleet: fleetApiBaseUrl,
-  emergency: emergencyApiBaseUrl,
+  safetySecurity: safetySecurityApiBaseUrl,
   facilities: facilitiesApiBaseUrl,
 };
 
 const serviceNames: Record<SflService, string> = {
   fleet: 'Fleet & Logistics service',
-  emergency: 'Emergency Notification service',
+  safetySecurity: 'Safety, Security & Emergency service',
   facilities: 'Facilities service',
 };
 
 const servicePorts: Record<SflService, string> = {
   fleet: '8093',
-  emergency: '8095',
+  safetySecurity: '8092',
   facilities: '8091',
 };
 

@@ -26,7 +26,7 @@
  *   operations workstation where the previous user walked away.
  * - Against an `HttpOnly` cookie, which would genuinely be safer against XSS: that needs the token
  *   issued and refreshed by a backend-for-frontend this platform does not have, and a same-site
- *   cookie does not survive the dashboard being served from 8093 while talking to 8095. Choosing
+ *   cookie does not survive the dashboard being served from 8093 while talking to 8092. Choosing
  *   `sessionStorage` is choosing to accept that a successful XSS can read the token.
  *
  * That is a real risk and it is written down rather than glossed: the mitigation is that the token is

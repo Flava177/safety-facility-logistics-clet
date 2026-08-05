@@ -91,12 +91,21 @@ class FleetArchitectureTest {
                 .check(fleetClasses);
     }
 
+    /**
+     * The rule is "an entity lives in an infrastructure package", not "an entity lives in
+     * <em>fleet's</em> infrastructure package". It used to say {@code FLEET + ".infrastructure.."},
+     * which was the same thing while fleet was the only module here with JPA — fuel and dispatch are
+     * JDBC. AVAMP arrived with two entities under {@code assets.infrastructure.persistence} and the
+     * rule failed, correctly and usefully: it was the only check that noticed the merge at all.
+     * Widening it to any module's infrastructure keeps the constraint that matters — entities stay out
+     * of domain and application — while letting each module own its own adapters.
+     */
     @Test
     @DisplayName("JPA entities live only in the persistence adapters")
     void jpa_entities_live_only_in_infrastructure() {
         classes()
                 .that().areAnnotatedWith(jakarta.persistence.Entity.class)
-                .should().resideInAnyPackage(FLEET + ".infrastructure..")
+                .should().resideInAnyPackage(BASE + "..infrastructure..")
                 .because("JPA entities are a persistence detail and must never become domain aggregates")
                 .check(fleetClasses);
     }

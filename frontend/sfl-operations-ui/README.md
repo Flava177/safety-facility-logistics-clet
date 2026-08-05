@@ -10,7 +10,7 @@ systems have screens, across three services:
 | S166 — Fleet and vehicle management | `modules/fleet` | `sfl-fleet-logistics-service` | `8093` |
 | S168 — Fuel and driver logbooks | `modules/fuel` | `sfl-fleet-logistics-service` | `8093` |
 | S171 — Courier and dispatch | `modules/dispatch` | `sfl-fleet-logistics-service` | `8093` |
-| S174 — Emergency mass notification | `modules/emergency` | `sfl-emergency-notification-service` | `8095` |
+| S174 — Emergency mass notification | `modules/emergency` | `sfl-safety-security-service` | `8092` |
 
 S166 was first and is the reference module. As of ADR 0006 this dashboard is the **only** interface —
 all five per-service static pages are now redirects into it.
@@ -143,7 +143,7 @@ unless you are deploying the dashboard somewhere other than the Fleet service.
 | Variable                  | Default                 | Purpose                                            |
 | ------------------------- | ----------------------- | -------------------------------------------------- |
 | `VITE_FLEET_API_BASE_URL` | `http://localhost:8093` | Base URL of the Fleet & Logistics service          |
-| `VITE_EMERGENCY_API_BASE_URL` | `http://localhost:8095` | Base URL of the Emergency Notification service (S174) |
+| `VITE_SAFETY_SECURITY_API_BASE_URL` | `http://localhost:8092` | Base URL of the SSEMP service — serves S174 today, S160–S163 later |
 | `VITE_FACILITIES_API_BASE_URL` | `http://localhost:8091` | Base URL of the Facilities service (S152)       |
 | `VITE_SFL_USER`           | `fleet.operator`        | Sent as `X-SFL-User`                               |
 | `VITE_SFL_DISPLAY_NAME`   | `Fleet Operator`        | Sent as `X-SFL-Display-Name`                       |

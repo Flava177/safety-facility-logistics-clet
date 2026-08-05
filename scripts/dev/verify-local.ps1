@@ -10,11 +10,9 @@
 $ErrorActionPreference = "Continue"
 
 $services = @(
-    @{ Name = "facilities";             Port = 8091; Covers = "S152, S153, S159" },
-    @{ Name = "safety-security";        Port = 8092; Covers = "SSEMP - unbuilt scope, starts only" },
-    @{ Name = "fleet-logistics";        Port = 8093; Covers = "S166, S168_fuel, S171. Serves /ui" },
-    @{ Name = "asset-visibility";       Port = 8094; Covers = "AVAMP-Lite" },
-    @{ Name = "emergency-notification"; Port = 8095; Covers = "S174" }
+    @{ Name = "facilities";      Port = 8091; Covers = "IFIMP - S152, S153, S159" },
+    @{ Name = "safety-security"; Port = 8092; Covers = "SSEMP - S174 built; S160-S163 unbuilt scope" },
+    @{ Name = "fleet-logistics"; Port = 8093; Covers = "FTLMP - S166, S168_fuel, S171, AVAMP-Lite. Serves /ui" }
 )
 
 $up = 0

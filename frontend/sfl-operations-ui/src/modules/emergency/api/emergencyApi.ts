@@ -61,56 +61,56 @@ export const emergencyRecordsApi = {
       `${BASE}/templates`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   template: (id: string, signal?: AbortSignal) =>
-    apiClient.get<NotificationTemplate>(`${BASE}/templates/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<NotificationTemplate>(`${BASE}/templates/${id}`, undefined, signal, 'safetySecurity'),
 
   createTemplate: (body: CreateTemplateRequest) =>
-    apiClient.post<NotificationTemplate>(`${BASE}/templates`, body, { service: 'emergency' }),
+    apiClient.post<NotificationTemplate>(`${BASE}/templates`, body, { service: 'safetySecurity' }),
 
   scenarios: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<EmergencyScenario>>(
       `${BASE}/scenarios`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createScenario: (body: CreateScenarioRequest) =>
-    apiClient.post<EmergencyScenario>(`${BASE}/scenarios`, body, { service: 'emergency' }),
+    apiClient.post<EmergencyScenario>(`${BASE}/scenarios`, body, { service: 'safetySecurity' }),
 
   audienceGroups: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<AudienceGroup>>(
       `${BASE}/audience-groups`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createAudienceGroup: (body: CreateAudienceGroupRequest) =>
-    apiClient.post<AudienceGroup>(`${BASE}/audience-groups`, body, { service: 'emergency' }),
+    apiClient.post<AudienceGroup>(`${BASE}/audience-groups`, body, { service: 'safetySecurity' }),
 
   recipientZones: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<RecipientZone>>(
       `${BASE}/recipient-zones`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createRecipientZone: (body: CreateRecipientZoneRequest) =>
-    apiClient.post<RecipientZone>(`${BASE}/recipient-zones`, body, { service: 'emergency' }),
+    apiClient.post<RecipientZone>(`${BASE}/recipient-zones`, body, { service: 'safetySecurity' }),
 
   scenario: (id: string, signal?: AbortSignal) =>
-    apiClient.get<EmergencyScenario>(`${BASE}/scenarios/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<EmergencyScenario>(`${BASE}/scenarios/${id}`, undefined, signal, 'safetySecurity'),
 
   audienceGroup: (id: string, signal?: AbortSignal) =>
-    apiClient.get<AudienceGroup>(`${BASE}/audience-groups/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<AudienceGroup>(`${BASE}/audience-groups/${id}`, undefined, signal, 'safetySecurity'),
 
   recipientZone: (id: string, signal?: AbortSignal) =>
-    apiClient.get<RecipientZone>(`${BASE}/recipient-zones/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<RecipientZone>(`${BASE}/recipient-zones/${id}`, undefined, signal, 'safetySecurity'),
 
   /**
    * Corrects an audience group's size and directory pointer.
@@ -121,7 +121,7 @@ export const emergencyRecordsApi = {
    * not editable: closed activations cite this group.
    */
   updateAudienceGroup: (id: string, body: { directoryReference?: string | null; recipientCount?: number }) =>
-    apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'emergency' }),
+    apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'safetySecurity' }),
 
   /** Retires or reinstates a record. Archiving is not deletion — activations citing it still resolve. */
   setLifecycle: (
@@ -129,7 +129,7 @@ export const emergencyRecordsApi = {
     id: string,
     lifecycle: RecordLifecycle,
   ) =>
-    apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'emergency' }),
+    apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'safetySecurity' }),
 };
 
 /** Activations — the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
@@ -139,7 +139,7 @@ export const activationsApi = {
       `${BASE}/activations`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   detail: (id: string, signal?: AbortSignal) =>
@@ -147,7 +147,7 @@ export const activationsApi = {
       `${BASE}/activations/${id}`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /** The activation plus its per-channel fan-out and acknowledgement count, in one read. */
@@ -156,7 +156,7 @@ export const activationsApi = {
       `${BASE}/activations/${id}/status`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /**
@@ -171,7 +171,7 @@ export const activationsApi = {
       `${BASE}/activations/${id}/history`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /** Per-recipient delivery receipts and acknowledgements. Closed gap 8. */
@@ -180,21 +180,21 @@ export const activationsApi = {
       `${BASE}/activations/${id}/delivery`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   create: (body: CreateActivationRequest) =>
-    apiClient.post<NotificationActivation>(`${BASE}/activations`, body, { service: 'emergency' }),
+    apiClient.post<NotificationActivation>(`${BASE}/activations`, body, { service: 'safetySecurity' }),
 
   submit: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/submit`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   approve: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/approve`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
@@ -202,19 +202,19 @@ export const activationsApi = {
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/reject`,
       { reason },
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   cancel: (id: string, body: ActivationReasonRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/cancel`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   /** The send. Fans out to every selected channel and stamps the fast-lane elapsed time. */
   activate: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/activate`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
@@ -222,31 +222,31 @@ export const activationsApi = {
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/degraded-fallback`,
       body,
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   afterActionApproval: (id: string, justification: string) =>
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/after-action-approval`,
       { justification },
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   allClear: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/all-clear`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   close: (id: string, body: CloseActivationRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/close`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   reopen: (id: string, body: ActivationReasonRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/reopen`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 };
@@ -261,7 +261,7 @@ export const activationsApi = {
 export const breakGlassApi = {
   send: (body: BreakGlassRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/break-glass`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
     }),
 };
 
@@ -272,15 +272,15 @@ export const drillsApi = {
       `${BASE}/drills`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   start: (body: StartDrillRequest) =>
-    apiClient.post<DrillRun>(`${BASE}/drills`, body, { service: 'emergency' }),
+    apiClient.post<DrillRun>(`${BASE}/drills`, body, { service: 'safetySecurity' }),
 
   complete: (id: string, body: CompleteDrillRequest) =>
     apiClient.post<DrillRun>(`${BASE}/drills/${id}/complete`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 };
@@ -293,11 +293,11 @@ export const emergencyDashboardApi = {
       `${BASE}/dashboard/breakdown`,
       { siteCode },
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   dashboard: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<EmergencyDashboard>(`${BASE}/dashboard`, { siteCode }, signal, 'emergency'),
+    apiClient.get<EmergencyDashboard>(`${BASE}/dashboard`, { siteCode }, signal, 'safetySecurity'),
 };
 
 export const emergencyReportsApi = {
@@ -314,7 +314,7 @@ export const emergencyReportsApi = {
       { siteCode },
       `emergency-activations-${siteCode}.csv`,
       'text/csv, application/json',
-      'emergency',
+      'safetySecurity',
     ),
 };
 
@@ -333,7 +333,7 @@ export const emergencyIntegrationsApi = {
       `${BASE}/integrations/inbox`,
       { recentLimit },
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   health: (signal?: AbortSignal) =>
@@ -341,13 +341,13 @@ export const emergencyIntegrationsApi = {
       `${BASE}/integrations/health`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   replay: (messageId: string) =>
     apiClient.post<{ messageId: string; requeued: boolean }>(
       `${BASE}/integrations/outbox/${messageId}/replay`,
       undefined,
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 };

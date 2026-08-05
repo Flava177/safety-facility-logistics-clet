@@ -10,9 +10,13 @@ Phase 1 covers thirteen Fast-Track systems across four programmes:
 | **FTLMP**  | Fleet, Transport & Logistics Management          |
 | **AVAMP**  | Asset Visibility & Asset Management (Lite)       |
 
-Five deployable Spring Boot services and one React dashboard. Each service owns its own schema,
-its own migrations and its own API boundary — services talk through APIs and events, never through
-each other's tables.
+**Three deployable Spring Boot services — one per platform — and one React dashboard.** Each service
+owns its own schemas, its own migrations and its own API boundary; services talk through APIs and
+events, never through each other's tables.
+
+AVAMP is not a fourth service. It is the asset and device reference layer supporting all thirteen
+systems, and S168 Asset Tagging is Phase 2 in the parent mapping, so it ships as a schema inside
+FTLMP rather than as a deployable of its own.
 
 ## Release 1 scope
 
@@ -40,11 +44,12 @@ integration with the external Comms system.
 
 ```
 services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
-  sfl-facilities-service             IFIMP  — S152, S153, S159             :8091
-  sfl-safety-security-service        SSEMP  — scaffold only                :8092
-  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171; serves /ui :8093
-  sfl-asset-visibility-service       AVAMP-Lite                            :8094
-  sfl-emergency-notification-service S174                                  :8095
+  sfl-facilities-service             IFIMP  — S152, S153, S159                    :8091
+                                     schema: facilities
+  sfl-safety-security-service        SSEMP  — S174 built; S160-S163 not built     :8092
+                                     schemas: safety_security, emergency_notification
+  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171, AVAMP; serves /ui :8093
+                                     schemas: fleet_logistics, asset_visibility
   sfl-service-common                 Shared kernel — principal, RBAC, error and event envelopes
 frontend/sfl-operations-ui           React 19 · TypeScript · Vite — the only user interface
 scripts/                             Local development helpers
@@ -115,7 +120,7 @@ start the databases and set:
 ```powershell
 $env:SFL_FACILITIES_TEST_DB_URL = 'jdbc:postgresql://localhost:55441/sfl_facilities_migration_test'
 $env:SFL_FLEET_LOGISTICS_TEST_DB_URL = 'jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e'
-$env:SFL_EMERGENCY_NOTIFICATION_TEST_DB_URL = 'jdbc:postgresql://localhost:55445/sfl_emergency_notification_service_e2e'
+$env:SFL_SAFETY_SECURITY_TEST_DB_URL = 'jdbc:postgresql://localhost:55442/sfl_safety_security_service_e2e'
 ```
 
 The facilities one points at a **dedicated, empty** database on purpose: the migration suite asserts

@@ -1,0 +1,44 @@
+package gh.edu.clet.sfl.safetysecurity.emergency.api;
+
+import gh.edu.clet.sfl.common.api.ApiResponse;
+import gh.edu.clet.sfl.safetysecurity.emergency.application.service.EmergencyDashboardService;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.servlet.http.HttpServletRequest;
+import java.util.Map;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+/** SRS-SFL-S174-05: emergency dashboard (active activations, break-glass, failed recipients, freshness). */
+@RestController
+@RequestMapping("/api/v1/emergency/dashboard")
+@Tag(name = "Dashboards and Reports")
+public class EmergencyDashboardController {
+
+    private final EmergencyDashboardService service;
+    private final EmergencyActorResolver actors;
+
+    public EmergencyDashboardController(EmergencyDashboardService service, EmergencyActorResolver actors) {
+        this.service = service;
+        this.actors = actors;
+    }
+
+    @GetMapping
+    public ApiResponse<Map<String, Object>> dashboard(@RequestParam String siteCode, HttpServletRequest h) {
+        return ApiResponse.ok(service.dashboard(siteCode, actors.resolve(h)));
+    }
+
+    /**
+     * The same population, split by status, priority, mode and channel.
+     *
+     * <p>Closes gap 12. The dashboard published seven totals and no breakdown at all, so every chart
+     * on the screen had to be bucketed in the browser from a page of fetched records — which is only
+     * ever the truth about that page.
+     */
+    @GetMapping("/breakdown")
+    public ApiResponse<Map<String, Map<String, Long>>> breakdown(@RequestParam String siteCode,
+            HttpServletRequest h) {
+        return ApiResponse.ok(service.breakdown(siteCode, actors.resolve(h)));
+    }
+}

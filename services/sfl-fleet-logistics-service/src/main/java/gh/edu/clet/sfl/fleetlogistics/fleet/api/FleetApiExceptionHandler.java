@@ -31,9 +31,23 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * rather than from the access policy: the failed request's transaction has already rolled back by the
  * time the handler runs, so the denial record survives (SRS-SFL-S166-03).
  *
- * <p>Scoped to the fleet controllers only, so the other services' handlers are unaffected.
+ * <p>Scoped to the fleet, fuel, dispatch and system controllers — <strong>not</strong> to
+ * {@code ..assets..}, which has its own handler and its own {@code ASSETVIS_*} codes.
+ *
+ * <p>It used to say {@code basePackages = "gh.edu.clet.sfl.fleetlogistics"}, which was correct while
+ * AVAMP was a separate deployable and is not now that it sits under this root. Left as it was, this
+ * handler and {@code AssetVisibilityApiExceptionHandler} would both claim the asset controllers, and
+ * which one answered a validation failure would depend on classpath scanning order. Listing the four
+ * packages makes the two sets disjoint, so no ordering annotation is needed to make the behaviour
+ * defined — and a {@code @WebMvcTest} slice over an asset controller no longer drags this handler,
+ * and therefore {@code FleetAuditService}, into a context that has no use for either.
  */
-@RestControllerAdvice(basePackages = "gh.edu.clet.sfl.fleetlogistics")
+@RestControllerAdvice(basePackages = {
+        "gh.edu.clet.sfl.fleetlogistics.api",
+        "gh.edu.clet.sfl.fleetlogistics.fleet",
+        "gh.edu.clet.sfl.fleetlogistics.fuel",
+        "gh.edu.clet.sfl.fleetlogistics.dispatch"
+})
 class FleetApiExceptionHandler {
 
     private static final Logger log = LoggerFactory.getLogger(FleetApiExceptionHandler.class);
