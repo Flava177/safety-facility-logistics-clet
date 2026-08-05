@@ -31,6 +31,7 @@ import { readSession } from 'shared/auth/session';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { isPersona } from 'shared/layout/personas';
 import { useRecentValues } from 'shared/hooks/useRecentValues';
+import FormSummary from 'shared/components/FormSummary';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 const REFERENCE_WINDOW = 200;
@@ -285,6 +286,15 @@ export const CreateLogbookDialog = ({
   const incomplete =
     !form.values.endTime || form.values.endOdometer === '' || !form.values.declarationAccepted;
 
+  const logbookDistance =
+    form.values.startOdometer !== '' && form.values.endOdometer !== ''
+      ? `${Number(form.values.startOdometer).toLocaleString()} → ${Number(
+          form.values.endOdometer,
+        ).toLocaleString()} km`
+      : form.values.startOdometer !== ''
+        ? `from ${Number(form.values.startOdometer).toLocaleString()} km`
+        : null;
+
   return (
     <FormDialog
       open={open}
@@ -298,6 +308,25 @@ export const CreateLogbookDialog = ({
       submitting={form.submitting}
       formError={form.formError}
       maxWidth="lg"
+      summary={
+        <FormSummary
+          items={[
+            {
+              label: 'Journey',
+              value:
+                form.values.origin && form.values.destination
+                  ? `${form.values.origin} → ${form.values.destination}`
+                  : null,
+            },
+            { label: 'Date', value: form.values.journeyDate || null },
+            { label: 'Odometer', value: logbookDistance },
+            // A draft that is missing an end time, a closing reading or the declaration cannot be
+            // submitted for review, and `incomplete` already knows it — saying so here means the
+            // operator learns it before saving rather than from the next screen.
+            { label: 'State', value: incomplete ? 'Draft — not yet complete' : 'Complete' },
+          ]}
+        />
+      }
       onClose={onClose}
       onSubmit={form.submit}
     >

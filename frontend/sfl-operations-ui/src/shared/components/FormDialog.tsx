@@ -15,6 +15,14 @@ interface FormDialogProps {
   formError?: FleetApiError;
   maxWidth?: ModalSize;
   destructive?: boolean;
+  /**
+   * A one-line read-back of what is about to be submitted, pinned above the actions.
+   *
+   * <p>Outside `children` on purpose. The body scrolls at `68vh`, so anything inside it can be off
+   * screen at the moment the operator reaches the submit button — which is the one moment a summary
+   * is for. See {@link FormSummary}.
+   */
+  summary?: ReactNode;
   onClose: () => void;
   onSubmit: () => void;
   children: ReactNode;
@@ -37,6 +45,7 @@ const FormDialog = ({
   formError,
   maxWidth = 'md',
   destructive,
+  summary,
   onClose,
   onSubmit,
   children,
@@ -80,6 +89,8 @@ const FormDialog = ({
           </Alert>
         )}
       </div>
+
+      {summary}
 
       <footer className="flex items-center justify-end gap-2 border-t border-gray-200 bg-gray-50 px-6 py-4">
         <Button variant="ghost" onClick={onClose} disabled={submitting}>

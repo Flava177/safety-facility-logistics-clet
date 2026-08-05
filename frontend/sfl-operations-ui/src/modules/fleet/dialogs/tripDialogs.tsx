@@ -23,7 +23,12 @@ import {
   TextAreaInput,
   TextInput,
 } from 'shared/components/fields';
-import { formatNumber, fromLocalInputValue, nowLocalInputValue } from 'shared/components/format';
+import {
+  formatDateTime,
+  formatNumber,
+  fromLocalInputValue,
+  nowLocalInputValue,
+} from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import {
@@ -37,6 +42,7 @@ import {
 import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 import { useRecentValues } from 'shared/hooks/useRecentValues';
+import FormSummary from 'shared/components/FormSummary';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -210,6 +216,14 @@ export const CreateTripDialog = ({
   const { vehicles, drivers } = useAssignableOptions(form.values.siteCode || undefined, open);
   const [assignmentPermitted, setAssignmentPermitted] = useState(true);
 
+  /** Both ends of the planned window, or nothing — half a window tells the reader less than none. */
+  const plannedWindow =
+    form.values.plannedStart && form.values.plannedEnd
+      ? `${formatDateTime(fromLocalInputValue(form.values.plannedStart))} → ${formatDateTime(
+          fromLocalInputValue(form.values.plannedEnd),
+        )}`
+      : null;
+
   return (
     <FormDialog
       open={open}
@@ -221,6 +235,27 @@ export const CreateTripDialog = ({
       submitDisabled={Boolean(form.values.vehicleId) && !assignmentPermitted}
       formError={form.formError}
       maxWidth="md"
+      summary={
+        <FormSummary
+          items={[
+            {
+              label: 'Route',
+              value:
+                form.values.origin && form.values.destination
+                  ? `${form.values.origin} → ${form.values.destination}`
+                  : null,
+            },
+            { label: 'Window', value: plannedWindow },
+            { label: 'Mode', value: humanise(form.values.operatingMode) },
+            {
+              label: 'Crew',
+              // "Assign later" is a real answer, not a blank — the disclosure is collapsed by
+              // default and a dash here would read as something left undone.
+              value: form.values.vehicleId || form.values.driverId ? 'Assigned now' : 'Assign later',
+            },
+          ]}
+        />
+      }
       onClose={onClose}
       onSubmit={form.submit}
     >
@@ -553,6 +588,11 @@ export const CloseTripDialog = ({
     },
   });
 
+  const distanceCovered =
+    trip.startOdometer !== null && form.values.endOdometer !== ''
+      ? `${formatNumber(Math.max(0, Number(form.values.endOdometer) - trip.startOdometer))} km`
+      : null;
+
   return (
     <FormDialog
       open={open}
@@ -561,6 +601,25 @@ export const CloseTripDialog = ({
       submitLabel="Close trip"
       submitting={form.submitting}
       formError={form.formError}
+      summary={
+        <FormSummary
+          items={[
+            {
+              label: 'Odometer',
+              value:
+                trip.startOdometer !== null && form.values.endOdometer !== ''
+                  ? `${formatNumber(trip.startOdometer)} → ${formatNumber(
+                      Number(form.values.endOdometer),
+                    )} km`
+                  : null,
+            },
+            // The whole point of the line. An odometer reading is unremarkable in isolation; a trip
+            // that covered 38,000 km is not, and this is the last place to notice before closure.
+            { label: 'Covered', value: distanceCovered, emphasis: true },
+            { label: 'Evidence', value: form.values.closureEvidenceId ? 'Selected' : null },
+          ]}
+        />
+      }
       onClose={onClose}
       onSubmit={form.submit}
     >

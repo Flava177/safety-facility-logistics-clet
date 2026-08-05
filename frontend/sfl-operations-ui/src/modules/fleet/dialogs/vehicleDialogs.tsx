@@ -34,6 +34,7 @@ import {
 } from 'shared/validation/validators';
 import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
+import FormSummary from 'shared/components/FormSummary';
 
 interface BaseDialogProps {
   open: boolean;
@@ -135,6 +136,21 @@ export const RegisterVehicleDialog = ({
       submitting={form.submitting}
       formError={form.formError}
       maxWidth="md"
+      summary={
+        <FormSummary
+          items={[
+            { label: 'Vehicle', value: form.values.registrationNumber },
+            {
+              label: 'Model',
+              value: [form.values.make, form.values.model, form.values.manufactureYear]
+                .filter(Boolean)
+                .join(' ') || null,
+            },
+            { label: 'Site', value: form.values.siteCode },
+            { label: 'Owner', value: form.values.operationalOwner },
+          ]}
+        />
+      }
       onClose={onClose}
       onSubmit={form.submit}
     >
