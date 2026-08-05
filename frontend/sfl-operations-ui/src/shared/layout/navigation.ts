@@ -539,16 +539,6 @@ export const navSections: NavSection[] = [
         permission: 'FLEET_DASHBOARD_READ',
       },
       {
-        label: 'Trips & assignments',
-        to: fleetPaths.trips,
-        icon: 'route',
-        matchPrefix: fleetPaths.trips,
-        description: 'Plan, assign, start and close movements',
-        // Enforced by TripApplicationService. A driver holds this and sees the register; planning,
-        // assigning and closing are separate permissions the page gates its controls on.
-        permission: 'FLEET_TRIP_READ',
-      },
-      {
         label: 'Workflow queue',
         to: fleetPaths.workflow,
         icon: 'workflow',
@@ -558,6 +548,16 @@ export const navSections: NavSection[] = [
         // and escalations across the fleet; a driver records an inspection against their own trip
         // and has no business reading everybody else's defects.
         permission: 'FLEET_WORKFLOW_READ',
+      },
+      {
+        label: 'Trips & assignments',
+        to: fleetPaths.trips,
+        icon: 'route',
+        matchPrefix: fleetPaths.trips,
+        description: 'Plan, assign, start and close movements',
+        // Enforced by TripApplicationService. A driver holds this and sees the register; planning,
+        // assigning and closing are separate permissions the page gates its controls on.
+        permission: 'FLEET_TRIP_READ',
       },
     ],
   },
