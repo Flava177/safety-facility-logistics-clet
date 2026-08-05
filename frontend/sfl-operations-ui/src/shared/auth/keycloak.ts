@@ -15,7 +15,7 @@ import { SflSession, clearSession, readSession, sessionFromTokens, writeSession 
  * here: the dashboard handles the user's actual password, so it cannot support multi-factor,
  * step-up, or an external identity provider, and every one of those is a plausible CLET requirement.
  * Authorization Code with PKCE is the flow that replaces it, and it needs a redirect URI, a callback
- * route and PKCE state — none of which exists yet.
+ * route and PKCE state - none of which exists yet.
  *
  * The grant is used here because the realm already enables it and it makes A1's authentication
  * reachable from a browser today. `docs/frontend/` records the migration to PKCE as owed work rather
@@ -23,8 +23,8 @@ import { SflSession, clearSession, readSession, sessionFromTokens, writeSession 
  *
  * <h2>Errors say which of the two things went wrong</h2>
  *
- * "Cannot sign in" covers two completely different situations — the credentials are wrong, or the
- * identity provider is not running — and on a developer laptop it is nearly always the second. They
+ * "Cannot sign in" covers two completely different situations - the credentials are wrong, or the
+ * identity provider is not running - and on a developer laptop it is nearly always the second. They
  * are reported separately, because telling somebody their password is wrong when Keycloak is simply
  * down sends them to reset a password that was fine.
  */
@@ -106,7 +106,7 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
       };
     }
     if (body.error === 'invalid_client' || body.error === 'unauthorized_client') {
-      // The realm exists but the client is misconfigured — a deployment problem, not a user one.
+      // The realm exists but the client is misconfigured - a deployment problem, not a user one.
       return {
         ok: false,
         reason: 'disabled',

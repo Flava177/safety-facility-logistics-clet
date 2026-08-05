@@ -32,8 +32,8 @@ const SOURCE_FILTERS = [
  * The fuel transaction register.
  *
  * Every filter here goes to the service, and the table is server-paged with a real total. Source
- * and vendor used to be applied in the browser over a capped window — so "manual captures at this
- * site" really meant "manual captures among the first two hundred" — and are now query parameters.
+ * and vendor used to be applied in the browser over a capped window - so "manual captures at this
+ * site" really meant "manual captures among the first two hundred" - and are now query parameters.
  */
 const FuelTransactionsPage = () => {
   const navigate = useNavigate();

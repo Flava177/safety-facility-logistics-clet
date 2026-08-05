@@ -68,7 +68,7 @@ class JpaReadinessRepositoryAdapter implements ReadinessRepository {
      *
      * <p>A checklist naming both the space type and the operating mode scores 2, one naming a single
      * dimension scores 1, and a catch-all scores 0. Ties break on the checklist code so the choice is
-     * deterministic — an assessor must get the same list twice for the same space.
+     * deterministic - an assessor must get the same list twice for the same space.
      */
     @Override
     public Optional<ReadinessChecklist> findApplicableChecklist(String siteCode, SpaceType spaceType,

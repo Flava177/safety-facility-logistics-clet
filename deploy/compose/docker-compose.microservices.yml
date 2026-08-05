@@ -51,7 +51,7 @@ services:
   keycloak:
     image: quay.io/keycloak/keycloak:25.0
     # `--import-realm` is the half that was missing. Without it start-dev comes up with no `sfl`
-    # realm, so every service's issuer-uri points at a realm that does not exist — and with security
+    # realm, so every service's issuer-uri points at a realm that does not exist - and with security
     # now on by default, that is a startup failure rather than a quiet degradation. The realm carries
     # all 26 SflRole values, the site_scopes mapper the actor resolvers already read, and one user per
     # persona so a portal can be signed into rather than only reasoned about.

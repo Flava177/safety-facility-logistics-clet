@@ -159,7 +159,7 @@ class S152MandatoryScenariosTest {
 
         @Test
         void an_archived_record_releases_its_identifier() {
-            // Archival is retirement, not deletion — but the code becomes reusable, which is what lets a
+            // Archival is retirement, not deletion - but the code becomes reusable, which is what lets a
             // demolished building's code be given to its replacement.
             Site site = createSite();
             Building building = createBuilding(site);

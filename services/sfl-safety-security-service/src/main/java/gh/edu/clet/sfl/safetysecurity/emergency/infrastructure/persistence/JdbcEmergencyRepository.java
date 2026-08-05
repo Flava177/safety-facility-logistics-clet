@@ -61,7 +61,7 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     /**
      * A WHERE clause and its bind values, minus the leading site-scope array.
      *
-     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * <p>Built once per query and used twice - for the count and for the page - so the two can never
      * disagree about which records they are describing.
      */
     private record Where(StringBuilder sql, List<Object> args) {
@@ -70,7 +70,7 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
             if (value != null) { sql.append(" AND ").append(fragment); args.add(value); }
             return this;
         }
-        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        /** A predicate with no bind value - for IS NULL / IS NOT NULL and set tests. */
         Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
     }
 

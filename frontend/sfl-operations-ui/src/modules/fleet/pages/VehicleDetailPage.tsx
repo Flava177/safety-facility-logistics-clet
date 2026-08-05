@@ -36,20 +36,20 @@ import { fleetPaths } from 'shared/layout/navigation';
 
 type TabKey = 'overview' | 'compliance' | 'service' | 'trips' | 'movement';
 
-/** A record row inside a tab panel — bordered, two columns, wraps on narrow viewports. */
+/** A record row inside a tab panel - bordered, two columns, wraps on narrow viewports. */
 const recordRow =
   'flex flex-col justify-between gap-3 rounded-xl border border-gray-200 p-3 sm:flex-row';
 
 /**
  * Vehicle detail.
  *
- * Readiness comes from `GET /vehicles/{id}/readiness` — the same `FleetReadinessService` policy the
+ * Readiness comes from `GET /vehicles/{id}/readiness` - the same `FleetReadinessService` policy the
  * assignment itself runs, now with a door of its own. It used to be fetched through
  * `trips/assignment-preview` with only a `vehicleId`, which gave the right answer through an endpoint
  * shaped for a question nobody was asking here.
  *
  * Movement is a **vendor projection**, so the panel shows `recordedAt` on every row and does not
- * decide on the reader's behalf how stale is too stale — that depends on what is being asked.
+ * decide on the reader's behalf how stale is too stale - that depends on what is being asked.
  */
 const VehicleDetailPage = () => {
   const { vehicleId = '' } = useParams();
@@ -79,7 +79,7 @@ const VehicleDetailPage = () => {
   /**
    * Movement snapshots.
    *
-   * Coordinates are shown to five decimal places — about a metre, which is finer than any fleet
+   * Coordinates are shown to five decimal places - about a metre, which is finer than any fleet
    * telematics feed is honest to and coarse enough not to imply survey accuracy. `recordedAt` leads
    * the row because it is the only thing that says whether the position still means anything.
    */
@@ -116,7 +116,7 @@ const VehicleDetailPage = () => {
         align: 'right',
         cell: (row) =>
           row.odometerValue === null ? (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ) : (
             formatOdometer(row.odometerValue)
           ),
@@ -128,7 +128,7 @@ const VehicleDetailPage = () => {
         hideBelowLg: true,
         cell: (row) => (
           <span className="font-mono text-theme-xs text-gray-600">
-            {row.correlationId ? row.correlationId.slice(0, 8) : '—'}
+            {row.correlationId ? row.correlationId.slice(0, 8) : '-'}
           </span>
         ),
       },
@@ -288,7 +288,7 @@ const VehicleDetailPage = () => {
                         { label: 'Registration number', value: vehicle.data.registrationNumber },
                         {
                           label: 'VIN',
-                          value: vehicle.data.vin ?? '—',
+                          value: vehicle.data.vin ?? '-',
                           masked: vehicle.data.vinMasked,
                         },
                         { label: 'Category', value: humanise(vehicle.data.category) },
@@ -298,7 +298,7 @@ const VehicleDetailPage = () => {
                         { label: 'Operational owner', value: vehicle.data.operationalOwner },
                         {
                           label: 'Acquisition reference',
-                          value: vehicle.data.acquisitionReference ?? '—',
+                          value: vehicle.data.acquisitionReference ?? '-',
                         },
                         {
                           label: 'Odometer',
@@ -335,7 +335,7 @@ const VehicleDetailPage = () => {
                               Open trip
                             </Link>
                           ) : (
-                            '—'
+                            '-'
                           ),
                         },
                         { label: 'Record version', value: vehicle.data.version },
@@ -345,9 +345,9 @@ const VehicleDetailPage = () => {
                     <KeyValueGrid
                       columns={4}
                       items={[
-                        { label: 'Created by', value: vehicle.data.createdBy ?? '—' },
+                        { label: 'Created by', value: vehicle.data.createdBy ?? '-' },
                         { label: 'Created at', value: formatDateTime(vehicle.data.createdAt) },
-                        { label: 'Last modified by', value: vehicle.data.lastModifiedBy ?? '—' },
+                        { label: 'Last modified by', value: vehicle.data.lastModifiedBy ?? '-' },
                         {
                           label: 'Last modified at',
                           value: formatDateTime(vehicle.data.lastModifiedAt),
@@ -374,7 +374,7 @@ const VehicleDetailPage = () => {
                       error={compliance.error}
                       empty={(compliance.data?.length ?? 0) === 0}
                       emptyTitle="No compliance documents"
-                      emptyHint="Mandatory documents are missing — the vehicle carries a blocking readiness blocker until they are registered."
+                      emptyHint="Mandatory documents are missing - the vehicle carries a blocking readiness blocker until they are registered."
                       onRetry={compliance.refetch}
                       minHeight={160}
                     >
@@ -538,7 +538,7 @@ const VehicleDetailPage = () => {
                         dense
                       />
                       <p className="px-5 pt-3 text-theme-xs text-gray-500">
-                        The twenty-five most recent snapshots. This is a vendor projection — SFL
+                        The twenty-five most recent snapshots. This is a vendor projection - SFL
                         records what a telematics provider reported and when, and does not correct
                         it. Judge freshness from the recorded time: a position from last week is not
                         wrong, it is just old.
@@ -558,14 +558,14 @@ const VehicleDetailPage = () => {
 
             {/*
              * Mounted only while open. These forms are seeded from the vehicle record, and a
-             * dialog that stays mounted keeps the values it was first given — so after a save and
+             * dialog that stays mounted keeps the values it was first given - so after a save and
              * refetch the edit form would still be offering the superseded make, capacity and
              * odometer back to the service.
              */}
             {/*
               * A periodic inspection needs no trip, which is exactly why the action lives here on
-              * the vehicle rather than only on a trip. Recording one can change readiness — a
-              * critical finding takes the vehicle out of service — so the readiness card refetches.
+              * the vehicle rather than only on a trip. Recording one can change readiness - a
+              * critical finding takes the vehicle out of service - so the readiness card refetches.
               */}
             {dialog === 'inspection' && (
               <RecordStandaloneInspectionDialog

@@ -58,7 +58,7 @@ interface BaseProps {
 /**
  * Vehicle and driver pickers.
  *
- * Loaded from the register rather than typed as raw UUIDs — an operator picks a registration
+ * Loaded from the register rather than typed as raw UUIDs - an operator picks a registration
  * number, and the eligibility of the pick is then previewed against the real policy.
  */
 const useAssignableOptions = (siteCode: string | undefined, enabled: boolean) => {
@@ -118,7 +118,7 @@ const AssignmentPreview = ({
   const permitsAssignment = preview.data?.permitsAssignment;
 
   useEffect(() => {
-    // Undefined while the preview is loading or unavailable — an unknown must never block the form.
+    // Undefined while the preview is loading or unavailable - an unknown must never block the form.
     onPermitsAssignmentChange?.(permitsAssignment !== false);
   }, [permitsAssignment, onPermitsAssignmentChange]);
 
@@ -144,7 +144,7 @@ const AssignmentPreview = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Create a trip — POST /api/v1/fleet/trips
+ * Create a trip - POST /api/v1/fleet/trips
  * ------------------------------------------------------------------------------------------- */
 
 export const CreateTripDialog = ({
@@ -216,7 +216,7 @@ export const CreateTripDialog = ({
   const { vehicles, drivers } = useAssignableOptions(form.values.siteCode || undefined, open);
   const [assignmentPermitted, setAssignmentPermitted] = useState(true);
 
-  /** Both ends of the planned window, or nothing — half a window tells the reader less than none. */
+  /** Both ends of the planned window, or nothing - half a window tells the reader less than none. */
   const plannedWindow =
     form.values.plannedStart && form.values.plannedEnd
       ? `${formatDateTime(fromLocalInputValue(form.values.plannedStart))} → ${formatDateTime(
@@ -228,7 +228,7 @@ export const CreateTripDialog = ({
     <FormDialog
       open={open}
       title="Plan a trip"
-      description="Planned first, crewed later — or assign a vehicle and driver now and it is assigned immediately."
+      description="Planned first, crewed later - or assign a vehicle and driver now and it is assigned immediately."
       submitLabel="Create trip"
       submitting={form.submitting}
       // An immediate assignment carries the same readiness policy the assignment endpoint applies.
@@ -249,7 +249,7 @@ export const CreateTripDialog = ({
             { label: 'Mode', value: humanise(form.values.operatingMode) },
             {
               label: 'Crew',
-              // "Assign later" is a real answer, not a blank — the disclosure is collapsed by
+              // "Assign later" is a real answer, not a blank - the disclosure is collapsed by
               // default and a dash here would read as something left undone.
               value: form.values.vehicleId || form.values.driverId ? 'Assigned now' : 'Assign later',
             },
@@ -318,8 +318,8 @@ export const CreateTripDialog = ({
       />
 
       {/*
-        Assignment is genuinely optional — a trip may be planned now and crewed later, which is the
-        common case — but it was presented as two more fields on the same wall, so every planner met
+        Assignment is genuinely optional - a trip may be planned now and crewed later, which is the
+        common case - but it was presented as two more fields on the same wall, so every planner met
         eight fields when five would do. Behind a disclosure it stays one click away and stops
         reading like something that must be answered.
 
@@ -332,7 +332,7 @@ export const CreateTripDialog = ({
       >
         <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
           Assign a vehicle and driver now
-          <span className="ml-1 font-normal text-gray-500">— optional, can be done later</span>
+          <span className="ml-1 font-normal text-gray-500">- optional, can be done later</span>
         </summary>
 
       <div className={`mt-4 ${twoColumn}`}>
@@ -342,7 +342,7 @@ export const CreateTripDialog = ({
           onChange={(value) => form.setValue('vehicleId', value)}
           options={(vehicles.data?.content ?? []).map((vehicle) => ({
             value: vehicle.id,
-            label: `${vehicle.registrationNumber} — ${vehicle.make} ${vehicle.model} (${humanise(
+            label: `${vehicle.registrationNumber} - ${vehicle.make} ${vehicle.model} (${humanise(
               vehicle.availabilityStatus,
             )})`,
           }))}
@@ -358,7 +358,7 @@ export const CreateTripDialog = ({
           onChange={(value) => form.setValue('driverId', value)}
           options={(drivers.data?.content ?? []).map((driver) => ({
             value: driver.id,
-            label: `${driver.displayName} — class ${driver.licenceClass} (${humanise(
+            label: `${driver.displayName} - class ${driver.licenceClass} (${humanise(
               driver.eligibilityStatus,
             )})`,
           }))}
@@ -387,7 +387,7 @@ export const CreateTripDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Assign or reassign — PATCH /api/v1/fleet/trips/{id}/assignment
+ * Assign or reassign - PATCH /api/v1/fleet/trips/{id}/assignment
  * ------------------------------------------------------------------------------------------- */
 
 export const AssignTripDialog = ({
@@ -444,7 +444,7 @@ export const AssignTripDialog = ({
           onChange={(value) => form.setValue('vehicleId', value)}
           options={(vehicles.data?.content ?? []).map((vehicle) => ({
             value: vehicle.id,
-            label: `${vehicle.registrationNumber} — ${humanise(vehicle.availabilityStatus)}`,
+            label: `${vehicle.registrationNumber} - ${humanise(vehicle.availabilityStatus)}`,
           }))}
           {...form.fieldProps('vehicleId')}
         />
@@ -456,7 +456,7 @@ export const AssignTripDialog = ({
           onChange={(value) => form.setValue('driverId', value)}
           options={(drivers.data?.content ?? []).map((driver) => ({
             value: driver.id,
-            label: `${driver.displayName} — ${humanise(driver.eligibilityStatus)}`,
+            label: `${driver.displayName} - ${humanise(driver.eligibilityStatus)}`,
           }))}
           {...form.fieldProps('driverId')}
         />
@@ -484,7 +484,7 @@ export const AssignTripDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Start — PATCH /api/v1/fleet/trips/{id}/start
+ * Start - PATCH /api/v1/fleet/trips/{id}/start
  * ------------------------------------------------------------------------------------------- */
 
 export const StartTripDialog = ({
@@ -547,7 +547,7 @@ export const StartTripDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Close — PATCH /api/v1/fleet/trips/{id}/closure
+ * Close - PATCH /api/v1/fleet/trips/{id}/closure
  * ------------------------------------------------------------------------------------------- */
 
 export const CloseTripDialog = ({
@@ -597,7 +597,7 @@ export const CloseTripDialog = ({
     <FormDialog
       open={open}
       title="Close trip"
-      description="Closure reason and closure evidence are both mandatory — the service refuses closure without them."
+      description="Closure reason and closure evidence are both mandatory - the service refuses closure without them."
       submitLabel="Close trip"
       submitting={form.submitting}
       formError={form.formError}
@@ -713,7 +713,7 @@ export const HoldTripDialog = ({
 /**
  * The assigned driver answers for their trip (SRS-SFL-S166-02).
  *
- * Confirming needs no dialog of its own — there is nothing to collect — but deferring does, because
+ * Confirming needs no dialog of its own - there is nothing to collect - but deferring does, because
  * the reason is what a dispatcher acts on. Both are handled here so the two answers are written the
  * same way and cannot drift apart.
  *
@@ -765,7 +765,7 @@ export const AcknowledgeTripDialog = ({
         <>
           <Alert variant="info">
             The trip stays assigned to you and keeps its vehicle. Deferring tells the dispatcher you
-            cannot take it as scheduled — it does not release the trip.
+            cannot take it as scheduled - it does not release the trip.
           </Alert>
           <TextAreaInput
             label="Why you cannot take this trip"
@@ -809,7 +809,7 @@ export const CancelTripDialog = ({
     <FormDialog
       open={open}
       title="Cancel trip"
-      description={`${trip.tripNumber} will be cancelled. This cannot be undone — the record stays in history.`}
+      description={`${trip.tripNumber} will be cancelled. This cannot be undone - the record stays in history.`}
       submitLabel="Cancel trip"
       submitting={form.submitting}
       formError={form.formError}
@@ -830,7 +830,7 @@ export const CancelTripDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Record an inspection — POST /api/v1/fleet/trips/{id}/inspections
+ * Record an inspection - POST /api/v1/fleet/trips/{id}/inspections
  * ------------------------------------------------------------------------------------------- */
 
 interface FindingDraft {
@@ -916,7 +916,7 @@ export const RecordInspectionDialog = ({
     <FormDialog
       open={open}
       title="Record an inspection"
-      description={`${trip.tripNumber}. Findings decide the result — and a critical defect blocks the vehicle from use.`}
+      description={`${trip.tripNumber}. Findings decide the result - and a critical defect blocks the vehicle from use.`}
       submitLabel="Record inspection"
       submitting={form.submitting}
       formError={form.formError}
@@ -962,7 +962,7 @@ export const RecordInspectionDialog = ({
 
       {findings.length === 0 ? (
         <p className="text-theme-sm text-gray-500">
-          No findings recorded — this inspection will pass.
+          No findings recorded - this inspection will pass.
         </p>
       ) : (
         <div className="space-y-3">
@@ -1018,7 +1018,7 @@ export const RecordInspectionDialog = ({
 
       <Alert variant={hasCritical ? 'error' : findings.length > 0 ? 'warning' : 'success'}>
         Expected result: <strong>{humanise(predictedResult)}</strong>
-        {hasCritical && ' — a critical defect blocks the vehicle from use until it is resolved.'}
+        {hasCritical && ' - a critical defect blocks the vehicle from use until it is resolved.'}
       </Alert>
     </FormDialog>
   );

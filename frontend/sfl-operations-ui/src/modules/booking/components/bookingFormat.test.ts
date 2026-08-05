@@ -13,7 +13,7 @@ import {
 /**
  * The formatting decisions worth pinning down.
  *
- * Tones and labels are not tested — they are taste, and a test of taste is a test that fails on every
+ * Tones and labels are not tested - they are taste, and a test of taste is a test that fails on every
  * design change. What is tested is the two places where getting it wrong produces a **wrong booking**
  * rather than an ugly one: the local/UTC round trip, and the window validation that decides whether a
  * request is sent at all.
@@ -55,7 +55,7 @@ describe('window validation', () => {
   /*
     Only the two rules that need no context. Whether the window has passed, whether it is inside the
     site's booking horizon and whether the space is free are decisions with context that the service
-    owns — guessing at them here would produce a screen refusing bookings the estate would have taken,
+    owns - guessing at them here would produce a screen refusing bookings the estate would have taken,
     which is the failure nobody reports because it looks like the rules.
   */
   it('refuses an end at or before its start', () => {
@@ -95,7 +95,7 @@ describe('formatWindow', () => {
   });
 
   it('states both dates when a booking spans days', () => {
-    // An overnight setup is real — an examination hall laid out the evening before.
+    // An overnight setup is real - an examination hall laid out the evening before.
     const formatted = formatWindow('2026-08-04T22:00:00Z', '2026-08-05T06:00:00Z');
     expect(formatted.match(/Aug/g) ?? []).toHaveLength(2);
   });

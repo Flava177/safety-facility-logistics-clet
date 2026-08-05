@@ -17,7 +17,7 @@ interface CreateScheduleDialogProps {
   onSubmit: (request: CreateScheduleRequest) => Promise<void>;
 }
 
-/** A schedule cannot raise corrective work — that answers a fault, and nothing is wrong yet. */
+/** A schedule cannot raise corrective work - that answers a fault, and nothing is wrong yet. */
 const SCHEDULE_TYPES: WorkOrderType[] = ['PREVENTIVE', 'INSPECTION'];
 
 /**
@@ -33,7 +33,7 @@ const SCHEDULE_TYPES: WorkOrderType[] = ['PREVENTIVE', 'INSPECTION'];
  * ## Why the asset is mandatory
  *
  * Closing a preventive work order writes the service date back to its asset. Without one there is
- * nothing to write to, and the order would close having silently done nothing — the estate's overdue
+ * nothing to write to, and the order would close having silently done nothing - the estate's overdue
  * count would keep climbing while somebody serviced the machine every quarter.
  */
 const CreateScheduleDialog = ({ siteCode, onClose, onSubmit }: CreateScheduleDialogProps) => {
@@ -147,7 +147,7 @@ const CreateScheduleDialog = ({ siteCode, onClose, onSubmit }: CreateScheduleDia
           error={touched && missingAsset}
           options={(assets.data?.items ?? []).map((asset) => ({
             value: asset.id,
-            label: `${asset.assetCode} — ${asset.name}`,
+            label: `${asset.assetCode} - ${asset.name}`,
           }))}
           helperText={
             touched && missingAsset

@@ -19,7 +19,7 @@ import org.junit.jupiter.api.condition.EnabledIf;
  *
  * <p>Gated on {@link FleetPostgresSupport#databaseAvailable()} like every other suite in this package.
  * It was the last class still gated on {@code @Testcontainers(disabledWithoutDocker = true)}, which
- * asks whether the <em>Java</em> Docker client can reach the daemon — a question that answers "no" on
+ * asks whether the <em>Java</em> Docker client can reach the daemon - a question that answers "no" on
  * Windows even while the daemon runs and {@code docker ps} works. So this test skipped on every run
  * here, and a skip reads as a pass in a summary line.
  */

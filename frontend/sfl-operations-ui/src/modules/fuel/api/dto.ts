@@ -15,7 +15,7 @@ import {
  * Wire types for the S168 fuel API.
  *
  * The fuel controllers return the **domain records themselves** rather than response DTOs, so these
- * mirror `FuelTransaction`, `DriverLogbook`, `FuelAnomalyCase` and `FuelPolicy` field for field —
+ * mirror `FuelTransaction`, `DriverLogbook`, `FuelAnomalyCase` and `FuelPolicy` field for field -
  * including the two shapes that catch people out: `siteCode` is a `SiteCode` value object that
  * serialises as `{ value }`, and `currency` is a `java.util.Currency` that serialises as an object,
  * not a string. Requests, by contrast, take a plain `String` for both.
@@ -81,7 +81,7 @@ export type SourceChannel =
   | 'IMPORT'
   | 'MIGRATION';
 
-/** `RecordMetadata` — provenance carried by every fuel aggregate. */
+/** `RecordMetadata` - provenance carried by every fuel aggregate. */
 export interface RecordMetadata {
   createdBy: string | null;
   createdAt: string | null;
@@ -136,7 +136,7 @@ export interface FuelTransaction {
   unitPrice: number;
   totalCost: number;
   currency: CurrencyValue;
-  /** Already masked by the domain record — never the full card number. */
+  /** Already masked by the domain record - never the full card number. */
   maskedCardReference: string | null;
   odometerReading: number;
   receiptEvidenceId: string | null;
@@ -187,7 +187,7 @@ export interface FuelAnomalyCase {
   tripId: string | null;
   type: AnomalyType;
   severity: AnomalySeverity;
-  /** `totalCost >= policy.materialityAmount` at detection — drives finance/audit visibility. */
+  /** `totalCost >= policy.materialityAmount` at detection - drives finance/audit visibility. */
   material: boolean;
   status: AnomalyStatus;
   assignee: string | null;
@@ -215,7 +215,7 @@ export interface CreatePolicyRequest {
   tankCapacity: number | null;
   minConsumption: number | null;
   maxConsumption: number | null;
-  /** Primitive `long` on the service — sending `null` fails deserialisation before validation runs. */
+  /** Primitive `long` on the service - sending `null` fails deserialisation before validation runs. */
   odometerJumpTolerance: number;
   receiptRequired: boolean;
   receiptGraceHours: number;
@@ -300,7 +300,7 @@ export interface LogbookTransitionRequest {
   comment: string | null;
 }
 
-/** `FuelAnomalyController.ActionRequest` — `value` carries assignee, explanation or reason. */
+/** `FuelAnomalyController.ActionRequest` - `value` carries assignee, explanation or reason. */
 export interface AnomalyActionRequest {
   value: string | null;
   evidenceId: string | null;
@@ -347,7 +347,7 @@ export interface AnomalySearchParams extends FuelPageParams {
   material?: boolean;
   /** Neither closed nor cancelled. */
   openOnly?: boolean;
-  /** SLA cutoff — with `openOnly`, this is the breaching-SLA queue. */
+  /** SLA cutoff - with `openOnly`, this is the breaching-SLA queue. */
   dueBefore?: string;
   transactionId?: string;
 }
@@ -397,7 +397,7 @@ export interface ImportSearchParams extends FuelPageParams {
 /**
  * One reconciliation run, with the policy version it applied and every rule outcome.
  *
- * `ruleResults` is the map the service stores — `{ RULE_NAME: { passed: boolean } }` — so a screen
+ * `ruleResults` is the map the service stores - `{ RULE_NAME: { passed: boolean } }` - so a screen
  * can finally show the rules that **passed** as well as the ones that failed.
  */
 export interface FuelReconciliation {
@@ -447,7 +447,7 @@ export interface ImportRowResult {
   errorMessage: string | null;
 }
 
-/** `FuelImportService.ImportResult` — the upload response. The batch is now readable afterwards. */
+/** `FuelImportService.ImportResult` - the upload response. The batch is now readable afterwards. */
 export interface ImportResult {
   batchId: string;
   totalRows: number;
@@ -531,7 +531,7 @@ export interface ReplayResult {
 /* -------------------------------------------------------------- dashboard */
 
 /**
- * `GET /api/v1/fuel/dashboard` — the whole payload.
+ * `GET /api/v1/fuel/dashboard` - the whole payload.
  *
  * The five transaction figures come from the `fuel_dashboard_summary` view; the anomaly, logbook
  * and import indicators are counted by the service. Every figure here is published, so nothing on
@@ -565,7 +565,7 @@ export interface FuelDashboardSnapshot {
  * One day of fuel spend at a site, aggregated by the service.
  *
  * `day` is a UTC calendar date, which is how every timestamp in the fuel schema is stored. Only days
- * that had at least one transaction are returned — the service reports what happened, and a day with
+ * that had at least one transaction are returned - the service reports what happened, and a day with
  * no fuel has nothing to report.
  */
 /** Filters for one batch's rows. `status` filters in SQL, not over the fetched page. */

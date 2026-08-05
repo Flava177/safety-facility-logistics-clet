@@ -32,11 +32,11 @@ const ROW_FILTERS: { value: FuelImportRow['status'] | ''; label: string }[] = [
  * CSV import, with the batch history the service now keeps.
  *
  * Every batch and every row outcome is readable. This screen used to hold the batches uploaded in
- * one browsing session and warn that leaving the page lost them — the rows were written and nothing
- * read them back — so a rejected row an operator did not deal with immediately was simply gone.
+ * one browsing session and warn that leaving the page lost them - the rows were written and nothing
+ * read them back - so a rejected row an operator did not deal with immediately was simply gone.
  *
  * The rows are paged and filtered by the service. They used to come from the batch detail read,
- * which returns all of them, and the rejected-only filter ran over that array — so a file of several
+ * which returns all of them, and the rejected-only filter ran over that array - so a file of several
  * thousand rows arrived whole and was filtered in the browser. `GET /imports/{id}/rows?status=` does
  * both properly, which matters most for the filter: the rejected rows are the reason anyone opens
  * this screen.
@@ -73,7 +73,7 @@ const FuelImportsPage = () => {
     [activeBatchId],
   );
 
-  /** Reset to the first page when the batch or the filter changes — page 4 of the old set is nothing. */
+  /** Reset to the first page when the batch or the filter changes - page 4 of the old set is nothing. */
   const rowPaging = useServerPage(`${activeBatchId ?? ''}-${rowFilter}`, 50);
 
   const rowPage = useApiQuery(
@@ -417,7 +417,7 @@ const FuelImportsPage = () => {
             notifySuccess(
               `Imported ${result.acceptedRows} of ${result.totalRows} rows.`,
               result.rejectedRows > 0
-                ? `${result.rejectedRows} rows were rejected — their errors are listed below.`
+                ? `${result.rejectedRows} rows were rejected - their errors are listed below.`
                 : 'Every row was accepted.',
             );
             batches.refetch();

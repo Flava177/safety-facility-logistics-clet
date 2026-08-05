@@ -1,4 +1,4 @@
-# CLET Cluster 9 — Safety, Facilities & Logistics
+# CLET Cluster 9 - Safety, Facilities & Logistics
 
 The SFL Directorate platform for the Centre for Language and Educational Technology (CLET).
 Phase 1 covers thirteen Fast-Track systems across four programmes:
@@ -10,7 +10,7 @@ Phase 1 covers thirteen Fast-Track systems across four programmes:
 | **FTLMP**  | Fleet, Transport & Logistics Management          |
 | **AVAMP**  | Asset Visibility & Asset Management (Lite)       |
 
-**Three deployable Spring Boot services — one per platform — and one React dashboard.** Each service
+**Three deployable Spring Boot services - one per platform - and one React dashboard.** Each service
 owns its own schemas, its own migrations and its own API boundary; services talk through APIs and
 events, never through each other's tables.
 
@@ -26,15 +26,15 @@ Release 1 is closed as a **7-system demo build**, not the full 13-system Phase 1
 
 | System | What                              |
 | ------ | --------------------------------- |
-| S152   | Facility management — CAFM / IWMS |
-| S153   | Maintenance management — CMMS     |
+| S152   | Facility management - CAFM / IWMS |
+| S153   | Maintenance management - CMMS     |
 | S159   | Room & resource booking           |
 | S166   | Fleet & vehicle management        |
 | S168   | Fuel management & driver logbooks |
 | S171   | Mailroom, courier & dispatch      |
 | S174   | Emergency mass notification       |
 
-**Not in the demo** — S160 visitor management, S160a access control, S161 CCTV/VMS,
+**Not in the demo** - S160 visitor management, S160a access control, S161 CCTV/VMS,
 S162 intrusion, S162a fire & life safety, S163 HSE incident and near-miss.
 
 S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
@@ -44,14 +44,14 @@ integration with the external Comms system.
 
 ```
 services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
-  sfl-facilities-service             IFIMP  — S152, S153, S159                    :8091
+  sfl-facilities-service             IFIMP  - S152, S153, S159                    :8091
                                      schema: facilities
-  sfl-safety-security-service        SSEMP  — S174 built; S160-S163 not built     :8092
+  sfl-safety-security-service        SSEMP  - S174 built; S160-S163 not built     :8092
                                      schemas: safety_security, emergency_notification
-  sfl-fleet-logistics-service        FTLMP  — S166, S168, S171, AVAMP; serves /ui :8093
+  sfl-fleet-logistics-service        FTLMP  - S166, S168, S171, AVAMP; serves /ui :8093
                                      schemas: fleet_logistics, asset_visibility
-  sfl-service-common                 Shared kernel — principal, RBAC, error and event envelopes
-frontend/sfl-operations-ui           React 19 · TypeScript · Vite — the only user interface
+  sfl-service-common                 Shared kernel - principal, RBAC, error and event envelopes
+frontend/sfl-operations-ui           React 19 · TypeScript · Vite - the only user interface
 scripts/                             Local development helpers
 deploy/                              Deployment assets
 ```
@@ -128,7 +128,7 @@ a genesis audit hash of all zeros, so running it against a database with any his
 errors that look like defects and are residue. Drop and recreate it if that happens.
 
 **The "Invalid VCS root mapping" warning on project open.** `.idea/vcs.xml` acquires a Git root
-mapping for `frontend/sfl-operations-ui`, which is neither a repository nor a submodule — it is a
+mapping for `frontend/sfl-operations-ui`, which is neither a repository nor a submodule - it is a
 directory inside this one. Remove the second `<mapping>` line, leaving only the project-root
 mapping. `.idea/` is gitignored, so this recurs for everyone who opens the project.
 
@@ -141,8 +141,8 @@ Buy or integrate specialist platforms and hardware: CCTV/VMS, access-control dev
 readers, fire and life-safety panels, intrusion panels, SMS/voice/signage providers, fuel provider
 feeds, GPS/telematics, and RFID/barcode devices.
 
-Shared ecosystem services — IAM, API gateway, notification, audit and evidence, integration gateway
-and event broker, reporting, document and object storage — are integrated through adapters and are
+Shared ecosystem services - IAM, API gateway, notification, audit and evidence, integration gateway
+and event broker, reporting, document and object storage - are integrated through adapters and are
 not duplicated inside SFL services.
 
 ## A note on documentation

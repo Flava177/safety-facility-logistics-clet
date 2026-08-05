@@ -10,7 +10,7 @@ package gh.edu.clet.sfl.facilities.masterdata.domain;
  * orders against either.
  *
  * <p>Distinct from {@link DeviceReferenceType}, and the distinction is load-bearing:
- * a {@code DeviceReference} is an <em>integration endpoint</em> — something a vendor system reports
+ * a {@code DeviceReference} is an <em>integration endpoint</em> - something a vendor system reports
  * on, like a camera or a card reader. A {@code FacilityAsset} is <em>fixed plant maintenance is
  * raised against</em>. A fire panel is both, which is why an asset may carry a device reference.
  */
@@ -27,9 +27,9 @@ public enum AssetCategory {
     LIFT,
     FIRE_SYSTEM,
     SECURITY_SYSTEM,
-    /** Structure, roofing, doors, glazing — what a building inspection reports on. */
+    /** Structure, roofing, doors, glazing - what a building inspection reports on. */
     BUILDING_FABRIC,
-    /** Projectors, screens, PA — the equipment a hall's readiness depends on. */
+    /** Projectors, screens, PA - the equipment a hall's readiness depends on. */
     AUDIO_VISUAL,
     IT_INFRASTRUCTURE,
     FURNITURE,

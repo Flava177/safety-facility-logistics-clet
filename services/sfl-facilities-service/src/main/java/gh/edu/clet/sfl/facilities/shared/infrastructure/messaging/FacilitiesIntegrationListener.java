@@ -21,7 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>This is the plumbing half of cross-service integration, and it is written once. It receives
  * anything the queue is bound to, turns it into an {@link InboundIntegrationEvent}, makes sure it has
  * not already been handled, and gives it to whichever {@link IntegrationEventHandler} beans want it.
- * Adding a reaction to a new event is a handler bean and nothing else — no queue, no binding, no
+ * Adding a reaction to a new event is a handler bean and nothing else - no queue, no binding, no
  * listener, no parsing, no deduplication.
  *
  * <p>That separation is what stops the per-event cost people fear about event-driven systems. The
@@ -32,7 +32,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>The queue binds whole programmes ({@code ftlmp.#}), not individual event names. A topic exchange
  * makes that cheap, and it means the day someone writes a handler for
- * {@code sfl.ftlmp.fuel-anomaly-detected.v1} the message is already arriving — no infrastructure
+ * {@code sfl.ftlmp.fuel-anomaly-detected.v1} the message is already arriving - no infrastructure
  * change, no redeploy of the publisher, no broker administration. Unwanted events are acknowledged
  * and dropped in memory, which costs nothing.
  *
@@ -40,7 +40,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>The inbox row is written only when a handler actually wants the event. Recording every message
  * this service merely overheard would fill the table with rows describing nothing, and would mean a
- * handler added later found its backlog already marked as processed — silently doing nothing on
+ * handler added later found its backlog already marked as processed - silently doing nothing on
  * exactly the events it was written for.
  */
 @Component
@@ -84,7 +84,7 @@ public class FacilitiesIntegrationListener {
 
         UUID messageId = messageId(message);
         if (messageId == null) {
-            log.error("Discarding {} — no usable message id, so it cannot be deduplicated", eventType);
+            log.error("Discarding {} - no usable message id, so it cannot be deduplicated", eventType);
             return;
         }
 

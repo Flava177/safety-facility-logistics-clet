@@ -20,7 +20,7 @@ import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-/** SRS-SFL-S174-01: operational records — templates, scenarios, audience groups and recipient zones. */
+/** SRS-SFL-S174-01: operational records - templates, scenarios, audience groups and recipient zones. */
 @RestController
 @RequestMapping("/api/v1/emergency")
 public class EmergencyRecordsController {
@@ -85,7 +85,7 @@ public class EmergencyRecordsController {
                 breakGlassEligible, EmergencyPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
-    /** Scenario detail. Closes half of gap 5 — only templates had a detail endpoint. */
+    /** Scenario detail. Closes half of gap 5 - only templates had a detail endpoint. */
     @GetMapping("/scenarios/{id}")
     @Tag(name = "Emergency Scenarios")
     public ApiResponse<EmergencyScenario> scenario(@PathVariable UUID id, HttpServletRequest h) {
@@ -126,7 +126,7 @@ public class EmergencyRecordsController {
      * <p>The sharp edge in gap 6: {@code recipientCount} is what the service fans out to and the
      * denominator every delivery percentage is read against, and it could not be corrected. A group
      * sized at zero sent to nobody and reported a completely successful broadcast. The name is
-     * deliberately not editable — closed activations cite this group, and renaming it would rewrite
+     * deliberately not editable - closed activations cite this group, and renaming it would rewrite
      * what they say they were sent to.
      */
     @PatchMapping("/audience-groups/{id}")

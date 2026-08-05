@@ -21,7 +21,7 @@ import java.util.UUID;
 /**
  * Request bodies for the estate endpoints.
  *
- * <p>Bean Validation covers what a request can be checked for without touching the database — required
+ * <p>Bean Validation covers what a request can be checked for without touching the database - required
  * fields, lengths, ranges. Everything that needs the estate's current state (does this parent exist, is
  * this code taken, is the caller's version current) is a domain rule and lives behind the application
  * boundary, so it cannot be bypassed by a caller that skips this layer.

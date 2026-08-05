@@ -24,7 +24,7 @@ import java.util.UUID;
 /**
  * The S153 wire types.
  *
- * <p>Each carries a derived field or two the client would otherwise recompute — {@code overdue},
+ * <p>Each carries a derived field or two the client would otherwise recompute - {@code overdue},
  * {@code minutesOverdue}, {@code dueForGeneration}. Those are decisions this service has already
  * made, and a client recomputing them is a client that will eventually disagree with the escalation
  * sweep about whether something is late.

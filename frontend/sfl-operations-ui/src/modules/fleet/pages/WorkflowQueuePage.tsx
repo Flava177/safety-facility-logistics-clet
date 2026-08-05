@@ -38,7 +38,7 @@ interface Filters {
    * Severity, which the queue could not filter on.
    *
    * The service has accepted it since the search endpoint was written, and the column has always
-   * shown it — so a supervisor looking for the critical defects could see which rows were critical
+   * shown it - so a supervisor looking for the critical defects could see which rows were critical
    * and had no way to ask for only those.
    */
   severity: WorkflowSeverity | '';
@@ -58,7 +58,7 @@ const emptyFilters: Filters = {
   escalatedOnly: false,
 };
 
-/** The fleet workflow queue — defects, renewals, exceptions and their SLA standing. */
+/** The fleet workflow queue - defects, renewals, exceptions and their SLA standing. */
 const WorkflowQueuePage = () => {
   const navigate = useNavigate();
   const { notifySuccess } = useNotifier();
@@ -248,7 +248,7 @@ const WorkflowQueuePage = () => {
           error={query.error}
           empty={rows.length === 0 && !query.loading}
           emptyTitle="No workflow items match these filters"
-          emptyHint="A clear queue is a good sign — or widen the filters to check."
+          emptyHint="A clear queue is a good sign - or widen the filters to check."
           onRetry={query.refetch}
           minHeight={280}
         >

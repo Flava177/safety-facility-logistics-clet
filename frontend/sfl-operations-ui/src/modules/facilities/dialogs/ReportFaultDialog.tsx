@@ -21,14 +21,14 @@ interface ReportFaultDialogProps {
 }
 
 /**
- * Reporting a fault — SRS-SFL-S153-01.
+ * Reporting a fault - SRS-SFL-S153-01.
  *
  * ## Two things this dialog does that a plain form would not
  *
  * **It requires a place, and says which kinds count.** The service refuses a fault carrying neither
  * a room nor a location code: one with a site and nothing else cannot be dispatched anywhere, which
  * makes it a complaint rather than a fault. So the form asks for a space *or* free text, and refuses
- * neither — matching the aggregate rather than discovering the rule on submit. Free text is there on
+ * neither - matching the aggregate rather than discovering the rule on submit. Free text is there on
  * purpose: a corridor, a car park or an external wall has no room in the estate model, deliberately,
  * because none of them is a bookable space.
  *
@@ -132,7 +132,7 @@ const ReportFaultDialog = ({ siteCode, roomId, onClose, onSubmit }: ReportFaultD
           emptyLabel="Not in a listed space"
           options={(spaces.data?.items ?? []).map((space) => ({
             value: space.id,
-            label: `${space.roomCode} — ${space.name}`,
+            label: `${space.roomCode} - ${space.name}`,
           }))}
           helperText="Choosing a space is what lets a fault affect whether it can be used."
         />

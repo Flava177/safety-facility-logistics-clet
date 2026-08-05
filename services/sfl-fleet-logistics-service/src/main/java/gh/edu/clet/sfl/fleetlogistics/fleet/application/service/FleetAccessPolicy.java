@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>Denials carry machine-readable context in the exception details. Auditing of denials happens in
  * {@code FleetAuditService.recordAuthorizationDenial}, invoked from the API exception handler once the
- * failed request's transaction has rolled back — writing the denial inside the doomed transaction would
+ * failed request's transaction has rolled back - writing the denial inside the doomed transaction would
  * lose it, and writing it in a nested transaction would contend with the audit chain lock the outer
  * transaction may already hold.
  */
@@ -68,7 +68,7 @@ public class FleetAccessPolicy {
     }
 
     /**
-     * Privileged workflow transitions — approve, override, cancel, reopen — report the SRS
+     * Privileged workflow transitions - approve, override, cancel, reopen - report the SRS
      * "Unauthorized Approval" wording rather than the generic scope error.
      */
     public void requirePrivilegedTransition(ActorContext actor, SflPermission permission, SiteCode site,

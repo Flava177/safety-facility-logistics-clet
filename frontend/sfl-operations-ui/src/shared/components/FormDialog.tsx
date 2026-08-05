@@ -19,7 +19,7 @@ interface FormDialogProps {
    * A one-line read-back of what is about to be submitted, pinned above the actions.
    *
    * <p>Outside `children` on purpose. The body scrolls at `68vh`, so anything inside it can be off
-   * screen at the moment the operator reaches the submit button — which is the one moment a summary
+   * screen at the moment the operator reaches the submit button - which is the one moment a summary
    * is for. See {@link FormSummary}.
    */
   summary?: ReactNode;

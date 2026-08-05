@@ -12,7 +12,7 @@ import java.util.Set;
  *
  * <h2>Why this file did not exist until 1 August 2026</h2>
  *
- * It should have. Until this was written the service had **no authorisation of any kind** — no
+ * It should have. Until this was written the service had **no authorisation of any kind** - no
  * permission matrix, no policy, not one {@code require} call across eight endpoints. Any
  * authenticated caller could register an asset, read the whole register and query assets by location
  * at any site, and that included every one of the twenty-two seeded accounts down to the driver.
@@ -40,14 +40,14 @@ import java.util.Set;
  *
  * <ul>
  *   <li><strong>Read</strong> is broad, because knowing where a tracked device is helps everyone who
- *       operates the estate, and the register carries no personal data — an asset code, a category, a
+ *       operates the estate, and the register carries no personal data - an asset code, a category, a
  *       location and a custodian reference.</li>
  *   <li><strong>Manage</strong> is narrow. Moving an asset or reassigning custody rewrites the chain
  *       of responsibility for a physical object, which is an administrative and integration act
  *       rather than an operational convenience.</li>
  *   <li>{@link SflRole#FLEET_DRIVER}, {@link SflRole#IFIMP_REQUESTER} and
  *       {@link SflRole#VENDOR_TECHNICIAN} appear nowhere. A contractor is not CLET staff, a requester
- *       books rooms, and a driver drives — none of the three has a reason to enumerate the estate's
+ *       books rooms, and a driver drives - none of the three has a reason to enumerate the estate's
  *       tracked devices, and before this file all three could.</li>
  * </ul>
  */

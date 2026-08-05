@@ -29,7 +29,7 @@ public class FleetAuditService {
      *
      * <p>Called after the denied request's transaction has rolled back. A failure to write the denial
      * must not replace the 403 the caller is about to receive, so it is logged at error level and
-     * swallowed — losing the response would hide the denial from the client as well as from the log.
+     * swallowed - losing the response would hide the denial from the client as well as from the log.
      */
     public void recordAuthorizationDenial(ActorContext actor, String siteScope, String resourceType,
             String resourceId, String requiredPermission, String reason) {

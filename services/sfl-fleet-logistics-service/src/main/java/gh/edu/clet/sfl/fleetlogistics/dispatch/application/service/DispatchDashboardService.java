@@ -89,7 +89,7 @@ public class DispatchDashboardService {
      * Every record matching the query, a page at a time.
      *
      * <p>Both exports used to stop at the first 500 rows with nothing in the file, the headers or the
-     * response to say so — a site with more activity than that got a quietly incomplete compliance
+     * response to say so - a site with more activity than that got a quietly incomplete compliance
      * export. Draining the pages is the fix; {@code EXPORT_CAP} is a runaway guard rather than a
      * limit anybody is expected to reach, and reaching it is reported rather than swallowed.
      */

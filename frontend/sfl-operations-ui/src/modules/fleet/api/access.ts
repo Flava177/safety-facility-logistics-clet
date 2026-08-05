@@ -7,8 +7,8 @@ import { permits } from 'shared/layout/actorPermissions';
  *
  * Reading a register and changing it are different permissions in every one of the three matrices,
  * and the screens were not making that distinction. Every FTLMP register offered its create button
- * to anybody who could open the page, so a driver — who holds `FLEET_VEHICLE_READ` and
- * `FLEET_TRIP_READ` and nothing else that writes — was shown **Register vehicle**, **Register
+ * to anybody who could open the page, so a driver - who holds `FLEET_VEHICLE_READ` and
+ * `FLEET_TRIP_READ` and nothing else that writes - was shown **Register vehicle**, **Register
  * driver** and **Plan a trip**. Pressing any of them produced `FLEET_UNAUTHORIZED_SCOPE`, which is
  * the service doing its job and the screen having wasted the operator's time to get there.
  *
@@ -22,7 +22,7 @@ import { permits } from 'shared/layout/actorPermissions';
  * <h2>Never the enforcement point</h2>
  *
  * The services authorise every call independently and refuse regardless of what the screen offered.
- * These decide what is *worth offering*, which is a usability question — and `permits` fails open
+ * These decide what is *worth offering*, which is a usability question - and `permits` fails open
  * when the services could not be asked, so a failed lookup shows the control rather than hiding the
  * application.
  */
@@ -36,7 +36,7 @@ export const canManageVehicles = (): boolean => permits('FLEET_VEHICLE_MANAGE');
  * Register or amend a driver record.
  *
  * Worth stating because the name invites the wrong reading: this is not "am I a driver", it is "may
- * I create and amend driver records" — a personnel function. `FLEET_DRIVER` does not hold it, and a
+ * I create and amend driver records" - a personnel function. `FLEET_DRIVER` does not hold it, and a
  * driver registering themselves is exactly what it exists to prevent.
  */
 export const canManageDrivers = (): boolean => permits('FLEET_DRIVER_MANAGE');
@@ -49,8 +49,8 @@ export const canManageTrips = (): boolean => permits('FLEET_TRIP_MANAGE');
  *
  * A driver's only write against the trip register, and the mirror image of the grants around it:
  * `canManageTrips` is a dispatcher's power over anybody's trip, this is one person's answer about
- * their own. The permission is necessary and not sufficient — the service also requires the
- * signed-in identity to be the driver on that trip — so a screen must check
+ * their own. The permission is necessary and not sufficient - the service also requires the
+ * signed-in identity to be the driver on that trip - so a screen must check
  * {@link isMyTrip} as well before offering the control, or it offers every driver a button that
  * refuses on every trip but one.
  */
@@ -77,7 +77,7 @@ export const canRunReconciliation = (): boolean => permits('FUEL_RECONCILIATION_
 export const canManageFuelCards = (): boolean => permits('FUEL_CARD_MANAGE');
 
 /**
- * Create a logbook. A driver holds this — it is their own journey record.
+ * Create a logbook. A driver holds this - it is their own journey record.
  *
  * Reviewing one is `FUEL_LOGBOOK_REVIEW`, which they do not hold, and the two must not be collapsed:
  * a driver who could review would be approving their own submission.

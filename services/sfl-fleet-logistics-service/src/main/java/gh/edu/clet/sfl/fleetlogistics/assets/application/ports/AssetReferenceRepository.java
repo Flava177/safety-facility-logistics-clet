@@ -21,8 +21,8 @@ public interface AssetReferenceRepository {
     /**
      * The register narrowed to a set of sites, filtered in SQL.
      *
-     * <p>Added when AVAMP gained authorisation. The alternative — loading the register and filtering
-     * in memory — reads every asset at every site out of the database to then discard most of them,
+     * <p>Added when AVAMP gained authorisation. The alternative - loading the register and filtering
+     * in memory - reads every asset at every site out of the database to then discard most of them,
      * which is both wasteful and the shape of a filter somebody later removes as redundant.
      *
      * <p>An empty set returns nothing. That is the fail-closed half: an actor with no site scope

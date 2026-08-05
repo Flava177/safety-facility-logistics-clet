@@ -19,7 +19,7 @@ import { formatDateTime, humaniseCode, scoreTone, severityTone } from '../compon
  * The S152-05 facilities dashboard.
  *
  * Computed live by the service from the source records, which is why the counts always reconcile to
- * the rows behind them — and why every tile here can be opened rather than only believed.
+ * the rows behind them - and why every tile here can be opened rather than only believed.
  *
  * The stale-data warning is given the top of the page, not a footnote. SRS-SFL-S152-05 requires that
  * "critical safety and examination-readiness indicators must display stale-data warnings where

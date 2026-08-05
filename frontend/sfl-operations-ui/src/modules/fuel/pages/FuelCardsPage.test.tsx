@@ -123,7 +123,7 @@ describe('FuelCardsPage', () => {
 
     const dialog = await screen.findByRole('dialog', { name: /issue a fuel card/i });
     // The field opens pre-filled with a generated demo reference, so it has to be cleared
-    // first — otherwise this types a full card number onto a valid mask and the rejection
+    // first - otherwise this types a full card number onto a valid mask and the rejection
     // proves nothing.
     const maskedReference = within(dialog).getByLabelText(/^masked reference/i);
     await user.clear(maskedReference);
@@ -148,7 +148,7 @@ describe('FuelCardsPage', () => {
     const maskedReference = within(dialog).getByLabelText(/^masked reference/i);
     await user.clear(maskedReference);
     await user.type(maskedReference, '****9876');
-    // Provider is the shared listbox, not a native select, and it opens through a portal —
+    // Provider is the shared listbox, not a native select, and it opens through a portal -
     // so the options are queried from the document, not from inside the dialog.
     await user.click(within(dialog).getByRole('combobox', { name: /^provider/i }));
     await user.click(await screen.findByRole('option', { name: 'TotalEnergies Ghana' }));

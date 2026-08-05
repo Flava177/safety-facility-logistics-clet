@@ -8,7 +8,7 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
  *
  * This replaces a timeline this application used to reconstruct from the record's own timestamps,
  * which
- * could show a logbook's creation and approval but nothing in between — the fuel aggregates had no
+ * could show a logbook's creation and approval but nothing in between - the fuel aggregates had no
  * history endpoint, and the fleet audit search that would have served one returned 500 on every
  * call. Both are fixed, so these are the actual recorded transitions, in chain order, with the actor
  * who made each.
@@ -47,7 +47,7 @@ const toneFor = (action: string): TimelineEntry['tone'] => {
 
 interface HistoryTimelineProps {
   events: FuelAuditEvent[] | undefined;
-  /** Names the aggregate in the empty message — "logbook", "case", "transaction". */
+  /** Names the aggregate in the empty message - "logbook", "case", "transaction". */
   recordNoun: string;
 }
 

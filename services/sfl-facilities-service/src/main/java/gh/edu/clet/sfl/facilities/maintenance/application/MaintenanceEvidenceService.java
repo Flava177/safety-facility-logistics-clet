@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Closure evidence and its export — SRS-SFL-S153-03.
+ * Closure evidence and its export - SRS-SFL-S153-03.
  *
  * <h2>What this service is careful about</h2>
  *
@@ -102,7 +102,7 @@ public class MaintenanceEvidenceService {
     /**
      * Records an approved export and returns the reference the caller may fetch.
      *
-     * <p>This service does not perform the export — it authorises it and writes the evidence that it
+     * <p>This service does not perform the export - it authorises it and writes the evidence that it
      * happened. The caller takes the returned reference to object storage. Splitting it that way is
      * what lets the audit entry be written inside the same transaction as the authorisation decision.
      */
@@ -140,7 +140,7 @@ public class MaintenanceEvidenceService {
         ActorContext actor = command.actor();
         MaintenanceEvidence evidence = requireEvidence(command.evidenceId());
         // A hold suspends disposal, which is a compliance act rather than an operational one, so it
-        // takes the export permission — the same one held only by reviewers.
+        // takes the export permission - the same one held only by reviewers.
         authorization.require(actor, SflPermission.FACILITIES_EVIDENCE_EXPORT, evidence.siteCode(),
                 command.channel(), "MaintenanceEvidence", evidence.id().toString());
         if (command.reason() == null || command.reason().isBlank()) {

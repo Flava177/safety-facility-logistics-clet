@@ -26,7 +26,7 @@ interface SelectProps {
  * The dashboard's dropdown.
  *
  * A native `<select>` was correct but felt abrupt: the operating system paints the list instantly,
- * in its own font, ignoring everything around it. This is a listbox that opens in the page — it
+ * in its own font, ignoring everything around it. This is a listbox that opens in the page - it
  * eases in, matches the dashboard's type and spacing, and marks the current choice.
  *
  * It keeps everything the native control gave away for free, because a dropdown that cannot be

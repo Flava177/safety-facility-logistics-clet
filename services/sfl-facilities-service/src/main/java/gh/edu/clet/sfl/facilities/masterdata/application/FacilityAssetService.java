@@ -122,7 +122,7 @@ public class FacilityAssetService {
      * Records that an asset's condition changed, and reconciles the readiness that depends on it.
      *
      * <p>The recompute is the point of the method. A generator going out of service is only useful
-     * information if the examination hall it powers stops reporting itself ready — otherwise the fault
+     * information if the examination hall it powers stops reporting itself ready - otherwise the fault
      * is recorded in one screen and contradicted in another.
      */
     @Transactional

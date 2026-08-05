@@ -34,7 +34,7 @@ const CONFIRMATIONS: Record<LogbookTransition, string> = {
   cancel: 'Logbook cancelled.',
 };
 
-/** The order the buttons appear in — forward moves first, then the privileged exits. */
+/** The order the buttons appear in - forward moves first, then the privileged exits. */
 const TRANSITION_ORDER: LogbookTransition[] = [
   'submit',
   'review',
@@ -48,7 +48,7 @@ const TRANSITION_ORDER: LogbookTransition[] = [
  * A driver logbook, its journey detail and every transition legal from where it stands.
  *
  * Which buttons appear is decided by the record's own `requireState` guards, transcribed in
- * `workflow.ts` — so the dashboard offers approve only from under review, cancel only from draft,
+ * `workflow.ts` - so the dashboard offers approve only from under review, cancel only from draft,
  * submitted or returned, and reopen only from approved. The service still decides; this just stops
  * the dashboard offering an action that can only be refused.
  */
@@ -79,8 +79,8 @@ const DriverLogbookDetailPage = () => {
   const record = logbook.data;
 
   /**
-   * `review` is the one transition with nothing to fill in — the service takes no comment for it and
-   * the domain asks for nothing — so it runs from the button rather than through a dialog that
+   * `review` is the one transition with nothing to fill in - the service takes no comment for it and
+   * the domain asks for nothing - so it runs from the button rather than through a dialog that
    * would have a single "Confirm" in it.
    */
   const startReview = async () => {
@@ -90,7 +90,7 @@ const DriverLogbookDetailPage = () => {
       notifySuccess(CONFIRMATIONS.review);
       refreshAll();
     } catch (error) {
-      // Shown with the service's own wording — a refused transition is never silent.
+      // Shown with the service's own wording - a refused transition is never silent.
       notifyError(error);
     } finally {
       setWorking(false);
@@ -269,19 +269,19 @@ const DriverLogbookDetailPage = () => {
                         label: 'Closing odometer',
                         value:
                           record.endOdometer === null || record.endOdometer === undefined
-                            ? '—'
+                            ? '-'
                             : `${formatNumber(record.endOdometer)} km`,
                       },
                       { label: 'Origin', value: record.origin },
                       { label: 'Destination', value: record.destination },
                       { label: 'Purpose', value: record.purpose, span: 2 },
-                      { label: 'Route notes', value: record.routeNotes ?? '—', span: 2 },
+                      { label: 'Route notes', value: record.routeNotes ?? '-', span: 2 },
                       {
                         label: 'Passenger and load notes',
-                        value: record.passengerLoadNotes ?? '—',
+                        value: record.passengerLoadNotes ?? '-',
                         span: 2,
                       },
-                      { label: 'Evidence reference', value: record.evidenceId ?? '—', span: 2 },
+                      { label: 'Evidence reference', value: record.evidenceId ?? '-', span: 2 },
                     ]}
                   />
                 </SectionCard>
@@ -292,10 +292,10 @@ const DriverLogbookDetailPage = () => {
                     items={[
                       { label: 'Submitted at', value: formatDateTime(record.submittedAt) },
                       { label: 'Approved at', value: formatDateTime(record.approvedAt) },
-                      { label: 'Review comment', value: record.reviewComment ?? '—', span: 2 },
+                      { label: 'Review comment', value: record.reviewComment ?? '-', span: 2 },
                       {
                         label: 'Last transition reason',
-                        value: record.transitionReason ?? '—',
+                        value: record.transitionReason ?? '-',
                         span: 2,
                       },
                     ]}

@@ -20,7 +20,7 @@ const RECORD_PAGE = 200;
 /**
  * The four master-data registers a site's activations are composed from.
  *
- * An activation names a scenario, a template, audience groups and recipient zones — all by id.
+ * An activation names a scenario, a template, audience groups and recipient zones - all by id.
  * Every screen that composes or explains one therefore needs all four, and needs to turn an id back
  * into a name. Loading them once here means the composer dialog, the register and the detail screen
  * resolve the same records rather than each fetching its own copy and disagreeing about a name that
@@ -35,14 +35,14 @@ export interface SiteRecords {
   audiences: AudienceGroup[];
   zones: RecipientZone[];
   loading: boolean;
-  /** True until the first response of each has landed — what a form should wait for. */
+  /** True until the first response of each has landed - what a form should wait for. */
   initialising: boolean;
   refetch: () => void;
   templateName: (id: string | null | undefined) => string;
   scenarioName: (id: string | null | undefined) => string;
   audienceName: (id: string) => string;
   zoneName: (id: string) => string;
-  /** Recipients across the named groups — the number the service will fan out to. */
+  /** Recipients across the named groups - the number the service will fan out to. */
   audienceReach: (ids: string[]) => number;
   template: (id: string | null | undefined) => NotificationTemplate | undefined;
   scenario: (id: string | null | undefined) => EmergencyScenario | undefined;

@@ -9,7 +9,7 @@ import { cn } from './cn';
  * Date and date-time entry.
  *
  * A real calendar rather than the browser's native control, which looks different on every machine
- * and — on the desktops this dashboard runs on — is a grey box with no month view. The visible input
+ * and - on the desktops this dashboard runs on - is a grey box with no month view. The visible input
  * shows a human date ("14 Mar 2026"); form state keeps the wire-friendly string it always did
  * (`YYYY-MM-DD`, or `YYYY-MM-DDTHH:mm` for date-times), so validation and request mapping are
  * unchanged.
@@ -135,7 +135,7 @@ const Picker = ({
     if (altInput) {
       // flatpickr owns this input: it creates the visible `altInput` itself and React never renders
       // it, so configuring it means writing to a DOM node React does not manage. The rule is right
-      // that this mutates through a ref and wrong that it is avoidable — the alternative is not
+      // that this mutates through a ref and wrong that it is avoidable - the alternative is not
       // using the picker.
       /* eslint-disable react-hooks/immutability */
       altInput.disabled = Boolean(disabled);

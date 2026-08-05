@@ -37,14 +37,14 @@ const CONFIRMATIONS: Record<ItemAction, string> = {
   close: 'Item closed.',
 };
 
-/** The order the moves appear in — the lifecycle forward, then the exits. */
+/** The order the moves appear in - the lifecycle forward, then the exits. */
 const ACTION_ORDER: ItemAction[] = ['stage', 'dispatch', 'in-transit', 'deliver', 'return', 'close'];
 
 /**
  * One courier item, with every move legal from where it stands.
  *
  * Which buttons appear is decided by `CourierItem`'s own `requireState` guards, transcribed in
- * `workflow.ts` — so the screen offers "Mark delivered" only from dispatched or in transit, and
+ * `workflow.ts` - so the screen offers "Mark delivered" only from dispatched or in transit, and
  * "Close" only once the item has been delivered or returned.
  *
  * The item carries no history endpoint of its own; what it does carry is the acknowledgement,
@@ -66,7 +66,7 @@ const CourierItemDetailPage = () => {
       notifySuccess(CONFIRMATIONS[action]);
       item.refetch();
     } catch (error) {
-      // A refused move is never silent — the service's own wording is shown.
+      // A refused move is never silent - the service's own wording is shown.
       notifyError(error);
     } finally {
       setWorking(null);
@@ -197,20 +197,20 @@ const CourierItemDetailPage = () => {
                     },
                     { label: 'Origin', value: record.origin },
                     { label: 'Destination', value: record.destination },
-                    { label: 'Sender', value: record.sender ?? '—' },
-                    { label: 'Recipient', value: record.recipient ?? '—' },
+                    { label: 'Sender', value: record.sender ?? '-' },
+                    { label: 'Recipient', value: record.recipient ?? '-' },
                     { label: 'Handler', value: record.assignedHandler ?? 'Unassigned' },
                     {
                       label: 'Distribution reference',
-                      value: record.distributionReference ?? '—',
+                      value: record.distributionReference ?? '-',
                     },
                     {
                       label: 'Acknowledgement evidence',
-                      value: record.acknowledgementEvidenceId ?? '—',
+                      value: record.acknowledgementEvidenceId ?? '-',
                       span: 2,
                     },
-                    { label: 'Misroute reason', value: record.misrouteReason ?? '—', span: 2 },
-                    { label: 'Exception reason', value: record.exceptionReason ?? '—', span: 2 },
+                    { label: 'Misroute reason', value: record.misrouteReason ?? '-', span: 2 },
+                    { label: 'Exception reason', value: record.exceptionReason ?? '-', span: 2 },
                   ]}
                 />
               </SectionCard>
@@ -220,9 +220,9 @@ const CourierItemDetailPage = () => {
                   <KeyValueGrid
                     columns={2}
                     items={[
-                      { label: 'Registered by', value: record.metadata.createdBy ?? '—' },
+                      { label: 'Registered by', value: record.metadata.createdBy ?? '-' },
                       { label: 'Registered at', value: formatDateTime(record.metadata.createdAt) },
-                      { label: 'Last change by', value: record.metadata.lastModifiedBy ?? '—' },
+                      { label: 'Last change by', value: record.metadata.lastModifiedBy ?? '-' },
                       {
                         label: 'Last change at',
                         value: formatDateTime(record.metadata.lastModifiedAt),
@@ -231,7 +231,7 @@ const CourierItemDetailPage = () => {
                       { label: 'Record version', value: record.metadata.version },
                       {
                         label: 'Correlation ID',
-                        value: record.metadata.auditCorrelationId ?? '—',
+                        value: record.metadata.auditCorrelationId ?? '-',
                         span: 2,
                       },
                     ]}

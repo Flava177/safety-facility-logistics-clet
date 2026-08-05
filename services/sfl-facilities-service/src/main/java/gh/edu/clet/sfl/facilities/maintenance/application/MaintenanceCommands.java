@@ -159,7 +159,7 @@ public final class MaintenanceCommands {
     /**
      * Attaches evidence by reference. SRS-SFL-S153-03.
      *
-     * <p>{@code contentHash} is supplied by the caller because this service never holds the bytes —
+     * <p>{@code contentHash} is supplied by the caller because this service never holds the bytes -
      * the upload goes to object storage, which returns the reference and the digest. Recomputing it
      * here would mean downloading every file this service is deliberately not storing.
      */

@@ -22,15 +22,15 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  *
  * <h2>Why this was rewritten on 1 August 2026</h2>
  *
- * <p>It handled two exception types and emitted a shape of its own —
- * {@code {status, error, message, timestamp}} — while the rest of the platform emits
+ * <p>It handled two exception types and emitted a shape of its own -
+ * {@code {status, error, message, timestamp}} - while the rest of the platform emits
  * {@code {data, error}}. The dashboard's single API client reads {@code envelope.error.code}, so an
  * AVAMP failure reached it as an error with no code at all.
  *
  * <p>The more pressing gap: {@link AssetVisibilityAuthorizationException} did not exist when this was
  * written and nothing mapped it. A refusal from the new access policy would have fallen through to
  * Spring's default handler and surfaced as <strong>500</strong>. A permission check that reports its
- * refusals as server faults is worse than none — it is a check that trains whoever reads the logs to
+ * refusals as server faults is worse than none - it is a check that trains whoever reads the logs to
  * treat a real denial as a bug in the service.
  *
  * <h2>403, not 401</h2>
@@ -64,7 +64,7 @@ class AssetVisibilityApiExceptionHandler {
     /**
      * The refusal from {@code AssetVisibilityAccessPolicy}.
      *
-     * <p>The structured details travel in {@code data} — the permission required, the resource, and
+     * <p>The structured details travel in {@code data} - the permission required, the resource, and
      * the site when the refusal was a scope one. A caller told only "forbidden" cannot tell whether to
      * request a role or a site scope, and those go to different people.
      */
@@ -107,7 +107,7 @@ class AssetVisibilityApiExceptionHandler {
      * <p>404 rather than 400: the request was well-formed. Note that the controller checks site scope
      * <em>after</em> loading the record, so an out-of-scope asset answers 403 and a genuinely absent
      * one answers 404. That does leak existence to a caller who holds the read permission but not the
-     * site — an acceptable trade here, because the alternative (404 for both) makes a scope
+     * site - an acceptable trade here, because the alternative (404 for both) makes a scope
      * misconfiguration indistinguishable from a bad asset id for the integrations team that has to
      * diagnose it.
      */

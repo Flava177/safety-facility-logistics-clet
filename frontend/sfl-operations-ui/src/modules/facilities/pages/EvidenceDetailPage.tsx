@@ -17,7 +17,7 @@ import TransitionNoteDialog from '../dialogs/TransitionNoteDialog';
 import { formatDate, formatDateTime, humaniseCode, orDash } from '../components/facilitiesFormat';
 
 /**
- * One piece of evidence — SRS-SFL-S153-03.
+ * One piece of evidence - SRS-SFL-S153-03.
  *
  * ## Metadata only, and deliberately so
  *
@@ -60,7 +60,7 @@ const EvidenceDetailPage = () => {
         {evidence.data && (
           <>
             <PageHeader
-              title={orDash(evidence.data.fileName) === '—' ? 'Evidence' : evidence.data.fileName!}
+              title={orDash(evidence.data.fileName) === '-' ? 'Evidence' : evidence.data.fileName!}
               subtitle={`${humaniseCode(evidence.data.evidenceType)} · attached by ${evidence.data.uploadedBy}`}
               crumbs={[
                 { label: 'Facilities', to: facilitiesPaths.dashboard },
@@ -116,7 +116,7 @@ const EvidenceDetailPage = () => {
                       label: 'Size',
                       value: evidence.data.sizeBytes
                         ? `${Math.round(evidence.data.sizeBytes / 1024)} KB`
-                        : '—',
+                        : '-',
                     },
                     {
                       label: 'Retention',

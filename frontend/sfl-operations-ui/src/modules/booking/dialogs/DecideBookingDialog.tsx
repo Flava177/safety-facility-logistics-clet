@@ -13,7 +13,7 @@ interface DecideBookingDialogProps {
 }
 
 /**
- * Approve or reject a request — SRS-SFL-S159-02.
+ * Approve or reject a request - SRS-SFL-S159-02.
  *
  * ## Why a rejection cannot be submitted without a reason
  *
@@ -27,7 +27,7 @@ interface DecideBookingDialogProps {
  * The space is tested for conflict **again** at approval, not only at request. A hall free when it
  * was asked for on Monday can be taken by an override or a rescheduled booking before Thursday's
  * decision, and confirming into a clash would produce two confirmed bookings for one room. So an
- * approval can be refused with `BOOKING_CONFLICT`, and that is not a bug to work around here — it is
+ * approval can be refused with `BOOKING_CONFLICT`, and that is not a bug to work around here - it is
  * the constraint doing exactly what it is for. The error surfaces with the service's own wording.
  */
 const DecideBookingDialog = ({ booking, onClose, onSubmit }: DecideBookingDialogProps) => {
@@ -62,7 +62,7 @@ const DecideBookingDialog = ({ booking, onClose, onSubmit }: DecideBookingDialog
     <FormDialog
       open
       title="Decide this booking"
-      description={`${booking.bookingReference} — ${booking.title}`}
+      description={`${booking.bookingReference} - ${booking.title}`}
       submitLabel={rejecting ? 'Reject the request' : 'Approve and confirm'}
       submitting={submitting}
       submitDisabled={reasonMissing}
@@ -78,8 +78,8 @@ const DecideBookingDialog = ({ booking, onClose, onSubmit }: DecideBookingDialog
           onChange={setDecision}
           required
           options={[
-            { value: 'APPROVE', label: 'Approve — confirm the booking' },
-            { value: 'REJECT', label: 'Reject — release the space' },
+            { value: 'APPROVE', label: 'Approve - confirm the booking' },
+            { value: 'REJECT', label: 'Reject - release the space' },
           ]}
         />
 
@@ -114,7 +114,7 @@ const DecideBookingDialog = ({ booking, onClose, onSubmit }: DecideBookingDialog
         ) : (
           <Alert variant="info" title="Checked again on approval">
             <p className="text-theme-sm">
-              The space is re-tested for a clash now, not only when it was requested — a hall free on
+              The space is re-tested for a clash now, not only when it was requested - a hall free on
               Monday can be taken before Thursday&rsquo;s decision. If it has gone, this will be
               refused rather than confirming two bookings into one room.
             </p>

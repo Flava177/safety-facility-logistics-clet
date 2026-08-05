@@ -17,7 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
  * Idempotency store for retried state-creating commands.
  *
  * <p>A replay with the same key and the same payload returns the original identifier. A replay with the
- * same key but a different payload is rejected rather than silently creating a second record — the
+ * same key but a different payload is rejected rather than silently creating a second record - the
  * client has a bug and hiding it would corrupt the register.
  */
 @Component

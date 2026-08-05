@@ -21,7 +21,7 @@ interface AttachEvidenceDialogProps {
 const SHA_256 = /^[0-9a-fA-F]{64}$/;
 
 /**
- * Attaching closure evidence — SRS-SFL-S153-03.
+ * Attaching closure evidence - SRS-SFL-S153-03.
  *
  * ## The file is read here and uploaded nowhere
  *
@@ -30,11 +30,11 @@ const SHA_256 = /^[0-9a-fA-F]{64}$/;
  * has not changed and this dialog does not upload anything.
  *
  * What has changed is who computes the digest. Choosing the file fills the name, the media type, the
- * size and — the one that matters — the SHA-256, because the browser has the bytes and can hash them.
+ * size and - the one that matters - the SHA-256, because the browser has the bytes and can hash them.
  * Before this, a technician standing in a plant room with a photograph had to obtain a digest from
  * somewhere else and type sixty-four hexadecimal characters into a form. Nobody does that correctly,
  * and a mistyped digest is the one error in this system that surfaces years later, during an
- * integrity check, on evidence nobody can now re-hash — as a **false report that the file was
+ * integrity check, on evidence nobody can now re-hash - as a **false report that the file was
  * tampered with**.
  *
  * The storage reference is still typed, because it genuinely cannot be known here: it is what the
@@ -44,7 +44,7 @@ const SHA_256 = /^[0-9a-fA-F]{64}$/;
  * ## Why the digest can still be entered by hand
  *
  * Three cases where the browser cannot hash: a file above the size cap, a browser without Web Crypto,
- * and a dashboard served over plain HTTP. In each the field falls back to what it was — manual — with
+ * and a dashboard served over plain HTTP. In each the field falls back to what it was - manual - with
  * the reason on the field rather than a control that silently does nothing. Somebody re-recording
  * evidence from a paper trail also has a digest and no file, and that has always been legitimate.
  *
@@ -52,7 +52,7 @@ const SHA_256 = /^[0-9a-fA-F]{64}$/;
  *
  * Disposal is the irreversible half of retention. Evidence with no class attached has no defensible
  * date on which anybody may delete it, so in practice it is either kept forever or deleted by whoever
- * is clearing space — and only one of those failures is visible. The service refuses without it; the
+ * is clearing space - and only one of those failures is visible. The service refuses without it; the
  * form says why.
  */
 const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) => {
@@ -154,7 +154,7 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           options={evidenceTypes.map((value) => ({ value, label: humaniseCode(value) }))}
           helperText={
             evidenceType === 'INVOICE'
-              ? 'An invoice proves money was spent, not that the work was done — it does not count towards closure.'
+              ? 'An invoice proves money was spent, not that the work was done - it does not count towards closure.'
               : 'Counts towards the closure requirement.'
           }
         />
@@ -206,7 +206,7 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           onChange={(value) => {
             setContentHash(value);
             // Typing over a derived hash makes it a typed hash, and the field should stop claiming
-            // it came from the file — the whole point of the badge is that it cannot be mistyped.
+            // it came from the file - the whole point of the badge is that it cannot be mistyped.
             setDerived(false);
           }}
           onBlur={() => setTouched(true)}
@@ -245,7 +245,7 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
         <details className="rounded-lg border border-gray-200 px-4 py-3">
           <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
             File details
-            {file ? ` — taken from ${fileName}` : ''}
+            {file ? ` - taken from ${fileName}` : ''}
           </summary>
           <div className="mt-4 space-y-4">
             <div className="grid gap-4 sm:grid-cols-2">
@@ -271,7 +271,7 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
             <p className="text-theme-sm text-gray-600">
               Size:{' '}
               {sizeBytes === ''
-                ? 'not known — choose a file, or leave it unrecorded'
+                ? 'not known - choose a file, or leave it unrecorded'
                 : `${formatBytes(Number(sizeBytes))} (${Number(sizeBytes).toLocaleString()} bytes)`}
               {sizeBytes !== '' && (
                 <Button
@@ -298,7 +298,7 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
         <Alert variant="info" title="The file is not uploaded from here">
           <p className="text-theme-sm">
             This service stores references and hashes, never the bytes. Choosing a file lets the
-            browser read its digest so it cannot be mistyped — you still upload to document storage
+            browser read its digest so it cannot be mistyped - you still upload to document storage
             yourself and record the reference it gives back.
           </p>
         </Alert>

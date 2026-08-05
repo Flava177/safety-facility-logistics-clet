@@ -135,7 +135,7 @@ const PageFallback = () => (
 /**
  * A system's routes, refused when the actor is not entitled to it.
  *
- * The wrapper sits on the parent route so every child inherits it — there is no way to add a screen
+ * The wrapper sits on the parent route so every child inherits it - there is no way to add a screen
  * under `fleet` or `emergency` and forget the check.
  *
  * It takes the **system**, not the programme, because the system is the more specific fact and the
@@ -151,7 +151,7 @@ const SystemRoutes = ({ system }: { system: SystemCode }) => (
 
 const App = () => {
   // Where this actor lands, which is their first entitled destination rather than the fleet
-  // dashboard — that is only the right answer for a fleet user.
+  // dashboard - that is only the right answer for a fleet user.
   const home = landingPath();
 
   return (
@@ -171,8 +171,8 @@ const App = () => {
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
             />
             {/*
-              Personal landings. Outside the SystemRoutes guards on purpose: these cross systems — a
-              driver's day is an S166 assignment and an S168 logbook — and every one of them is
+              Personal landings. Outside the SystemRoutes guards on purpose: these cross systems - a
+              driver's day is an S166 assignment and an S168 logbook - and every one of them is
               already gated in the sidebar by persona plus permission, with the services enforcing
               per record underneath. A system guard here would have to pick one system arbitrarily
               and would refuse the other half of the page.
@@ -219,7 +219,7 @@ const App = () => {
               <Route path="configuration" element={<FacilitiesConfigurationPage />} />
             </Route>
             {/*
-              S153 shares the /facilities base with S152 — same service, same programme — but is
+              S153 shares the /facilities base with S152 - same service, same programme - but is
               guarded on its own system code, so a role entitled to one and not the other lands on
               the no-entitlement page rather than an empty screen. Evidence sits outside the
               /maintenance prefix because an auditor reaching a piece of evidence has no interest in
@@ -249,7 +249,7 @@ const App = () => {
 
               The three static children are declared before `:bookingId`. React Router ranks static
               segments above dynamic ones regardless of order, so this is for the reader rather than
-              the router — but a new static child that looks like a UUID would break that, and having
+              the router - but a new static child that looks like a UUID would break that, and having
               them together is what makes it obvious.
             */}
             <Route path="bookings" element={<SystemRoutes system="S159" />}>

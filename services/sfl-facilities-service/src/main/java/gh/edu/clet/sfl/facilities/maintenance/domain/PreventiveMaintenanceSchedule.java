@@ -18,7 +18,7 @@ import java.util.UUID;
  * happened, so the interval could only ever be set at registration and then watched.
  *
  * <p>This schedule closes that loop. It generates a work order ahead of the due date, and closing
- * that work order moves the asset's {@code lastServicedOn} — which re-derives {@code serviceDueOn}
+ * that work order moves the asset's {@code lastServicedOn} - which re-derives {@code serviceDueOn}
  * and updates the dashboard without anybody editing the asset by hand.
  *
  * <h2>Why generation is idempotent, and how</h2>
@@ -26,7 +26,7 @@ import java.util.UUID;
  * The generator is scheduled and at-least-once. Two runs on the same day, or a restart mid-run, must
  * not produce two work orders for one service. {@link #lastGeneratedFor} records the due date most
  * recently generated for, and {@link #isDueForGeneration} refuses to generate for a date already
- * covered. That makes the key "one schedule, one cycle" rather than "one schedule, one run" —
+ * covered. That makes the key "one schedule, one cycle" rather than "one schedule, one run" -
  * important because a run that fails partway is retried, and a run that is late still generates for
  * the cycle it missed rather than skipping it.
  *
@@ -128,7 +128,7 @@ public record PreventiveMaintenanceSchedule(
      * Records that this cycle has been generated, and advances to the next one.
      *
      * <p>The next due date is computed from the cycle just generated, not from today. A generator
-     * that ran three days late must not push every subsequent service three days later — a quarterly
+     * that ran three days late must not push every subsequent service three days later - a quarterly
      * inspection would drift out of its quarter within a year.
      */
     public PreventiveMaintenanceSchedule markGenerated(UUID workOrderId, Instant at, String actorId,

@@ -17,11 +17,11 @@ import { landingPath } from './navigation';
  *
  * The sidebar already stops offering these destinations, but a typed address, a bookmark or a link in
  * an old email reaches them anyway. Without this the operator would get the screen and then a page of
- * `403`s from the service — technically correct, and a poor way to be told.
+ * `403`s from the service - technically correct, and a poor way to be told.
  *
  * **The refusal names the grain that actually failed**, because the two are different conversations.
  * A driver reaching courier and dispatch is inside their own programme and lacks one system of it, so
- * "Fleet, Transport & Logistics is not part of your work" would be false — they are looking at it. A
+ * "Fleet, Transport & Logistics is not part of your work" would be false - they are looking at it. A
  * security officer reaching the fleet register is outside their programme entirely. Same page,
  * different sentence, and only one of them is true in each case.
  *
@@ -65,7 +65,7 @@ const RequireEntitlement = ({
       <p className="mt-2 max-w-lg text-theme-sm text-gray-600">
         {programmeRefused ? (
           <>
-            This screen belongs to SFL.{programme.code} — {programme.scope.toLowerCase()}.
+            This screen belongs to SFL.{programme.code} - {programme.scope.toLowerCase()}.
           </>
         ) : (
           <>
@@ -78,7 +78,7 @@ const RequireEntitlement = ({
           : programmeRefused
             ? 'no SFL programme'
             : 'none of its systems'}
-        . If you need it, ask for the role that carries it rather than a link to this page — the
+        . If you need it, ask for the role that carries it rather than a link to this page - the
         service would refuse the request regardless.
       </p>
       {home && (
@@ -99,7 +99,7 @@ export default RequireEntitlement;
 /**
  * What an actor with no programme at all sees.
  *
- * Distinct from the refusal above: nothing has been asked for and nothing is being withheld — the
+ * Distinct from the refusal above: nothing has been asked for and nothing is being withheld - the
  * account simply carries no role this dashboard recognises. Saying so is better than an empty shell
  * that reads as a broken deployment.
  */
@@ -110,7 +110,7 @@ export const NoProgrammePage = () => (
     </span>
     <p className="text-title-sm font-bold text-gray-900">No programme is assigned to you</p>
     <p className="mt-2 max-w-lg text-theme-sm text-gray-600">
-      SFL covers four programmes — facilities and infrastructure, safety and security, fleet and
+      SFL covers four programmes - facilities and infrastructure, safety and security, fleet and
       logistics, and asset visibility. Your roles grant none of them, so there is nothing to show.
       Ask for the role that covers the work you do.
     </p>

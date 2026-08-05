@@ -7,7 +7,7 @@ import { SflSession, clearSession, writeSession } from './session';
  * <h2>What happens, in order</h2>
  *
  * The email is matched against `accounts.ts`, the password against one shared constant, and on a
- * match the account becomes the actor for this browser session — username, display name, roles and
+ * match the account becomes the actor for this browser session - username, display name, roles and
  * site scopes. Those four are what the API client sends as `X-SFL-*` on every request, so the portal
  * that opens next is the one that account's roles entitle it to.
  *
@@ -16,7 +16,7 @@ import { SflSession, clearSession, writeSession } from './session';
  * An unknown email and a wrong password are told apart here and reported the same way, which is a
  * deliberate inversion of the usual advice. Normally a sign-in form says "those details did not
  * match" for both, so an attacker cannot enumerate accounts. That reasoning does not apply to a form
- * whose entire account list is printed on the page beneath it — and pretending otherwise would cost a
+ * whose entire account list is printed on the page beneath it - and pretending otherwise would cost a
  * developer the one piece of information they need, which is whether they typed the address wrong or
  * the password wrong.
  *
@@ -41,7 +41,7 @@ const SESSION_HOURS = 12;
 const sessionFor = (account: SeededAccount): SflSession => ({
   // No token: this session was not issued by an identity provider and must not look as though it
   // was. `client.ts` sends an Authorization header only when this is non-empty, so a development
-  // session sends the X-SFL-* headers alone — which is exactly what the open services read.
+  // session sends the X-SFL-* headers alone - which is exactly what the open services read.
   accessToken: '',
   refreshToken: null,
   expiresAt: Math.floor(Date.now() / 1000) + SESSION_HOURS * 3600,

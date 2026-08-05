@@ -67,7 +67,7 @@ public interface JpaFacilityFaultRepository extends JpaRepository<FacilityFaultR
      *
      * <p>A count would be wrong twice over: two concurrent reports would read the same count and
      * allocate the same number, and a dismissed fault that was later archived would let a number be
-     * reused. A sequence has neither problem, and it is monotonic even under rollback — a gap in
+     * reused. A sequence has neither problem, and it is monotonic even under rollback - a gap in
      * fault numbers is harmless, a duplicate is not.
      */
     @Query(value = "select nextval('facilities.fault_number_seq')", nativeQuery = true)

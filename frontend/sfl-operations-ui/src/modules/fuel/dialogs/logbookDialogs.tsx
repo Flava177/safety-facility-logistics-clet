@@ -76,7 +76,7 @@ interface CreateLogbookDialogProps {
 }
 
 /**
- * Create a draft logbook — `POST /api/v1/fuel/logbooks`.
+ * Create a draft logbook - `POST /api/v1/fuel/logbooks`.
  *
  * The record is always created as `DRAFT`; there is no create-and-submit. That is deliberate on the
  * service side and it shapes this form: the end of the journey (end time, closing odometer,
@@ -85,7 +85,7 @@ interface CreateLogbookDialogProps {
  *
  * The two cross-field rules are the record's own: `endTime` may not precede `startTime`, and
  * `endOdometer` may not be below `startOdometer`. Both are enforced in `DriverLogbook`'s compact
- * constructor, so a violation would be a 400 rather than a field error — checking here turns it
+ * constructor, so a violation would be a 400 rather than a field error - checking here turns it
  * into an inline message on the field that caused it.
  */
 export const CreateLogbookDialog = ({
@@ -321,9 +321,9 @@ export const CreateLogbookDialog = ({
             { label: 'Date', value: form.values.journeyDate || null },
             { label: 'Odometer', value: logbookDistance },
             // A draft that is missing an end time, a closing reading or the declaration cannot be
-            // submitted for review, and `incomplete` already knows it — saying so here means the
+            // submitted for review, and `incomplete` already knows it - saying so here means the
             // operator learns it before saving rather than from the next screen.
-            { label: 'State', value: incomplete ? 'Draft — not yet complete' : 'Complete' },
+            { label: 'State', value: incomplete ? 'Draft - not yet complete' : 'Complete' },
           ]}
         />
       }
@@ -544,7 +544,7 @@ export const LogbookTransitionDialog = ({
     reopen: {
       title: 'Reopen this approved logbook',
       submit: 'Reopen',
-      note: 'Privileged — needs FUEL_LOGBOOK_REOPEN. The reason is recorded against the record.',
+      note: 'Privileged - needs FUEL_LOGBOOK_REOPEN. The reason is recorded against the record.',
     },
     cancel: {
       title: 'Cancel this logbook',

@@ -3,12 +3,12 @@ import { FleetApiError } from 'shared/errors/FleetApiError';
 /**
  * Turning a chosen file into the four things the platform actually stores.
  *
- * <p>SFL never holds evidence bytes — S166-03 and the facilities equivalent both store a *reference*
+ * <p>SFL never holds evidence bytes - S166-03 and the facilities equivalent both store a *reference*
  * plus a SHA-256, and the file itself lives in the document store. That is why every evidence form
  * has fields called "storage reference", "file name" and "checksum" rather than an upload button.
  *
  * <p>It is also why those forms were miserable. Three of them were plain text inputs the operator was
- * expected to fill by hand, checksum included — and a hand-typed SHA-256 is not a checksum, it is a
+ * expected to fill by hand, checksum included - and a hand-typed SHA-256 is not a checksum, it is a
  * sixty-four character opportunity to make the hash chain unverifiable. The evidence registration
  * dialog on Evidence & audit already solved this with a file picker that derives all four; these
  * helpers are that solution lifted out of it so the custody and handover forms can use it too.
@@ -36,7 +36,7 @@ export const evidenceStorageReference = (
   return `local-demo://fleet-evidence/${siteCode.toUpperCase()}/${safeType}/${safeRecord}/${now}-${safeFile}`;
 };
 
-/** SHA-256 of the file's bytes, lower-case hex — the form the services store and compare. */
+/** SHA-256 of the file's bytes, lower-case hex - the form the services store and compare. */
 export const sha256Hex = async (file: File): Promise<string> => {
   if (!globalThis.crypto?.subtle) {
     throw FleetApiError.transport('This browser cannot compute the SHA-256 evidence hash.');

@@ -12,7 +12,7 @@ import { CurrencyValue, SiteCodeValue } from 'modules/fuel/api/dto';
 /** `SiteCode` serialises as `{ value }`, not as a string. */
 export const siteOf = (site: SiteCodeValue | string | null | undefined): string => {
   if (!site) {
-    return '—';
+    return '-';
   }
   return typeof site === 'string' ? site : site.value;
 };
@@ -21,7 +21,7 @@ export const currencyCodeOf = (currency: CurrencyValue | null | undefined): stri
   currency?.currencyCode ?? '';
 
 /**
- * Money with its code — "GHS 1,240.00".
+ * Money with its code - "GHS 1,240.00".
  *
  * The code leads rather than a symbol: the fleet operates in cedis but a provider import can carry
  * any ISO code, and `GHS 200.00` beside `USD 200.00` is unambiguous where two currency symbols an
@@ -32,7 +32,7 @@ export const formatMoney = (
   currency?: CurrencyValue | string | null,
 ): string => {
   if (amount === null || amount === undefined) {
-    return '—';
+    return '-';
   }
   const code = typeof currency === 'string' ? currency : currencyCodeOf(currency);
   const value = amount.toLocaleString(undefined, {
@@ -43,7 +43,7 @@ export const formatMoney = (
 };
 
 /**
- * Quantity with its unit — "20.000 L".
+ * Quantity with its unit - "20.000 L".
  *
  * Three decimal places because that is the scale `FuelTransaction` rounds to, so the dashboard never
  * shows a figure the record does not hold.
@@ -53,7 +53,7 @@ export const formatQuantity = (
   unit?: string | null,
 ): string => {
   if (quantity === null || quantity === undefined) {
-    return '—';
+    return '-';
   }
   const value = quantity.toLocaleString(undefined, {
     minimumFractionDigits: 3,
@@ -78,7 +78,7 @@ export const formatUnitPrice = (
   currency?: CurrencyValue | string | null,
 ): string => {
   if (price === null || price === undefined) {
-    return '—';
+    return '-';
   }
   const code = typeof currency === 'string' ? currency : currencyCodeOf(currency);
   const value = price.toLocaleString(undefined, {
@@ -90,16 +90,16 @@ export const formatUnitPrice = (
 
 /** Shortens a UUID for a dense table cell. The full value stays in the row's title attribute. */
 export const shortId = (id: string | null | undefined): string =>
-  id ? id.slice(0, 8) : '—';
+  id ? id.slice(0, 8) : '-';
 
-/** "in 4 hours" / "6 hours overdue" — how an SLA reads in a queue. */
+/** "in 4 hours" / "6 hours overdue" - how an SLA reads in a queue. */
 export const formatDueIn = (dueAt: string | null | undefined, now = Date.now()): string => {
   if (!dueAt) {
-    return '—';
+    return '-';
   }
   const due = new Date(dueAt).getTime();
   if (Number.isNaN(due)) {
-    return '—';
+    return '-';
   }
   const minutes = Math.round((due - now) / 60000);
   const overdue = minutes < 0;

@@ -14,8 +14,8 @@ import { formatDateTime, orDash } from '../components/facilitiesFormat';
 /**
  * Zones and what they cover.
  *
- * A zone is how the safety and emergency systems address the estate — S162a life-safety events
- * arrive per zone, S174 broadcasts target recipient zones — so "what is actually in this zone" is
+ * A zone is how the safety and emergency systems address the estate - S162a life-safety events
+ * arrive per zone, S174 broadcasts target recipient zones - so "what is actually in this zone" is
  * the question the screen exists to answer. Selecting a zone loads its membership rather than
  * navigating away, because the comparison between zones is the common task.
  */
@@ -135,7 +135,7 @@ const ZonesPage = () => {
               error={members.error}
               empty={!members.data || members.data.length === 0}
               emptyTitle="This zone is empty"
-              emptyHint="A zone with no members resolves to nothing — an alarm against it would reach nobody."
+              emptyHint="A zone with no members resolves to nothing - an alarm against it would reach nobody."
               onRetry={members.refetch}
               minHeight={120}
             >

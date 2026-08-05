@@ -21,7 +21,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>The dashboard needs this to stop offering screens the actor cannot read. It could not derive the
  * answer itself: there are 103 permissions across 26 roles, and transcribing that into TypeScript
- * would have created exactly the drift that hiding a navigation entry is supposed to prevent — the
+ * would have created exactly the drift that hiding a navigation entry is supposed to prevent - the
  * sidebar would eventually promise something the service refuses, or hide something it allows. So the
  * front end asks, and this answers from the same matrices the enforcement path uses.
  *
@@ -31,11 +31,11 @@ import org.springframework.web.bind.annotation.RestController;
  * the {@code X-SFL-*} headers exactly as every other endpoint is.
  *
  * <p>It grants nothing either way. Every endpoint authorises independently, so an actor who overstates
- * their roles gains no access — only a sidebar that offers screens the service will refuse. Once IAM
+ * their roles gains no access - only a sidebar that offers screens the service will refuse. Once IAM
  * lands this becomes a claim on the token and the route can go.
  *
  * <p>S174's permissions are <strong>not</strong> included. Emergency notification is a separate
- * deployable with its own matrix (ADR 0004), and this service cannot answer for it — the emergency
+ * deployable with its own matrix (ADR 0004), and this service cannot answer for it - the emergency
  * service exposes the same route for that. Answering with a partial list and letting the dashboard
  * treat it as complete would hide every emergency screen from an entitled coordinator.
  */

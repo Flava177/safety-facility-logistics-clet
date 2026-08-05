@@ -25,7 +25,7 @@ interface StartDrillDialogProps {
 }
 
 /**
- * Start a drill — `POST /drills`.
+ * Start a drill - `POST /drills`.
  *
  * A drill exercises the activation path and records how it performed. It sends nothing: there is no
  * fan-out, no channel record and no provider call, which is why the target is a number an operator
@@ -122,7 +122,7 @@ export const StartDrillDialog = ({
       />
 
       <Alert variant="info" title="The drill stays running until it is completed">
-        Completion is where the figures are recorded — reached, acknowledged and elapsed time. A
+        Completion is where the figures are recorded - reached, acknowledged and elapsed time. A
         drill that is never completed contributes nothing to the performance record.
       </Alert>
     </FormDialog>
@@ -137,10 +137,10 @@ interface CompleteDrillDialogProps {
 }
 
 /**
- * Complete a drill — `POST /drills/{id}/complete`.
+ * Complete a drill - `POST /drills/{id}/complete`.
  *
  * The three figures entered here are the performance record. The acknowledgement rate the service
- * computes is against the **target**, not against how many were reached — so a drill that reached
+ * computes is against the **target**, not against how many were reached - so a drill that reached
  * half the site and had every one of them acknowledge still reports fifty per cent, which is the
  * honest reading. The dialog previews both so the difference is visible before it is filed.
  */
@@ -166,7 +166,7 @@ export const CompleteDrillDialog = ({
     crossFieldValidate: (values) => {
       const reached = Number(values.reachedRecipients || 0);
       const acknowledged = Number(values.acknowledgedRecipients || 0);
-      // Not a service rule — the domain accepts any non-negative pair. It is caught here because an
+      // Not a service rule - the domain accepts any non-negative pair. It is caught here because an
       // acknowledgement from somebody the drill never reached is a transcription error every time.
       return acknowledged > reached
         ? { acknowledgedRecipients: 'More acknowledgements than recipients reached.' }

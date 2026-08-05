@@ -67,7 +67,7 @@ describe('the closure evidence gate', () => {
   /**
    * SRS-SFL-S153-02: "A workflow cannot be closed without required evidence or closure reason."
    * The count is the useful half of the message, and it is asserted because the service answers with
-   * the same two numbers — two different sentences for one rule teaches a user to distrust both.
+   * the same two numbers - two different sentences for one rule teaches a user to distrust both.
    */
   it('refuses closure below the required evidence, naming both counts', () => {
     const action = closeAction(order('IN_PROGRESS', { evidenceRequired: 2 }), 0);
@@ -154,7 +154,7 @@ describe('who may reopen completed work', () => {
   /**
    * SRS-SFL-S153-02: "Only authorised roles may approve, override, cancel or reopen workflow items."
    * A technician holds `_UPDATE` and not `_CLOSE`, which is the whole reason the two states are
-   * separate — this is the guard that stops them undoing their own supervisor.
+   * separate - this is the guard that stops them undoing their own supervisor.
    */
   it('refuses a technician holding only the update permission', () => {
     permits.mockImplementation((permission) => permission === 'FACILITIES_WORK_ORDER_UPDATE');
@@ -284,7 +284,7 @@ describe('the fault workflow', () => {
 
 describe('the priority ordering the thresholds depend on', () => {
   /**
-   * Two configurable rules — the blocking threshold and the closure-evidence threshold — are both
+   * Two configurable rules - the blocking threshold and the closure-evidence threshold - are both
    * expressed as "at least this priority", so the order of the array is behaviour rather than
    * presentation. Reordering it silently changes both.
    */

@@ -71,7 +71,7 @@ const NO_INPUT_ACTIONS: AnomalyAction[] = ['review', 'request-explanation', 'res
  * A fuel anomaly case: why it exists, who owns it, and every action legal from where it stands.
  *
  * The closure gate is the heart of this screen. `FuelAnomalyCase.close` demands an explanation, a
- * decision and evidence, and refuses with a single message naming all three — so the panel tracks
+ * decision and evidence, and refuses with a single message naming all three - so the panel tracks
  * each of them separately and shows which are actually satisfied. An operator can see the whole
  * path to closure at a glance instead of discovering it one refusal at a time.
  */
@@ -163,7 +163,7 @@ const FuelAnomalyDetailPage = () => {
           <div className="space-y-5">
             {breached && (
               <Alert variant="error" title="This case has breached its SLA">
-                It was due {formatDateTime(record.slaDueAt)} — {formatDueIn(record.slaDueAt)}. The
+                It was due {formatDateTime(record.slaDueAt)} - {formatDueIn(record.slaDueAt)}. The
                 scheduled sweep escalates cases past their target automatically.
               </Alert>
             )}
@@ -281,13 +281,13 @@ const FuelAnomalyDetailPage = () => {
                       { label: 'SLA due', value: formatDateTime(record.slaDueAt) },
                       { label: 'SLA standing', value: formatDueIn(record.slaDueAt) },
                       { label: 'Escalation level', value: record.escalationLevel },
-                      { label: 'Explanation', value: record.explanation ?? '—', span: 2 },
+                      { label: 'Explanation', value: record.explanation ?? '-', span: 2 },
                       {
                         label: 'Decision',
-                        value: record.decision ? humanise(record.decision) : '—',
+                        value: record.decision ? humanise(record.decision) : '-',
                       },
-                      { label: 'Evidence reference', value: record.evidenceId ?? '—' },
-                      { label: 'Closure reason', value: record.closureReason ?? '—', span: 2 },
+                      { label: 'Evidence reference', value: record.evidenceId ?? '-' },
+                      { label: 'Closure reason', value: record.closureReason ?? '-', span: 2 },
                     ]}
                   />
                 </SectionCard>

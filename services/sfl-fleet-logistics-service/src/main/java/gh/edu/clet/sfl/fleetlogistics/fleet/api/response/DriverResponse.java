@@ -30,7 +30,7 @@ public record DriverResponse(
         DriverEligibilityStatus eligibilityStatus,
         String suspensionReason,
         /*
-          Whether anybody signs in as this driver — not the subject itself, which is an identity
+          Whether anybody signs in as this driver - not the subject itself, which is an identity
           provider identifier and has no business on a list screen. The register needs to show which
           profiles are linked, so an administrator can see at a glance who will and will not see their
           own trips; it does not need to publish the identifiers to do that.

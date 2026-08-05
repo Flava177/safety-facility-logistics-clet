@@ -55,13 +55,13 @@ public class JdbcFuelRepository implements FuelRepository {
     /**
      * A WHERE clause and its bind values, minus the leading site-scope array.
      *
-     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * <p>Built once per query and used twice - for the count and for the page - so the two can never
      * disagree about which records they are describing.
      */
     private record Where(StringBuilder sql, List<Object> args) {
         static Where scoped() { return new Where(new StringBuilder("site_code = ANY (?)"), new ArrayList<>()); }
         Where and(String fragment, Object value) { if (value != null) { sql.append(" AND ").append(fragment); args.add(value); } return this; }
-        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        /** A predicate with no bind value - for IS NULL / IS NOT NULL and set tests. */
         Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
     }
 
@@ -318,7 +318,7 @@ public class JdbcFuelRepository implements FuelRepository {
     @Override public Optional<FuelAnomalyCase> findAnomaly(UUID tx,FuelAnomalyCase.Type type){return one("SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE transaction_id=? AND anomaly_type=?",this::anomaly,tx,type.name());}
     @Override public Optional<FuelAnomalyCase> findAnomalyForTrip(UUID trip,FuelAnomalyCase.Type type){return one("SELECT * FROM fleet_logistics.fuel_anomaly_cases WHERE trip_id=? AND transaction_id IS NULL AND anomaly_type=?",this::anomaly,trip,type.name());}
 
-    /** Neither closed nor cancelled — what "open" means everywhere in this module. */
+    /** Neither closed nor cancelled - what "open" means everywhere in this module. */
     private static final String OPEN_STATUSES = "status NOT IN ('CLOSED','CANCELLED')";
 
     @Override public FuelPage<FuelAnomalyCase> findAnomalies(AnomalyQuery q) {
@@ -492,7 +492,7 @@ public class JdbcFuelRepository implements FuelRepository {
             if(rs.next()){m.put("transactionCount",rs.getLong(1));m.put("fuelVolume",rs.getBigDecimal(2));m.put("fuelSpend",rs.getBigDecimal(3));m.put("reconciledCount",rs.getLong(4));m.put("exceptionCount",rs.getLong(5));m.put("sourceUpdatedAt",instant(rs,"source_updated_at"));}
             return null;});
 
-        // Transactions that have never been reconciled — the backlog a run would clear.
+        // Transactions that have never been reconciled - the backlog a run would clear.
         m.put("awaitingReconciliation",count("fleet_logistics.fuel_transactions","status='RECEIVED'",sites,site,null));
 
         m.put("openAnomalies",count("fleet_logistics.fuel_anomaly_cases",OPEN_STATUSES,sites,site,null));

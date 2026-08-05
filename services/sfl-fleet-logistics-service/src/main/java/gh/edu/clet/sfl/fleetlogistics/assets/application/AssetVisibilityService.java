@@ -79,7 +79,7 @@ public class AssetVisibilityService {
      * The register narrowed to the sites an actor holds.
      *
      * <p>The cross-site scope is {@code *}, matching {@code SiteScopeGuc.ALL_SITES} and
-     * {@code crossProgrammeRoles} — one spelling of "everywhere" across the platform rather than
+     * {@code crossProgrammeRoles} - one spelling of "everywhere" across the platform rather than
      * three. Anything else is filtered in SQL.
      */
     @Transactional(readOnly = true)
@@ -98,7 +98,7 @@ public class AssetVisibilityService {
     /**
      * An asset that is not there is a 404, not a 400.
      *
-     * <p>This threw {@link IllegalArgumentException} and so answered <strong>400</strong> — telling a
+     * <p>This threw {@link IllegalArgumentException} and so answered <strong>400</strong> - telling a
      * client its request was malformed when the request was perfectly well-formed and the asset simply
      * does not exist. A client cannot distinguish "you sent nonsense" from "that id is gone", and only
      * one of those is worth retrying.

@@ -31,7 +31,7 @@ describe('Modal focus on open', () => {
 
   it('respects a field that asked for focus explicitly', () => {
     // React sets autoFocus as a property and focuses during commit, leaving no `autofocus`
-    // attribute to query — so the rule is "focus is already inside, do not second-guess it" rather
+    // attribute to query - so the rule is "focus is already inside, do not second-guess it" rather
     // than a selector. Searching for `[autofocus]` matched nothing and stole focus from the
     // emergency dialogs that rely on this.
     render(
@@ -45,7 +45,7 @@ describe('Modal focus on open', () => {
   });
 
   it('skips a field hidden inside a collapsed disclosure', () => {
-    // `querySelectorAll` finds inputs inside a closed <details>, but they cannot take focus — so a
+    // `querySelectorAll` finds inputs inside a closed <details>, but they cannot take focus - so a
     // naive implementation calls .focus() on them, nothing happens, and focus stays outside the
     // modal. This is exactly the shape "Register a vehicle" now has, with VIN behind More details.
     render(

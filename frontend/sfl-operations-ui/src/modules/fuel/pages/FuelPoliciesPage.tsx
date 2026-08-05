@@ -28,8 +28,8 @@ const inForce = (policy: FuelPolicy, at = Date.now()): boolean =>
 /**
  * The fuel policy register.
  *
- * `GET /policies?siteCode=` returns every policy for a site, unpaged and unfiltered — it is the one
- * fuel collection that takes no `size` at all — so this register holds the whole set and the effective
+ * `GET /policies?siteCode=` returns every policy for a site, unpaged and unfiltered - it is the one
+ * fuel collection that takes no `size` at all - so this register holds the whole set and the effective
  * period is the thing worth reading. A policy is what reconciliation resolves against a transaction's
  * own timestamp, so "which one is in force right now" is called out rather than left to be worked
  * out from two dates.

@@ -9,7 +9,7 @@
     </parent>
     <artifactId>sfl-safety-security-service</artifactId>
     <name>sfl-safety-security-service</name>
-    <description>Safety, Security &amp; Emergency Management Platform (SFL.SSEMP) — S160, S160a, S161, S162, S162a, S163 and S174</description>
+    <description>Safety, Security &amp; Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174</description>
     <properties>
         <archunit.version>1.3.0</archunit.version>
         <springdoc-openapi.version>3.0.3</springdoc-openapi.version>

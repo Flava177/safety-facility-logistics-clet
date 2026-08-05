@@ -20,7 +20,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>No fleet notification provider is procured for Phase 1 (gap report C-11), so this adapter records
  * a durable notification intent and logs it. That is an honest outcome an operator can inspect and
- * reconcile — it never reports a delivery that did not happen.
+ * reconcile - it never reports a delivery that did not happen.
  *
  * <p>If {@code sfl.fleet.notification.provider} names a real provider, resolution fails loudly at the
  * first send rather than degrading to the recorded behaviour, so a mis-configured environment is

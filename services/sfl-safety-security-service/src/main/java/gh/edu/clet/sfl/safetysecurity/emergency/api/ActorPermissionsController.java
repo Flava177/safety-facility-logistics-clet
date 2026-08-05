@@ -34,7 +34,7 @@ import org.springframework.web.bind.annotation.RestController;
  * the {@code X-SFL-*} headers exactly as every other endpoint is.
  *
  * <p>It grants nothing either way. Every endpoint authorises independently, so an actor who overstates
- * their roles gains no access — only a sidebar that offers screens the service will refuse. Once IAM
+ * their roles gains no access - only a sidebar that offers screens the service will refuse. Once IAM
  * lands this becomes a claim on the token and the route can go.
  */
 @RestController

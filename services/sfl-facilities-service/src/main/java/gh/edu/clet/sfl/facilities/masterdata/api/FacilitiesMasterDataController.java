@@ -43,7 +43,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>The controller does no business work: it resolves the actor and source channel, binds and
  * validates the request, delegates to an application service and shapes the response. Authorisation,
- * invariants, audit and event publication all live behind the application boundary — the ArchUnit
+ * invariants, audit and event publication all live behind the application boundary - the ArchUnit
  * boundary test enforces that this class cannot reach past it.
  */
 @RestController

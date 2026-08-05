@@ -9,7 +9,7 @@ import java.util.List;
  * and the fuel {@code FuelPageResponse}.
  *
  * <p>Before this, every dispatch collection returned a bare {@code List<T>} capped by a {@code size}
- * limit — no total, no page, and no way for a client to know whether it held the register or the
+ * limit - no total, no page, and no way for a client to know whether it held the register or the
  * first hundred rows of it. A dashboard could only be honest about that by guessing from whether the
  * list came back full, which is the kind of thing an operator discovers when a consignment is
  * missing.

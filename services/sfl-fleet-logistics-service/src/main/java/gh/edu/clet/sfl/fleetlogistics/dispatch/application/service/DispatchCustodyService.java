@@ -28,7 +28,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 /**
  * S171-02: unbroken chain-of-custody handovers. Each hop is appended immutably; after recording, the
- * chain is re-checked for gaps (missing handover, broken seal, count mismatch, out-of-order hop) — any
+ * chain is re-checked for gaps (missing handover, broken seal, count mismatch, out-of-order hop) - any
  * gap opens a {@code CUSTODY_GAP} exception (security-relevant when the seal is compromised) and blocks
  * dispatch/custody closure.
  */
@@ -96,7 +96,7 @@ public class DispatchCustodyService {
      * A gap as one line of text, for the {@code detectedRules} list on an exception case.
      *
      * <p>The only place a gap is still flattened to a string. It is a case's own summary of why it
-     * was raised, not a wire format anybody parses — the custody read returns the structured gaps.
+     * was raised, not a wire format anybody parses - the custody read returns the structured gaps.
      */
     private static String describe(CustodyChainPolicy.Gap gap) {
         StringBuilder text = new StringBuilder(gap.reason().name()).append(" at ").append(gap.hop());
@@ -115,7 +115,7 @@ public class DispatchCustodyService {
      * Custody handovers across a site's consignments.
      *
      * <p>Closes gap 7. Custody was readable per consignment only, so "everything this custodian
-     * handled last week" needed the manifests to be known first — which is the wrong way round when
+     * handled last week" needed the manifests to be known first - which is the wrong way round when
      * the custodian is the reason for asking.
      */
     public DispatchRepository.DispatchPage<CustodyHandover> handovers(String site, UUID dispatchId, CustodyHop hop,

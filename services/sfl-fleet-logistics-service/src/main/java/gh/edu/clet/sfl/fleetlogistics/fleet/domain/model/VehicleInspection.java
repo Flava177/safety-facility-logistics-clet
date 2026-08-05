@@ -13,7 +13,7 @@ import java.util.UUID;
  *
  * <p>Traced to SRS-SFL-S166-01 (an inspection is an operational record carrying service status and
  * availability evidence) and SRS-SFL-S166-02 (the pre-trip inspection is the evidence-bearing workflow
- * step that can block a trip). The workplan's "S166-06" identifier is deliberately not used — it has
+ * step that can block a trip). The workplan's "S166-06" identifier is deliberately not used - it has
  * no formal SRS requirement behind it (gap report C-01).
  *
  * <p>The result is derived from the findings rather than supplied, so an inspector cannot record a
@@ -80,7 +80,7 @@ public record VehicleInspection(
         return withStatus(InspectionStatus.ACCEPTED, findings, newMetadata);
     }
 
-    /** Rejects a submitted inspection — for example when the evidence does not match the findings. */
+    /** Rejects a submitted inspection - for example when the evidence does not match the findings. */
     public VehicleInspection reject(RecordMetadata newMetadata) {
         requireStatus(InspectionStatus.SUBMITTED, InspectionStatus.REJECTED);
         return withStatus(InspectionStatus.REJECTED, findings, newMetadata);

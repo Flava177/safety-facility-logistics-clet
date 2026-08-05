@@ -6,7 +6,7 @@ import { humaniseCode, relativeTime, severityTone } from './facilitiesFormat';
 
 interface ReadinessBlockerListProps {
   blockers: ReadinessBlocker[];
-  /** Shown when nothing is open — silence would read as "not checked" rather than "clear". */
+  /** Shown when nothing is open - silence would read as "not checked" rather than "clear". */
   clearMessage?: string;
   /** Omitted when the actor cannot resolve, so no button is offered that would be refused. */
   onResolve?: (blocker: ReadinessBlocker) => void;
@@ -17,7 +17,7 @@ interface ReadinessBlockerListProps {
  *
  * A sibling of the shared `BlockerList` rather than a reuse of it: that component is bound to the
  * fleet's two-value vocabulary (`BLOCKING` / everything else) and to `modules/fleet/api/dto`. S152
- * has four severities and the distinction between them is the whole model — a critical blocker
+ * has four severities and the distinction between them is the whole model - a critical blocker
  * forbids READY, a major one degrades, an advisory one is noted and changes nothing. Flattening that
  * into "blocking or not" would throw away the information an operator is here for.
  *
@@ -67,7 +67,7 @@ const ReadinessBlockerList = ({
       {critical.length > 0 && (
         <Alert
           variant="error"
-          title={`${critical.length} critical blocker${critical.length === 1 ? '' : 's'} — this space cannot be marked ready`}
+          title={`${critical.length} critical blocker${critical.length === 1 ? '' : 's'} - this space cannot be marked ready`}
         >
           <ul className="mt-1.5 space-y-3">{critical.map(row)}</ul>
         </Alert>

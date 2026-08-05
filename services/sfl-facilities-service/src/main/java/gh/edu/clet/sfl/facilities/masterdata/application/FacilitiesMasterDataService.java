@@ -35,14 +35,14 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Every command follows the same five steps, in this order, and the order matters:
  * <ol>
- *   <li><strong>Authorise</strong> — permission and site scope, before anything is read or written, so
+ *   <li><strong>Authorise</strong> - permission and site scope, before anything is read or written, so
  *       an unauthorised caller cannot learn from a 404 that a record exists.</li>
- *   <li><strong>Replay check</strong> — an {@code Idempotency-Key} already seen with the same payload
+ *   <li><strong>Replay check</strong> - an {@code Idempotency-Key} already seen with the same payload
  *       returns the original result rather than creating a second record.</li>
- *   <li><strong>Validate</strong> — parent references resolve, identifiers are free, the caller's
+ *   <li><strong>Validate</strong> - parent references resolve, identifiers are free, the caller's
  *       version is current.</li>
- *   <li><strong>Apply</strong> — the domain decides; this layer never encodes a business rule.</li>
- *   <li><strong>Record</strong> — audit and outbox, in the same transaction as the change.</li>
+ *   <li><strong>Apply</strong> - the domain decides; this layer never encodes a business rule.</li>
+ *   <li><strong>Record</strong> - audit and outbox, in the same transaction as the change.</li>
  * </ol>
  */
 @Service
@@ -137,7 +137,7 @@ public class FacilitiesMasterDataService {
      * Declares or stands down examination mode (NFR 23.3).
      *
      * <p>Its own permission, its own audit action and its own event, because the mode change is the
-     * decision — every stricter rule that follows is a consequence of it, and burying it inside a
+     * decision - every stricter rule that follows is a consequence of it, and burying it inside a
      * general site update would make the one thing a reviewer looks for invisible.
      */
     @Transactional

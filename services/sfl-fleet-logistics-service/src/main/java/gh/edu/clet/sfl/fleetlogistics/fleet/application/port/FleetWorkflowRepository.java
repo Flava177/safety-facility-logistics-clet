@@ -28,7 +28,7 @@ public interface FleetWorkflowRepository {
 
     List<FleetWorkflowItem> findAllInScope(SiteScopeFilter scope);
 
-    /** Live items whose resolution target has passed — the input to the escalation sweep. */
+    /** Live items whose resolution target has passed - the input to the escalation sweep. */
     List<FleetWorkflowItem> findLiveBreachedAt(Instant now);
 
     // --- append-only history -------------------------------------------------------------

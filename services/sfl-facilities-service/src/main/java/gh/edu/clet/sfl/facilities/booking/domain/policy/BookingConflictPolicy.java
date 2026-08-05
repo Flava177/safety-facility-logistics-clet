@@ -13,7 +13,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * Whether a proposed booking clashes with one already held — SRS-SFL-S159-02.
+ * Whether a proposed booking clashes with one already held - SRS-SFL-S159-02.
  *
  * <h2>The rule, stated once</h2>
  *
@@ -23,7 +23,7 @@ import java.util.UUID;
  * <ul>
  *   <li><strong>Occupied, not booked.</strong> {@link BookingWindow#occupied()} widens by the setup
  *       and teardown buffers. Testing the bare window would let the next booking start while the
- *       chairs are still being moved — the failure nobody notices until a lecturer walks into a room
+ *       chairs are still being moved - the failure nobody notices until a lecturer walks into a room
  *       being re-laid.</li>
  *   <li><strong>Half-open.</strong> A booking ending at 10:00 and one starting at 10:00 do not clash.
  *       Get this wrong in one direction and every back-to-back lecture reports a phantom conflict
@@ -37,7 +37,7 @@ import java.util.UUID;
  * press Request in the same second, because no amount of read-then-write in application code can.
  * This class is the <em>explanation</em>. A constraint violation arrives as an opaque SQL error
  * naming an index; a requester needs to be told which booking has the hall and when. So the two are
- * both present and neither is redundant — this refuses readably in the ordinary case, and the
+ * both present and neither is redundant - this refuses readably in the ordinary case, and the
  * constraint refuses correctly in the race.
  *
  * <p>They must agree. The status set here comes from {@link Booking#holdsTheSpace()}, and the

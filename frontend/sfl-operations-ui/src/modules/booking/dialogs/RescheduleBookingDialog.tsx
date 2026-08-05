@@ -20,7 +20,7 @@ interface RescheduleBookingDialogProps {
  * ## What moves with it, and why that is one transaction
  *
  * Every resource the booking holds moves too. An allocation left on the old window would hold a
- * projector at a time nothing is happening and release it at a time something is — so the service
+ * projector at a time nothing is happening and release it at a time something is - so the service
  * does both in one transaction, and this dialog says so rather than leaving an operator to discover
  * it on the allocations list afterwards.
  *
@@ -72,7 +72,7 @@ const RescheduleBookingDialog = ({ booking, onClose, onSubmit }: RescheduleBooki
     <FormDialog
       open
       title="Move this booking"
-      description={`${booking.bookingReference} — ${booking.title}`}
+      description={`${booking.bookingReference} - ${booking.title}`}
       submitLabel="Move it"
       submitting={submitting}
       submitDisabled={Boolean(problem)}
@@ -123,7 +123,7 @@ const RescheduleBookingDialog = ({ booking, onClose, onSubmit }: RescheduleBooki
         <Alert variant="info" title="What moves with it">
           <p className="text-theme-sm">
             Every resource this booking holds moves to the new window in the same transaction, and any
-            readiness hold is cleared — the reconciliation sweep re-places it within the minute if it
+            readiness hold is cleared - the reconciliation sweep re-places it within the minute if it
             still applies. The approval is <strong>not</strong> reset: an approved booking stays
             approved.
           </p>

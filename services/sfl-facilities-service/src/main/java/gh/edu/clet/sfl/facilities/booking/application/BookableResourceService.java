@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The bookable-resource register, and attaching resources to bookings — SRS-SFL-S159-01, -02.
+ * The bookable-resource register, and attaching resources to bookings - SRS-SFL-S159-01, -02.
  *
  * <h2>Why reducing a quantity does not check what is already allocated</h2>
  *
@@ -33,7 +33,7 @@ import org.springframework.transaction.annotation.Transactional;
  * bookings next week are holding thirty-five. Refusing would be the tidier rule and the wrong one:
  * the chairs are genuinely gone, and a register that insists otherwise is a register that has stopped
  * describing the estate. The oversubscription surfaces on the availability screen, where a human can
- * decide which booking loses out — which is a decision, not an arithmetic error.
+ * decide which booking loses out - which is a decision, not an arithmetic error.
  */
 @Service
 public class BookableResourceService {

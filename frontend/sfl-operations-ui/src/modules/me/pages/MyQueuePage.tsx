@@ -10,13 +10,13 @@ import { searchWorkOrders } from 'modules/facilities/api/facilitiesApi';
 import type { WorkOrder } from 'modules/facilities/api/dto';
 
 /**
- * The technician's and the vendor's queue — SRS §2.3 "Maintenance Technician / Vendor".
+ * The technician's and the vendor's queue - SRS §2.3 "Maintenance Technician / Vendor".
  *
  * ## The narrowing is the service's, and it is per record
  *
  * `WorkOrderApplicationService.assertVisible` refuses a work order not assigned to the actor, on
  * reads and writes alike, and `vendorFilter` narrows the list in the same breath. So this screen
- * asks for the queue and receives only what is theirs — including by id, which is the part an empty
+ * asks for the queue and receives only what is theirs - including by id, which is the part an empty
  * list cannot prove.
  *
  * S153 recorded the reasoning: "the real boundary is **assignment**... because 'the ones assigned to
@@ -43,16 +43,16 @@ const MyQueuePage = () => {
   const columns: Column<WorkOrder>[] = [
     { key: 'workOrderNumber', header: 'Job', cell: (row) => row.workOrderNumber },
     { key: 'title', header: 'What', cell: (row) => row.title },
-    { key: 'locationCode', header: 'Where', cell: (row) => row.locationCode ?? '—' },
+    { key: 'locationCode', header: 'Where', cell: (row) => row.locationCode ?? '-' },
     { key: 'priority', header: 'Priority', cell: (row) => <StatusChip value={row.priority} /> },
     { key: 'status', header: 'Status', cell: (row) => <StatusChip value={row.status} /> },
     {
       key: 'overdue',
       header: 'SLA',
       // `overdue` comes down the wire. A browser deciding for itself what is late would disagree
-      // with the escalation sweep the moment a workstation clock drifted — and the sweep is the one
+      // with the escalation sweep the moment a workstation clock drifted - and the sweep is the one
       // that notifies people.
-      cell: (row) => (row.overdue ? <StatusChip value="OVERDUE" tone="blocked" /> : '—'),
+      cell: (row) => (row.overdue ? <StatusChip value="OVERDUE" tone="blocked" /> : '-'),
     },
   ];
 
@@ -64,7 +64,7 @@ const MyQueuePage = () => {
         error={orders.error}
         empty={rows.length === 0}
         emptyTitle="Nothing is assigned to you"
-        // Never "every job at this site is closed" — this queue is yours, and a contractor who sees
+        // Never "every job at this site is closed" - this queue is yours, and a contractor who sees
         // only their own has no way to know what else exists.
         emptyHint="Work assigned to you appears here. It does not show anybody else's."
         onRetry={orders.refetch}

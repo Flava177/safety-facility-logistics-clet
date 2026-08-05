@@ -27,7 +27,7 @@ import {
 } from '../components/facilitiesFormat';
 
 /**
- * The fault register — SRS-SFL-S153-01.
+ * The fault register - SRS-SFL-S153-01.
  *
  * <p>This is the screen the retired static page had and the dashboard did not, and it is the last
  * thing ADR 0006 gave up when that page went.
@@ -123,7 +123,7 @@ const FaultRegisterPage = () => {
       cell: (fault) => {
         if (!fault.slaDueAt) {
           // Untriaged, or migrated from the pre-S153 system. Either way it has no deadline yet, and
-          // saying so is more use than an empty cell — a fault with no SLA never escalates.
+          // saying so is more use than an empty cell - a fault with no SLA never escalates.
           return <span className="text-theme-xs text-gray-500">Not triaged</span>;
         }
         return fault.overdue ? (

@@ -37,7 +37,7 @@ import org.springframework.web.bind.annotation.RestController;
  * <h2>Two things changed here on 1 August 2026, and both were overdue</h2>
  *
  * <p><strong>Authorisation.</strong> Every method below now passes through
- * {@link AssetVisibilityAccessPolicy}. Before, none did — eight endpoints with no permission check
+ * {@link AssetVisibilityAccessPolicy}. Before, none did - eight endpoints with no permission check
  * and no site-scope check, so any authenticated caller could register an asset, read the whole
  * register and query by location at any site. Reads did not even resolve an actor.
  *
@@ -51,7 +51,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * A caller asking for a site they do not hold is refused, because they asked for something specific
  * and the honest answer is no. A caller asking for *no* site gets the register narrowed to the sites
- * they hold rather than everything — see {@code assets} below, where the distinction is made
+ * they hold rather than everything - see {@code assets} below, where the distinction is made
  * explicit, because getting it the other way round is how a scoped register quietly leaks.
  */
 @RestController
@@ -91,7 +91,7 @@ public class AssetReferenceController {
         ActorContext actor = actors.resolve(http);
 
         if (siteCode != null && !siteCode.isBlank()) {
-            // They named a site. Refuse if it is not theirs — answering an explicit question with a
+            // They named a site. Refuse if it is not theirs - answering an explicit question with a
             // silently empty list would let a caller conclude the site has no assets.
             access.require(actor, SflPermission.ASSET_REFERENCE_READ, siteCode, RESOURCE);
             return ApiResponse.ok(service.findAll(siteCode));
@@ -114,7 +114,7 @@ public class AssetReferenceController {
 
         AssetReference asset = service.findById(assetId);
         // Scope is checked against the record's own site, after loading it. A by-id read that skipped
-        // this is how an out-of-scope asset is read by pasting a UUID — the defect A0 found in fuel.
+        // this is how an out-of-scope asset is read by pasting a UUID - the defect A0 found in fuel.
         access.require(actor, SflPermission.ASSET_REFERENCE_READ, asset.siteCode(), RESOURCE);
         return ApiResponse.ok(asset);
     }

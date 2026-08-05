@@ -14,8 +14,8 @@ import java.util.UUID;
  *
  * <p>SRS-SFL-S153-01 names "vendor assignment" as an operational record and S153-04 lists
  * "procurement/vendor master" among the systems this module integrates with. This is deliberately
- * <strong>not</strong> that master. It is a local reference — enough to assign work, track the
- * contracted response time and see whether the contract has expired — carrying
+ * <strong>not</strong> that master. It is a local reference - enough to assign work, track the
+ * contracted response time and see whether the contract has expired - carrying
  * {@link #externalVendorId} as the procurement system's identifier for the same company.
  *
  * <p>That is the same shape S152 uses for AVAMP asset references: a value, not a foreign key, and

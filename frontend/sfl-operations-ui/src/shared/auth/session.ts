@@ -3,7 +3,7 @@
  *
  * <h2>Why this file exists at all</h2>
  *
- * A1 turned authentication on across every service — the resource server, the JWT actor resolvers,
+ * A1 turned authentication on across every service - the resource server, the JWT actor resolvers,
  * the realm, the 403-versus-401 distinction. **None of it was reachable from the browser.** The API
  * client sent `X-SFL-User`, `X-SFL-Roles` and `X-SFL-Sites` and no `Authorization` header at any
  * point, so the dashboard worked against a service running with `SFL_SECURITY_ENABLED=false` and
@@ -14,8 +14,8 @@
  * The obvious shortcut is to keep sending the `X-SFL-*` headers and just gate the UI behind a login
  * screen. That would be theatre of exactly the kind ADR 0007 refuses: the headers are caller-supplied,
  * so a "signed-in driver" could still assert `SFL_ADMIN` by editing local storage. The roles and site
- * scopes below are read from the **token's own claims** — `realm_access.roles` and `site_scopes`,
- * the same two the services read — so what the sidebar believes and what the service enforces come
+ * scopes below are read from the **token's own claims** - `realm_access.roles` and `site_scopes`,
+ * the same two the services read - so what the sidebar believes and what the service enforces come
  * from one signed source.
  *
  * <h2>Where the token is kept, and the honest tradeoff</h2>
@@ -65,7 +65,7 @@ interface KeycloakClaims {
  *
  * **Deliberately unverified, and that is not a shortcut.** Verification is the service's job and it
  * does it on every call against the realm's public keys. A browser cannot verify a signature in any
- * meaningful sense — it would be checking a token it was handed against a key it was also handed.
+ * meaningful sense - it would be checking a token it was handed against a key it was also handed.
  * What this is for is deciding which nav items to draw, and a tampered token buys nothing: the
  * services refuse it.
  */
@@ -170,7 +170,7 @@ export const clearSession = (): void => {
   try {
     sessionStorage.removeItem(STORAGE_KEY);
   } catch {
-    // Nothing to do — see writeSession.
+    // Nothing to do - see writeSession.
   }
 };
 

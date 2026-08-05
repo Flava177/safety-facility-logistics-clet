@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * A building within a site (SRS-SFL-S152-01).
  *
- * <p>Carries {@code siteCode} alongside {@code siteId} — denormalised on purpose. Site scope is
+ * <p>Carries {@code siteCode} alongside {@code siteId} - denormalised on purpose. Site scope is
  * checked on every read and write, and resolving the site row to learn its code on each of those
  * checks would turn one query into two for no gain. The pair is written together and never
  * separately, because a building cannot move between sites: that would be a demolition and a new
@@ -43,7 +43,7 @@ public record Building(
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
-    /** A null or blank field leaves the current value alone — this is a PATCH, not a replace. */
+    /** A null or blank field leaves the current value alone - this is a PATCH, not a replace. */
     public Building update(String name, String description, String actorId, Instant at, SourceChannel channel,
             String correlationId) {
         return new Building(id, siteId, siteCode, buildingCode,

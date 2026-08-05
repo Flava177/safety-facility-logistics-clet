@@ -14,7 +14,7 @@ import type {
 /**
  * Wire types for the S174 emergency notification service.
  *
- * These are the domain records as they serialise — the controllers return the aggregates directly,
+ * These are the domain records as they serialise - the controllers return the aggregates directly,
  * so `SiteCode` arrives as `{ value }` rather than as a string and the provenance block is nested
  * on every record.
  *
@@ -26,7 +26,7 @@ import type {
  */
 export type { SiteCodeValue };
 
-/** `RecordMetadata` — the provenance block S174 carries on every aggregate. */
+/** `RecordMetadata` - the provenance block S174 carries on every aggregate. */
 export interface RecordMetadata {
   createdBy: string;
   createdAt: string;
@@ -38,7 +38,7 @@ export interface RecordMetadata {
   correlationId: string | null;
 }
 
-/** `NotificationTemplate` — reusable message text bound to a set of channels. */
+/** `NotificationTemplate` - reusable message text bound to a set of channels. */
 export interface NotificationTemplate {
   id: string;
   templateCode: string;
@@ -52,7 +52,7 @@ export interface NotificationTemplate {
   metadata: RecordMetadata;
 }
 
-/** `EmergencyScenario` — a declared emergency type with a default template and a priority. */
+/** `EmergencyScenario` - a declared emergency type with a default template and a priority. */
 export interface EmergencyScenario {
   id: string;
   scenarioCode: string;
@@ -66,7 +66,7 @@ export interface EmergencyScenario {
 }
 
 /**
- * `AudienceGroup` — a named set of recipients.
+ * `AudienceGroup` - a named set of recipients.
  *
  * Contact detail is held by the directory and never reaches this dashboard; `directoryReference`
  * is the pointer and `recipientCount` is the sizing every delivery and acknowledgement figure is
@@ -83,7 +83,7 @@ export interface AudienceGroup {
   metadata: RecordMetadata;
 }
 
-/** `RecipientZone` — a building, floor or room scope, referenced into the facilities model. */
+/** `RecipientZone` - a building, floor or room scope, referenced into the facilities model. */
 export interface RecipientZone {
   id: string;
   zoneCode: string;
@@ -94,7 +94,7 @@ export interface RecipientZone {
   metadata: RecordMetadata;
 }
 
-/** `NotificationActivation` — the workflow aggregate. */
+/** `NotificationActivation` - the workflow aggregate. */
 export interface NotificationActivation {
   id: string;
   activationNumber: string;
@@ -116,7 +116,7 @@ export interface NotificationActivation {
   afterActionJustification: string | null;
   allClearAt: string | null;
   closureReason: string | null;
-  /** Set by the service at closure — "channels=3; sent=720; delivered=0; failed=0". */
+  /** Set by the service at closure - "channels=3; sent=720; delivered=0; failed=0". */
   deliverySummary: string | null;
   acknowledgementSummary: string | null;
   closureEvidenceId: string | null;
@@ -128,7 +128,7 @@ export interface NotificationActivation {
   metadata: RecordMetadata;
 }
 
-/** `NotificationChannel` — one activation × one channel, with its fan-out counters. */
+/** `NotificationChannel` - one activation × one channel, with its fan-out counters. */
 export interface NotificationChannel {
   id: string;
   activationId: string;
@@ -143,14 +143,14 @@ export interface NotificationChannel {
   metadata: RecordMetadata;
 }
 
-/** `ActivationService.ActivationStatusView` — the activation with its fan-out and ack count. */
+/** `ActivationService.ActivationStatusView` - the activation with its fan-out and ack count. */
 export interface ActivationStatusView {
   activation: NotificationActivation;
   channels: NotificationChannel[];
   acknowledgements: number;
 }
 
-/** `DrillRun` — a rehearsal of the activation path, with its performance figures. */
+/** `DrillRun` - a rehearsal of the activation path, with its performance figures. */
 export interface DrillRun {
   id: string;
   drillNumber: string;
@@ -168,7 +168,7 @@ export interface DrillRun {
 }
 
 /**
- * `GET /dashboard` — the service's own counts plus its freshness verdict.
+ * `GET /dashboard` - the service's own counts plus its freshness verdict.
  *
  * `stale` is decided by the service against a per-site configured threshold, not by this
  * dashboard, so the screen reports it rather than recomputing it.
@@ -198,7 +198,7 @@ export interface EmergencyOutboxEntry {
   createdAt: string;
 }
 
-/** `OutboxAdminPort.OutboxHealth` — outbound only; S174 publishes no inbound inbox read. */
+/** `OutboxAdminPort.OutboxHealth` - outbound only; S174 publishes no inbound inbox read. */
 export interface EmergencyOutboxHealth {
   pending: number;
   published: number;
@@ -290,11 +290,11 @@ export interface CompleteDrillRequest {
 }
 
 /**
- * `EmergencyPageResponse<T>` — the envelope every S174 collection now returns.
+ * `EmergencyPageResponse<T>` - the envelope every S174 collection now returns.
  *
  * Identical in shape to the fleet, fuel and dispatch ones. Before the gap-closure round these
  * endpoints returned a bare array capped at 200 by the application service, with no `size`
- * parameter to raise it — which is why the register paged a window client-side and warned when it
+ * parameter to raise it - which is why the register paged a window client-side and warned when it
  * came back full. Both are gone.
  */
 export interface EmergencyPageResponse<T> {
@@ -330,9 +330,9 @@ export interface ActivationSearchParams extends PagingParams {
   priority?: Priority | '';
   /** Contains-match over the incident reference and the activation number. */
   incidentReference?: string;
-  /** `NotificationActivation.open()` — not closed, cancelled or rejected. */
+  /** `NotificationActivation.open()` - not closed, cancelled or rejected. */
   openOnly?: boolean;
-  /** `NotificationActivation.active()` — a broadcast is out and has not been stood down. */
+  /** `NotificationActivation.active()` - a broadcast is out and has not been stood down. */
   liveOnly?: boolean;
   /** Break-glass sends nobody has accounted for yet. The one figure an auditor asks about. */
   afterActionOutstanding?: boolean;
@@ -378,7 +378,7 @@ export interface DeliveryReceiptRecord {
   providerMessageId: string;
   recipientRef: string | null;
   status: DeliveryStatus;
-  /** The provider's own words for why it failed — what makes a failed recipient chaseable. */
+  /** The provider's own words for why it failed - what makes a failed recipient chaseable. */
   reason: string | null;
   occurredAt: string;
   createdBy: string;
@@ -401,7 +401,7 @@ export interface AcknowledgementRecord {
 }
 
 /**
- * `InboxAdminPort.InboxHealth` — the inbound provider feed. Closed gap 3.
+ * `InboxAdminPort.InboxHealth` - the inbound provider feed. Closed gap 3.
  *
  * Read-only by design: a rejected inbound message failed signature or schema validation, so the
  * sending system has to correct and re-send it. Only dead-lettered outbound messages are replayable.

@@ -3,7 +3,7 @@ import { toneColors } from 'shared/charts/palette';
 
 export interface DrillBar {
   label: string;
-  /** Reached but did not acknowledge — the part of the audience the drill failed to close. */
+  /** Reached but did not acknowledge - the part of the audience the drill failed to close. */
   reachedOnly: number;
   acknowledged: number;
   /** Never reached at all: target minus reached. */
@@ -22,7 +22,7 @@ interface DrillPerformanceChartProps {
  * the drill meant to reach and the green segment is the only part that worked end to end. Stacking
  * rather than grouping is deliberate: acknowledged, reached-but-silent and never-reached are three
  * mutually exclusive fates of the same population, and reading them as a proportion of one bar is
- * the question — "how much of the site did we actually close?" — that a grouped chart makes an
+ * the question - "how much of the site did we actually close?" - that a grouped chart makes an
  * operator answer with arithmetic.
  *
  * Never-reached carries the blocked tone because it is a delivery failure; reached-but-silent

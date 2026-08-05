@@ -10,7 +10,7 @@ import java.util.List;
  * <em>only</em> thing that ever writes {@code delivered}, {@code failed} and {@code acknowledged} on
  * an activation, and none of that path was readable: no inbox endpoint, no processed count, no
  * rejected count, no message list. An activation showing 480 sent and 0 delivered therefore could
- * not be diagnosed from the dashboard at all — "no provider is configured" and "every callback is
+ * not be diagnosed from the dashboard at all - "no provider is configured" and "every callback is
  * being rejected for a bad signature" produced identical screens.
  *
  * <p>Read-only by design. A rejected inbound message is not replayable: it failed signature

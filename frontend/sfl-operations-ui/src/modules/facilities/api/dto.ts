@@ -45,7 +45,7 @@ export interface RecordMetadata {
 /** The paged envelope every S152 search endpoint returns. */
 export interface FacilitiesPage<T> {
   items: T[];
-  /** What the caller may see, after site-scope filtering — not what exists. */
+  /** What the caller may see, after site-scope filtering - not what exists. */
   totalElements: number;
   totalPages: number;
   page: number;
@@ -107,7 +107,7 @@ export interface Space {
   costCentre: string | null;
   bookable: boolean;
   examinationCapable: boolean;
-  /** Derived by the service — flag, lifecycle and readiness combined. Do not recompute. */
+  /** Derived by the service - flag, lifecycle and readiness combined. Do not recompute. */
   availableForBooking: boolean;
   /** Stricter than booking: requires READY outright. */
   availableForExamination: boolean;
@@ -155,7 +155,7 @@ export interface DeviceReference {
   locationCode: string | null;
   vendor: string | null;
   externalReference: string | null;
-  /** The vendor's observation time, not our receipt time — what staleness is measured from. */
+  /** The vendor's observation time, not our receipt time - what staleness is measured from. */
   statusReportedAt: string | null;
   lifecycleStatus: RecordLifecycleStatus;
   createdAt: string;
@@ -271,7 +271,7 @@ export interface ReadinessBlocker {
   resolutionNotes: string | null;
 }
 
-/** A space's current readiness and the reasons for it — the S152-05 drilldown. */
+/** A space's current readiness and the reasons for it - the S152-05 drilldown. */
 export interface ReadinessOutcome {
   status: LocationReadinessStatus;
   score: number;
@@ -626,7 +626,7 @@ export interface AuditSearchParams {
 }
 
 // =================================================================================================
-// S153 CMMS — transcribed from the service's OpenAPI document
+// S153 CMMS - transcribed from the service's OpenAPI document
 //
 // Several fields here are derived by the service and must not be recomputed on this side:
 // `overdue`, `minutesOverdue`, `open`, `assignable`, `dueForGeneration`, `disposalEligibleFrom`
@@ -638,7 +638,7 @@ export interface FacilityFault {
   id: string;
   faultNumber: string;
   siteCode: string;
-  /** Null when the fault is somewhere the estate model has no room for — a corridor, a car park. */
+  /** Null when the fault is somewhere the estate model has no room for - a corridor, a car park. */
   roomId: string | null;
   locationCode: string | null;
   assetId: string | null;
@@ -792,7 +792,7 @@ export interface PreventiveSchedule {
   priority: FaultPriority;
   workOrderType: WorkOrderType;
   nextDueOn: string;
-  /** The date the work order is raised on — the due date minus the lead time. */
+  /** The date the work order is raised on - the due date minus the lead time. */
   generateOn: string;
   lastGeneratedFor: string | null;
   lastGeneratedAt: string | null;

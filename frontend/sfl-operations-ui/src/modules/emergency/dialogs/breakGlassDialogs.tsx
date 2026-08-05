@@ -29,7 +29,7 @@ interface ConfirmBreakGlassDialogProps {
 }
 
 /**
- * The last step before a break-glass broadcast — `POST /activations/break-glass`.
+ * The last step before a break-glass broadcast - `POST /activations/break-glass`.
  *
  * Everything on this dialog is there because of what the action is: a message to the whole named
  * audience, over every chosen channel, with **nobody approving it first**, which cannot be recalled
@@ -99,7 +99,7 @@ export const ConfirmBreakGlassDialog = ({
 
       <Alert variant="warning" title="What this leaves behind">
         The activation is created already live, in break-glass mode. It cannot be closed until
-        somebody holding the after-action approval permission records a justification against it —
+        somebody holding the after-action approval permission records a justification against it -
         that is the account of why approval was bypassed, and it is what an auditor will read.
       </Alert>
 

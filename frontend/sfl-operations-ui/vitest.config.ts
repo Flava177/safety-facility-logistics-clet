@@ -6,7 +6,7 @@ import tsconfigPaths from 'vite-tsconfig-paths';
  * Test configuration for the SFL Operations dashboard.
  *
  * Separate from `vite.config.ts` on purpose: that file computes `base` from the build mode and
- * stamps a build time into `define`, neither of which a test run should inherit — a suite whose
+ * stamps a build time into `define`, neither of which a test run should inherit - a suite whose
  * behaviour depends on the mode it was started in is a suite that will eventually disagree with CI.
  *
  * `tsconfigPaths` is what lets a test import `shared/...` and `modules/...` the same way the

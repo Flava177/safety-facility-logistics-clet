@@ -31,7 +31,7 @@ public interface TripRepository {
 
     List<Trip> findAllInScope(SiteScopeFilter scope);
 
-    /** Live trips whose planned end has passed — used by the overdue-trip indicator. */
+    /** Live trips whose planned end has passed - used by the overdue-trip indicator. */
     List<Trip> findLiveTripsEndingBefore(Instant threshold);
 
     record TripSearchCriteria(

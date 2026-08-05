@@ -16,7 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Three places in this service asked "is this record the actor's own?" by comparing a driver's
  * {@code staffReference} against {@code ActorContext.actorId()}. That holds under header
  * authentication, where the caller supplies {@code X-SFL-User} and it happens to be the staff
- * reference. It cannot hold under a token, where {@code actorId()} is the subject claim — a Keycloak
+ * reference. It cannot hold under a token, where {@code actorId()} is the subject claim - a Keycloak
  * UUID. So from the day authentication was switched on, the comparison was false for every driver:
  * the narrowing refused drivers their own records and, because the collection query had no narrowing
  * at all, still showed them everybody's.
@@ -29,13 +29,13 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Derived from the permission, not from a list of role names: an actor is narrowed when they hold
  * no supervising permission for the thing being read. {@code FLEET_TRIP_MANAGE} is the supervising
  * permission for trips, {@code FUEL_TRANSACTION_MANAGE} for fuel. A hard-coded list of "supervisor
- * roles" would have to be found and edited every time the matrix gains a role — and the failure mode
+ * roles" would have to be found and edited every time the matrix gains a role - and the failure mode
  * of forgetting is that a new supervisory role silently sees only their own records, or worse, that a
  * new limited role silently sees everything.
  *
  * <p>Note the direction of the default: an actor holding the supervising permission is
  * {@link DriverScope.Everything}, and everyone else who is not bound to a driver profile is
- * {@link DriverScope.Nothing} — not "unnarrowed".
+ * {@link DriverScope.Nothing} - not "unnarrowed".
  */
 @Component
 public class DriverScopeResolver {

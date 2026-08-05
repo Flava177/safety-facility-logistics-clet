@@ -38,7 +38,7 @@ const ScheduleDetailPage = () => {
     [schedule.data?.assetId],
   );
 
-  /** Everything this schedule has raised, newest first — the service already orders it that way. */
+  /** Everything this schedule has raised, newest first - the service already orders it that way. */
   const generated = useApiQuery(
     (signal) =>
       schedule.data

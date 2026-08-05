@@ -43,7 +43,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilder;
 
 /**
- * The AVAMP register's HTTP contract, and — as of 1 August 2026 — who is allowed to reach it.
+ * The AVAMP register's HTTP contract, and - as of 1 August 2026 - who is allowed to reach it.
  *
  * <p>These five tests passed for months against a controller with no authorisation whatsoever, which
  * is the point worth recording: they asserted the shape of every response and never once asserted who
@@ -58,7 +58,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
         // exclude; under the merged FTLMP service `@WebMvcTest` scans every @ControllerAdvice on the
         // classpath, so `FleetApiExceptionHandler` gets instantiated here and drags in
         // `FleetAuditService`, which this slice has no reason to provide. Narrowing the advice with
-        // `basePackages` does not help — that governs which controllers a handler *applies to*, not
+        // `basePackages` does not help - that governs which controllers a handler *applies to*, not
         // whether the bean is created.
         //
         // The negative lookahead rather than a literal `..fleet..` exclusion: a handler added under
@@ -68,7 +68,7 @@ import org.springframework.test.web.servlet.request.MockHttpServletRequestBuilde
                 pattern = "gh\\.edu\\.clet\\.sfl\\.fleetlogistics\\.(?!assets\\.).*"))
 @AutoConfigureMockMvc(addFilters = false)
 // Both are real collaborators, not mocks. What the resolver resolves *to* is the thing the controller
-// records and the thing the policy judges — mocking either would let the header path or the matrix
+// records and the thing the policy judges - mocking either would let the header path or the matrix
 // regress without a single test noticing.
 @Import({AssetVisibilityActorResolver.class, AssetVisibilityAccessPolicy.class})
 class AssetReferenceControllerTest {
@@ -81,7 +81,7 @@ class AssetReferenceControllerTest {
     @MockitoBean
     private AssetVisibilityService service;
 
-    /** An integration engineer scoped to MAIN — the ordinary AVAMP write principal. */
+    /** An integration engineer scoped to MAIN - the ordinary AVAMP write principal. */
     private static MockHttpServletRequestBuilder asManager(MockHttpServletRequestBuilder request) {
         return request.header("X-SFL-User", "operator@sfl.local")
                 .header("X-SFL-Roles", "INTEGRATION_ENGINEER")
@@ -137,7 +137,7 @@ class AssetReferenceControllerTest {
     }
 
     /**
-     * No site named, so the answer is the actor's own sites — not the whole estate.
+     * No site named, so the answer is the actor's own sites - not the whole estate.
      *
      * <p>This is the path the dashboard takes when it has no site filter set, and before this pass it
      * called {@code findAll(null)} and returned every asset at every site to anybody who asked.
@@ -221,7 +221,7 @@ class AssetReferenceControllerTest {
      *
      * <p>Split deliberately: a caller with no permission and a caller with the permission but not the
      * site fail through different branches of {@code AssetVisibilityAccessPolicy}, and a suite that
-     * only exercised the first would leave the site check — the one the register actually needs —
+     * only exercised the first would leave the site check - the one the register actually needs -
      * unproven.
      */
     @Nested

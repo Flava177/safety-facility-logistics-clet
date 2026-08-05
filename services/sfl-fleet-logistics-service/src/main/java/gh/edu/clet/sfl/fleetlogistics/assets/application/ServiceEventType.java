@@ -7,13 +7,13 @@ import java.util.regex.Pattern;
  *
  * <p>{@code docs/integration/event-catalog.md} defines the rule as
  * {@code sfl.{platform}.{event-name}.v{version}}. This service published
- * {@code sfl.asset.asset-registered} — the right prefix, the wrong platform token ({@code asset}
- * rather than {@code avamp}) and no version suffix — so a consumer binding {@code sfl.avamp.*.v1}
+ * {@code sfl.asset.asset-registered} - the right prefix, the wrong platform token ({@code asset}
+ * rather than {@code avamp}) and no version suffix - so a consumer binding {@code sfl.avamp.*.v1}
  * received nothing, and could not distinguish that from an estate with no asset movements.
  *
  * <p>Enforced at the outbox rather than asserted over a list of names, for the same reason as the
  * facilities copy of this class: a list has to be remembered, and the write path cannot be avoided.
- * The duplication between the two services is deliberate — shared kernel code lives in
+ * The duplication between the two services is deliberate - shared kernel code lives in
  * {@code sfl-service-common}, and this rule is small enough that copying it costs less than coupling
  * two independently deployable services through it.
  */

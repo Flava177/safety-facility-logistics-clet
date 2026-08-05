@@ -93,14 +93,14 @@ const ManifestDetailPage = () => {
    * Exception cases against this consignment.
    *
    * `GET /exceptions` has no `dispatchId` filter, so the site's cases are fetched and matched here.
-   * Recorded as gap 2 — with more open cases than the window holds, a case against this manifest
+   * Recorded as gap 2 - with more open cases than the window holds, a case against this manifest
    * could be missed, which is why the closure panel says where its count came from.
    */
   /**
    * The cases raised against **this** manifest.
    *
    * `dispatchId` reaches the service now, so this is no longer the site's whole exception window
-   * sieved down to one consignment — which quietly missed cases whenever the site had more than the
+   * sieved down to one consignment - which quietly missed cases whenever the site had more than the
    * window held.
    */
   const exceptions = useApiQuery(
@@ -250,7 +250,7 @@ const ManifestDetailPage = () => {
           row.evidenceId ? (
             <StatusChip value="ACTIVE" label="Held" tone="ready" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {
@@ -258,7 +258,7 @@ const ManifestDetailPage = () => {
         header: 'Notes',
         width: 220,
         hideBelowLg: true,
-        cell: (row) => row.notes ?? <span className="text-gray-500">—</span>,
+        cell: (row) => row.notes ?? <span className="text-gray-500">-</span>,
       },
     ],
     [],
@@ -338,7 +338,7 @@ const ManifestDetailPage = () => {
         width: 200,
         cell: (row) => (
           <CellStack
-            primary={`${row.returnedCount} returned of ${row.expectedCount ?? '—'}`}
+            primary={`${row.returnedCount} returned of ${row.expectedCount ?? '-'}`}
             secondary={
               row.shortfall > 0
                 ? `${row.shortfall} short`
@@ -374,7 +374,7 @@ const ManifestDetailPage = () => {
         header: 'Notes',
         width: 220,
         hideBelowLg: true,
-        cell: (row) => row.notes ?? <span className="text-gray-500">—</span>,
+        cell: (row) => row.notes ?? <span className="text-gray-500">-</span>,
       },
     ],
     [],
@@ -580,8 +580,8 @@ const ManifestDetailPage = () => {
                     { label: 'Site', value: siteOf(record.siteCode) },
                     { label: 'Route', value: record.route },
                     { label: 'Handler', value: record.assignedHandler },
-                    { label: 'Destination centre', value: record.destinationCentre ?? '—' },
-                    { label: 'Examination context', value: record.examinationContext ?? '—' },
+                    { label: 'Destination centre', value: record.destinationCentre ?? '-' },
+                    { label: 'Examination context', value: record.examinationContext ?? '-' },
                     { label: 'Items', value: formatNumber(record.itemCount) },
                     {
                       label: 'Seals',
@@ -591,7 +591,7 @@ const ManifestDetailPage = () => {
                     { label: 'Dispatched at', value: formatDateTime(record.dispatchedAt) },
                     { label: 'Received at', value: formatDateTime(record.receivedAt) },
                     { label: 'Reconciled at', value: formatDateTime(record.reconciledAt) },
-                    { label: 'Closure reason', value: record.closureReason ?? '—', span: 2 },
+                    { label: 'Closure reason', value: record.closureReason ?? '-', span: 2 },
                   ]}
                 />
               </SectionCard>
@@ -629,7 +629,7 @@ const ManifestDetailPage = () => {
                                     </span>
                                     {` at ${humanise(gap.hop).toLowerCase()}`}
                                     {Object.keys(gap.detail).length > 0 &&
-                                      ` — ${Object.entries(gap.detail)
+                                      ` - ${Object.entries(gap.detail)
                                         .map(([key, value]) => `${humanise(key).toLowerCase()} ${value}`)
                                         .join(', ')}`}
                                   </span>
@@ -801,7 +801,7 @@ const ManifestDetailPage = () => {
                   />
                   <div className="px-5 pt-2 pb-4">
                     <p className="text-theme-xs text-gray-600">
-                      Matched from the exception cases returned for {site} — the exception endpoint
+                      Matched from the exception cases returned for {site} - the exception endpoint
                       has no manifest filter, so a case beyond that window would not appear here.
                     </p>
                   </div>

@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * Guards the event-naming reconciliation recorded as conflict C-03: fleet events follow
- * {@code docs/integration/event-catalog.md} — {@code sfl.{platform}.{event-name}.v{version}} — and the
+ * {@code docs/integration/event-catalog.md} - {@code sfl.{platform}.{event-name}.v{version}} - and the
  * numeric version can never drift from the {@code .vN} suffix.
  *
  * <p>Traces: SRS-SFL-S166-01/02/03/04 change-event publication.

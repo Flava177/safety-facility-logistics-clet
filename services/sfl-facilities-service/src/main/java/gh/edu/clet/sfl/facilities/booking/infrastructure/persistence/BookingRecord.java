@@ -22,7 +22,7 @@ import java.util.UUID;
  *
  * <h2>The two columns that are not domain state</h2>
  *
- * {@code occupiedFrom} and {@code occupiedTo} are derived — {@code window.occupied()} — and are stored
+ * {@code occupiedFrom} and {@code occupiedTo} are derived - {@code window.occupied()} - and are stored
  * anyway. That is the whole mechanism by which the estate cannot be double-booked: the {@code GIST}
  * exclusion constraint has to range over columns on this table, and a constraint cannot call a Java
  * method or follow a join.
@@ -33,8 +33,8 @@ import java.util.UUID;
  * fails at the database rather than silently letting the next booking start early.
  *
  * <p>They are not {@code GENERATED ALWAYS} columns, which would have been tidier, because
- * {@code timestamptz - interval} is {@code STABLE} rather than {@code IMMUTABLE} in PostgreSQL — it
- * depends on the session time zone — and a stored generated column may only use immutable expressions.
+ * {@code timestamptz - interval} is {@code STABLE} rather than {@code IMMUTABLE} in PostgreSQL - it
+ * depends on the session time zone - and a stored generated column may only use immutable expressions.
  */
 @Entity
 @Table(name = "bookings", schema = "facilities")

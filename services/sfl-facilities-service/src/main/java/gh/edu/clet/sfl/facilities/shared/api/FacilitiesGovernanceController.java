@@ -114,7 +114,7 @@ public class FacilitiesGovernanceController {
      * What this actor may do.
      *
      * <p>Read by the operations dashboard to decide which screens to offer. Mirrors the fleet and
-     * emergency services' own endpoints so one client can ask every service the same question — and it
+     * emergency services' own endpoints so one client can ask every service the same question - and it
      * is the difference between a user being offered a screen and meeting a 403 on arrival.
      *
      * <p>Reads no data, so it needs no transaction and no permission of its own: the answer is derived

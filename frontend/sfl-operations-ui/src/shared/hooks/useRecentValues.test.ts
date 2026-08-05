@@ -7,7 +7,7 @@ import { useRecentValues } from './useRecentValues';
  *
  * <p>Worth testing for two reasons, neither of them the happy path. The first is **scoping**: the key
  * carries the site, and a bug that dropped it would offer one centre's routes to an operator filing
- * against another — the same class of leak the platform enforces against everywhere else, arriving
+ * against another - the same class of leak the platform enforces against everywhere else, arriving
  * through a convenience feature nobody thinks of as security-relevant.
  *
  * <p>The second is **failing quietly**. Private-mode browsers throw from `localStorage`, and a typing
@@ -86,8 +86,8 @@ describe('useRecentValues', () => {
   });
 
   it('persists before the caller unmounts', () => {
-    // The bug this exists for. Every caller is a dialog that closes on success — `remember(...)`
-    // then `onClose()` — so the component is gone before React would run a state updater. The first
+    // The bug this exists for. Every caller is a dialog that closes on success - `remember(...)`
+    // then `onClose()` - so the component is gone before React would run a state updater. The first
     // version wrote inside `setValues` and therefore persisted nothing at all, which no test caught
     // because `renderHook` keeps the component mounted.
     const { result, unmount } = renderHook(() => useRecentValues('origin', 'CLET-HQ'));

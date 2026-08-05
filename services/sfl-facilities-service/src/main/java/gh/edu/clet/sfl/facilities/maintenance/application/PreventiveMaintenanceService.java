@@ -31,13 +31,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Preventive maintenance — the half of S153 that stops faults happening.
+ * Preventive maintenance - the half of S153 that stops faults happening.
  *
  * <h2>The idempotency this class turns on</h2>
  *
  * {@link #generateDueWorkOrders} is called from a scheduler, which is at-least-once. Two runs in one
  * day, a restart mid-run, or a manual trigger next to the scheduled one must not produce two work
- * orders for one service — a technician who arrives to find the generator already serviced yesterday
+ * orders for one service - a technician who arrives to find the generator already serviced yesterday
  * stops trusting the queue, and one who is sent twice costs a vendor call-out.
  *
  * <p>The key is the <em>cycle</em>, not the run:
@@ -193,7 +193,7 @@ public class PreventiveMaintenanceService {
           It had no check at all. The parameter is named `systemActor` and the method was written for
           the scheduler, where the trust boundary is implicit; the HTTP verb was added afterwards and
           inherited an assumption that no longer held. The effect was that anybody who could obtain a
-          token — a driver, a requester, a vendor technician — could raise preventive work orders
+          token - a driver, a requester, a vendor technician - could raise preventive work orders
           across the entire estate and read every one of them back in the response.
 
           The sweep is deliberately estate-wide (`generationBatchSize(null)`, no site filter), which is
@@ -220,7 +220,7 @@ public class PreventiveMaintenanceService {
             Optional<FacilityAsset> asset = facilities.findAsset(schedule.assetId());
             if (asset.isEmpty() || !servicable(asset.get())) {
                 // A schedule against a retired asset stops generating rather than failing the whole
-                // run. It stays on the register so somebody can see it and retire it too — deleting
+                // run. It stays on the register so somebody can see it and retire it too - deleting
                 // it here would hide the fact that a service was being planned for a machine that is
                 // gone, which is exactly what an audit of a missed inspection would want to find.
                 continue;
@@ -238,7 +238,7 @@ public class PreventiveMaintenanceService {
                     maintenance.nextWorkOrderNumber(schedule.siteCode()), schedule.workOrderType(),
                     schedule.id(), schedule.siteCode(), schedule.roomId(), asset.get().locationCode(),
                     schedule.assetId(),
-                    schedule.name() + " — due " + schedule.nextDueOn(),
+                    schedule.name() + " - due " + schedule.nextDueOn(),
                     schedule.description(), schedule.priority(), slaDue, responseDue, evidenceRequired,
                     systemActor.actorId(), at, SourceChannel.SCHEDULER, systemActor.correlationId()));
 
@@ -293,7 +293,7 @@ public class PreventiveMaintenanceService {
         return clock.instant();
     }
 
-    /** Today at the service's clock, in UTC — the date the generator reasons about. */
+    /** Today at the service's clock, in UTC - the date the generator reasons about. */
     public LocalDate today() {
         return now().atZone(ZoneOffset.UTC).toLocalDate();
     }

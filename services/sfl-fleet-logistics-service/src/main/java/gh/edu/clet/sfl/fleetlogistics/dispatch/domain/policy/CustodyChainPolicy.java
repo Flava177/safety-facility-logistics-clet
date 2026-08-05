@@ -34,8 +34,8 @@ public final class CustodyChainPolicy {
     /**
      * One break in the custody chain, as structured data.
      *
-     * <p>These used to be formatted strings with the structure baked into them —
-     * {@code BROKEN_SEAL@TRANSIT(BROKEN)}, {@code COUNT_MISMATCH@TRANSIT(expected=12,verified=11)} —
+     * <p>These used to be formatted strings with the structure baked into them -
+     * {@code BROKEN_SEAL@TRANSIT(BROKEN)}, {@code COUNT_MISMATCH@TRANSIT(expected=12,verified=11)} -
      * which meant every consumer had to parse a wire format with a regular expression to colour a
      * row or count by reason. The client that did is deleted with this change.
      *

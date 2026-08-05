@@ -24,7 +24,7 @@ interface CreateManifestDialogProps {
 }
 
 /**
- * Create a manifest — `POST /manifests`.
+ * Create a manifest - `POST /manifests`.
  *
  * Created as a draft, which is the only state in which items can be added; sealing freezes the
  * contents. The trip, vehicle and driver are optional here and assignable later, because a manifest
@@ -171,7 +171,7 @@ interface AddItemDialogProps {
 }
 
 /**
- * Add a courier item to a draft manifest — `POST /manifests/{id}/items`.
+ * Add a courier item to a draft manifest - `POST /manifests/{id}/items`.
  *
  * The picker offers items at the manifest's own site that are not already on it and are still in a
  * state that can be consigned. An item already dispatched under another manifest would be refused,
@@ -293,7 +293,7 @@ interface SealDialogProps {
 }
 
 /**
- * Seal the manifest — `POST /manifests/{id}/seal`.
+ * Seal the manifest - `POST /manifests/{id}/seal`.
  *
  * One way and draft-only: sealing freezes the contents, and there is no unseal. The seal identifiers
  * are what every later custody handover and the destination receipt are checked against, so a
@@ -345,7 +345,7 @@ export const SealManifestDialog = ({
       )}
 
       <Alert variant="warning" title="Sealing cannot be undone">
-        The contents freeze at this point — no item can be added or removed afterwards. Every custody
+        The contents freeze at this point - no item can be added or removed afterwards. Every custody
         handover and the destination receipt are checked against these identifiers, so a seal typed
         wrongly here surfaces later as a broken-seal exception.
       </Alert>
@@ -374,7 +374,7 @@ interface AssignTripDialogProps {
   manifest: DispatchManifest;
 }
 
-/** Assign the movement carrying the consignment — `POST /manifests/{id}/assign-trip`. */
+/** Assign the movement carrying the consignment - `POST /manifests/{id}/assign-trip`. */
 export const AssignTripDialog = ({ open, onClose, onSaved, manifest }: AssignTripDialogProps) => {
   const site = manifest.siteCode.value;
   const form = useFleetForm({
@@ -406,7 +406,7 @@ export const AssignTripDialog = ({ open, onClose, onSaved, manifest }: AssignTri
       onSubmit={form.submit}
     >
       <Alert variant="info">
-        Assignable while the manifest is a draft or sealed. All three are optional — a consignment
+        Assignable while the manifest is a draft or sealed. All three are optional - a consignment
         can be dispatched without a fleet movement recorded against it.
       </Alert>
       <TripSelect
@@ -444,7 +444,7 @@ interface CloseManifestDialogProps {
 }
 
 /**
- * Close the manifest — `POST /manifests/{id}/close`.
+ * Close the manifest - `POST /manifests/{id}/close`.
  *
  * `DispatchClosurePolicy` refuses closure while an exception case is open or the custody chain is
  * not closable. Both are shown here, separately, because the service's own message names one cause

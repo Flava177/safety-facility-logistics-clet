@@ -11,13 +11,13 @@ import { manifestsApi } from 'modules/dispatch/api/dispatchApi';
 import type { DispatchManifest } from 'modules/dispatch/api/dto';
 
 /**
- * The centre manager's receipts — S171's destination persona.
+ * The centre manager's receipts - S171's destination persona.
  *
  * ## A portal that cannot yet keep the promise its name makes
  *
  * `CENTRE_MANAGER` has **no §2.3 user class**; it was added additively under S171 decision D-14 for
  * the person at an examination centre who signs for a consignment. That is a real job, so the screen
- * is built — but it is a **Deviation**, and its limitation is stated on the page rather than buried
+ * is built - but it is a **Deviation**, and its limitation is stated on the page rather than buried
  * in a report.
  *
  * `Dispatch.destinationCentre` and `assignedHandler` are `VARCHAR(200)` free text supplied at
@@ -26,7 +26,7 @@ import type { DispatchManifest } from 'modules/dispatch/api/dto';
  * otherwise, which is worse than no rule because it looks like enforcement. So this lists
  * consignments **at this site**, says so twice, and does not claim to be "my centre".
  *
- * Closing it needs a principal-bound centre reference on a dispatch — a schema change and an
+ * Closing it needs a principal-bound centre reference on a dispatch - a schema change and an
  * identity decision for the Transportation & Logistics Unit. Recorded as C-16 in
  * `docs/fleet/S166_Gap_And_Conflict_Report.md`.
  */
@@ -44,8 +44,8 @@ const CentreReceiptsPage = () => {
 
   const columns: Column<DispatchManifest>[] = [
     { key: 'manifestNumber', header: 'Manifest', cell: (row) => row.manifestNumber },
-    { key: 'destinationCentre', header: 'Destination', cell: (row) => row.destinationCentre ?? '—' },
-    { key: 'route', header: 'Route', cell: (row) => row.route ?? '—' },
+    { key: 'destinationCentre', header: 'Destination', cell: (row) => row.destinationCentre ?? '-' },
+    { key: 'route', header: 'Route', cell: (row) => row.route ?? '-' },
     { key: 'itemCount', header: 'Items', cell: (row) => String(row.itemCount) },
     { key: 'status', header: 'Status', cell: (row) => <StatusChip value={row.status} /> },
   ];
@@ -54,14 +54,14 @@ const CentreReceiptsPage = () => {
     'A dispatch records its destination centre as free text, with nothing tying it to your account, '
     + 'so the platform cannot yet tell which consignments are yours. Everything at '
     + site
-    + ' is shown. Narrowing needs a schema change owned by the Transportation and Logistics Unit — '
+    + ' is shown. Narrowing needs a schema change owned by the Transportation and Logistics Unit - '
     + 'see C-16 in the S166 gap report.';
 
   return (
     <div className="space-y-8">
       <PageHeader
         title="Centre receipts"
-        subtitle={'Consignments at ' + site + ' — confirm receipt, record a variance, chase returns'}
+        subtitle={'Consignments at ' + site + ' - confirm receipt, record a variance, chase returns'}
       />
 
       <Alert variant="info" title="This list is not narrowed to your centre">

@@ -6,8 +6,8 @@ import { MAX_DIGEST_BYTES, digestUnavailable, formatBytes, sha256OfFile } from '
  *
  * Worth testing because of what it replaces: sixty-four hexadecimal characters typed by hand, where
  * a single wrong one produces a false tamper report years later, during an integrity check, on
- * evidence nobody can now re-hash. A helper that quietly returned the wrong digest — or the right
- * digest in upper case, which the database stores verbatim — would be worse than the typing.
+ * evidence nobody can now re-hash. A helper that quietly returned the wrong digest - or the right
+ * digest in upper case, which the database stores verbatim - would be worse than the typing.
  *
  * The known-answer vector is the one every SHA-256 implementation is checked against, so this test
  * fails if the browser's Web Crypto is stubbed with something that merely returns bytes.
@@ -48,7 +48,7 @@ describe('sha256OfFile', () => {
   it('refuses a file over the cap instead of freezing the tab', async () => {
     /*
       `crypto.subtle.digest` cannot stream, so the whole file is read into memory. The cap is what
-      stops a mis-selected video from taking a site laptop with it — and the refusal has to name the
+      stops a mis-selected video from taking a site laptop with it - and the refusal has to name the
       size, because "too large" with no number is not something an operator can act on.
     */
     const huge = fileOf('x');
@@ -82,7 +82,7 @@ describe('digestUnavailable', () => {
 
   it('blames the connection when the context is insecure', () => {
     // Serving the dashboard over plain HTTP from a hostname is the only way to reach this, and the
-    // fix is a deployment change — so the message has to name it rather than say "not supported".
+    // fix is a deployment change - so the message has to name it rather than say "not supported".
     vi.stubGlobal('crypto', {});
     vi.stubGlobal('window', { ...window, isSecureContext: false });
 

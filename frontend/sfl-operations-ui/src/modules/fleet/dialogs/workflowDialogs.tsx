@@ -27,7 +27,7 @@ interface BaseProps {
   onSaved: () => void;
 }
 
-/* Raise — POST /api/v1/fleet/workflow-items */
+/* Raise - POST /api/v1/fleet/workflow-items */
 export const RaiseWorkflowItemDialog = ({
   open,
   onClose,
@@ -135,7 +135,7 @@ export const RaiseWorkflowItemDialog = ({
           label="Assignee"
           value={form.values.assignee}
           onChange={(value) => form.setValue('assignee', value)}
-          {...form.fieldProps('assignee', 'Optional — leave blank to raise unassigned.')}
+          {...form.fieldProps('assignee', 'Optional - leave blank to raise unassigned.')}
         />
       </div>
       <TextInput
@@ -157,7 +157,7 @@ export const RaiseWorkflowItemDialog = ({
   );
 };
 
-/* Assign — PATCH /api/v1/fleet/workflow-items/{id}/assignment */
+/* Assign - PATCH /api/v1/fleet/workflow-items/{id}/assignment */
 export const AssignWorkflowItemDialog = ({
   open,
   onClose,
@@ -209,7 +209,7 @@ export const AssignWorkflowItemDialog = ({
   );
 };
 
-/* Close — PATCH /api/v1/fleet/workflow-items/{id}/closure */
+/* Close - PATCH /api/v1/fleet/workflow-items/{id}/closure */
 export const CloseWorkflowItemDialog = ({
   open,
   onClose,
@@ -292,7 +292,7 @@ export const ReasonTransitionDialog = ({
     escalate: {
       title: 'Escalate item',
       submit: 'Escalate',
-      note: 'Manual escalation is privileged — the service refuses it without the approval permission.',
+      note: 'Manual escalation is privileged - the service refuses it without the approval permission.',
     },
     cancel: {
       title: 'Cancel item',
@@ -358,7 +358,7 @@ export const ReasonTransitionDialog = ({
   );
 };
 
-/* Comment — POST /api/v1/fleet/workflow-items/{id}/comments */
+/* Comment - POST /api/v1/fleet/workflow-items/{id}/comments */
 export const AddCommentDialog = ({
   open,
   onClose,

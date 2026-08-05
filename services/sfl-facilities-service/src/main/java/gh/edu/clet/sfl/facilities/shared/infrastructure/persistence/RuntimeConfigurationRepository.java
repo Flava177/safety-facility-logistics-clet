@@ -22,7 +22,7 @@ interface RuntimeConfigurationRepository extends JpaRepository<RuntimeConfigurat
     Optional<RuntimeConfigurationEntity> findActiveForSite(@Param("key") String key,
             @Param("siteCode") String siteCode);
 
-    /** The active platform default — the value used when no site override exists. */
+    /** The active platform default - the value used when no site override exists. */
     @Query("""
             select c from RuntimeConfigurationEntity c
             where c.configKey = :key and c.effectiveTo is null and c.siteCode is null

@@ -43,7 +43,7 @@ public class FuelImportService {
      *
      * <p>A rejected row never fails the batch: each goes through the same idempotent capture command
      * as a manual entry and carries its own outcome. The duplicate-file check happens **before** any
-     * row is processed — the unique constraint would have caught it either way, but only after every
+     * row is processed - the unique constraint would have caught it either way, but only after every
      * row had been captured, and the operator would have received an unmapped 500 with no indication
      * that nothing had been duplicated.
      */

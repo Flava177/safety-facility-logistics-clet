@@ -7,14 +7,14 @@ import type { BookingStatus } from './enums';
  *
  * Two things here are worth testing and nothing else is: **which permission gates which control**,
  * and **when a control is hidden rather than disabled**. Both are transcriptions of decisions the
- * service makes, and both have already been got wrong once in this codebase — S153 shipped a Close
+ * service makes, and both have already been got wrong once in this codebase - S153 shipped a Close
  * button permanently disabled with "you do not have permission", which is the failure the
  * hidden/disabled split exists to prevent.
  *
  * The rule that most needs a test is the misnamed one. `FACILITIES_BOOKING_CANCEL` reads as "may
  * cancel"; `BookingApplicationService.requireMayAct` uses it as the "may act on somebody else's
  * booking" grant and routes cancel, reschedule, start and complete through it identically. Gating
- * reschedule on `FACILITIES_BOOKING_REQUEST` — the reading the names invite — offers a requester the
+ * reschedule on `FACILITIES_BOOKING_REQUEST` - the reading the names invite - offers a requester the
  * control on a hall booked by the registry, and the service then refuses it.
  */
 
@@ -151,7 +151,7 @@ describe('S159 booking controls', () => {
 
     it('refuses self-approval, and disables rather than hides so the rule is legible', () => {
       /*
-        Separation of duties, and administrators are not exempt — `BookingApplicationService.decide`
+        Separation of duties, and administrators are not exempt - `BookingApplicationService.decide`
         refuses it outright. Disabled, not hidden: the actor plainly holds the authority, and what
         they lack is distance from this particular request. Hiding it would read as a missing
         permission and send them to look for one.

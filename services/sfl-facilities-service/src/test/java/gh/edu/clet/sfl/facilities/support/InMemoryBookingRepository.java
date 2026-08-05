@@ -33,8 +33,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * rule that reads the wrong rows fails here rather than in an integration test.
  *
  * <p>It deliberately does <strong>not</strong> reproduce the {@code GIST} exclusion constraint. That
- * constraint exists precisely to catch what application code cannot — two requests that both read an
- * empty diary before either writes — and a single-threaded map cannot exhibit that race, so
+ * constraint exists precisely to catch what application code cannot - two requests that both read an
+ * empty diary before either writes - and a single-threaded map cannot exhibit that race, so
  * simulating the refusal here would prove nothing and would hide the fact that the guarantee lives in
  * PostgreSQL. The constraint is verified against a real database, and
  * {@code S159MandatoryScenariosTest} pins its {@code WHERE} clause against

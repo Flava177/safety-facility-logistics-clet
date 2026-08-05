@@ -405,7 +405,7 @@ public class FleetWorkflowApplicationService implements FleetWorkflowRaiser {
                 RecordMetadata.createdBy(actor.actorId(), now, sourceChannel, actor.correlationId()));
     }
 
-    /** Resolves the SLA from the rules effective now — never from a cached value. */
+    /** Resolves the SLA from the rules effective now - never from a cached value. */
     private SlaTarget resolveSla(FleetWorkflowItem item, Instant now) {
         return SlaPolicy.resolve(slaRules.findEffectiveRules(now), item.workflowType(), item.priority(),
                 item.severity(), item.siteCode().value(), item.operatingMode());

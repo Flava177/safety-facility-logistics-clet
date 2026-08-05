@@ -10,7 +10,7 @@ import java.time.Instant;
  * The single-row chain head.
  *
  * <p>Writers take a pessimistic row lock here before appending, so two concurrent commands cannot
- * both read sequence <em>n</em> and both claim it. Without this the chain does not break loudly — it
+ * both read sequence <em>n</em> and both claim it. Without this the chain does not break loudly - it
  * breaks on a unique-constraint violation for one writer and a wrong previous-hash link for the
  * other, which replays later as tampering that never happened.
  */

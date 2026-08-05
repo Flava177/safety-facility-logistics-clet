@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Prints the service's front doors once it is up, and optionally opens them in a browser.
  *
  * <p>The point is that starting the service is the whole ceremony: the log says where the API docs
- * and the dashboard are, and {@code sfl.fleet.open-browser=true} — which the local start script sets —
+ * and the dashboard are, and {@code sfl.fleet.open-browser=true} - which the local start script sets -
  * opens both tabs.
  *
  * <p>The browser is launched with the platform's own opener rather than {@code java.awt.Desktop},

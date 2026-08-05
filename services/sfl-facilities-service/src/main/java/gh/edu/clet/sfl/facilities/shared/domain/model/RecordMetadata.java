@@ -10,7 +10,7 @@ import java.util.Objects;
  * "created by/date, last modified by/date, version, source channel and audit correlation ID".
  *
  * <p>One value object rather than six columns copied onto seven aggregates. Every mutation goes
- * through {@link #modifiedBy}, which increments the version — so an aggregate cannot be changed
+ * through {@link #modifiedBy}, which increments the version - so an aggregate cannot be changed
  * without its provenance moving with it, and forgetting to bump the version is not a thing a
  * developer can do by omission.
  *

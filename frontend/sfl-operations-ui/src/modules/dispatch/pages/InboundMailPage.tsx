@@ -31,7 +31,7 @@ import { dispatchPaths } from 'shared/layout/navigation';
  * The mailroom: inbound registration and acknowledged distribution.
  *
  * The same courier item register underneath, with direction fixed to inbound by the endpoint. What
- * makes it a distinct screen is the one thing inbound mail is *for* — getting the item to its
+ * makes it a distinct screen is the one thing inbound mail is *for* - getting the item to its
  * recipient and recording that they took it. Distribution is offered directly from the row, because
  * an operator working through the morning's post should not have to open each item to acknowledge
  * it.

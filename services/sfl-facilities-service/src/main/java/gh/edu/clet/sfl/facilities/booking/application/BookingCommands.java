@@ -16,8 +16,8 @@ import java.util.UUID;
  *
  * <p>Commands rather than long argument lists, for the reason S153 found the hard way: a service
  * method taking eleven parameters is one where two of the same type can be swapped at a call site and
- * nothing complains. Each record carries its actor, its channel and — where the operation creates
- * state — its idempotency key.
+ * nothing complains. Each record carries its actor, its channel and - where the operation creates
+ * state - its idempotency key.
  *
  * <p>{@code expectedVersion} is nullable throughout. A caller that supplies it gets optimistic-lock
  * semantics; one that does not accepts last-write-wins. Forcing it on every command would break the

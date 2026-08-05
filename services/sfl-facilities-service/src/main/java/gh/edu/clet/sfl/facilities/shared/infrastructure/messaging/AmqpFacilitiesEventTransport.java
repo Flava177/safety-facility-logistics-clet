@@ -8,7 +8,7 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 /**
  * RabbitMQ transport: exchange {@code sfl.events}, routing key
- * {@code {platform}.{event-name}.v{version}}, dead-letter exchange {@code sfl.events.dlx} — the
+ * {@code {platform}.{event-name}.v{version}}, dead-letter exchange {@code sfl.events.dlx} - the
  * Phase 1 topology from the event catalogue, and byte-for-byte the envelope the fleet transport sends
  * so a consumer can bind both without a per-service special case.
  */

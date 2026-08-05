@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A reservation of a space for a window — SRS-SFL-S159-01.
+ * A reservation of a space for a window - SRS-SFL-S159-01.
  *
  * <h2>What a booking is a promise about</h2>
  *
@@ -21,7 +21,7 @@ import java.util.UUID;
  * <h2>The readiness hold is a flag, not a state</h2>
  *
  * {@code readinessHoldReason} sits beside the status rather than inside it, and that is deliberate.
- * A confirmed booking on a space that has just been blocked is <em>still a confirmed booking</em> —
+ * A confirmed booking on a space that has just been blocked is <em>still a confirmed booking</em> -
  * somebody has it in their diary and is planning around it. Moving it to a state called
  * {@code AT_RISK} would mean deciding, on the estate's behalf, that a hall blocked on Tuesday will
  * still be blocked on Friday. It usually will not be.
@@ -89,7 +89,7 @@ public record Booking(
         }
     }
 
-    /** A newly requested booking. Already holding the space — see {@link BookingStatus}. */
+    /** A newly requested booking. Already holding the space - see {@link BookingStatus}. */
     public static Booking request(UUID id, String bookingReference, String siteCode, UUID roomId,
             String roomCode, BookingPurpose purpose, String title, String description,
             BookingWindow window, int expectedAttendees, String requestedFor, boolean approvalRequired,
@@ -106,7 +106,7 @@ public record Booking(
      * Confirms the booking.
      *
      * <p>{@code approvalId} is null for a booking that needed none, and its absence is what records
-     * that fact — there is no separate "did not need approving" flag to fall out of step with the
+     * that fact - there is no separate "did not need approving" flag to fall out of step with the
      * {@code approvalRequired} the booking was created with.
      */
     public Booking confirm(UUID approval, String actorId, Instant at, SourceChannel channel,
@@ -235,7 +235,7 @@ public record Booking(
      * {@code true} when the sweep should call this a no-show.
      *
      * <p>Measured from the <em>start</em> plus a grace period, not from the end of the window. A
-     * three-hour lecture nobody attended should not hold a hall for three hours — releasing it twenty
+     * three-hour lecture nobody attended should not hold a hall for three hours - releasing it twenty
      * minutes in is what makes a no-show policy worth having rather than a statistic collected after
      * the fact.
      *

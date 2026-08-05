@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The room-turnaround queue — SRS-SFL-S159-02.
+ * The room-turnaround queue - SRS-SFL-S159-02.
  *
  * <p>Ordered by when the room is needed rather than when the task was raised. A task for this
  * afternoon matters more than one raised last week for next month, and a created-at ordering gets

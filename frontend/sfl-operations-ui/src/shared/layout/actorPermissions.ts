@@ -9,19 +9,19 @@ import type { SflPermission } from './permissions';
  * Programme and system entitlement are derived from roles in `programmeModel.ts`, because those two
  * mappings are small enough to transcribe and check. Permissions are not: there are **103 permissions
  * across 26 roles**, held in four matrices. Copying that into TypeScript would guarantee the drift the
- * whole idea is meant to prevent — a sidebar that eventually offers a screen the service refuses, or
+ * whole idea is meant to prevent - a sidebar that eventually offers a screen the service refuses, or
  * hides one it allows. So each service answers for its own matrices at `/actor/permissions`.
  *
  * ## Why it is resolved before the first render
  *
  * The navigation, the route guard and the landing destination are all synchronous. Making them await a
  * fetch would mean either a context threaded through four call sites or a sidebar that renders wide and
- * then narrows — and the flicker is worse than the wait, because a nav entry that appears and vanishes
+ * then narrows - and the flicker is worse than the wait, because a nav entry that appears and vanishes
  * looks like a bug rather than a permission. `main.tsx` resolves this once, then renders.
  *
  * ## What happens when it cannot be answered
  *
- * **Nothing is narrowed.** A null result — service down, request timed out, response malformed — means
+ * **Nothing is narrowed.** A null result - service down, request timed out, response malformed - means
  * this returns `true` for everything, so the dashboard behaves exactly as it did before item-level
  * gating existed. That is the same fail-open choice made for system entitlement and for the same
  * reason: a dashboard that hides screens because a request failed reads as a broken build, and the
@@ -35,11 +35,11 @@ import type { SflPermission } from './permissions';
  *
  * The fail-open above is per-*set*, not per-service: as soon as **one** source answers, `granted` is
  * non-null and anything absent from it is treated as denied. So a service missing from `SOURCES`
- * does not go "unknown" — it goes **denied**, and every one of its gated controls silently
+ * does not go "unknown" - it goes **denied**, and every one of its gated controls silently
  * disappears while the dashboard looks perfectly healthy.
  *
  * That is exactly what happened when S152 arrived: fleet answered, facilities was not asked, and so
- * every facilities permission evaluated false — the dashboard drilldowns stopped navigating and the
+ * every facilities permission evaluated false - the dashboard drilldowns stopped navigating and the
  * lock and mode controls vanished, with no error anywhere. **Adding a module means adding its source
  * here.**
  */
@@ -58,11 +58,11 @@ interface Source {
 // to answer from a fourth on 8092's behalf; it now answers from the SSEMP service itself, so the
 // path is unchanged and only the origin moved.
 const SOURCES: Source[] = [
-  // FTLMP — fleet, fuel, dispatch and AVAMP assets. Four matrices, one deployable, one answer.
+  // FTLMP - fleet, fuel, dispatch and AVAMP assets. Four matrices, one deployable, one answer.
   { path: '/api/v1/fleet/actor/permissions' },
-  // SSEMP — S174's matrix today, joined by S160-S163 as they are built.
+  // SSEMP - S174's matrix today, joined by S160-S163 as they are built.
   { path: '/api/v1/emergency/actor/permissions', service: 'safetySecurity' },
-  // IFIMP — S152, S153 and S159, one matrix in `shared` answering for all three.
+  // IFIMP - S152, S153 and S159, one matrix in `shared` answering for all three.
   { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
 ];
 
@@ -78,7 +78,7 @@ const fetchOne = async (source: Source): Promise<string[]> => {
     );
     return Array.isArray(result) ? result : [];
   } catch {
-    // Deliberately silent. An unavailable service means "unknown", not "denied" — see the docblock.
+    // Deliberately silent. An unavailable service means "unknown", not "denied" - see the docblock.
     return [];
   } finally {
     clearTimeout(timer);
@@ -93,11 +93,11 @@ const fetchOne = async (source: Source): Promise<string[]> => {
  * <p><strong>A partial answer is not a partial fail-open, and this comment used to claim it was.</strong>
  * It said that if fleet replied and SSEMP did not, "the S174 items stay visible because nothing is
  * known about them". That is not what happens. Everything merges into one flat set, and `permits()`
- * only fails open when `granted` is `null` — so the moment *any* service answers, a permission absent
+ * only fails open when `granted` is `null` - so the moment *any* service answers, a permission absent
  * from the merged set reads as **denied**, not as unknown.
  *
  * <p>The practical consequence is worth stating because it looks like a permissions problem and is
- * not one: start the fleet service alone and the dashboard still loads — fleet serves it — fleet
+ * not one: start the fleet service alone and the dashboard still loads - fleet serves it - fleet
  * answers for its own permissions, and every facilities and emergency control silently disappears.
  * No error, no empty state, no failed request the operator can see. It presents as "this account
  * cannot do that" when the truth is "that service is not running".
@@ -114,7 +114,7 @@ export const loadActorPermissions = async (): Promise<void> => {
 /**
  * Whether a nav item may be offered.
  *
- * An item with no `permission` is always offered — its section's system entitlement is the whole
+ * An item with no `permission` is always offered - its section's system entitlement is the whole
  * requirement, which is true of most screens.
  */
 /**

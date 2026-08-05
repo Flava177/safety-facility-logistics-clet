@@ -35,7 +35,7 @@ import org.junit.jupiter.api.Test;
  * <h2>What was actually wrong</h2>
  *
  * <p>{@code TripQueryService.search} applied a permission check and a site filter, and stopped. A
- * {@code FLEET_DRIVER} therefore opened their trip screen and got every trip at their site — every
+ * {@code FLEET_DRIVER} therefore opened their trip screen and got every trip at their site - every
  * colleague's route, purpose, operating mode and timing. The by-id read did call a record-scope check,
  * but that check compared the driver's staff reference against the token subject, which cannot match
  * once authentication is on, so it refused drivers their own trips while the list showed them

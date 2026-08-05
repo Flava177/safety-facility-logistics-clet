@@ -7,7 +7,7 @@ import java.util.UUID;
 
 /**
  * Governed-evidence boundary: dispatch/receipt/scan/custody documents are registered as governed evidence
- * references (hash, uploader, retention class, related activation) — never ungoverned binaries in a column.
+ * references (hash, uploader, retention class, related activation) - never ungoverned binaries in a column.
  */
 public interface EvidencePort {
 

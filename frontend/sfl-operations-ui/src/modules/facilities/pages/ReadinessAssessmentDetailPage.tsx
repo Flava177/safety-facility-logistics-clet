@@ -25,7 +25,7 @@ import {
  * assessment rather than an edit to this.
  *
  * The item wording and severity are the ones stored *on the assessment*, not looked up from the
- * checklist as it stands today — the checklist is versioned and will have changed, and a result from
+ * checklist as it stands today - the checklist is versioned and will have changed, and a result from
  * March has to stay readable against the questions that were asked in March.
  */
 const ReadinessAssessmentDetailPage = () => {
@@ -84,7 +84,7 @@ const ReadinessAssessmentDetailPage = () => {
         <>
           <PageHeader
             title="Readiness assessment"
-            subtitle={`${space.data ? `${space.data.roomCode} — ${space.data.name} · ` : ''}${formatDateTime(assessment.data.assessedAt)}`}
+            subtitle={`${space.data ? `${space.data.roomCode} - ${space.data.name} · ` : ''}${formatDateTime(assessment.data.assessedAt)}`}
             crumbs={[
               { label: 'Facilities', to: facilitiesPaths.dashboard },
               { label: 'Assessments', to: facilitiesPaths.assessments },
@@ -151,7 +151,7 @@ const ReadinessAssessmentDetailPage = () => {
                 rows={assessment.data.items}
                 columns={columns}
                 getRowId={(item) => item.id}
-                emptyMessage="This assessment recorded no answers — no checklist applied to the space."
+                emptyMessage="This assessment recorded no answers - no checklist applied to the space."
                 dense
               />
             </SectionCard>

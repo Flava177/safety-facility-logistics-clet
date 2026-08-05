@@ -2,7 +2,7 @@
 #
 # Cluster 9 does not own a message broker and should not acquire one. The enterprise integration
 # layer (S217 in the CLET system mapping) is a DTI-owned Kafka serving all 246 systems, and most of
-# SFL's integration edges leave the cluster anyway — fuel reconciliation to Finance (S138), HSE
+# SFL's integration edges leave the cluster anyway - fuel reconciliation to Finance (S138), HSE
 # claims to Insurance (S151_ins), courier to the Question-Paper Vault (S068), and IR-10's mandatory
 # audit stream from all four platforms to S204. A private broker would need bridging to the
 # enterprise one for every one of those.
@@ -29,7 +29,7 @@ services:
       RABBITMQ_DEFAULT_PASS: sfl
     ports:
       # 5672 is AMQP for the services; 15672 is the management UI, which is the point of the
-      # `-management` image — being able to see a message arrive is most of what this proves.
+      # `-management` image - being able to see a message arrive is most of what this proves.
       - "5672:5672"
       - "15672:15672"
     healthcheck:

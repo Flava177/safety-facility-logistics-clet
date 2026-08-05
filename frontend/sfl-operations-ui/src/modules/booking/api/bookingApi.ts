@@ -23,7 +23,7 @@ import type {
 import type { BookingPurpose, BookingStatus, ResourceCategory } from './enums';
 
 /**
- * S159 room and resource booking — the paths that had no client until now.
+ * S159 room and resource booking - the paths that had no client until now.
  *
  * Same service and same envelope as S152 and S153, so this shares their transport rather than
  * reaching for its own. `idempotent: true` is set on the two state-**creating** POSTs that accept an
@@ -63,7 +63,7 @@ export const bookingsApi = {
    * The diary.
    *
    * An actor holding only `IFIMP_REQUESTER` receives their own bookings and no others, narrowed per
-   * record by `BookingApplicationService.requesterFilter` — this asks for the register and gets a
+   * record by `BookingApplicationService.requesterFilter` - this asks for the register and gets a
    * shorter one. There is no client-side filter and there must never be: a filter in the browser is a
    * display convention, and the rows would still have crossed the boundary.
    */
@@ -79,7 +79,7 @@ export const bookingsApi = {
   /**
    * The decisions taken on a booking.
    *
-   * Empty for a booking that needed none, which is what says so — there is no separate flag to fall
+   * Empty for a booking that needed none, which is what says so - there is no separate flag to fall
    * out of step with the record.
    */
   approvals: (bookingId: string, signal?: AbortSignal) =>
@@ -184,7 +184,7 @@ export const setupTasksApi = {
    * Resolve a setup task.
    *
    * Setup tasks are deliberately **not** S153 work orders. Routing them there would buy the queue, the
-   * SLA and the closure evidence for free — and would put a twenty-minute chair rearrangement in the
+   * SLA and the closure evidence for free - and would put a twenty-minute chair rearrangement in the
    * same queue as a failed standby generator, where the generator ends up on page four.
    */
   resolve: (taskId: string, body: ResolveSetupTaskBody) =>

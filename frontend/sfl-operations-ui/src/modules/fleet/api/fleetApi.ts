@@ -59,7 +59,7 @@ import type { EvidenceSearch } from 'shared/components/EvidenceSelect';
 /**
  * Typed client for the S166 Fleet & Vehicle Management API.
  *
- * Paths were taken from the controllers, not from the API inventory document — several inventory
+ * Paths were taken from the controllers, not from the API inventory document - several inventory
  * entries do not match the implementation. The mismatches are listed in
  * `docs/fleet/S166_UI_Gap_Report.md`; nothing here calls an endpoint that does not exist.
  */
@@ -89,7 +89,7 @@ export const vehiclesApi = {
    * The vehicle's readiness, on its own terms.
    *
    * The vehicle detail screen used to answer this by calling `trips/assignment-preview` with only a
-   * `vehicleId` — the same policy, reached through a trip-shaped endpoint because nothing else
+   * `vehicleId` - the same policy, reached through a trip-shaped endpoint because nothing else
    * existed. This is that policy with a vehicle-shaped door.
    */
   readiness: (vehicleId: string, signal?: AbortSignal) =>
@@ -109,7 +109,7 @@ export const vehiclesApi = {
     ),
 
   /**
-   * Records a standalone periodic inspection — no trip involved.
+   * Records a standalone periodic inspection - no trip involved.
    *
    * Before this endpoint existed, a vehicle with no open trip could not be inspected at all, which
    * blocked the periodic-inspection half of SRS-SFL-S166-01.
@@ -210,7 +210,7 @@ export const tripsApi = {
   /**
    * The assigned driver confirms or defers (SRS-SFL-S166-02).
    *
-   * Refused unless the signed-in identity is bound to the driver on the trip — a driver may answer
+   * Refused unless the signed-in identity is bound to the driver on the trip - a driver may answer
    * for their own assignment and nobody else's, and a supervisor may not answer on their behalf.
    */
   acknowledge: (tripId: string, body: AcknowledgeTripRequest) =>
@@ -294,7 +294,7 @@ export const workflowApi = {
 /**
  * The FTLMP evidence store, in the shape {@link EvidenceSelect} wants.
  *
- * <p>One store serves fleet, fuel and dispatch — a dispatch exception's closure evidence is written
+ * <p>One store serves fleet, fuel and dispatch - a dispatch exception's closure evidence is written
  * into the same `EvidenceReference` table as a trip's, by `RecordedDispatchEvidenceAdapter`. So this
  * is the search function every FTLMP dialog passes to the picker, and dispatch importing it is the
  * same cross-module reuse it already does for `EVIDENCE_RETENTION_CLASSES` and `humanise`.
@@ -379,7 +379,7 @@ export const integrationsApi = {
    * Searches the inbound inbox.
    *
    * Replay takes a message identifier, and the health projection only ever carried a handful of
-   * recent messages — so dead-letter replay was a documented capability that could not be reached
+   * recent messages - so dead-letter replay was a documented capability that could not be reached
    * from this dashboard at all.
    */
   messages: (params: InboxSearchParams = {}, signal?: AbortSignal) =>

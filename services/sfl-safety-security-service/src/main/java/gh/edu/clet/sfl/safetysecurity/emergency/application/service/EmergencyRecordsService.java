@@ -170,7 +170,7 @@ public class EmergencyRecordsService {
      * Corrects an audience group's size and directory pointer.
      *
      * <p>Closes the sharp edge in gap 6. {@code recipientCount} is what the service fans out to and
-     * the denominator every delivery and acknowledgement percentage is read against — and it could
+     * the denominator every delivery and acknowledgement percentage is read against - and it could
      * not be corrected through any endpoint. A group sized at zero sent to nobody and reported a
      * completely successful broadcast. The name is deliberately **not** editable: activations already
      * closed cite this group, and renaming it would rewrite what they say they were sent to.

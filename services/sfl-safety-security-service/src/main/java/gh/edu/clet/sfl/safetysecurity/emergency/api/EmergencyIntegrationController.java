@@ -25,7 +25,7 @@ public class EmergencyIntegrationController {
     }
 
     /**
-     * The inbound provider feed — processed, rejected and dead-lettered counts plus recent envelopes.
+     * The inbound provider feed - processed, rejected and dead-lettered counts plus recent envelopes.
      *
      * <p>Closes gap 3, the most consequential gap on this service: this feed is the only thing that
      * ever writes {@code delivered}, {@code failed} and {@code acknowledged}, and none of it was

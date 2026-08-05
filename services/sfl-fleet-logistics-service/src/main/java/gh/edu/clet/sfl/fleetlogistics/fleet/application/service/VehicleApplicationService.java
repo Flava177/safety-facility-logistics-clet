@@ -53,8 +53,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Write use cases for the vehicle register (SRS-SFL-S166-01).
  *
  * <p>Every method here is one transaction that atomically persists three things: the domain state
- * change, the audit record and the outbox event. That is the S166-01 workflow — "System saves the
- * record, writes audit evidence and publishes any required change event" — and doing it in one
+ * change, the audit record and the outbox event. That is the S166-01 workflow - "System saves the
+ * record, writes audit evidence and publishes any required change event" - and doing it in one
  * transaction is what stops an event escaping for a change that rolled back.
  */
 @Service
@@ -250,7 +250,7 @@ public class VehicleApplicationService {
      * Cross-fleet compliance search.
      *
      * <p>Closes gap 10. The compliance screen fanned out over the first fifty active vehicles in
-     * scope and said so on the page — correct for a small fleet and quietly wrong for any other.
+     * scope and said so on the page - correct for a small fleet and quietly wrong for any other.
      */
     @Transactional(readOnly = true)
     public List<ComplianceDocument> searchComplianceDocuments(ComplianceDocumentType documentType,
@@ -457,7 +457,7 @@ public class VehicleApplicationService {
         if (eventType == null) {
             return;
         }
-        // `registrationNumber` and `siteCode` are not decoration — they are the contract.
+        // `registrationNumber` and `siteCode` are not decoration - they are the contract.
         //
         // Two code paths publish this same event type: here, when a recorded service changes the
         // status, and `ComplianceServiceSweepService`, when the daily sweep notices one has fallen

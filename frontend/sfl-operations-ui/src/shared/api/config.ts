@@ -14,7 +14,7 @@ import { readActorOverride } from 'shared/dev/actorOverride';
  * The development actor override, when one is set.
  *
  * Read once, at module scope, because everything derived from the actor is also computed once at
- * module scope — see `shared/dev/actorOverride.ts` for why applying an override reloads the page.
+ * module scope - see `shared/dev/actorOverride.ts` for why applying an override reloads the page.
  * A blank field falls through to the environment default rather than sending an empty header.
  */
 const actorOverride = readActorOverride();
@@ -41,7 +41,7 @@ export interface SflActorConfig {
 /**
  * Base URL of the Fleet service.
  *
- * An empty value means same origin — which is what the embedded build uses, because the Spring Boot
+ * An empty value means same origin - which is what the embedded build uses, because the Spring Boot
  * service serves both the API and this dashboard. `npm run dev` points at `http://localhost:8093`
  * instead, and the service allows `http://localhost:5005` as a CORS origin.
  */
@@ -51,12 +51,12 @@ export const fleetApiBaseUrl = readOptionalEnv('VITE_FLEET_API_BASE_URL', 'http:
  * Base URL of the Safety, Security & Emergency service (SSEMP).
  *
  * `sfl-safety-security-service`, port **8092**. It serves `/api/v1/emergency/**` for S174 and will
- * serve S160-S163 from the same origin as they are built — one base URL for a whole programme
+ * serve S160-S163 from the same origin as they are built - one base URL for a whole programme
  * rather than for one system.
  *
  * S174 was its own deployable on 8095 until the platform was consolidated to three services. The
  * API paths did not move, so nothing in `emergencyApi.ts` changed; only the origin did. That is the
- * property worth preserving in any future consolidation — a path is a contract, a port is a
+ * property worth preserving in any future consolidation - a path is a contract, a port is a
  * deployment detail.
  *
  * The service allows `http://localhost:8093` (the bundled dashboard's origin) and
@@ -71,7 +71,7 @@ export const safetySecurityApiBaseUrl = readOptionalEnv(
 /**
  * Base URL of the Facilities service.
  *
- * S152 CAFM/IWMS is the third service the dashboard talks to — `sfl-facilities-service`, port 8091,
+ * S152 CAFM/IWMS is the third service the dashboard talks to - `sfl-facilities-service`, port 8091,
  * the `facilities` schema and its own permission matrix. It is also the IFIMP host: S153 maintenance
  * and S159 room booking will arrive in the same service behind this same origin, so this is one base
  * URL for a whole programme rather than for one system.
@@ -89,7 +89,7 @@ export const facilitiesApiBaseUrl = readOptionalEnv(
 /**
  * The development actor's roles, when `VITE_SFL_ROLES` is not set.
  *
- * One header serves both services and each reads only the roles its own matrix knows — an
+ * One header serves both services and each reads only the roles its own matrix knows - an
  * unrecognised name grants nothing rather than failing the request, so the two sets can sit in one
  * list. The four emergency roles are what it takes to exercise S174 end to end: the coordinator
  * composes and sends, the command role approves and records after-action approval, the auditor
@@ -100,7 +100,7 @@ export const facilitiesApiBaseUrl = readOptionalEnv(
  * local-development convenience, not the design.
  *
  * This list is also what `shared/layout/programmes.ts` derives programme entitlement from, so
- * dropping the two SSEMP roles here is all it takes to see the dashboard as a fleet operator does —
+ * dropping the two SSEMP roles here is all it takes to see the dashboard as a fleet operator does -
  * the emergency section disappears from the sidebar and its routes are refused.
  *
  * Two earlier entries were **not real roles**: `FLEET_DISPATCHER` and `FLEET_AUDITOR` are not in
@@ -109,7 +109,7 @@ export const facilitiesApiBaseUrl = readOptionalEnv(
  * `.env` is git-ignored, so an older local one must be corrected by hand.
  */
 const defaultRoles = [
-  // SFL.IFIMP — S152. The manager runs the estate, the supervisor overrides a readiness lock, and
+  // SFL.IFIMP - S152. The manager runs the estate, the supervisor overrides a readiness lock, and
   // the technician assesses readiness in the field. A centre manager is what it takes to declare
   // examination mode: the facilities matrix deliberately withholds that from FACILITIES_MANAGER,
   // so without it the operating-mode control cannot be exercised locally at all.
@@ -146,7 +146,7 @@ export const keycloakClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operation
  * Three sources in a deliberate order, and the order is the whole point:
  *
  * 1. **The signed-in session**, when there is one. Roles and site scopes come from the token's own
- *    claims — the same `realm_access.roles` and `site_scopes` the services read — so the sidebar and
+ *    claims - the same `realm_access.roles` and `site_scopes` the services read - so the sidebar and
  *    the service cannot disagree about who you are.
  * 2. **The development actor switcher**, for header-based local work with security off.
  * 3. **The environment**, which is the fallback that has always been here.
@@ -154,7 +154,7 @@ export const keycloakClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operation
  * The headers are still sent in every case, and that is not redundant: with
  * `SFL_SECURITY_ENABLED=false` they are the only identity there is, and with security on the
  * services ignore them entirely in favour of the JWT. Sending both means one build works against
- * either, and there is no mode where the headers can *override* a token — the resolver prefers the
+ * either, and there is no mode where the headers can *override* a token - the resolver prefers the
  * verified principal, which is what makes this safe rather than merely convenient.
  */
 const sessionActor = (): SflActorConfig | null => {

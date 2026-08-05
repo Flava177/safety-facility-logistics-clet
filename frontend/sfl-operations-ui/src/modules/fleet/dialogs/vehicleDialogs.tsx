@@ -48,7 +48,7 @@ const sectionHeading =
   'border-t border-gray-200 pt-4 text-theme-sm font-semibold text-brand-900';
 
 /* ---------------------------------------------------------------------------------------------
- * Register a vehicle — POST /api/v1/fleet/vehicles
+ * Register a vehicle - POST /api/v1/fleet/vehicles
  * ------------------------------------------------------------------------------------------- */
 
 interface RegisterVehicleDialogProps extends BaseDialogProps {
@@ -122,7 +122,7 @@ export const RegisterVehicleDialog = ({
     },
   });
 
-  /** Any error on a field that lives inside "More details" — see the note on the element itself. */
+  /** Any error on a field that lives inside "More details" - see the note on the element itself. */
   const moreDetailsHasError = (
     ['vin', 'capacity', 'initialOdometer', 'acquisitionReference'] as const
   ).some((field) => Boolean(form.errors[field]));
@@ -159,7 +159,7 @@ export const RegisterVehicleDialog = ({
         now three groups: what the vehicle *is*, who *answers for it*, and the rest.
 
         Only fields that are optional or carry a defensible default sit behind the disclosure, which
-        is the rule that makes hiding a required field safe — capacity defaults to 5 and the odometer
+        is the rule that makes hiding a required field safe - capacity defaults to 5 and the odometer
         to 0, so the form submits correctly without it ever being opened. Manufacture year stays
         visible despite having a default, because "this year" is a guess about a real vehicle and a
         wrong year submitted unseen is worse than one more field on the page.
@@ -218,7 +218,7 @@ export const RegisterVehicleDialog = ({
           required
           value={form.values.responsibleUnit}
           onChange={(value) => form.setValue('responsibleUnit', value)}
-          {...form.fieldProps('responsibleUnit', 'The unit the vehicle belongs to — Transport, Estates.')}
+          {...form.fieldProps('responsibleUnit', 'The unit the vehicle belongs to - Transport, Estates.')}
         />
         <TextInput
           label="Operational owner"
@@ -241,7 +241,7 @@ export const RegisterVehicleDialog = ({
         <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
           More details
           <span className="ml-1 font-normal text-gray-500">
-            — VIN, capacity, opening odometer, acquisition, emergency use
+            - VIN, capacity, opening odometer, acquisition, emergency use
           </span>
         </summary>
         <div className={`mt-4 ${twoColumn}`}>
@@ -287,7 +287,7 @@ export const RegisterVehicleDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Lifecycle transition — PATCH /api/v1/fleet/vehicles/{id}/lifecycle
+ * Lifecycle transition - PATCH /api/v1/fleet/vehicles/{id}/lifecycle
  * ------------------------------------------------------------------------------------------- */
 
 interface LifecycleDialogProps extends BaseDialogProps {
@@ -351,7 +351,7 @@ export const ChangeVehicleLifecycleDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Compliance document — POST /api/v1/fleet/vehicles/{id}/compliance-documents
+ * Compliance document - POST /api/v1/fleet/vehicles/{id}/compliance-documents
  * ------------------------------------------------------------------------------------------- */
 
 interface ComplianceDialogProps extends BaseDialogProps {
@@ -484,7 +484,7 @@ export const RegisterComplianceDocumentDialog = ({
 
       {isMandatory && (
         <Alert variant="info">
-          {humanise(form.values.documentType)} is a mandatory document — while it is missing or
+          {humanise(form.values.documentType)} is a mandatory document - while it is missing or
           expired the vehicle carries a blocking readiness blocker.
         </Alert>
       )}
@@ -493,7 +493,7 @@ export const RegisterComplianceDocumentDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Service record — POST /api/v1/fleet/vehicles/{id}/service-records
+ * Service record - POST /api/v1/fleet/vehicles/{id}/service-records
  * ------------------------------------------------------------------------------------------- */
 
 interface ServiceDialogProps extends BaseDialogProps {
@@ -658,7 +658,7 @@ export const RecordServiceDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Odometer correction — POST /api/v1/fleet/vehicles/{id}/odometer-corrections
+ * Odometer correction - POST /api/v1/fleet/vehicles/{id}/odometer-corrections
  * ------------------------------------------------------------------------------------------- */
 
 interface OdometerDialogProps extends BaseDialogProps {
@@ -736,14 +736,14 @@ export const CorrectOdometerDialog = ({ open, onClose, onSaved, vehicle }: Odome
         relatedRecordId={vehicle.id}
         value={form.values.evidenceId}
         onChange={(value) => form.setValue('evidenceId', value)}
-        {...form.fieldProps('evidenceId', 'What shows the true reading — a photograph of the dial, or the service record that corrected it.')}
+        {...form.fieldProps('evidenceId', 'What shows the true reading - a photograph of the dial, or the service record that corrected it.')}
       />
     </FormDialog>
   );
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Edit vehicle — PATCH /api/v1/fleet/vehicles/{id}
+ * Edit vehicle - PATCH /api/v1/fleet/vehicles/{id}
  * ------------------------------------------------------------------------------------------- */
 
 interface EditVehicleDialogProps extends BaseDialogProps {
@@ -811,7 +811,7 @@ export const EditVehicleDialog = ({ open, onClose, onSaved, vehicle }: EditVehic
     >
       {vehicle.vinMasked && (
         <Alert variant="warning">
-          The VIN is masked for your role. Leaving this field blank clears the stored VIN — only
+          The VIN is masked for your role. Leaving this field blank clears the stored VIN - only
           fill it in if you hold the real value.
         </Alert>
       )}

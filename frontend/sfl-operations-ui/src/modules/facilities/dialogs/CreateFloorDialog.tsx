@@ -21,7 +21,7 @@ interface CreateFloorDialogProps {
  *
  * It is what floors sort by, and two real cases break a positive-integer-required field. A basement
  * is below ground and sorts below it, so the column is signed. A mezzanine is between two floors and
- * has no honest number at all, so the column is nullable — and a mezzanine forced to be `1` would
+ * has no honest number at all, so the column is nullable - and a mezzanine forced to be `1` would
  * file itself above the first floor it sits inside.
  *
  * Floors with no level sort last, which is the service's ordering. This dialog does not invent one.
@@ -68,7 +68,7 @@ const CreateFloorDialog = ({
         buildingId: building.id,
         floorCode: trimmedCode,
         name: name.trim(),
-        // Empty means "no honest number", which is a mezzanine — not zero, which is the ground floor.
+        // Empty means "no honest number", which is a mezzanine - not zero, which is the ground floor.
         levelNumber: levelNumber === '' ? null : Number(levelNumber),
       });
     } catch (cause) {
@@ -82,7 +82,7 @@ const CreateFloorDialog = ({
     <FormDialog
       open
       title="Add a floor"
-      description={`${building.buildingCode} — ${building.name}`}
+      description={`${building.buildingCode} - ${building.name}`}
       submitLabel="Add it"
       submitting={submitting}
       submitDisabled={invalid}
@@ -137,7 +137,7 @@ const CreateFloorDialog = ({
         {levelTaken && (
           <Alert variant="warning" title="Another floor is already at this level">
             <p className="text-theme-sm">
-              {levelTaken.floorCode} — {levelTaken.name}. Two floors at one level is allowed and
+              {levelTaken.floorCode} - {levelTaken.name}. Two floors at one level is allowed and
               sometimes right, in a building with separate wings. It is worth checking it is what you
               mean.
             </p>

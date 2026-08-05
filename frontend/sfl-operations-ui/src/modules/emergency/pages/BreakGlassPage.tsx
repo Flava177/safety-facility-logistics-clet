@@ -37,11 +37,11 @@ import { emergencyPaths } from 'shared/layout/navigation';
 import type { NotificationActivation } from 'modules/emergency/api/dto';
 
 /**
- * Break-glass activation — the declared-emergency path that sends without approval (Arch §0E).
+ * Break-glass activation - the declared-emergency path that sends without approval (Arch §0E).
  *
  * A destination of its own rather than a mode on the compose dialog, for two reasons that pull the
  * same way. It must never be reached by accident from a routine flow, and in a real emergency it
- * must be reachable in one click from anywhere — a screen that is both a warning and the fastest
+ * must be reachable in one click from anywhere - a screen that is both a warning and the fastest
  * path is exactly what this needs to be.
  *
  * The eligibility rule is stated on the form because `BreakGlassPolicy` is an OR: the template
@@ -64,7 +64,7 @@ const BreakGlassPage = () => {
 
   const records = useSiteRecords(siteCode);
 
-  /** Every break-glass send at this site — a server-side filter now, not a sieve over a window. */
+  /** Every break-glass send at this site - a server-side filter now, not a sieve over a window. */
   const history = useApiQuery(
     (signal) => activationsApi.search({ siteCode, mode: 'BREAK_GLASS', size: 100 }, signal),
     [siteCode],
@@ -150,7 +150,7 @@ const BreakGlassPage = () => {
               secondary={formatDateTime(row.afterActionApprovedAt)}
             />
           ) : (
-            <span className="font-medium text-error-800">Not yet — closure is blocked</span>
+            <span className="font-medium text-error-800">Not yet - closure is blocked</span>
           ),
       },
       {
@@ -194,7 +194,7 @@ const BreakGlassPage = () => {
         <Alert variant="error" title="This is not the routine path">
           A break-glass broadcast goes out the moment it is confirmed. There is no draft, no
           approver and no recall. Use it when a declared emergency makes waiting for approval the
-          greater risk — and use the routine path for everything else, including anything urgent
+          greater risk - and use the routine path for everything else, including anything urgent
           that can still wait for one other person to read it.
         </Alert>
 
@@ -238,7 +238,7 @@ const BreakGlassPage = () => {
               emptyLabel="None"
               options={records.scenarios.map((scenario) => ({
                 value: scenario.id,
-                label: `${scenario.scenarioCode} · ${scenario.name}${scenario.breakGlassEligible ? ' — eligible' : ''}`,
+                label: `${scenario.scenarioCode} · ${scenario.name}${scenario.breakGlassEligible ? ' - eligible' : ''}`,
               }))}
               helperText="Fills the template, priority and channels below."
             />
@@ -255,9 +255,9 @@ const BreakGlassPage = () => {
               }}
               options={records.templates.map((template) => ({
                 value: template.id,
-                label: `${template.templateCode} · ${template.title}${template.breakGlassEligible ? ' — eligible' : ''}`,
+                label: `${template.templateCode} · ${template.title}${template.breakGlassEligible ? ' - eligible' : ''}`,
               }))}
-              helperText="The message recipients will receive. Required — break-glass has no default."
+              helperText="The message recipients will receive. Required - break-glass has no default."
             />
           </div>
 
@@ -265,7 +265,7 @@ const BreakGlassPage = () => {
             {templateId && !eligible && (
               <Alert variant="error" title="Neither record is break-glass eligible">
                 The service will refuse this send. Break-glass needs the template{' '}
-                <strong>or</strong> the scenario to be marked eligible — choose a different one, or
+                <strong>or</strong> the scenario to be marked eligible - choose a different one, or
                 have the record marked eligible by somebody who can justify it being sendable with
                 no approval.
               </Alert>
@@ -337,7 +337,7 @@ const BreakGlassPage = () => {
               />
               <ConsequenceLine label="Channels" value={listChannels(channels)} />
               <ConsequenceLine label="Messages" value={formatNumber(reach * channels.length)} />
-              <ConsequenceLine label="Approval" value="None — sent on your authority alone" />
+              <ConsequenceLine label="Approval" value="None - sent on your authority alone" />
               <ConsequenceLine label="Eligible via" value={eligibleVia} />
             </ConsequencePanel>
 
@@ -409,7 +409,7 @@ const BreakGlassPage = () => {
           onSent={(activation) => {
             notifySuccess(
               `${activation.activationNumber} is live.`,
-              'Record after-the-fact approval against it — closure is blocked until you do.',
+              'Record after-the-fact approval against it - closure is blocked until you do.',
             );
             history.refetch();
             navigate(emergencyPaths.activationDetail(activation.id));

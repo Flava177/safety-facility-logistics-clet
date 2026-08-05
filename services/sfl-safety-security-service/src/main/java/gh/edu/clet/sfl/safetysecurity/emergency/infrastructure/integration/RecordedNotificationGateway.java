@@ -10,7 +10,7 @@ import org.springframework.stereotype.Component;
 
 /**
  * Phase-1 recorded notification gateway. Provider-neutral: it records what it dispatched to the channel
- * simulator and reports it honestly — it never fabricates vendor success. A real SMS/email/voice/siren
+ * simulator and reports it honestly - it never fabricates vendor success. A real SMS/email/voice/siren
  * adapter replaces this without any domain change; vendor DTOs would live only inside such an adapter.
  */
 @Component

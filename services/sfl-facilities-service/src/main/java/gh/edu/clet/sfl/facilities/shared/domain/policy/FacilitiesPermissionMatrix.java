@@ -12,7 +12,7 @@ import java.util.Set;
  *
  * <p>{@code SiteScopedPrincipal} carries roles and site scopes but no permissions, so permissions are
  * derived here rather than read from a token claim. Keeping the derivation in the facilities service
- * — not in {@code sfl-service-common} — means no IFIMP business rule leaks into the shared library,
+ * - not in {@code sfl-service-common} - means no IFIMP business rule leaks into the shared library,
  * and the matrix can be replaced by real token claims later without touching a single call site
  * (gap report C-07). Same decision as {@code FleetPermissionMatrix}, {@code FuelPermissionMatrix},
  * {@code DispatchPermissionMatrix} and {@code EmergencyPermissionMatrix}.
@@ -25,7 +25,7 @@ import java.util.Set;
  * <p>The interesting grants, none of them incidental:
  * <ul>
  *   <li>{@link SflRole#IFIMP_TECHNICIAN} assesses readiness, changes an asset's operational status
- *       and works the jobs assigned to them — but cannot manage the estate, override a lock, change
+ *       and works the jobs assigned to them - but cannot manage the estate, override a lock, change
  *       the operating mode, or <em>close</em> a work order. A technician marks work complete; a
  *       supervisor accepts it.</li>
  *   <li>{@link SflRole#VENDOR_TECHNICIAN} was the same set as the technician until S153 and is now
@@ -34,7 +34,7 @@ import java.util.Set;
  *       {@code WorkOrderApplicationService} because "the ones assigned to me" is a property of the
  *       record and not something a matrix can say.</li>
  *   <li>{@link SflRole#IFIMP_REQUESTER} reports a fault and follows their own, and reads nothing
- *       else — the fault read is narrowed per record the same way. A requester who could read the
+ *       else - the fault read is narrowed per record the same way. A requester who could read the
  *       site's fault register would learn which halls are unusable and which security equipment is
  *       broken, which is not what reporting a leak earns.</li>
  *   <li>{@link SflPermission#FACILITIES_EVIDENCE_EXPORT} is held only by reviewers and
@@ -45,7 +45,7 @@ import java.util.Set;
  *       centre-level operational decision, and NFR 23.3 requires it to be role-restricted.</li>
  *   <li>{@link SflRole#AUDITOR} and {@link SflRole#COMPLIANCE_OFFICER} read everything and change
  *       nothing, and they alone hold {@link SflPermission#FACILITIES_AUDIT_INTEGRITY_CHECK} alongside
- *       the administrators — an integrity failure is escalated to compliance, so compliance must be
+ *       the administrators - an integrity failure is escalated to compliance, so compliance must be
  *       able to run the check.</li>
  * </ul>
  */
@@ -62,8 +62,8 @@ public final class FacilitiesPermissionMatrix {
             SflPermission.FACILITIES_DASHBOARD_READ,
             SflPermission.FACILITIES_FAULT_READ,
             SflPermission.FACILITIES_WORK_ORDER_READ,
-            // S159. A room diary is the least sensitive thing in this service — knowing that Hall A is
-            // taken on Tuesday is what stops two people planning for it — so every staff-facing role
+            // S159. A room diary is the least sensitive thing in this service - knowing that Hall A is
+            // taken on Tuesday is what stops two people planning for it - so every staff-facing role
             // that reads the estate reads its bookings. The narrow roles below, which do not take
             // READ_ONLY, are granted or refused it individually.
             SflPermission.FACILITIES_BOOKING_READ,
@@ -99,14 +99,14 @@ public final class FacilitiesPermissionMatrix {
     private static Map<SflRole, Set<SflPermission>> buildMatrix() {
         Map<SflRole, Set<SflPermission>> matrix = new EnumMap<>(SflRole.class);
 
-        // Platform administration — everything S152 defines.
+        // Platform administration - everything S152 defines.
         Set<SflPermission> administrator = EnumSet.allOf(SflPermission.class).stream()
                 .filter(permission -> permission.name().startsWith("FACILITIES_"))
                 .collect(java.util.stream.Collectors.toCollection(() -> EnumSet.noneOf(SflPermission.class)));
         matrix.put(SflRole.SFL_ADMIN, Set.copyOf(administrator));
         matrix.put(SflRole.DTI_ADMIN, Set.copyOf(administrator));
 
-        // Facilities director — the whole estate, including mode changes and overrides, but not
+        // Facilities director - the whole estate, including mode changes and overrides, but not
         // platform configuration, which is an administrative concern.
         matrix.put(SflRole.FACILITIES_DIRECTOR, union(READ_ONLY,
                 SflPermission.FACILITIES_SITE_MANAGE,
@@ -142,7 +142,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_RESOURCE_MANAGE,
                 SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
-        // Facilities manager — day-to-day estate management. No mode change: declaring an examination
+        // Facilities manager - day-to-day estate management. No mode change: declaring an examination
         // is a centre-level decision, not an estate-maintenance one.
         matrix.put(SflRole.FACILITIES_MANAGER, union(READ_ONLY,
                 SflPermission.FACILITIES_SITE_MANAGE,
@@ -176,7 +176,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_RESOURCE_MANAGE,
                 SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
-        // Maintenance supervisor — owns readiness and the asset register it depends on, and can
+        // Maintenance supervisor - owns readiness and the asset register it depends on, and can
         // override a lock because a supervisor is who a blocked examination hall escalates to.
         matrix.put(SflRole.IFIMP_MAINTENANCE_SUPERVISOR, union(READ_ONLY,
                 SflPermission.FACILITIES_SPACE_MANAGE,
@@ -198,7 +198,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_VENDOR_READ,
                 SflPermission.FACILITIES_EVIDENCE_READ,
                 SflPermission.FACILITIES_EVIDENCE_ATTACH,
-                // Books spaces for maintenance access — the RESERVED purpose — and runs the setups.
+                // Books spaces for maintenance access - the RESERVED purpose - and runs the setups.
                 //
                 // Deliberately no BOOKING_OVERRIDE, even though this role holds READINESS_OVERRIDE.
                 // The two would be redundant and the redundancy is harmful: a supervisor who needs a
@@ -210,7 +210,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_RESOURCE_MANAGE,
                 SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
-        // In-house technician — field work. Assesses readiness, changes asset status, works the jobs
+        // In-house technician - field work. Assesses readiness, changes asset status, works the jobs
         // assigned to them.
         //
         // No CREATE and no ASSIGN: a technician who could raise and self-assign work would be outside
@@ -218,7 +218,7 @@ public final class FacilitiesPermissionMatrix {
         // omission: a technician marks work COMPLETED and a supervisor accepts it. Giving them both
         // would collapse the two states the SRS separates ("Authorised user closes or verifies
         // closure") into one, and would let the person who did the job be the only person who ever
-        // saw it — which is exactly what closure evidence exists to prevent.
+        // saw it - which is exactly what closure evidence exists to prevent.
         matrix.put(SflRole.IFIMP_TECHNICIAN, union(READ_ONLY,
                 SflPermission.FACILITIES_READINESS_ASSESS,
                 SflPermission.FACILITIES_ASSET_MANAGE,
@@ -231,7 +231,7 @@ public final class FacilitiesPermissionMatrix {
                 // hall would be scheduling the estate from the shop floor.
                 SflPermission.FACILITIES_SETUP_TASK_MANAGE));
 
-        // Vendor technician — a contractor, and therefore NOT a technician with a different badge.
+        // Vendor technician - a contractor, and therefore NOT a technician with a different badge.
         //
         // This is the narrowest role in the matrix and the split from IFIMP_TECHNICIAN is deliberate:
         // the two shared a permission set before S153, which meant a contractor could read the whole
@@ -255,14 +255,14 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_EVIDENCE_ATTACH,
                 SflPermission.FACILITIES_EVIDENCE_READ));
 
-        // Requester — reports what they can see is wrong, and follows their own report. Nothing more.
+        // Requester - reports what they can see is wrong, and follows their own report. Nothing more.
         // FACILITIES_FAULT_READ is granted, and narrowed per record to the faults they reported: a
         // requester who could read the site's whole fault register would learn which halls are
         // unusable and which security equipment is broken, which is not what reporting a leak earns.
         //
         // S159 makes this the busiest role in the module rather than the narrowest: a requester is
         // exactly the person who books a room. BOOKING_READ is granted and narrowed per record to
-        // their own bookings, the same treatment FACILITIES_FAULT_READ gets and for the same reason —
+        // their own bookings, the same treatment FACILITIES_FAULT_READ gets and for the same reason -
         // a full room diary would tell somebody which halls are empty and when.
         //
         // No BOOKING_CANCEL: cancelling one's own booking is allowed by the per-record rule in
@@ -276,7 +276,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_BOOKING_REQUEST,
                 SflPermission.FACILITIES_RESOURCE_READ));
 
-        // Command — oversight across facilities and emergency; declares examination mode.
+        // Command - oversight across facilities and emergency; declares examination mode.
         matrix.put(SflRole.COMMAND_ROLE, union(READ_ONLY,
                 SflPermission.FACILITIES_OPERATING_MODE_CHANGE,
                 SflPermission.FACILITIES_READINESS_OVERRIDE,
@@ -288,7 +288,7 @@ public final class FacilitiesPermissionMatrix {
                 SflPermission.FACILITIES_BOOKING_CANCEL,
                 SflPermission.FACILITIES_BOOKING_OVERRIDE));
 
-        // Centre manager — runs a centre, so declares its mode, reads its readiness, and owns its
+        // Centre manager - runs a centre, so declares its mode, reads its readiness, and owns its
         // diary. The role S159 expects to hold BOOKING_OVERRIDE in practice: deciding that an
         // examination will go ahead in a degraded hall is a centre-level operational call, made with
         // a recorded reason, and it is the same authority NFR 23.3 already gives this role over mode.
@@ -318,7 +318,7 @@ public final class FacilitiesPermissionMatrix {
         matrix.put(SflRole.AUDITOR, assurance);
         matrix.put(SflRole.COMPLIANCE_OFFICER, assurance);
 
-        // Integration principals — maintain the feeds that carry device and asset data in, and need
+        // Integration principals - maintain the feeds that carry device and asset data in, and need
         // to see whether what they sent landed. They do not operate the estate.
         Set<SflPermission> integration = union(READ_ONLY,
                 SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER,
@@ -326,7 +326,7 @@ public final class FacilitiesPermissionMatrix {
         matrix.put(SflRole.INTEGRATION_ENGINEER, union(integration, SflPermission.FACILITIES_CONFIG_MANAGE));
         matrix.put(SflRole.SERVICE_INTEGRATION, integration);
 
-        // HSE manager — reads the estate to place an incident and judge a location's standing.
+        // HSE manager - reads the estate to place an incident and judge a location's standing.
         matrix.put(SflRole.HSE_MANAGER, union(READ_ONLY, SflPermission.FACILITIES_DASHBOARD_DRILLDOWN));
 
         return Map.copyOf(matrix);

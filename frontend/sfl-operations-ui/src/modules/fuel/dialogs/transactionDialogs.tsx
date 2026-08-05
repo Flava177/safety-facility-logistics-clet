@@ -48,7 +48,7 @@ interface CaptureDialogProps {
 }
 
 /**
- * Manual capture — `POST /api/v1/fuel/transactions`.
+ * Manual capture - `POST /api/v1/fuel/transactions`.
  *
  * Two things are deliberately not editable. `sourceSystem` is fixed to `MANUAL`, because that is
  * what selects the `FUEL_TRANSACTION_CAPTURE` permission in the service (any other value routes to
@@ -57,7 +57,7 @@ interface CaptureDialogProps {
  * the domain refuses a total that is not `quantity × unitPrice` to two decimal places.
  *
  * This is the only fuel mutation that reads `Idempotency-Key`, which the shared client sends on
- * every `post` — so a double submission returns the first transaction rather than creating a second.
+ * every `post` - so a double submission returns the first transaction rather than creating a second.
  */
 export const CaptureTransactionDialog = ({
   open,
@@ -150,7 +150,7 @@ export const CaptureTransactionDialog = ({
           value={form.values.siteCode}
           onChange={(value) => {
             // The vehicle, driver and trip lists are scoped to the site, so a site change must
-            // clear them — a reference from the previous site would be refused on submission.
+            // clear them - a reference from the previous site would be refused on submission.
             form.setValues({ siteCode: value, vehicleId: '', driverId: '', tripId: '' });
           }}
           {...form.fieldProps('siteCode')}
@@ -242,14 +242,14 @@ export const CaptureTransactionDialog = ({
           suffix="km"
           value={form.values.odometerReading}
           onChange={(value) => form.setValue('odometerReading', value)}
-          {...form.fieldProps('odometerReading', 'A raw observation — Fleet owns the accepted value.')}
+          {...form.fieldProps('odometerReading', 'A raw observation - Fleet owns the accepted value.')}
         />
       </div>
 
       <Alert variant="info" title="Total cost">
         {total === null
           ? 'Enter a quantity and a unit price to see the total this will be recorded with.'
-          : `${formatMoney(total, form.values.currency)} — quantity × unit price, at two decimal
+          : `${formatMoney(total, form.values.currency)} - quantity × unit price, at two decimal
              places. The service computes the same figure and refuses a total that disagrees, so it
              is not entered by hand.`}
       </Alert>
@@ -265,7 +265,7 @@ export const CaptureTransactionDialog = ({
           label="Card reference"
           value={form.values.cardReference}
           onChange={(value) => form.setValue('cardReference', value)}
-          {...form.fieldProps('cardReference', 'Stored masked — only the last four digits are kept.')}
+          {...form.fieldProps('cardReference', 'Stored masked - only the last four digits are kept.')}
         />
         <TextInput
           label="Provider transaction reference"
@@ -306,7 +306,7 @@ interface VoidDialogProps {
 }
 
 /**
- * Void — `POST /api/v1/fuel/transactions/{id}/void`.
+ * Void - `POST /api/v1/fuel/transactions/{id}/void`.
  *
  * Privileged (`FUEL_TRANSACTION_VOID`) and irreversible: the record moves to `VOIDED` lifecycle and
  * `FuelTransaction.withStatus` refuses everything afterwards, so it can never be reconciled. The

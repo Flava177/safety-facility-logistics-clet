@@ -12,8 +12,8 @@ import { formatDateTime, orDash } from '../components/facilitiesFormat';
 /**
  * The sites this actor is scoped to.
  *
- * The service filters rather than refuses here — asking for "all sites" is a legitimate request that
- * should answer with the actor's own — so an operator scoped to one centre sees one row and no
+ * The service filters rather than refuses here - asking for "all sites" is a legitimate request that
+ * should answer with the actor's own - so an operator scoped to one centre sees one row and no
  * error. Operating mode is the column that matters most: a centre in examination mode is running
  * under different rules, and that has to be visible without opening anything.
  */

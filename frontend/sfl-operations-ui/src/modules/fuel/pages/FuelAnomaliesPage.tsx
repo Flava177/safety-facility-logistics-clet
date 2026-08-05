@@ -41,7 +41,7 @@ const QUEUE_VIEWS = [
  *
  * Every filter here reaches the service, including the four queue views. That matters more here
  * than anywhere else in the module: these filters were once applied in the browser over a capped
- * window, so "breaching SLA" meant "breaches among the first two hundred cases" — precisely the
+ * window, so "breaching SLA" meant "breaches among the first two hundred cases" - precisely the
  * queue an operator must not be handed. The service's default ordering is oldest SLA first, which
  * is what a queue wants.
  *
@@ -159,7 +159,7 @@ const FuelAnomaliesPage = () => {
           row.material ? (
             <StatusChip value="HIGH" label="Material" tone="caution" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {

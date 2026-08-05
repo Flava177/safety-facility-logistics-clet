@@ -317,7 +317,7 @@ public class ActivationService {
      *
      * <p>Closes gap 4. {@code saveActivationHistory} has been called on every transition since day
      * one and nothing ever read it back, so the detail screen reconstructed a timeline from whatever
-     * fields the record still carried — which silently omitted any transition that left none.
+     * fields the record still carried - which silently omitted any transition that left none.
      */
     public List<EmergencyRepository.ActivationHistoryEntry> history(UUID id, ActorContext actor) {
         activation(id, actor, SflPermission.EMERGENCY_ACTIVATION_READ);
@@ -362,7 +362,7 @@ public class ActivationService {
                     record.metadata().modifiedBy(actor.actorId(), clock.instant(), channel, actor.correlationId()));
             repository.saveChannel(sent);
         }
-        // Observe-only / seam-only context (no certified life-safety actuation — Arch §0E).
+        // Observe-only / seam-only context (no certified life-safety actuation - Arch §0E).
         lifeSafety.latestLifeSafetyEvent(activation.siteCode().value());
         for (UUID zone : activation.recipientZoneIds()) {
             lockdown.recordLockdownContext(activation.id(), zone.toString());

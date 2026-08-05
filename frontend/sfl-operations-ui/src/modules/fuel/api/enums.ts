@@ -1,7 +1,7 @@
 /**
  * Enumerations mirrored from `gh.edu.clet.sfl.fleetlogistics.fuel.domain.model`.
  *
- * Values are the wire values — the Java enum constant names, read off the records themselves and
+ * Values are the wire values - the Java enum constant names, read off the records themselves and
  * confirmed against `/v3/api-docs`. Labels are UI-only; the service never sees them.
  *
  * `humanise` is not redefined here. It is one function and it belongs to whichever module declared
@@ -24,8 +24,8 @@ export type FuelTransactionStatus = (typeof FUEL_TRANSACTION_STATUSES)[number];
  * Statuses the enum declares but no code path writes.
  *
  * `capture` writes `RECEIVED`, `reconcile` writes `RECONCILED` or `EXCEPTION`, `voidTransaction`
- * writes `VOIDED`. Nothing produces the other three. They stay in the filter — a stored record could
- * carry any of them — but the lifecycle panel marks them so an operator does not wait for a
+ * writes `VOIDED`. Nothing produces the other three. They stay in the filter - a stored record could
+ * carry any of them - but the lifecycle panel marks them so an operator does not wait for a
  * transition that will never arrive. Recorded as gap 8.
  */
 export const UNREACHABLE_TRANSACTION_STATUSES: FuelTransactionStatus[] = [
@@ -113,7 +113,7 @@ export type AnomalyDecision = (typeof ANOMALY_DECISIONS)[number];
  *
  * The per-rule outcomes are persisted to `fuel_reconciliations.rule_results` but no endpoint reads
  * them back (gap 1), so this list exists to name a rule when a failure surfaces through
- * `FuelAnomalyCase.detectedRules` — never to claim a rule passed.
+ * `FuelAnomalyCase.detectedRules` - never to claim a rule passed.
  */
 export const RECONCILIATION_RULES = [
   'MAX_PER_TRANSACTION',
@@ -226,7 +226,7 @@ export const CSV_OPTIONAL_HEADERS = [
   'comments',
 ] as const;
 
-/** Fuel products and units the dashboard offers. Free text on the wire — the policy is the authority. */
+/** Fuel products and units the dashboard offers. Free text on the wire - the policy is the authority. */
 export const FUEL_PRODUCTS = ['DIESEL', 'PETROL', 'LPG', 'KEROSENE'] as const;
 export const QUANTITY_UNITS = ['LITRE', 'GALLON', 'KILOGRAM'] as const;
 export const CURRENCIES = ['GHS', 'USD', 'EUR', 'GBP'] as const;

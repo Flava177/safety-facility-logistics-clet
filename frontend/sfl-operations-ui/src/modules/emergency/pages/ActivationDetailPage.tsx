@@ -51,12 +51,12 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * One activation, end to end.
  *
  * Read through `GET /activations/{id}/status`, which returns the activation, its per-channel
- * fan-out and the acknowledgement count in a single request — so the record and its counters can
+ * fan-out and the acknowledgement count in a single request - so the record and its counters can
  * never be a refresh apart from each other.
  *
  * The history is the service's own record of every transition, read from `activation_history`. It
  * used to be reconstructed from whatever timestamps the activation still carried, which silently
- * omitted any transition that left no field behind — that was gap 4, and it is closed.
+ * omitted any transition that left no field behind - that was gap 4, and it is closed.
  */
 const ActivationDetailPage = () => {
   const { activationId = '' } = useParams();
@@ -110,9 +110,9 @@ const ActivationDetailPage = () => {
         title: humanise(entry.action),
         detail: entry.fromStatus
           ? `${humanise(entry.fromStatus)} → ${humanise(entry.toStatus)}${
-              entry.comment ? ` — ${entry.comment}` : ''
+              entry.comment ? ` - ${entry.comment}` : ''
             }`
-          : `${humanise(entry.toStatus)}${entry.comment ? ` — ${entry.comment}` : ''}`,
+          : `${humanise(entry.toStatus)}${entry.comment ? ` - ${entry.comment}` : ''}`,
         actor: entry.actor,
         occurredAt: entry.occurredAt,
         // Break-glass and escalation are the two an operator scanning the column must not miss.
@@ -324,7 +324,7 @@ const ActivationDetailPage = () => {
               {activationLive(activation) && (
                 <Alert variant="error" title="This broadcast is live">
                   It has gone out and has not been stood down. Send the all-clear when the emergency
-                  is over — that is what tells the record it is finished, and it is not the same as
+                  is over - that is what tells the record it is finished, and it is not the same as
                   closing it.
                 </Alert>
               )}
@@ -425,13 +425,13 @@ const ActivationDetailPage = () => {
                       label: 'Escalation level',
                       value:
                         activation.escalationLevel > 0
-                          ? `${activation.escalationLevel} — the acknowledgement SLA was breached`
+                          ? `${activation.escalationLevel} - the acknowledgement SLA was breached`
                           : 'None',
                     },
                     {
                       label: 'Degraded mode',
                       value: activation.degradedMode
-                        ? `Yes — fallback path ${activation.fallbackPath ?? 'not recorded'}`
+                        ? `Yes - fallback path ${activation.fallbackPath ?? 'not recorded'}`
                         : 'No',
                     },
                   ]}
@@ -473,7 +473,7 @@ const ActivationDetailPage = () => {
                     <Alert variant="info" title="Delivered is zero because no provider has replied">
                       Sent means the message was handed to the gateway. Delivered, failed and
                       acknowledged are only written when a provider posts a signed callback to this
-                      service — so on a system with no live provider they stay at zero, and that is
+                      service - so on a system with no live provider they stay at zero, and that is
                       not a failed broadcast.
                     </Alert>
                   </div>
@@ -532,7 +532,7 @@ const ActivationDetailPage = () => {
                         </span>
                         <span className="text-gray-600">
                           {' '}
-                          on {formatDateTime(activation.afterActionApprovedAt)} —{' '}
+                          on {formatDateTime(activation.afterActionApprovedAt)} -{' '}
                           {activation.afterActionJustification}
                         </span>
                       </span>
@@ -557,7 +557,7 @@ const ActivationDetailPage = () => {
                       label: 'Correlation ID',
                       value: (
                         <span className="font-mono text-theme-xs">
-                          {activation.metadata.correlationId ?? '—'}
+                          {activation.metadata.correlationId ?? '-'}
                         </span>
                       ),
                       span: 2,

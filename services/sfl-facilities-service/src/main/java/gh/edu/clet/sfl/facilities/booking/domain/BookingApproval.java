@@ -7,13 +7,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A decision on a booking request — SRS-SFL-S159-01, "approval".
+ * A decision on a booking request - SRS-SFL-S159-01, "approval".
  *
  * <p>A record rather than a status, because the interesting content is who decided and why, and
  * because a booking that was approved and one that never needed approving are different facts a
  * single {@code CONFIRMED} status cannot tell apart. The presence of one of these is the difference.
  *
- * <p>A rejection requires a reason; an approval does not. The asymmetry is deliberate — the requester
+ * <p>A rejection requires a reason; an approval does not. The asymmetry is deliberate - the requester
  * of a rejected booking has to be told something, and nobody has ever needed an explanation for being
  * given the room they asked for.
  */

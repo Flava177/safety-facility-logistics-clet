@@ -18,7 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
  *
  * <p>Exists because both of its write paths are <em>two</em> operations that must share a transaction:
  * verify-then-record, and configure-then-record. {@link AuditPort#record} is deliberately
- * {@code MANDATORY} — it must never run outside the transaction of the change it documents — so a
+ * {@code MANDATORY} - it must never run outside the transaction of the change it documents - so a
  * controller calling it directly fails with "No existing transaction found". Found by running the
  * endpoints against a real database; the fix is this class, not a weaker propagation.
  */

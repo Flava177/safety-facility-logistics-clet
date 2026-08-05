@@ -40,8 +40,8 @@ import type { RecordLifecycle } from './enums';
  * `ApiResponse` envelope.
  *
  * S174 operator and integration operations exposed by the service are gathered here. The real
- * provider callbacks — `POST /provider-callbacks/{provider}/delivery-status` and
- * `/acknowledgements` — which require an HMAC signature over the raw body and a registered shared
+ * provider callbacks - `POST /provider-callbacks/{provider}/delivery-status` and
+ * `/acknowledgements` - which require an HMAC signature over the raw body and a registered shared
  * secret. A browser cannot hold that secret, and a dashboard that posted delivery facts would be
  * fabricating them. They belong to the provider and are left to it.
  */
@@ -54,7 +54,7 @@ const asQuery = (params: object | undefined): QueryParams | undefined =>
 /** Default page size. The service clamps anything above 200. */
 export const DEFAULT_PAGE_SIZE = 25;
 
-/** Records — templates, scenarios, audience groups and recipient zones (SRS-SFL-S174-01). */
+/** Records - templates, scenarios, audience groups and recipient zones (SRS-SFL-S174-01). */
 export const emergencyRecordsApi = {
   templates: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<NotificationTemplate>>(
@@ -116,14 +116,14 @@ export const emergencyRecordsApi = {
    * Corrects an audience group's size and directory pointer.
    *
    * The sharp edge in gap 6: `recipientCount` is what the service fans out to and the denominator
-   * every delivery percentage is read against, and it could not be corrected — a group sized at
+   * every delivery percentage is read against, and it could not be corrected - a group sized at
    * zero sent to nobody and reported a completely successful broadcast. The name is deliberately
    * not editable: closed activations cite this group.
    */
   updateAudienceGroup: (id: string, body: { directoryReference?: string | null; recipientCount?: number }) =>
     apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'safetySecurity' }),
 
-  /** Retires or reinstates a record. Archiving is not deletion — activations citing it still resolve. */
+  /** Retires or reinstates a record. Archiving is not deletion - activations citing it still resolve. */
   setLifecycle: (
     resource: 'templates' | 'scenarios' | 'audience-groups' | 'recipient-zones',
     id: string,
@@ -132,7 +132,7 @@ export const emergencyRecordsApi = {
     apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'safetySecurity' }),
 };
 
-/** Activations — the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
+/** Activations - the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
 export const activationsApi = {
   search: (query: ActivationSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<NotificationActivation>>(
@@ -164,7 +164,7 @@ export const activationsApi = {
    *
    * Closed gap 4. The service has written this on every state change since it was built and
    * published no way to read it, which is why the detail screen used to reconstruct a timeline from
-   * whatever fields the record still carried — and silently omit any transition that left none.
+   * whatever fields the record still carried - and silently omit any transition that left none.
    */
   history: (id: string, signal?: AbortSignal) =>
     apiClient.get<ActivationHistoryEntry[]>(
@@ -252,7 +252,7 @@ export const activationsApi = {
 };
 
 /**
- * Break-glass — a declared-emergency send with no pre-approval (Arch §0E).
+ * Break-glass - a declared-emergency send with no pre-approval (Arch §0E).
  *
  * A separate endpoint and a separate permission (`EMERGENCY_BREAK_GLASS_SEND`), not a flag on the
  * routine create. It returns an activation already in `BREAK_GLASS_ACTIVE`: there is no draft to
@@ -265,7 +265,7 @@ export const breakGlassApi = {
     }),
 };
 
-/** Drills — rehearsals with recorded performance (SRS-SFL-S174-05). */
+/** Drills - rehearsals with recorded performance (SRS-SFL-S174-05). */
 export const drillsApi = {
   search: (query: DrillSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<DrillRun>>(
@@ -304,7 +304,7 @@ export const emergencyReportsApi = {
   /**
    * The activation register as CSV.
    *
-   * Needs `EMERGENCY_REPORT_EXPORT`, which the coordinator and SOC roles do not hold — only
+   * Needs `EMERGENCY_REPORT_EXPORT`, which the coordinator and SOC roles do not hold - only
    * auditor, compliance officer, security director and admin do. A refusal comes back in the
    * envelope and is shown as it is written, rather than as a download that silently does nothing.
    */

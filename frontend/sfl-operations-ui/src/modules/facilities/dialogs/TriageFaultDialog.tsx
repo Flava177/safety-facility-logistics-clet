@@ -17,7 +17,7 @@ interface TriageFaultDialogProps {
 }
 
 /**
- * Triage — the point at which a fault gets a deadline. SRS-SFL-S153-02.
+ * Triage - the point at which a fault gets a deadline. SRS-SFL-S153-02.
  *
  * ## Why the priority can be changed here and only here
  *
@@ -30,7 +30,7 @@ interface TriageFaultDialogProps {
  * The deadline itself depends on the site's configured SLA for the confirmed priority **and** on
  * whether the site is in examination mode, which halves it. Both live in runtime configuration that
  * this screen does not read. Rather than compute a figure that might be wrong, it says what the
- * inputs are and lets the service answer — the due date appears on the fault the moment this
+ * inputs are and lets the service answer - the due date appears on the fault the moment this
  * returns.
  */
 const TriageFaultDialog = ({ fault, onClose, onSubmit }: TriageFaultDialogProps) => {
@@ -63,7 +63,7 @@ const TriageFaultDialog = ({ fault, onClose, onSubmit }: TriageFaultDialogProps)
     <FormDialog
       open
       title="Triage fault"
-      description={`${fault.faultNumber} — ${fault.title}`}
+      description={`${fault.faultNumber} - ${fault.title}`}
       submitLabel="Triage and start the clock"
       submitting={submitting}
       formError={formError}

@@ -13,11 +13,11 @@ import org.springframework.stereotype.Component;
  * <h2>Two checks, and the second is the one that was most missing</h2>
  *
  * <ol>
- *   <li><strong>Permission</strong> — does any of the actor's roles grant this?</li>
- *   <li><strong>Site scope</strong> — is this asset at a site the actor holds?</li>
+ *   <li><strong>Permission</strong> - does any of the actor's roles grant this?</li>
+ *   <li><strong>Site scope</strong> - is this asset at a site the actor holds?</li>
  * </ol>
  *
- * The register is site-scoped in the domain — every asset carries a {@code siteCode} — and that was
+ * The register is site-scoped in the domain - every asset carries a {@code siteCode} - and that was
  * enforced nowhere. A permission check alone would have left an integration engineer scoped to one
  * centre able to move an asset at another, which is the failure site scope exists to prevent and the
  * one a role-only check never catches.
@@ -31,7 +31,7 @@ import org.springframework.stereotype.Component;
  * <h2>The error is the platform's, not a new one</h2>
  *
  * {@link AssetVisibilityAuthorizationException} carries {@code ASSETVIS_UNAUTHORIZED_SCOPE} and the
- * details a caller needs — the permission required, the resource, the site. It maps to **403**, not
+ * details a caller needs - the permission required, the resource, the site. It maps to **403**, not
  * 401: "who are you" and "you may not" are different answers, and A1 established that distinction
  * across the platform.
  */
@@ -51,7 +51,7 @@ public class AssetVisibilityAccessPolicy {
         require(actor, permission, resource);
         if (siteCode == null || siteCode.isBlank()) {
             // A missing site on a scoped operation is a caller error rather than an open door: the
-            // alternative — treating "no site" as "every site" — is how a scoped register leaks.
+            // alternative - treating "no site" as "every site" - is how a scoped register leaks.
             throw refusal(permission, resource, siteCode, "A site code is required for this operation");
         }
         if (!actor.principal().canAccessSite(siteCode)) {

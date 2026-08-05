@@ -12,7 +12,7 @@ import org.hibernate.annotations.ColumnTransformer;
  * A fleet integration event awaiting delivery.
  *
  * <p>Written in the same transaction as the business change (SRS-SFL-S166-04 at-least-once delivery
- * safety) and drained by {@code OutboxDrainer}. Delivery state — attempts, next attempt, dead-letter —
+ * safety) and drained by {@code OutboxDrainer}. Delivery state - attempts, next attempt, dead-letter -
  * lives on the row so a restart never loses the retry schedule.
  */
 @Entity

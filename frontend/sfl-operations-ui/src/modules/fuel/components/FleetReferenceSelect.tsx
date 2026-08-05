@@ -13,7 +13,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
  * fleet registers for the same site instead, so the dashboard can only offer references that exist.
  *
  * The lists are scoped to the site the form is submitting for, and reload when it changes. A vehicle
- * or driver at a site the actor cannot read simply is not offered — the fleet search already applies
+ * or driver at a site the actor cannot read simply is not offered - the fleet search already applies
  * the actor's own scope.
  */
 

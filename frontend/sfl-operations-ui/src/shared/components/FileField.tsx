@@ -21,7 +21,7 @@ interface FileFieldProps {
  *
  * Lived in the fuel module while the CSV import was the only screen that took a file, with a note
  * saying the shared kit gains a component when a second module needs it rather than in anticipation.
- * Three now do — the fuel import, the dispatch scan batch, and S153 evidence — and dispatch was
+ * Three now do - the fuel import, the dispatch scan batch, and S153 evidence - and dispatch was
  * already importing it across a module boundary, which is the shape of a component that should have
  * moved a release earlier.
  *
@@ -29,7 +29,7 @@ interface FileFieldProps {
  * inherits the one focus treatment.
  *
  * A native `<input type="file">` cannot be styled and reads differently on every browser, so the
- * real input is visually hidden and a button drives it — but it stays in the accessible tree with
+ * real input is visually hidden and a button drives it - but it stays in the accessible tree with
  * the field's own id, so a screen reader announces "Choose a file" against the right label rather
  * than a decorative button with no relationship to it.
  */

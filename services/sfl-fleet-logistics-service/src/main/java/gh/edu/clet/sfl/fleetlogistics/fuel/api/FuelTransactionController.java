@@ -66,7 +66,7 @@ public class FuelTransactionController {
         return ApiResponse.ok(service.reconciliations(id,actors.resolve(h)));
     }
 
-    /** The transaction's audit trail — its own slice of the hash-chained log. */
+    /** The transaction's audit trail - its own slice of the hash-chained log. */
     @GetMapping("/{id}/history") public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id,HttpServletRequest h){
         return ApiResponse.ok(service.history("FuelTransaction",id,actors.resolve(h)));
     }

@@ -44,7 +44,7 @@ const SPEND_DAYS = 14;
 /**
  * Lays the service's daily totals onto a fixed window.
  *
- * The arithmetic is the service's — this only supplies the days it had nothing to report, so the
+ * The arithmetic is the service's - this only supplies the days it had nothing to report, so the
  * axis stays a full fortnight. A gap in the line would read as missing data rather than a quiet day,
  * which is a presentation problem and is why it is solved here rather than in a query.
  */
@@ -88,7 +88,7 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  *
  * The last two derivations went with `/dashboard/daily-totals` and `/dashboard/anomaly-counts`. The
  * spend trend was bucketed in the browser from one page of transactions, and the by-type breakdown
- * counted a page of the anomaly queue — both correct for a quiet site and both silently short for a
+ * counted a page of the anomaly queue - both correct for a quiet site and both silently short for a
  * busy one. The one remaining caption is on reconciliation, where a single figure really is a
  * remainder of two others.
  *
@@ -127,7 +127,7 @@ const FuelDashboardPage = () => {
   /**
    * One transaction, for the currency and the quantity unit.
    *
-   * The aggregate carries neither, and both belong to the site rather than to the row — a site
+   * The aggregate carries neither, and both belong to the site rather than to the row - a site
    * transacts in one currency and dispenses in one unit. This used to be the whole spend window, a
    * page of records fetched so two labels could be read off the first one.
    */

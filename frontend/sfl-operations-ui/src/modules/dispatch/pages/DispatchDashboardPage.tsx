@@ -41,7 +41,7 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
 /**
  * The Courier & Dispatch workspace.
  *
- * The dispatch dashboard endpoint is **entirely exception-shaped** — eight counts, every one of them
+ * The dispatch dashboard endpoint is **entirely exception-shaped** - eight counts, every one of them
  * a thing going wrong. That is the right emphasis for a custody system and it decides this page's
  * layout: what needs attention comes first, and the volume figures underneath are counted from the
  * registers because the snapshot does not carry them.
@@ -251,7 +251,7 @@ const DispatchDashboardPage = () => {
 
               {/*
                * Every figure in this row is published by the service, and every one of them counts
-               * something that has gone wrong — which is what a custody system's dashboard should
+               * something that has gone wrong - which is what a custody system's dashboard should
                * lead with. Tone is spent only while a count is non-zero.
                */}
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">

@@ -18,7 +18,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** SRS-SFL-S174-05: notification drills — rehearse the activation path and record performance metrics. */
+/** SRS-SFL-S174-05: notification drills - rehearse the activation path and record performance metrics. */
 @Service
 public class DrillService {
 

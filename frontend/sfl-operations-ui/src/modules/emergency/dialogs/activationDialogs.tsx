@@ -41,11 +41,11 @@ interface ComposeDialogProps {
 }
 
 /**
- * Compose an activation — `POST /activations`.
+ * Compose an activation - `POST /activations`.
  *
  * This creates a **draft**. Nothing is sent: the draft goes on to submission, approval and only
- * then a send, which is the entire point of the routine path. The dialog says so twice — in the
- * description and in the submit label — because the operator using it may have reached for it in an
+ * then a send, which is the entire point of the routine path. The dialog says so twice - in the
+ * description and in the submit label - because the operator using it may have reached for it in an
  * emergency and needs to know it is not the fast path.
  *
  * Choosing a scenario fills the template, priority and channels from it. That is a convenience, not
@@ -274,11 +274,11 @@ interface ActivationActionProps {
 }
 
 /**
- * Send an approved activation — `POST /activations/{id}/activate`.
+ * Send an approved activation - `POST /activations/{id}/activate`.
  *
  * A confirmation with no fields, which is deliberate: everything that decides what goes out was
  * settled at composition and approved by somebody else. What this dialog adds is the last honest
- * statement of scale — how many people, over how many channels — because that is the number nobody
+ * statement of scale - how many people, over how many channels - because that is the number nobody
  * can take back once the button is pressed.
  */
 export const SendActivationDialog = ({
@@ -327,7 +327,7 @@ export const SendActivationDialog = ({
   );
 };
 
-/** Reject a submitted activation — `POST /activations/{id}/reject`. Terminal; there is no re-submit. */
+/** Reject a submitted activation - `POST /activations/{id}/reject`. Terminal; there is no re-submit. */
 export const RejectActivationDialog = ({
   open,
   activation,
@@ -367,7 +367,7 @@ export const RejectActivationDialog = ({
       />
       <Alert variant="warning" title="Rejection is final">
         A rejected activation cannot be re-submitted. If the broadcast is still wanted, it has to be
-        composed again — which is what puts a corrected version in front of an approver rather than
+        composed again - which is what puts a corrected version in front of an approver rather than
         an edited one.
       </Alert>
     </FormDialog>
@@ -413,7 +413,7 @@ export const CancelActivationDialog = ({
         {...form.fieldProps('reason')}
       />
       <Alert variant="warning" title="Only pre-send activations can be cancelled">
-        Once a broadcast is active, the operator path is all-clear, closure or degraded fallback —
+        Once a broadcast is active, the operator path is all-clear, closure or degraded fallback -
         not cancellation. That keeps the record honest about whether a message actually went out.
       </Alert>
     </FormDialog>
@@ -504,7 +504,7 @@ export const AllClearDialog = ({ open, activation, onClose, onDone }: Activation
 };
 
 /**
- * Record after-the-fact approval — `POST /activations/{id}/after-action-approval`.
+ * Record after-the-fact approval - `POST /activations/{id}/after-action-approval`.
  *
  * The counterweight to break-glass. The broadcast has already gone out with nobody approving it;
  * this is where somebody with the authority accounts for that, and until they do the activation
@@ -564,7 +564,7 @@ export const AfterActionApprovalDialog = ({
       />
 
       <Alert variant="info" title="Your identity is the approval">
-        The service records the approver from your credentials, not from anything typed here — the
+        The service records the approver from your credentials, not from anything typed here - the
         justification is the account, and the name on it is yours.
       </Alert>
     </FormDialog>
@@ -572,11 +572,11 @@ export const AfterActionApprovalDialog = ({
 };
 
 /**
- * Close an activation — `POST /activations/{id}/close`.
+ * Close an activation - `POST /activations/{id}/close`.
  *
  * The service composes the delivery and acknowledgement summaries itself from the channel counters,
  * so there is nothing to enter for them. What it needs is a reason, an evidence reference and a
- * retention class — and, for a break-glass broadcast, after-the-fact approval already recorded.
+ * retention class - and, for a break-glass broadcast, after-the-fact approval already recorded.
  * `closureBlockers` lists all four separately, because the domain raises one message for the first
  * three together and an operator cannot tell from it which one is missing.
  */
@@ -703,7 +703,7 @@ export const CloseActivationDialog = ({
               />
               <span className="min-w-0 text-theme-sm">
                 <span className="font-medium text-gray-900">{blocker.label}</span>
-                <span className="text-gray-600"> — {blocker.detail}</span>
+                <span className="text-gray-600"> - {blocker.detail}</span>
               </span>
             </li>
           ))}
@@ -770,7 +770,7 @@ export const CloseActivationDialog = ({
         onChange={(value) => form.setValue('evidenceSha256', value)}
         {...form.fieldProps(
           'evidenceSha256',
-          'Optional, and worth supplying — it is what proves the filed document was not altered later.',
+          'Optional, and worth supplying - it is what proves the filed document was not altered later.',
         )}
       />
 

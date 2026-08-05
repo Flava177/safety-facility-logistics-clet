@@ -23,8 +23,8 @@ import org.springframework.stereotype.Component;
  * {@link #noShowGrace} defaults to twenty minutes, and the sweep releases the space at that point
  * rather than at the end of the booked window. A three-hour lecture nobody attended should not hold a
  * hall for three hours; twenty minutes is long enough to cover a late start and short enough that the
- * room is recoverable. The trade is that arriving at minute twenty-five finds the booking gone —
- * {@code NO_SHOW} is terminal — so a site that runs late by habit should raise this rather than work
+ * room is recoverable. The trade is that arriving at minute twenty-five finds the booking gone -
+ * {@code NO_SHOW} is terminal - so a site that runs late by habit should raise this rather than work
  * around it.
  */
 @Component
@@ -62,7 +62,7 @@ public class BookingConfiguration {
      * Whether this booking needs an approver before it is confirmed.
      *
      * <p>Three independent triggers, any one of which is enough: the purpose, the length, and the
-     * site's operating mode. The mode trigger is the one that earns its keep — while a centre is in
+     * site's operating mode. The mode trigger is the one that earns its keep - while a centre is in
      * examination mode, a meeting booked into the wrong hall is a problem nobody finds until the
      * morning, and routing everything past a human for those few weeks is cheap.
      */
@@ -127,7 +127,7 @@ public class BookingConfiguration {
      *
      * <p>Ignoring rather than failing is the safe direction here and the unsafe one elsewhere: a typo
      * in the list quietly stops requiring approval for that purpose, which is a weakening. It is still
-     * better than the alternative — throwing would make one bad character in a configuration row
+     * better than the alternative - throwing would make one bad character in a configuration row
      * refuse every booking at the site.
      */
     private static Set<BookingPurpose> parsePurposes(String raw) {

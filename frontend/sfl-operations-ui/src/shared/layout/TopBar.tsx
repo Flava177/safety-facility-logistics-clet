@@ -12,7 +12,7 @@ import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
 
 /**
- * The development actor switcher, loaded on demand — and only in a development build.
+ * The development actor switcher, loaded on demand - and only in a development build.
  *
  * `import.meta.env.DEV` is written out here rather than the `devToolsEnabled` re-export on purpose.
  * Vite substitutes that expression with a literal `false` before Rollup runs, so the whole ternary
@@ -49,7 +49,7 @@ const roles = sflActor.roles
  * The product bar: full width, CLET Navy, above everything including the navigation rail.
  *
  * It carries identity rather than controls. What sits on the right is the actor the dashboard is
- * actually sending — `X-SFL-User`, roles and site scope go out on every request — because "why
+ * actually sending - `X-SFL-User`, roles and site scope go out on every request - because "why
  * can't I see that vehicle?" is nearly always a site-scope question, and the answer belongs on
  * screen rather than in a network trace.
  *
@@ -58,7 +58,7 @@ const roles = sflActor.roles
 const TopBar = () => {
   const { openMobile } = useSidebar();
   const [profileOpen, setProfileOpen] = useState(false);
-  /** Null when nobody has signed in — the header-based development actor is then in force. */
+  /** Null when nobody has signed in - the header-based development actor is then in force. */
   const session = readSession();
   const [switcherOpen, setSwitcherOpen] = useState(false);
   const profileRef = useRef<HTMLDivElement>(null);
@@ -95,9 +95,9 @@ const TopBar = () => {
 
           <p className="min-w-0 truncate text-theme-md font-bold tracking-tight text-white">
             {directorate.shortName}
-            {/* Whichever programme the actor is entitled to, not a fixed "Fleet & Logistics" — that
+            {/* Whichever programme the actor is entitled to, not a fixed "Fleet & Logistics" - that
                 label was only ever true for a fleet user, and this bundle now carries SSEMP too. */}
-            <span className="ml-2 font-normal text-white/60">— {portalLabel()}</span>
+            <span className="ml-2 font-normal text-white/60">- {portalLabel()}</span>
           </p>
         </div>
 

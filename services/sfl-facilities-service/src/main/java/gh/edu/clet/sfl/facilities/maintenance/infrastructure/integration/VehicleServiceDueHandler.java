@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>The first cross-service reaction in the platform, and deliberately the whole of one: no queue, no
  * binding, no deduplication, no JSON. Those live once in {@code FacilitiesIntegrationListener}. What
- * is left here is only the decision — which is the part nobody can generate for you, and the part
+ * is left here is only the decision - which is the part nobody can generate for you, and the part
  * that would exist in identical form if these two systems shared a process.
  *
  * <p>The next reaction is a class like this one and nothing else.
@@ -31,14 +31,14 @@ import org.springframework.stereotype.Component;
  *
  * <p>The system mapping names it: S166 Fleet & Vehicle Management integrates "Service via CMMS
  * (S153)", and SRS §21.1 lists Vehicle → Service Record among the relationships crossing a module
- * boundary. It is also the only named edge where both ends are built — S162a fire-safety would be the
+ * boundary. It is also the only named edge where both ends are built - S162a fire-safety would be the
  * more dramatic demonstration and cannot be done, because S162a does not exist to publish anything.
  *
  * <h2>An event, not a command</h2>
  *
  * <p>Fleet does not tell facilities to raise a fault. It states something true about its own record,
- * and facilities decides what that means here. Change the maintenance policy — a different priority,
- * an auto-generated work order, a dashboard entry instead of a fault — and only this class changes.
+ * and facilities decides what that means here. Change the maintenance policy - a different priority,
+ * an auto-generated work order, a dashboard entry instead of a fault - and only this class changes.
  * Fleet is neither consulted nor redeployed.
  *
  * <h2>The vehicle is the location</h2>
@@ -50,9 +50,9 @@ import org.springframework.stereotype.Component;
  *
  * <h2>Two kinds of repeat, two different guards</h2>
  *
- * <p><strong>Redelivery</strong> — the same message twice — is stopped by the inbox, before this runs.
+ * <p><strong>Redelivery</strong> - the same message twice - is stopped by the inbox, before this runs.
  *
- * <p><strong>Recurrence</strong> — the daily compliance sweep republishing while a vehicle stays due —
+ * <p><strong>Recurrence</strong> - the daily compliance sweep republishing while a vehicle stays due -
  * is not, because each sweep produces a genuinely new message with its own id. Left alone that raises
  * a fault a day, forever. The idempotency key below is derived from the vehicle and its service state
  * rather than from the message, so every sweep replays the original fault. A vehicle that goes DUE, is
@@ -72,7 +72,7 @@ public class VehicleServiceDueHandler implements IntegrationEventHandler {
      *
      * <p>A service account rather than a person, and {@code serviceAccount = true} so an audit reader
      * can tell a fault the platform raised from one somebody walked past and reported. Site scope is
-     * {@code *} because the publisher decides the site, not this consumer — it has to accept an event
+     * {@code *} because the publisher decides the site, not this consumer - it has to accept an event
      * for any site FTLMP operates.
      */
     private static final SiteScopedPrincipal SYSTEM = new SiteScopedPrincipal(
@@ -93,13 +93,13 @@ public class VehicleServiceDueHandler implements IntegrationEventHandler {
     public void handle(InboundIntegrationEvent event) {
         String vehicleId = event.text("vehicleId") != null ? event.text("vehicleId") : event.aggregateId();
         String serviceStatus = event.text("serviceStatus");
-        // The envelope header is the more reliable of the two — the publisher always sets it, whereas
+        // The envelope header is the more reliable of the two - the publisher always sets it, whereas
         // the payload field depends on which code path raised the event.
         String siteCode = event.siteCode() != null ? event.siteCode() : event.text("siteCode");
 
         if (vehicleId == null || siteCode == null) {
             // Nothing can be raised from this and retrying will not make the fields appear, so it is
-            // logged and dropped rather than thrown — throwing would loop it forever.
+            // logged and dropped rather than thrown - throwing would loop it forever.
             log.error("{} lacks a vehicle id and a site code; no fault can be raised", event.eventType());
             return;
         }
@@ -107,7 +107,7 @@ public class VehicleServiceDueHandler implements IntegrationEventHandler {
         // Degrade rather than discard.
         //
         // A missing registration used to drop the event entirely, which meant a real maintenance job
-        // vanished because a payload field was absent — and exactly that happened, because two
+        // vanished because a payload field was absent - and exactly that happened, because two
         // publishers of this event emitted different bodies. The publisher is fixed; this is the
         // second line of defence, because losing a maintenance job silently is a far worse failure
         // than raising one whose title reads a little worse.
@@ -124,7 +124,7 @@ public class VehicleServiceDueHandler implements IntegrationEventHandler {
                 null,
                 registration,
                 null,
-                (overdue ? "Vehicle service overdue — " : "Vehicle service due — ") + registration,
+                (overdue ? "Vehicle service overdue - " : "Vehicle service due - ") + registration,
                 describe(registration, vehicleId, serviceStatus, event.text("odometer")),
                 "FLEET_SERVICE",
                 overdue ? FaultPriority.HIGH : FaultPriority.MEDIUM,

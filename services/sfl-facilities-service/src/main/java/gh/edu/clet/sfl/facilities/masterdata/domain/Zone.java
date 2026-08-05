@@ -15,7 +15,7 @@ import java.util.UUID;
  * The pre-S152 model was a code and a name with nothing in it, which named a zone without being able
  * to say what it covered. {@link ZoneMembership} closes that.
  *
- * <p>{@code parentZoneId} supports nesting — a building's evacuation zone inside a campus-wide one —
+ * <p>{@code parentZoneId} supports nesting - a building's evacuation zone inside a campus-wide one -
  * without a separate hierarchy table. Membership resolution walks it; the walk is bounded by the
  * cycle check in the application service, because the domain cannot see its own siblings.
  */
@@ -48,7 +48,7 @@ public record Zone(
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
-    /** A null or blank field leaves the current value alone — this is a PATCH, not a replace. */
+    /** A null or blank field leaves the current value alone - this is a PATCH, not a replace. */
     public Zone update(String name, String purpose, String actorId, Instant at, SourceChannel channel,
             String correlationId) {
         return new Zone(id, siteCode, zoneCode,

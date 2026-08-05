@@ -12,7 +12,7 @@ import type {
  * How S152 values are shown.
  *
  * The tones matter more than they look. `StatusChip`'s shared lookup already maps some of these
- * words — `DEGRADED` is a fleet activation mode, `CRITICAL` is not in it at all — so readiness
+ * words - `DEGRADED` is a fleet activation mode, `CRITICAL` is not in it at all - so readiness
  * values are given their tone explicitly here rather than left to a lookup that was written for a
  * different vocabulary. A blocked examination hall rendered in a neutral grey would be a genuinely
  * dangerous piece of styling.
@@ -71,7 +71,7 @@ export const scoreTone = (score: number): Tone => {
 
 /** `EXAMINATION_HALL` → `Examination hall`. */
 export const humaniseCode = (value: string | null | undefined): string => {
-  if (!value) return '—';
+  if (!value) return '-';
   const words = value.replace(/_/g, ' ').toLowerCase();
   return words.charAt(0).toUpperCase() + words.slice(1);
 };
@@ -84,7 +84,7 @@ export const humaniseCode = (value: string | null | undefined): string => {
 export const relativeTime = (iso: string | null | undefined, now = new Date()): string => {
   if (!iso) return 'never';
   const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '—';
+  if (Number.isNaN(then)) return '-';
 
   const seconds = Math.round((now.getTime() - then) / 1000);
   if (seconds < 60) return 'just now';
@@ -104,19 +104,19 @@ export const relativeTime = (iso: string | null | undefined, now = new Date()): 
 
 /** An ISO date or timestamp as a readable date. */
 export const formatDate = (iso: string | null | undefined): string => {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
-    ? '—'
+    ? '-'
     : date.toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' });
 };
 
 /** An ISO timestamp as a readable date and time. */
 export const formatDateTime = (iso: string | null | undefined): string => {
-  if (!iso) return '—';
+  if (!iso) return '-';
   const date = new Date(iso);
   return Number.isNaN(date.getTime())
-    ? '—'
+    ? '-'
     : date.toLocaleString(undefined, {
         year: 'numeric',
         month: 'short',
@@ -128,7 +128,7 @@ export const formatDateTime = (iso: string | null | undefined): string => {
 
 /** `null` and `undefined` render as an em dash rather than as an empty cell. */
 export const orDash = (value: string | number | null | undefined): string =>
-  value === null || value === undefined || value === '' ? '—' : String(value);
+  value === null || value === undefined || value === '' ? '-' : String(value);
 
 // ---- S153 -----------------------------------------------------------------------------------
 
@@ -149,7 +149,7 @@ export const priorityTone = (priority: FaultPriority): Tone => {
 /**
  * The tone a fault status carries.
  *
- * `RESOLVED` is the only success. The three dismissals are neutral rather than negative — a fault
+ * `RESOLVED` is the only success. The three dismissals are neutral rather than negative - a fault
  * correctly rejected is not a failure, and colouring it red would train people to ignore red.
  */
 export const faultStatusTone = (status: FacilityFaultStatus): Tone => {
@@ -186,7 +186,7 @@ export const workOrderStatusTone = (status: WorkOrderStatus): Tone => {
  * How an SLA reads at a glance.
  *
  * Overdue is an error whatever the escalation level, because level zero overdue is still a breached
- * deadline. The level is shown separately rather than folded into the tone — "overdue" and "nobody
+ * deadline. The level is shown separately rather than folded into the tone - "overdue" and "nobody
  * has picked it up three times" are different facts and a single colour cannot carry both.
  */
 export const slaTone = (overdue: boolean): Tone => (overdue ? 'blocked' : 'ready');
@@ -244,7 +244,7 @@ export const escalationLabel = (level: number): string =>
  * How a floor names itself in a list.
  *
  * `B1 · Basement`, `GF · Ground`, `L2 · Second`. The code leads because it is what appears on signage
- * and on a work order, and the level follows because it is what the list is sorted by — a reader
+ * and on a work order, and the level follows because it is what the list is sorted by - a reader
  * scanning for "two floors up" is looking for the number, and a reader who has been told to go to GF
  * is looking for the code.
  *

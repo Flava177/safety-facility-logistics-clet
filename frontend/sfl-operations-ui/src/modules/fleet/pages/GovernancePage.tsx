@@ -47,7 +47,7 @@ interface AuditRow {
  * Evidence and audit governance.
  *
  * Evidence is reachable two ways: by its own identifier, and by the record it evidences. The second
- * is new, and is the one an operator can actually use — the identifier is a UUID that appears on no
+ * is new, and is the one an operator can actually use - the identifier is a UUID that appears on no
  * paperwork, whereas the record is the thing they were looking at when they needed the evidence.
  *
  * There is still no browsable list of all evidence, and there should not be. Every read names a
@@ -193,7 +193,7 @@ const GovernancePage = () => {
         header: 'Site',
         width: 120,
         hideBelowLg: true,
-        cell: ({ record }) => (record.siteCode ? String(record.siteCode) : '—'),
+        cell: ({ record }) => (record.siteCode ? String(record.siteCode) : '-'),
       },
       {
         key: 'occurredAt',
@@ -249,7 +249,7 @@ const GovernancePage = () => {
                     value={recordType}
                     onChange={setRecordType}
                     placeholder="Trip"
-                    helperText="As it was registered — for example Trip or VehicleInspection."
+                    helperText="As it was registered - for example Trip or VehicleInspection."
                   />
                   <TextInput
                     label="Related record ID"
@@ -280,7 +280,7 @@ const GovernancePage = () => {
                       error={byRecord.error}
                       empty={(byRecord.data?.length ?? 0) === 0}
                       emptyTitle="Nothing filed against this record"
-                      emptyHint="Check the record type spelling — it is stored exactly as it was registered."
+                      emptyHint="Check the record type spelling - it is stored exactly as it was registered."
                       onRetry={byRecord.refetch}
                       minHeight={120}
                     >
@@ -381,11 +381,11 @@ const GovernancePage = () => {
                           label: 'Retention expires',
                           value: formatDateTime(evidence.retentionExpiresAt),
                         },
-                        { label: 'Registered by', value: evidence.createdBy ?? '—' },
+                        { label: 'Registered by', value: evidence.createdBy ?? '-' },
                         { label: 'Registered at', value: formatDateTime(evidence.createdAt) },
                         {
                           label: 'Correlation ID',
-                          value: evidence.auditCorrelationId ?? '—',
+                          value: evidence.auditCorrelationId ?? '-',
                           span: 2,
                         },
                         { label: 'Record version', value: evidence.version },
@@ -436,16 +436,16 @@ const GovernancePage = () => {
                       { label: 'Records checked', value: integrity.data.recordsChecked },
                       {
                         label: 'First divergent sequence',
-                        value: integrity.data.firstDivergentSequence ?? '—',
+                        value: integrity.data.firstDivergentSequence ?? '-',
                       },
-                      { label: 'Reason', value: integrity.data.reason ?? '—' },
+                      { label: 'Reason', value: integrity.data.reason ?? '-' },
                       {
                         label: 'Expected value',
-                        value: integrity.data.expectedValue ?? '—',
+                        value: integrity.data.expectedValue ?? '-',
                         span: 2,
                       },
-                      { label: 'Actual value', value: integrity.data.actualValue ?? '—', span: 2 },
-                      { label: 'Head hash', value: integrity.data.headHash ?? '—', span: 2 },
+                      { label: 'Actual value', value: integrity.data.actualValue ?? '-', span: 2 },
+                      { label: 'Head hash', value: integrity.data.headHash ?? '-', span: 2 },
                     ]}
                   />
                 </div>
@@ -480,7 +480,7 @@ const GovernancePage = () => {
   );
 };
 
-/* Register evidence — POST /api/v1/fleet/evidence */
+/* Register evidence - POST /api/v1/fleet/evidence */
 const RegisterEvidenceDialog = ({
   open,
   onClose,
@@ -494,7 +494,7 @@ const RegisterEvidenceDialog = ({
     initialValues: {
       siteCode: defaultSite,
       // 'Vehicle', not 'VEHICLE'. The store matches the record type exactly, and every backend
-      // path files under PascalCase entity names — Trip, Vehicle, ComplianceDocument. Evidence
+      // path files under PascalCase entity names - Trip, Vehicle, ComplianceDocument. Evidence
       // registered under the old default was invisible to every picker that searches for 'Vehicle',
       // which is precisely the lookup this dialog exists to feed.
       relatedRecordType: 'Vehicle',
@@ -621,7 +621,7 @@ const RegisterEvidenceDialog = ({
   );
 };
 
-/* Request export — POST /api/v1/fleet/evidence/{id}/export-requests */
+/* Request export - POST /api/v1/fleet/evidence/{id}/export-requests */
 const RequestExportDialog = ({
   open,
   evidenceId,

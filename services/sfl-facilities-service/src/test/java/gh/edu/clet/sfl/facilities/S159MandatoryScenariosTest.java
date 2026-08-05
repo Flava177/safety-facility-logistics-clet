@@ -71,7 +71,7 @@ import org.junit.jupiter.api.Test;
  * <h2>What these tests cannot cover, and what covers it</h2>
  *
  * The double-booking guarantee is the {@code GIST} exclusion constraint in V10, and no single-threaded
- * test can exercise it — the race it exists to catch needs two transactions. So the tests here prove
+ * test can exercise it - the race it exists to catch needs two transactions. So the tests here prove
  * the readable refusal, and {@link DatabaseAgreesWithTheDomain} pins the constraint's status list
  * against {@link BookingStatus#holdsTheSpace()} so the two expressions of the rule cannot drift while
  * both look right in isolation.
@@ -199,7 +199,7 @@ class S159MandatoryScenariosTest {
                     .isInstanceOf(FacilitiesException.DuplicateIdentifierException.class);
         }
 
-        /** One row for a set of forty chairs, not forty rows — and one of a thing makes it exclusive. */
+        /** One row for a set of forty chairs, not forty rows - and one of a thing makes it exclusive. */
         @Test
         void a_resource_there_is_only_one_of_is_exclusive() {
             assertThat(registerResource("PROJ-01", 1, false).isExclusive()).isTrue();
@@ -267,8 +267,8 @@ class S159MandatoryScenariosTest {
         }
 
         /**
-         * A request holds the space before anybody approves it. The alternative — letting everyone
-         * request and resolving clashes at approval — has three people planning around one hall and
+         * A request holds the space before anybody approves it. The alternative - letting everyone
+         * request and resolving clashes at approval - has three people planning around one hall and
          * hands the approver a conflict to arbitrate rather than a decision to make.
          */
         @Test
@@ -589,7 +589,7 @@ class S159MandatoryScenariosTest {
 
         /**
          * The rule the readiness hold exists for. A hall blocked on Tuesday must not silently cancel
-         * Friday's examination — somebody has it in their diary and is planning around it.
+         * Friday's examination - somebody has it in their diary and is planning around it.
          */
         @Test
         void blocking_a_hall_flags_its_bookings_rather_than_cancelling_them() {
@@ -961,7 +961,7 @@ class S159MandatoryScenariosTest {
                         null));
     }
 
-    /** See {@code S153MandatoryScenariosTest} — half of this module is about time passing. */
+    /** See {@code S153MandatoryScenariosTest} - half of this module is about time passing. */
     private static final class MutableClock extends Clock {
 
         private Instant instant;

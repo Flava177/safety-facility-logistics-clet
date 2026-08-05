@@ -17,18 +17,18 @@ import org.springframework.transaction.annotation.Transactional;
  * Phase 1 IFIMP notification adapter: records the intent, never claims the delivery.
  *
  * <p>No notification provider is procured for IFIMP, and the honest response to that is a durable row
- * an operator can read and reconcile — not a log line, and above all not a silent success. "The
+ * an operator can read and reconcile - not a log line, and above all not a silent success. "The
  * technician was notified" and "we wrote that the technician should be notified" are different claims,
  * and only one of them is true today. This adapter makes the true one auditable.
  *
  * <p><strong>It fails loudly when misconfigured.</strong> If {@code sfl.facilities.notification.provider}
  * names a real provider, resolution throws at the first send rather than quietly degrading to the
  * recorded behaviour. A half-configured environment that looks like it is notifying people is worse
- * than one that plainly is not — the same rule fleet applies for C-11.
+ * than one that plainly is not - the same rule fleet applies for C-11.
  *
  * <p><strong>It runs in its own transaction.</strong> {@code REQUIRES_NEW}, because a notification is
- * evidence that an escalation happened and must survive the caller rolling back. The inverse — losing
- * the escalation but keeping the page — is the less damaging of the two failures, and the sweep is
+ * evidence that an escalation happened and must survive the caller rolling back. The inverse - losing
+ * the escalation but keeping the page - is the less damaging of the two failures, and the sweep is
  * idempotent, so a replayed escalation will not double-notify.
  */
 @Component
@@ -82,7 +82,7 @@ public class RecordedNotificationAdapter implements NotificationPort {
         if (!RECORDED_PROVIDER.equalsIgnoreCase(configuredProvider.strip())) {
             throw new IllegalStateException("sfl.facilities.notification.provider is '" + configuredProvider
                     + "' but only '" + RECORDED_PROVIDER + "' is implemented. Configure a real provider adapter "
-                    + "or set it back to 'recorded' — this will not silently fall back.");
+                    + "or set it back to 'recorded' - this will not silently fall back.");
         }
     }
 

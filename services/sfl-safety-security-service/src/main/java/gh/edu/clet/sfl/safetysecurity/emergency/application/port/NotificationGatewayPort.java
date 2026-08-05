@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * Provider-neutral outbound gateway for one channel of an activation. Vendor SDKs/types live only in
- * adapters; the Phase-1 recorded adapter never fakes vendor success — it reports what it actually did and
+ * adapters; the Phase-1 recorded adapter never fakes vendor success - it reports what it actually did and
  * whether it fell back to a degraded/direct path.
  */
 public interface NotificationGatewayPort {

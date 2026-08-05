@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The local vendor register — SRS-SFL-S153-01 ("vendor assignment").
+ * The local vendor register - SRS-SFL-S153-01 ("vendor assignment").
  *
  * <p>Small on purpose. This is not the procurement master: it holds enough to assign work, know the
  * contracted response time and see whether the contract has run out, and it carries the procurement

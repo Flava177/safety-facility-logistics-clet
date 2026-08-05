@@ -135,7 +135,7 @@ public class DispatchScanService {
      * The site's scan batches.
      *
      * <p>Closes gap 3. Both {@code /imports/{id}} and {@code /imports/{id}/rows} already existed, so
-     * a batch was a real record — but the only way back to one was an identifier returned once at
+     * a batch was a real record - but the only way back to one was an identifier returned once at
      * upload and kept nowhere, which meant an import could not be revisited the next morning.
      */
     public DispatchRepository.DispatchPage<ScanImportBatch> batches(String site, String sourceSystem, UUID dispatchId,

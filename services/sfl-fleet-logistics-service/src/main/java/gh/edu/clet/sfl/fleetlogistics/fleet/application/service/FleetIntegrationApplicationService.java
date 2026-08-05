@@ -105,7 +105,7 @@ public class FleetIntegrationApplicationService {
      * Searches the inbound inbox.
      *
      * <p>Closes gap 8. Replay needs a message identifier, and the health projection only ever
-     * carried a handful of recent messages — so dead-letter replay was a documented capability that
+     * carried a handful of recent messages - so dead-letter replay was a documented capability that
      * could not be reached from the dashboard at all.
      */
     public List<IntegrationInboxMessage> searchMessages(String sourceSystem, IntegrationMessageStatus status,

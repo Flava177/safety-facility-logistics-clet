@@ -182,7 +182,7 @@ const DriverDetailPage = () => {
                     { label: 'Staff reference', value: driver.data.staffReference },
                     {
                       label: 'Licence number',
-                      value: driver.data.licenceNumber ?? '—',
+                      value: driver.data.licenceNumber ?? '-',
                       masked: driver.data.licenceNumberMasked,
                     },
                     { label: 'Licence class', value: `Class ${driver.data.licenceClass}` },
@@ -200,7 +200,7 @@ const DriverDetailPage = () => {
                       label: 'Driver login linked',
                       value: driver.data.principalLinked ? 'Yes' : 'No',
                     },
-                    { label: 'Suspension reason', value: driver.data.suspensionReason ?? '—' },
+                    { label: 'Suspension reason', value: driver.data.suspensionReason ?? '-' },
                     { label: 'Record version', value: driver.data.version },
                   ]}
                 />
@@ -208,9 +208,9 @@ const DriverDetailPage = () => {
                 <KeyValueGrid
                   columns={4}
                   items={[
-                    { label: 'Created by', value: driver.data.createdBy ?? '—' },
+                    { label: 'Created by', value: driver.data.createdBy ?? '-' },
                     { label: 'Created at', value: formatDateTime(driver.data.createdAt) },
-                    { label: 'Last modified by', value: driver.data.lastModifiedBy ?? '—' },
+                    { label: 'Last modified by', value: driver.data.lastModifiedBy ?? '-' },
                     {
                       label: 'Last modified at',
                       value: formatDateTime(driver.data.lastModifiedAt),

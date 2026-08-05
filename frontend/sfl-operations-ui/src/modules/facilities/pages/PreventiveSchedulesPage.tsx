@@ -31,7 +31,7 @@ import { formatDate, humaniseCode } from '../components/facilitiesFormat';
  *
  * `dueForGeneration` accounts for something a client cannot see: whether this cycle has *already*
  * been generated for. A schedule inside its lead-time window that has already raised its work order
- * is not due, and a screen comparing `generateOn` to today would say it was — then a supervisor
+ * is not due, and a screen comparing `generateOn` to today would say it was - then a supervisor
  * would press Generate, nothing would happen, and they would reasonably conclude the button was
  * broken.
  */
@@ -143,7 +143,7 @@ const PreventiveSchedulesPage = () => {
       {dueNow > 0 && (
         <Alert variant="info" title={`${dueNow} schedule(s) are due to raise work`}>
           The scheduler does this hourly on its own. Generating by hand raises the same work and is
-          safe to repeat — a schedule that has already generated for its current cycle produces
+          safe to repeat - a schedule that has already generated for its current cycle produces
           nothing.
         </Alert>
       )}

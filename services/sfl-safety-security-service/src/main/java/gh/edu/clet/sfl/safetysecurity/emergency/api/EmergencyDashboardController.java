@@ -33,7 +33,7 @@ public class EmergencyDashboardController {
      * The same population, split by status, priority, mode and channel.
      *
      * <p>Closes gap 12. The dashboard published seven totals and no breakdown at all, so every chart
-     * on the screen had to be bucketed in the browser from a page of fetched records — which is only
+     * on the screen had to be bucketed in the browser from a page of fetched records - which is only
      * ever the truth about that page.
      */
     @GetMapping("/breakdown")

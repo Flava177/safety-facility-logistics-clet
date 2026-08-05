@@ -39,7 +39,7 @@ const toneStyles: Record<Severity, { bar: string; icon: string; name: IconName }
 /**
  * Global, non-blocking feedback for anything that is not a field error.
  *
- * Field-level problems belong on the field (see `useFleetForm`); this is for the rest — a
+ * Field-level problems belong on the field (see `useFleetForm`); this is for the rest - a
  * successful transition, an authorisation refusal, a service that cannot be reached. Failures stay
  * on screen twice as long as confirmations, because they are the ones worth reading.
  */

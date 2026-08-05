@@ -15,19 +15,19 @@ import org.testcontainers.containers.PostgreSQLContainer;
 /**
  * Resolves a real PostgreSQL for the end-to-end suite.
  *
- * <p>Testcontainers' Docker auto-detection is not reliable everywhere — Docker Desktop 29.x rejects the
+ * <p>Testcontainers' Docker auto-detection is not reliable everywhere - Docker Desktop 29.x rejects the
  * API version docker-java negotiates, so {@code disabledWithoutDocker} silently skips even when Docker is
  * running and healthy. A suite that proves the Flyway schema, the exclusion constraints and the audit
  * triggers is too important to be switched off by a client-library quirk, so the database is resolved in
  * three steps:
  *
  * <ol>
- *   <li><strong>An externally supplied database</strong> — {@code SFL_FLEET_LOGISTICS_TEST_DB_URL}
+ *   <li><strong>An externally supplied database</strong> - {@code SFL_FLEET_LOGISTICS_TEST_DB_URL}
  *       (preferred) or {@code SFL_TEST_DB_URL} (env var or system property). This is what CI service
  *       containers provide, and what a developer can point at a {@code docker run postgres} started by
  *       the Docker CLI.</li>
- *   <li><strong>Testcontainers</strong> — used when Docker auto-detection succeeds.</li>
- *   <li><strong>Skip</strong> — with a message naming both escape hatches, so a skipped run is never
+ *   <li><strong>Testcontainers</strong> - used when Docker auto-detection succeeds.</li>
+ *   <li><strong>Skip</strong> - with a message naming both escape hatches, so a skipped run is never
  *       mistaken for a passing one.</li>
  * </ol>
  *
@@ -46,7 +46,7 @@ public abstract class FleetPostgresSupport {
 
     /**
      * Whether a PostgreSQL is reachable. Referenced by {@code @EnabledIf} on the suites so the whole
-     * class is skipped — with a reason — rather than failing one assertion at a time.
+     * class is skipped - with a reason - rather than failing one assertion at a time.
      */
     public static boolean databaseAvailable() {
         return DATABASE != null;

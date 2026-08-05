@@ -77,7 +77,7 @@ public class EmergencyDashboardService {
     /**
      * Every activation at the site, a page at a time.
      *
-     * <p>Closes gap 11 — the only gap on this service with a compliance consequence rather than an
+     * <p>Closes gap 11 - the only gap on this service with a compliance consequence rather than an
      * operational one. The export stopped at the first 500 activations with nothing in the file, the
      * headers or the response to say so, so a busy site got a quietly incomplete compliance export
      * and neither the screen nor the file could tell. {@code EXPORT_CAP} is a runaway guard rather

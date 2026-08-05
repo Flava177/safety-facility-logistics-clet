@@ -8,7 +8,7 @@ import java.util.Optional;
  * Config-without-code (NFR 23.8; SRS-SFL-S152-02 "using the runtime configuration active at the time
  * of evaluation").
  *
- * <p>Values are read at evaluation time, never cached across a run — a threshold changed at 09:00
+ * <p>Values are read at evaluation time, never cached across a run - a threshold changed at 09:00
  * must apply to the 09:01 evaluation without a redeploy or a restart. Resolution is site-first: a
  * value scoped to the site wins, otherwise the platform default applies.
  */

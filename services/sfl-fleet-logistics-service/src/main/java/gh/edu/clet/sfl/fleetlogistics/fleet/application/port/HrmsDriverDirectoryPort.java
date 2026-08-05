@@ -18,7 +18,7 @@ public interface HrmsDriverDirectoryPort {
      * @throws gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException when the
      *         reference is unknown or the person is no longer employed
      * @throws gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.IntegrationConfigurationNotFoundException
-     *         when no HRMS adapter is configured — never a silent pass
+     *         when no HRMS adapter is configured - never a silent pass
      */
     void requireEmployedStaff(String staffReference, String siteCode);
 

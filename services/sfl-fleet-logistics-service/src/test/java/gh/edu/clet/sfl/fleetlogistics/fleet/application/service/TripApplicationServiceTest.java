@@ -450,7 +450,7 @@ class TripApplicationServiceTest {
     }
 
     /**
-     * The decision this pass was given: an unbound driver sees — and answers for — nothing.
+     * The decision this pass was given: an unbound driver sees - and answers for - nothing.
      *
      * <p>The actor holds {@code FLEET_TRIP_ACKNOWLEDGE} and the trip's site, and is still refused,
      * because no driver profile names their sign-in. Fail-closed: the alternative reading of "we do
@@ -474,7 +474,7 @@ class TripApplicationServiceTest {
         Trip trip = service.create(createCommand(vehicle.id(), driver.id(), "idem-1"));
 
         // Holds FLEET_TRIP_MANAGE and every other trip power, and still may not produce a record
-        // saying the driver confirmed — which is the one fact a dispatcher relies on being true.
+        // saying the driver confirmed - which is the one fact a dispatcher relies on being true.
         assertThatThrownBy(() -> service.acknowledge(new AcknowledgeTripCommand(trip.id(),
                 TripAcknowledgementState.CONFIRMED, null, null, FleetTestDoubles.fleetOfficer("ACCRA"),
                 SourceChannel.WEB)))

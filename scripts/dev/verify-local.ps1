@@ -1,7 +1,7 @@
 # Checks which SFL services are up.
 #
 # Rewritten 1 August 2026. This script used to call /api/health and /api/version on
-# http://localhost:8081 — endpoints that existed only on the pre-migration legacy application, which
+# http://localhost:8081 - endpoints that existed only on the pre-migration legacy application, which
 # has been removed. It could not have succeeded for weeks, and reported its failure as a hard error.
 #
 # The services expose Spring Boot's actuator instead. The health probe is deliberately reachable
@@ -26,7 +26,7 @@ foreach ($s in $services) {
             $up++
         }
         else {
-            # A service that answers but reports DOWN is running with a failed dependency — almost
+            # A service that answers but reports DOWN is running with a failed dependency - almost
             # always its database. That is a different problem from one that is not running, and the
             # two must not look the same here.
             Write-Host ("  {0,-5} {1,-24} :{2}  answered, dependency failed" -f $status, $s.Name, $s.Port) -ForegroundColor Yellow

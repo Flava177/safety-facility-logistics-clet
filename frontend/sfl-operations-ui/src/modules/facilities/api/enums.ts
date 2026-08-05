@@ -84,7 +84,7 @@ export const assetOperationalStatuses = [
 ] as const;
 export type AssetOperationalStatus = (typeof assetOperationalStatuses)[number];
 
-/** Whether a record is in use. `ARCHIVED` is terminal — the service refuses any move out of it. */
+/** Whether a record is in use. `ARCHIVED` is terminal - the service refuses any move out of it. */
 export const recordLifecycleStatuses = ['ACTIVE', 'INACTIVE', 'SUSPENDED', 'ARCHIVED'] as const;
 export type RecordLifecycleStatus = (typeof recordLifecycleStatuses)[number];
 
@@ -175,7 +175,7 @@ export type AuditAction = (typeof auditActions)[number];
  * The S152 permissions the screens gate on.
  *
  * Read from `GET /actor/permissions`, which is the service's own answer rather than a guess derived
- * from role names. A control the actor cannot use is not rendered — an operator meeting a 403 on a
+ * from role names. A control the actor cannot use is not rendered - an operator meeting a 403 on a
  * button they were offered has been misled by the screen.
  */
 export type FacilitiesPermission =
@@ -208,7 +208,7 @@ export type FacilitiesPermission =
 /**
  * How urgent a fault is, and therefore what SLA it earns.
  *
- * The order is meaningful and relied on by two configurable thresholds — the priority at which a
+ * The order is meaningful and relied on by two configurable thresholds - the priority at which a
  * fault blocks its space, and the priority at which closure evidence becomes mandatory. Both are
  * expressed as "at least this", so reordering this array changes behaviour.
  */
@@ -235,7 +235,7 @@ export type FaultDismissalOutcome = (typeof faultDismissalOutcomes)[number];
  * The life of a work order.
  *
  * `COMPLETED` and `CLOSED` are separate on purpose: the assignee says the work is done, an
- * authorised officer says it is accepted. Passing through `COMPLETED` is not mandatory — closure is
+ * authorised officer says it is accepted. Passing through `COMPLETED` is not mandatory - closure is
  * reachable from any working state, because the gate is the closing permission and the evidence
  * rule rather than the route taken.
  */
@@ -265,7 +265,7 @@ export const evidenceTypes = [
 ] as const;
 export type EvidenceType = (typeof evidenceTypes)[number];
 
-/** How long evidence must be kept. Mandatory on every attachment — SRS-SFL-S153-03. */
+/** How long evidence must be kept. Mandatory on every attachment - SRS-SFL-S153-03. */
 export const retentionClasses = [
   'OPERATIONAL',
   'COMPLIANCE',

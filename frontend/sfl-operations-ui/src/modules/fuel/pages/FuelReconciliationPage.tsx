@@ -46,14 +46,14 @@ interface RunOutcome {
 /**
  * Run reconciliation and read what it decided.
  *
- * There is no `POST /reconciliations/run` — the inventory document lists one, but the only entry
+ * There is no `POST /reconciliations/run` - the inventory document lists one, but the only entry
  * point the service has is `POST /transactions/{id}/reconcile`, one transaction at a time (gap 1).
  * So a "run" here is exactly that: the selected transactions, reconciled in sequence, with each
  * outcome reported as it lands. That is honest about what is happening and it means a failure on one
  * record does not abandon the rest.
  *
  * The per-rule results the service stores are not readable, so the outcomes below give the verdict
- * and link to the cases the run raised — where the failing rule *is* recorded, in `detectedRules`.
+ * and link to the cases the run raised - where the failing rule *is* recorded, in `detectedRules`.
  */
 const FuelReconciliationPage = () => {
   const navigate = useNavigate();
@@ -91,7 +91,7 @@ const FuelReconciliationPage = () => {
    *
    * The reconciliation record carries the full per-rule map and the policy version it applied.
    * Before that read existed, the failing rules had to be inferred from the anomaly cases the run
-   * raised — which could only ever show failures, never what passed.
+   * raised - which could only ever show failures, never what passed.
    */
   const outcomeFor = async (transaction: FuelTransaction): Promise<RunOutcome> => {
     const result = await fuelTransactionsApi.reconcile(transaction.id);

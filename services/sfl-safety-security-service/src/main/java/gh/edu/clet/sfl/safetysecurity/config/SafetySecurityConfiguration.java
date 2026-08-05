@@ -21,15 +21,15 @@ import org.springframework.security.oauth2.server.resource.authentication.JwtAut
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
- * The SSEMP filter chains — now the only ones in this deployable.
+ * The SSEMP filter chains - now the only ones in this deployable.
  *
  * <p><strong>One chain, not two.</strong> When S174 was folded in, it brought an identical pair of
  * chains whose bean methods were also called {@code developmentSecurity} and {@code keycloakSecurity}.
- * Two beans of the same name in one context is a startup failure, not a merge — so the emergency pair
+ * Two beans of the same name in one context is a startup failure, not a merge - so the emergency pair
  * was deleted and its permit list absorbed below. This was the fourth near-verbatim copy of the same
  * ninety lines across the estate; collapsing it is the point of the merge rather than a side effect.
  *
- * <p>Added 1 August 2026. This module had <strong>no security configuration at all</strong> — the
+ * <p>Added 1 August 2026. This module had <strong>no security configuration at all</strong> - the
  * absence the go-live readiness pack recorded under G-01 and which was never closed with the rest of
  * that item. The consequence was not that the service was open: it was the opposite. With no chain
  * declared, Spring Security's default secured <em>everything</em> including {@code /actuator/health},
@@ -37,7 +37,7 @@ import org.springframework.security.web.SecurityFilterChain;
  * had no effect because nothing read the property.
  *
  * <p>A service whose liveness probe returns 401 is a service every orchestrator treats as dead. It went
- * unnoticed for the same reason the missing main class did — nothing had ever started this module.
+ * unnoticed for the same reason the missing main class did - nothing had ever started this module.
  *
  * <p>The two chains are the platform convention and the reasoning is A1's:
  *
@@ -62,7 +62,7 @@ class SafetySecurityConfiguration {
     SecurityFilterChain developmentSecurity(HttpSecurity http) throws Exception {
         LoggerFactory.getLogger(getClass()).warn(
                 "sfl.security.enabled=false: every safety-security endpoint is UNAUTHENTICATED and the actor is "
-                        + "whatever the X-SFL-* headers claim — including /api/v1/emergency, where that means "
+                        + "whatever the X-SFL-* headers claim - including /api/v1/emergency, where that means "
                         + "anyone can fire a mass notification. Local development only.");
         return http.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
@@ -80,7 +80,7 @@ class SafetySecurityConfiguration {
                         .requestMatchers("/actuator/health/**", "/api/v1/system/info").permitAll()
                         // S174's public surfaces, carried over when the emergency deployable was folded
                         // into this one. Provider callbacks are authenticated at the application layer by
-                        // HMAC and source allowlist (SRS-SFL-S174-04), not by a bearer token — an SMS or
+                        // HMAC and source allowlist (SRS-SFL-S174-04), not by a bearer token - an SMS or
                         // voice gateway posting a delivery receipt has no way to present one. The notice
                         // page and Swagger are public operational surfaces.
                         .requestMatchers("/", "/index.html", "/emergency/**",

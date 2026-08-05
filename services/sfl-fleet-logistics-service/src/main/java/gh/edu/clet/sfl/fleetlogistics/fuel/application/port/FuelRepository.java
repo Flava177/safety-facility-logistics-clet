@@ -23,7 +23,7 @@ public interface FuelRepository {
      *
      * <p>Deliberately shaped like the fleet {@code PageResponse} so the two modules page the same
      * way from an operator's point of view, but declared here rather than imported from the API
-     * layer — the port must not depend on a transport type.
+     * layer - the port must not depend on a transport type.
      *
      * <p>{@code sort} is echoed back because the caller may have asked for a default: a client that
      * cannot see which ordering it got cannot tell a stable page from a shifting one.
@@ -43,7 +43,7 @@ public interface FuelRepository {
     /**
      * Paging and ordering, normalised.
      *
-     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL — the adapter maps
+     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL - the adapter maps
      * it to a column plus a deterministic tiebreak on {@code id}, because a page over rows that
      * share a sort value will otherwise skip or repeat records between requests.
      */

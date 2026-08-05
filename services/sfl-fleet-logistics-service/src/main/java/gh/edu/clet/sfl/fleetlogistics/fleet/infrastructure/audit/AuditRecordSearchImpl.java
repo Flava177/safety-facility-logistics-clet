@@ -14,7 +14,7 @@ import java.util.List;
  * Criteria implementation of {@link AuditRecordSearch}.
  *
  * <p>Each supplied filter adds one predicate; an omitted filter adds nothing at all. That is the
- * whole fix — see the interface for why the previous JPQL could not run.
+ * whole fix - see the interface for why the previous JPQL could not run.
  *
  * <p>Ordering stays {@code sequenceNo} descending, which is the append order of the hash chain and
  * therefore both stable and meaningful: the chain defines the sequence, so paging over it cannot

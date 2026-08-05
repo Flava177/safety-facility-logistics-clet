@@ -5,7 +5,7 @@ import java.util.Map;
 /**
  * Refusal by the AVAMP access policy.
  *
- * <p>Carries {@code ASSETVIS_UNAUTHORIZED_SCOPE} and structured details — the permission that was
+ * <p>Carries {@code ASSETVIS_UNAUTHORIZED_SCOPE} and structured details - the permission that was
  * required, the resource, and the site when the refusal was a scope one. A caller that is told only
  * "forbidden" has to guess which of the two it was, and the two have different remedies: one is a
  * role request, the other is a site-scope request.

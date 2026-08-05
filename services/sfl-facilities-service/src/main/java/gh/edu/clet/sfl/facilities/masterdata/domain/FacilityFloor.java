@@ -41,7 +41,7 @@ public record FacilityFloor(
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
-    /** A null or blank field leaves the current value alone — this is a PATCH, not a replace. */
+    /** A null or blank field leaves the current value alone - this is a PATCH, not a replace. */
     public FacilityFloor update(String name, Integer levelNumber, String actorId, Instant at, SourceChannel channel,
             String correlationId) {
         return new FacilityFloor(id, buildingId, siteCode, floorCode,

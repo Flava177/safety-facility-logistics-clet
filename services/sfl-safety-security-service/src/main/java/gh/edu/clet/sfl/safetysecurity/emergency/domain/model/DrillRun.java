@@ -5,7 +5,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A notification drill — a rehearsal that exercises the activation path and records performance metrics
+ * A notification drill - a rehearsal that exercises the activation path and records performance metrics
  * without a real broadcast. Completion computes acknowledgement rate and elapsed time.
  */
 public record DrillRun(UUID id, String drillNumber, SiteCode siteCode, UUID scenarioId, Status status,

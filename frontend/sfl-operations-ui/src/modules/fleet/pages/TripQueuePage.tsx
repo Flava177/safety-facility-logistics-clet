@@ -108,7 +108,7 @@ const TripQueuePage = () => {
         /*
           A separate column from Status, not a variant of it. A dispatcher's question the morning a
           vehicle is due out is "which of these has the driver not answered for", and folding the
-          answer into the status chip would make that question unanswerable at a glance — an assigned
+          answer into the status chip would make that question unanswerable at a glance - an assigned
           trip and a confirmed one are both ASSIGNED.
         */
         key: 'acknowledgementState',
@@ -134,7 +134,7 @@ const TripQueuePage = () => {
               }
             />
           ) : (
-            <span className="text-gray-400">—</span>
+            <span className="text-gray-400">-</span>
           ),
       },
       {
@@ -211,7 +211,7 @@ const TripQueuePage = () => {
 
         {/*
           Why the list is shorter than the site's, when it is. The server sends this on a narrowed
-          list — a driver sees their own trips — and sends nothing on an unnarrowed one. Showing it is
+          list - a driver sees their own trips - and sends nothing on an unnarrowed one. Showing it is
           what stops a driver reading their own list as "the queue is nearly empty today", and what
           tells an unbound driver why theirs is empty rather than leaving them at a blank screen.
         */}

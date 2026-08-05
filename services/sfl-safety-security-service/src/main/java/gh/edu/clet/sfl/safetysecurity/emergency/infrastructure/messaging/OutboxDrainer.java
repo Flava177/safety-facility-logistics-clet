@@ -16,7 +16,7 @@ import org.springframework.stereotype.Component;
 /**
  * Drains the transactional outbox at-least-once via the configured transport. Phase-1 {@code local}
  * transport records delivery (no broker); a delivery that throws is retried and dead-lettered after
- * {@code sfl.emergency.messaging.max-attempts}. It never fakes vendor success — a failed sink dead-letters.
+ * {@code sfl.emergency.messaging.max-attempts}. It never fakes vendor success - a failed sink dead-letters.
  */
 @Component
 @ConditionalOnProperty(name = "sfl.emergency.messaging.drainer-enabled", havingValue = "true", matchIfMissing = true)

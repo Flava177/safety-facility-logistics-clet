@@ -11,14 +11,14 @@ import org.springframework.transaction.annotation.Transactional;
 /**
  * The idempotent consumer, backed by {@code facilities.inbox_messages}.
  *
- * <p>Outbox plus a broker is <strong>at-least-once</strong>, never exactly-once — the guide says so in
+ * <p>Outbox plus a broker is <strong>at-least-once</strong>, never exactly-once - the guide says so in
  * 0K and it is not a limitation anyone can engineer away. A message will be delivered twice: the
  * drainer publishes, the broker acknowledges, the drainer dies before it records the publish, and it
  * publishes again on restart. So every consumer has to be safe to run twice, and the cheapest way to
  * be safe is to remember what has already been seen.
  *
  * <p>The claim is the insert itself. {@code message_id} is the primary key, so two concurrent
- * deliveries of the same message race on the database and exactly one wins — no read-then-write, no
+ * deliveries of the same message race on the database and exactly one wins - no read-then-write, no
  * window between checking and acting. The loser gets a {@link DuplicateKeyException} and stops.
  *
  * <h2>Two things worth knowing about this table</h2>

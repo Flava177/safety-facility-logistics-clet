@@ -14,8 +14,8 @@ import org.springframework.stereotype.Component;
  * Read access to the secure integration inbox, over the same table
  * {@code EmergencyIntegrationInbox} writes to before any domain effect.
  *
- * <p>Closes gap 3. Every count and every row here already existed — the table has been written on
- * every provider callback since the service was built — and nothing read it back, which is why an
+ * <p>Closes gap 3. Every count and every row here already existed - the table has been written on
+ * every provider callback since the service was built - and nothing read it back, which is why an
  * activation with 480 sent and 0 delivered could not be diagnosed.
  */
 @Component

@@ -17,7 +17,7 @@ interface CsvImportDialogProps {
 }
 
 /**
- * CSV import — `POST /api/v1/fuel/imports/csv`, multipart.
+ * CSV import - `POST /api/v1/fuel/imports/csv`, multipart.
  *
  * Every row goes through the same `capture` command as a manual entry, so a row can fail for any
  * reason a capture can: an unknown vehicle, a total that does not match, an unparseable instant. The

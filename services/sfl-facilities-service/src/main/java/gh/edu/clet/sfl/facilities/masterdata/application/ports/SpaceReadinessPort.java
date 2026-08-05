@@ -13,7 +13,7 @@ import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
  * implementing it <em>there</em> keeps the compile-time arrow pointing one way while the runtime
  * behaviour flows both.
  *
- * <p>The alternative — publishing a domain event and consuming it asynchronously — is what this will
+ * <p>The alternative - publishing a domain event and consuming it asynchronously - is what this will
  * become when the outbox has a drainer. Until then a synchronous port is honest: the recompute really
  * does happen inside the same transaction, and pretending otherwise would put an eventual-consistency
  * story in the documentation that the code does not implement.
@@ -25,7 +25,7 @@ public interface SpaceReadinessPort {
      *
      * <p>Called after an asset's operational status changes. An asset that has become impaired raises
      * a blocker; one that has recovered resolves the blocker it raised. Does nothing when the asset is
-     * not attached to a space — an asset in a yard blocks nothing.
+     * not attached to a space - an asset in a yard blocks nothing.
      */
     void reconcileAssetBlockers(FacilityAsset asset, ActorContext actor, SourceChannel channel);
 }

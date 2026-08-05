@@ -29,7 +29,7 @@ const ROW_FILTERS = [
 /**
  * Scanner batch import.
  *
- * Unlike the fuel CSV import, a batch here **is** readable afterwards — `GET /scans/imports/{id}`
+ * Unlike the fuel CSV import, a batch here **is** readable afterwards - `GET /scans/imports/{id}`
  * and its `/rows` both exist. What does not exist is a way to *list* batches for a site, so this
  * screen holds the batches uploaded in this browsing session and says so. A batch identifier can be
  * pasted in to reopen one from an earlier session, which is the workaround the missing list forces.
@@ -351,20 +351,20 @@ const ScanImportsPage = () => {
               <li className="flex items-start gap-2.5">
                 <Icon name="check-circle" size={15} className="mt-0.5 shrink-0 text-success-700" />
                 <span>
-                  <strong>Matched</strong> — the code belongs to an item the manifest expects.
+                  <strong>Matched</strong> - the code belongs to an item the manifest expects.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Icon name="alert-circle" size={15} className="mt-0.5 shrink-0 text-error-800" />
                 <span>
-                  <strong>Mismatch</strong> — the code belongs to a registered item, but not one this
+                  <strong>Mismatch</strong> - the code belongs to a registered item, but not one this
                   manifest carries. An exception case is raised.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Icon name="alert-triangle" size={15} className="mt-0.5 shrink-0 text-warning-700" />
                 <span>
-                  <strong>Unregistered</strong> — the code belongs to no item on the register at all.
+                  <strong>Unregistered</strong> - the code belongs to no item on the register at all.
                   An exception case is raised.
                 </span>
               </li>

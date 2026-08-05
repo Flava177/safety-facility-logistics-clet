@@ -48,17 +48,17 @@ const Modal = ({
    * `aria-modal`.
    *
    * <p>Fixed here rather than by adding `autoFocus` to each dialog's first field, because that is
-   * fifteen places to remember and one to forget — and the emergency module had already done it that
+   * fifteen places to remember and one to forget - and the emergency module had already done it that
    * way, which is why some dialogs behaved and most did not.
    *
    * <p>**An explicit `autoFocus` still wins, but not by being looked for.** React sets `autoFocus` as
-   * a property and focuses during commit — it leaves no `autofocus` attribute to query, and it has
+   * a property and focuses during commit - it leaves no `autofocus` attribute to query, and it has
    * already run by the time this effect fires. So the rule is simply: if focus is already inside the
    * dialog, somebody has chosen, and we do not second-guess them. Searching for `[autofocus]` finds
    * nothing in React and would have quietly stolen focus from the emergency dialogs that use it.
    *
    * <p>Otherwise the first form control that can actually take focus. `querySelectorAll` happily
-   * returns fields inside a collapsed `<details>` — which "Register a vehicle" now has — and calling
+   * returns fields inside a collapsed `<details>` - which "Register a vehicle" now has - and calling
    * `.focus()` on one does nothing, leaving focus outside the modal. `closest('details:not([open])')`
    * is the precise test for that, and unlike `offsetParent` it does not depend on layout, so it means
    * the same thing in a browser and in jsdom.

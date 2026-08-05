@@ -25,7 +25,7 @@ const dotTone = {
  * Append-only history rendered as a timeline.
  *
  * The service exposes transitions and comments as an immutable sequence, so this never offers an
- * edit affordance — the record is the audit trail.
+ * edit affordance - the record is the audit trail.
  */
 const WorkflowTimeline = ({
   entries,

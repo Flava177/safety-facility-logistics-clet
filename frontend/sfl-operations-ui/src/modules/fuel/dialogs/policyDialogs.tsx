@@ -39,12 +39,12 @@ interface CreatePolicyDialogProps {
 }
 
 /**
- * Create a fuel policy — `POST /api/v1/fuel/policies`.
+ * Create a fuel policy - `POST /api/v1/fuel/policies`.
  *
  * Every field on `PolicyRequest` is here, in the order the rules read them: identity and period,
  * then the limits reconciliation checks, then the exception settings. The four primitives
  * (`policyVersion`, `odometerJumpTolerance`, `receiptGraceHours`, `anomalySlaHours`) always send a
- * number — sending `null` for a Java `int`/`long` fails deserialisation *before* Bean Validation
+ * number - sending `null` for a Java `int`/`long` fails deserialisation *before* Bean Validation
  * runs, and the operator gets a Jackson message instead of a field error.
  */
 export const CreatePolicyDialog = ({

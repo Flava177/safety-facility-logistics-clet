@@ -8,7 +8,7 @@ import java.util.List;
  *
  * <p>It exists because the derived JPQL version could not be executed at all. That query expressed
  * every optional filter as {@code (:param is null or column = :param)}, which Hibernate renders as
- * {@code (? is null or column = ?)} — and PostgreSQL cannot infer a type for a parameter whose only
+ * {@code (? is null or column = ?)} - and PostgreSQL cannot infer a type for a parameter whose only
  * appearance is a bare {@code IS NULL} test. Every call failed with
  * {@code could not determine data type of parameter $11}, whatever combination of filters was
  * supplied, so audit search and the Evidence &amp; audit screen built on it returned 500 across the

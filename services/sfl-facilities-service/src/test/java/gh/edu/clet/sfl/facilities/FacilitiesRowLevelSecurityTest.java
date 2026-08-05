@@ -20,13 +20,13 @@ import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 
 /**
- * Row-level security, proved against the role it actually applies to — ADR 0007, V14.
+ * Row-level security, proved against the role it actually applies to - ADR 0007, V14.
  *
  * <p><strong>Why this test connects for itself.</strong> The application connects as the schema
  * owner, and a table owner bypasses RLS. That is deliberate: FORCE would apply the policies to Flyway,
  * so a migration that backfills would silently write nothing, which is a worse failure than the one
  * being prevented. The policies are therefore carried by a separate {@code sfl_app} role, and a test
- * that ran as the owner would pass while proving nothing at all — the most dangerous kind of green.
+ * that ran as the owner would pass while proving nothing at all - the most dangerous kind of green.
  *
  * <p>So this opens its own connection as {@code sfl_app} and asks the three questions that matter:
  * does an unscoped session see anything, does a scoped one see only its own site, and does {@code *}
@@ -72,7 +72,7 @@ class FacilitiesRowLevelSecurityTest {
     }
 
     @Test
-    @DisplayName("an unscoped session sees nothing — the policies fail closed")
+    @DisplayName("an unscoped session sees nothing - the policies fail closed")
     void unset_scope_sees_nothing() throws SQLException {
         // The whole value of a second layer. A policy that opened up when the application forgot to
         // set the scope would protect exactly nothing.
@@ -113,7 +113,7 @@ class FacilitiesRowLevelSecurityTest {
                 statement.executeUpdate(insertSiteSql("RLS-FORBIDDEN"));
                 throw new AssertionError("a site outside the caller's scope must not be insertable");
             } catch (SQLException expected) {
-                // 42501 insufficient_privilege — PostgreSQL's answer for a WITH CHECK violation.
+                // 42501 insufficient_privilege - PostgreSQL's answer for a WITH CHECK violation.
                 assertThat(expected.getSQLState()).isEqualTo("42501");
             } finally {
                 connection.rollback();

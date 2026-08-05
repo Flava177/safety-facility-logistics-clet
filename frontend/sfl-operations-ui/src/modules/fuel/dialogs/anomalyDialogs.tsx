@@ -20,13 +20,13 @@ interface AnomalyActionDialogProps {
  *
  * `POST /anomalies/{id}/{action}` takes a single `ActionRequest { value, evidenceId }`, and the
  * service overloads `value` by action: an assignee for assign and reassign, the explanation text
- * for explain, and the reason for everything else. One endpoint, one request shape, one dialog —
+ * for explain, and the reason for everything else. One endpoint, one request shape, one dialog -
  * what changes is the label on the field, whether it is mandatory, and whether evidence is asked
  * for. Splitting this into thirteen components would duplicate the same twenty lines thirteen times
  * and make it easy for one of them to drift from the service.
  *
- * `close` is the interesting one. `FuelAnomalyCase.close` demands three things — an explanation and
- * a decision already on the record, plus evidence supplied with the closure — and refuses with one
+ * `close` is the interesting one. `FuelAnomalyCase.close` demands three things - an explanation and
+ * a decision already on the record, plus evidence supplied with the closure - and refuses with one
  * message naming all three. The dialog shows which of them are actually missing and blocks
  * submission, rather than letting the operator write a closure reason and then be told no.
  */
@@ -170,15 +170,15 @@ const ACTION_NOTES: Partial<Record<AnomalyAction, string>> = {
   explain:
     'The explanation is one of the three things closure requires. Attach the supporting evidence if you have it.',
   approve:
-    'Privileged — needs FUEL_ANOMALY_APPROVE. Records an approved decision; the case still has to be closed.',
+    'Privileged - needs FUEL_ANOMALY_APPROVE. Records an approved decision; the case still has to be closed.',
   reject:
-    'Privileged — needs FUEL_ANOMALY_APPROVE. Records a rejected decision; the case still has to be closed.',
+    'Privileged - needs FUEL_ANOMALY_APPROVE. Records a rejected decision; the case still has to be closed.',
   escalate:
-    'Privileged — needs FUEL_ANOMALY_ESCALATE. Raises the escalation level and notifies the fleet manager. A material case is also surfaced to finance and audit.',
+    'Privileged - needs FUEL_ANOMALY_ESCALATE. Raises the escalation level and notifies the fleet manager. A material case is also surfaced to finance and audit.',
   hold: 'The assignee is notified that the case is blocked. Resume it when the block clears.',
   resume: 'Returns the case to under review.',
   cancel: 'Privileged. The case stays in the register and in the audit trail.',
-  close: 'Privileged — needs FUEL_ANOMALY_APPROVE. Closure is final unless the case is reopened.',
+  close: 'Privileged - needs FUEL_ANOMALY_APPROVE. Closure is final unless the case is reopened.',
   reopen: 'Privileged. The case returns to the queue and can be reassigned.',
 };
 

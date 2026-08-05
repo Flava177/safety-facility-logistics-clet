@@ -8,12 +8,12 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A fuel card CLET issued — SRS-SFL-S168fuel-04.
+ * A fuel card CLET issued - SRS-SFL-S168fuel-04.
  *
  * <p>Until this existed, {@code FuelTransaction.maskedCardReference} was a string with nothing behind
  * it: the platform could tell you which card was used and could answer no useful question about it.
  * Anti-fraud control is the stated purpose of S168_fuel in the C9 mapping, and the commonest fuel fraud
- * is a card assigned to one vehicle being used to fill another — which is undetectable without a row
+ * is a card assigned to one vehicle being used to fill another - which is undetectable without a row
  * saying which vehicle the card belongs to.
  *
  * <p><strong>The full card number is never held.</strong> {@link #maskedReference} is the same masked
@@ -43,7 +43,7 @@ public record FuelCard(
 
     public enum Status {
         ACTIVE,
-        /** Temporarily stopped — a lost card, a driver under investigation. Reversible. */
+        /** Temporarily stopped - a lost card, a driver under investigation. Reversible. */
         SUSPENDED,
         /** Terminal. The card is gone; the row stays so historic transactions still resolve. */
         CANCELLED
@@ -77,7 +77,7 @@ public record FuelCard(
                 issuedOn, expiresOn, dailyLimit, monthlyLimit, perTransactionLimit, null, notes, metadata);
     }
 
-    /** Reassignment is one move, not an unassign followed by an assign — the card is never unheld. */
+    /** Reassignment is one move, not an unassign followed by an assign - the card is never unheld. */
     public FuelCard assignTo(UUID newVehicleId, UUID newDriverId, RecordMetadata newMetadata) {
         requireNotCancelled("reassigned");
         return new FuelCard(id, siteCode, maskedReference, provider, newVehicleId, newDriverId, status,

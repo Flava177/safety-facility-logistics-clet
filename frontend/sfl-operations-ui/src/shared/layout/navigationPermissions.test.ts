@@ -6,7 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  * <h2>The defect this exists to stop coming back</h2>
  *
  * Most FTLMP nav items declared **no permission at all**, so entitlement to S166 showed every one of
- * them. A driver — who holds four fleet permissions and four fuel ones — was offered the workflow
+ * them. A driver - who holds four fleet permissions and four fuel ones - was offered the workflow
  * queue, the driver register, compliance, evidence and audit, reconciliation, anomaly cases, CSV
  * imports, fuel policies and provider integration. Nine screens, every one of which answers
  * `FLEET_UNAUTHORIZED_SCOPE` or its fuel equivalent on arrival.
@@ -18,7 +18,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
  *
  * `permits` is backed by a live call to each service's `/actor/permissions`, which cannot run in a
  * unit test. The sets below are transcribed from `FleetPermissionMatrix` and `FuelPermissionMatrix`
- * — if either changes and this file does not, these tests keep asserting the old contract, which is
+ * - if either changes and this file does not, these tests keep asserting the old contract, which is
  * the honest failure mode: it fails loudly rather than silently agreeing with whatever the code now
  * does.
  */
@@ -47,7 +47,7 @@ const { entitledSections } = await import('./navigation');
 /**
  * FLEET_DRIVER, transcribed from `FleetPermissionMatrix` and `FuelPermissionMatrix`.
  *
- * Transcribed, therefore capable of drifting — and it did: `FLEET_DRIVER_READ` and
+ * Transcribed, therefore capable of drifting - and it did: `FLEET_DRIVER_READ` and
  * `FLEET_TRIP_ACKNOWLEDGE` were granted in the Java matrix and this list went on asserting the
  * driver's menu as if they had not been, so the suite stayed green while describing a role that no
  * longer existed. There is no way to read the Java enum from vitest; the mitigation is that this
@@ -91,8 +91,8 @@ describe('what a driver is offered', () => {
   it('offers the driver register, which they may read and not write', () => {
     /*
       Read-only, and the read is the point: a driver looks up the colleague covering their trip. The
-      write side is FLEET_DRIVER_MANAGE, which is absent from DRIVER above — so no registering,
-      editing or retiring, including of themselves — and licence numbers arrive masked because
+      write side is FLEET_DRIVER_MANAGE, which is absent from DRIVER above - so no registering,
+      editing or retiring, including of themselves - and licence numbers arrive masked because
       FLEET_DRIVER_SENSITIVE_READ is absent too. Navigation grants sight of the page; it grants
       nothing on it.
     */
@@ -102,7 +102,7 @@ describe('what a driver is offered', () => {
 
   it('does not offer any assurance screen', () => {
     /*
-      A driver holds FLEET_EVIDENCE_REGISTER — they attach evidence to their own trip closure — and
+      A driver holds FLEET_EVIDENCE_REGISTER - they attach evidence to their own trip closure - and
       that is deliberately not a licence to read the fleet's evidence library or replay the audit
       chain, which is FLEET_EVIDENCE_READ.
     */
@@ -135,7 +135,7 @@ describe('what a driver is offered', () => {
 
   it('offers exactly the five screens a driver can actually use', () => {
     /*
-      The positive assertion, and the one that would catch an over-correction — a tightening pass is
+      The positive assertion, and the one that would catch an over-correction - a tightening pass is
       as capable of leaving a role unable to work as it is of leaving it able to see too much.
 
       Each is here for a stated reason:
@@ -145,7 +145,7 @@ describe('what a driver is offered', () => {
           and the colleague covering for them.
         - Driver logbooks: narrowed per record on created_by.
         - Fuel transactions: narrowed per record on driver_id. This line previously carried a note
-          calling that a "known gap … the service does not narrow transactions per driver" — it did
+          calling that a "known gap … the service does not narrow transactions per driver" - it did
           not, and now does, in FuelApplicationService.transactions.
     */
     holding(DRIVER);

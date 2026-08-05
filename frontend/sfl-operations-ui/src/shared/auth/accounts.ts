@@ -9,7 +9,7 @@
  * bundle that is served to the browser.
  *
  * That is a deliberate and bounded choice. The services this dashboard talks to run locally with
- * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the `X-SFL-*` headers claim — so a login
+ * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the `X-SFL-*` headers claim - so a login
  * page here can only ever decide *which headers to send*. Making it look like more than that would be
  * the worse outcome: a form that appears to authenticate while the service behind it is open.
  *
@@ -17,7 +17,7 @@
  *
  * `deploy/keycloak/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
  * password, and `keycloak.ts` exchanges them for a genuine token. When a service runs with security
- * on, that is the path — and `session.ts` stores either kind identically, so nothing downstream cares
+ * on, that is the path - and `session.ts` stores either kind identically, so nothing downstream cares
  * which one signed you in. The roles below and the roles in the realm are the same roles.
  *
  * <h2>Why the role list is here rather than fetched</h2>
@@ -38,7 +38,7 @@ export interface SeededAccount {
   description: string;
 }
 
-/** One password for every seeded account. Development only — see the docblock. */
+/** One password for every seeded account. Development only - see the docblock. */
 export const SEEDED_PASSWORD = 'Password@Clet1';
 
 export const seededAccounts: SeededAccount[] = [
@@ -49,7 +49,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Fleet Manager',
     roles: ['FLEET_MANAGER'],
     sites: ['CLET-HQ'],
-    description: 'Fleet, fuel and dispatch — plans trips and assigns drivers',
+    description: 'Fleet, fuel and dispatch - plans trips and assigns drivers',
   },
   {
     email: 'driver@clet.gh',
@@ -73,7 +73,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Reporting Viewer',
     roles: ['FLEET_REPORTING_VIEWER'],
     sites: ['CLET-HQ'],
-    description: 'Fleet, fuel and dispatch — read only',
+    description: 'Fleet, fuel and dispatch - read only',
   },
   {
     email: 'dispatchcontroller@clet.gh',
@@ -207,7 +207,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Nana Auditor',
     roles: ['AUDITOR'],
     sites: ['*'],
-    description: 'Read and prove — audit, evidence, chain replay',
+    description: 'Read and prove - audit, evidence, chain replay',
   },
   {
     email: 'complianceofficer@clet.gh',

@@ -34,7 +34,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Reporting, triaging and dismissing faults — SRS-SFL-S153-01 and the front half of -02.
+ * Reporting, triaging and dismissing faults - SRS-SFL-S153-01 and the front half of -02.
  *
  * <h2>What this replaces</h2>
  *
@@ -50,13 +50,13 @@ import org.springframework.transaction.annotation.Transactional;
  *   <li><strong>Writing</strong> checks the site named in the command, so an actor cannot report a
  *       fault into a site they cannot reach.</li>
  *   <li><strong>Reading</strong> filters by the actor's scopes rather than refusing, so a manager
- *       holding two sites gets both without asking twice — and gets a shorter list rather than an
+ *       holding two sites gets both without asking twice - and gets a shorter list rather than an
  *       error when their scope narrows.</li>
  * </ul>
  *
  * <p>A requester is narrowed further, per record: they read the faults they reported and nothing
- * else. That is not something a permission matrix can express — "mine" is a property of the record,
- * not of the role — so it lives in {@link #requesterFilter}.
+ * else. That is not something a permission matrix can express - "mine" is a property of the record,
+ * not of the role - so it lives in {@link #requesterFilter}.
  */
 @Service
 public class FacilityFaultService {
@@ -139,7 +139,7 @@ public class FacilityFaultService {
      * Triage: the point at which a fault gets a deadline.
      *
      * <p>The SLA is computed here from the configuration active right now and from the site's current
-     * operating mode — a fault triaged during an examination gets the compressed deadline, one
+     * operating mode - a fault triaged during an examination gets the compressed deadline, one
      * triaged the week before does not. That is what SRS-SFL-S153-02 means by calculating timers from
      * "priority, severity, site, operating mode and workflow type".
      */
@@ -358,7 +358,7 @@ public class FacilityFaultService {
      * The fault behind a work order, for {@code WorkOrderApplicationService}.
      *
      * <p>Package-private and unauthorised on purpose. The caller has already authorised the actor
-     * against the work order, and the work order's site is the fault's site — checking twice would
+     * against the work order, and the work order's site is the fault's site - checking twice would
      * refuse a legitimate closure whenever the two modules disagreed about which permission applied.
      */
     FacilityFault faultFor(UUID id) {

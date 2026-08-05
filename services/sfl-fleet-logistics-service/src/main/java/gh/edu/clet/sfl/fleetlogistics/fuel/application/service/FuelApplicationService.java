@@ -82,7 +82,7 @@ public class FuelApplicationService {
      * Creates an effective-dated policy, refusing one that overlaps an active policy for the site.
      *
      * <p>The domain model documented "no overlapping active policy for the same scope" as an
-     * invariant and nothing enforced it — not the record, which cannot see its siblings, and not the
+     * invariant and nothing enforced it - not the record, which cannot see its siblings, and not the
      * database. With two active policies covering one instant, {@code findApplicablePolicy} returns
      * whichever row the ordering surfaces, so the rules a transaction is judged against and the
      * policy version stamped on its reconciliation stop being reproducible. That defeats the point
@@ -252,7 +252,7 @@ public class FuelApplicationService {
      *
      * <p>The per-driver check was missing here while the list had none either, so a driver holding any
      * transaction id read it: vehicle, site, litres, cost, card and vendor. Narrowed on {@code driverId}
-     * — the transaction's own field — rather than on {@code createdBy} as logbooks are, because these
+     * - the transaction's own field - rather than on {@code createdBy} as logbooks are, because these
      * records are written by the provider feed and nobody's {@code createdBy} is a driver.
      */
     public FuelTransaction transaction(UUID id,ActorContext actor){
@@ -265,7 +265,7 @@ public class FuelApplicationService {
     /**
      * Refuses a driver-only actor a fuel record belonging to another driver.
      *
-     * <p>An unbound driver is refused everything rather than allowed everything — the same fail-closed
+     * <p>An unbound driver is refused everything rather than allowed everything - the same fail-closed
      * choice the trip list makes. A record with no driver at all is also refused to them: an
      * unattributed fuel transaction is not theirs, and treating "no owner" as "anyone's" is how the
      * narrowing leaks in exactly the cases worth investigating.
@@ -300,7 +300,7 @@ public class FuelApplicationService {
         if(access.isDriverOnly(actor)){
             var scope=driverScopes.resolve(actor,true);
             // An unbound driver sees nothing. Answered without touching the database, because there is
-            // no driver id that would produce an honest empty page — null would produce every row.
+            // no driver id that would produce an honest empty page - null would produce every row.
             if(!(scope instanceof DriverScope.Own own))return new FuelRepository.FuelPage<FuelTransaction>(List.of(),paging.page(),paging.size(),0L,0,paging.sort());
             effectiveDriver=own.driverId();
         }

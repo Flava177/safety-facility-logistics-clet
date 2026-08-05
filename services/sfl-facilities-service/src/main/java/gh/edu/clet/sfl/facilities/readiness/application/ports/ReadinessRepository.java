@@ -59,7 +59,7 @@ public interface ReadinessRepository {
     List<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity, Boolean open,
             int limit);
 
-    /** Open blockers raised from one source reference — how an asset's recovery clears its own blockers. */
+    /** Open blockers raised from one source reference - how an asset's recovery clears its own blockers. */
     List<ReadinessBlocker> findOpenBlockersBySource(BlockerSource source, String sourceReference);
 
     /** Open blockers across a site, for the dashboard's severity breakdown. */

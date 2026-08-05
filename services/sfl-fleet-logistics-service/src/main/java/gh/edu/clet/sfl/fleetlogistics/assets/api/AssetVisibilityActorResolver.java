@@ -25,16 +25,16 @@ import org.springframework.stereotype.Component;
  * {@code @RequestHeader(name = "X-SFL-User", defaultValue = "development-user")} and passed it
  * straight into the command. That is fine while security is off and the header *is* the actor. It
  * stops being fine the moment authentication is on: the request carries a verified JWT principal,
- * and the service would still have attributed the action to whatever string the caller chose — or,
+ * and the service would still have attributed the action to whatever string the caller chose - or,
  * absent one, to a user literally called {@code development-user}.
  *
  * <p><strong>The second, closed on 1 August 2026.</strong> Resolving an identity is not the same as
- * having one. This returned a bare {@code String} — an actor id and nothing else, no roles and no
- * site scopes — so even after A1 there was nothing for an authorisation check to read, and the
+ * having one. This returned a bare {@code String} - an actor id and nothing else, no roles and no
+ * site scopes - so even after A1 there was nothing for an authorisation check to read, and the
  * service duly had none. It now returns a full {@link ActorContext}, which is what
  * {@code AssetVisibilityAccessPolicy} needs to answer both of its questions.
  *
- * <p>The claim names are the platform's — {@code realm_access.roles} and {@code site_scopes}, both
+ * <p>The claim names are the platform's - {@code realm_access.roles} and {@code site_scopes}, both
  * issued by the imported realm and read identically by the other three services. AVAMP is brought
  * into line rather than given a fourth convention.
  *

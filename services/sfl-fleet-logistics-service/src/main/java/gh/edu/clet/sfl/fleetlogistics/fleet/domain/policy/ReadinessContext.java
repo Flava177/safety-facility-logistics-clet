@@ -80,7 +80,7 @@ public record ReadinessContext(
 
     /**
      * A minimal context for the "is this vehicle ready right now?" question, with no driver, period or
-     * inspection requirement — what the register and the dashboard ask.
+     * inspection requirement - what the register and the dashboard ask.
      */
     public static ReadinessContext forVehicleOnly(Vehicle vehicle, List<ComplianceDocument> documents,
             VehicleInspection latestInspection, Instant assessedAt, Duration complianceWarningWindow,

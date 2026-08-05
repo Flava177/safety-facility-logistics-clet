@@ -12,7 +12,7 @@ import { isSignedIn } from './session';
  * a form that cannot succeed.
  *
  * That reasoning was right about a Keycloak-backed form and wrong about this one. Signing in here
- * matches an email against the seeded accounts and makes that account the actor — it depends on
+ * matches an email against the seeded accounts and makes that account the actor - it depends on
  * nothing external, so it always succeeds and the objection disappears. Leaving the flag in place
  * meant the default run showed no login page at all, which was the whole point of building it.
  *

@@ -9,14 +9,14 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
  * Every closure dialog in this dashboard used to ask an operator to paste an evidence reference id.
  * The identifier is a UUID that appears on no paperwork, so the real workflow was: open Evidence &
  * audit in another tab, find the record, copy the id, come back. The S166 gap register called that
- * the main usability cost in the whole dashboard, and it was worst exactly where it mattered most —
+ * the main usability cost in the whole dashboard, and it was worst exactly where it mattered most -
  * closing a workflow item, where evidence is mandatory and the service refuses the close without it.
  *
  * `GET /evidence?relatedRecordType=&relatedRecordId=` is the whole fix. The record is the only thing
  * an operator reliably knows, and it is what every one of these dialogs already has in hand.
  *
  * **The text field does not go away.** Evidence filed against a different record is a legitimate
- * reference — a site-wide certificate closes a dozen items and belongs to none of them — so the
+ * reference - a site-wide certificate closes a dozen items and belongs to none of them - so the
  * picker offers what it found and gets out of the way when the answer is somewhere else. It also
  * falls back to the text field when the record has no evidence at all, which is the state an
  * operator is in the first time they close anything.
@@ -26,7 +26,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
  * It was written in `modules/fleet` and used by exactly one dialog, while eight others kept asking
  * for the paste. Moving it here is what let the rest adopt it: dispatch needs it too, and a dispatch
  * dialog reaching into `modules/fleet` for an API client is a module boundary crossed for no reason.
- * Injecting the search keeps this component ignorant of which service answers — the FTLMP evidence
+ * Injecting the search keeps this component ignorant of which service answers - the FTLMP evidence
  * store happens to serve fleet, fuel and dispatch alike, and a future module with its own store
  * passes its own function rather than forcing a change here.
  *
@@ -53,7 +53,7 @@ interface EvidenceSelectProps {
   /** Both are needed to query. Either being absent means the picker cannot run, not that it failed. */
   relatedRecordType: string | null;
   relatedRecordId: string | null;
-  /** Must be stable across renders — a module-level function, not an inline arrow. */
+  /** Must be stable across renders - a module-level function, not an inline arrow. */
   search: EvidenceSearch;
   value: string;
   onChange: (value: string) => void;
@@ -120,7 +120,7 @@ export const EvidenceSelect = ({
             (evidence.loading
               ? 'Looking for evidence filed against this record…'
               : options.length === 0 && relatedRecordType && relatedRecordId
-                ? `Nothing is filed against ${relatedRecordType} ${relatedRecordId.slice(0, 8)} yet — register it under Evidence and audit, then paste the reference here.`
+                ? `Nothing is filed against ${relatedRecordType} ${relatedRecordId.slice(0, 8)} yet - register it under Evidence and audit, then paste the reference here.`
                 : 'Paste the reference id from Evidence and audit.')
           }
         />

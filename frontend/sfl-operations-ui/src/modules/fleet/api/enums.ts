@@ -1,7 +1,7 @@
 /**
  * Enumerations mirrored from the Fleet & Logistics service domain model.
  *
- * Values are the wire values — the Java enum constant names. Labels are UI-only; the service never
+ * Values are the wire values - the Java enum constant names. Labels are UI-only; the service never
  * sees them. Every list here was read off the corresponding
  * `gh.edu.clet.sfl.fleetlogistics.fleet.domain.model` enum, not inferred from documentation.
  */
@@ -225,7 +225,7 @@ export type ReadinessBlockerCode = (typeof READINESS_BLOCKER_CODES)[number];
 /** Turns `PASSED_WITH_DEFECTS` into `Passed with defects` for display. */
 export const humanise = (value: string | null | undefined): string => {
   if (!value) {
-    return '—';
+    return '-';
   }
   const spaced = value.replace(/_/g, ' ').toLowerCase();
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);

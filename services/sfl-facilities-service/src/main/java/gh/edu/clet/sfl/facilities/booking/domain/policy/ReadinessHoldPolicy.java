@@ -5,7 +5,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.ReadinessHoldReason;
 import gh.edu.clet.sfl.facilities.masterdata.domain.LocationReadinessStatus;
 
 /**
- * Whether the state of a space is a reason not to use it — SRS-SFL-S159-02.
+ * Whether the state of a space is a reason not to use it - SRS-SFL-S159-02.
  *
  * <h2>One function, two jobs</h2>
  *
@@ -17,7 +17,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.LocationReadinessStatus;
  *       told the hall is blocked and picks another one, or somebody with
  *       {@code FACILITIES_BOOKING_OVERRIDE} books it anyway with a recorded reason.</li>
  *   <li><strong>Afterwards</strong> a non-null answer is a <em>hold</em>. The booking already exists
- *       and is in somebody's diary, so it keeps its status and gains a visible flag — see
+ *       and is in somebody's diary, so it keeps its status and gains a visible flag - see
  *       {@code Booking} for why a hold is not a state.</li>
  * </ul>
  *
@@ -44,7 +44,7 @@ public final class ReadinessHoldPolicy {
      * blocked is reported as withdrawn, because that is the fact the reader has to deal with.
      *
      * @param readinessLocked the NFR 23.3 examination lock. A locked hall is being held for an
-     *        examination, so a meeting booked into it is the thing that has to move — which is why
+     *        examination, so a meeting booked into it is the thing that has to move - which is why
      *        the test exempts examination bookings rather than treating the lock as a blanket refusal.
      */
     public static ReadinessHoldReason holdFor(BookingPurpose purpose, LocationReadinessStatus readiness,

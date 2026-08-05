@@ -16,13 +16,13 @@ import {
 /**
  * Programme entitlement for the **current actor**.
  *
- * The mapping itself lives in `programmeModel.ts`, which imports nothing — that separation is what
+ * The mapping itself lives in `programmeModel.ts`, which imports nothing - that separation is what
  * lets the decision "who sees what" be exercised directly instead of only through a running
  * application. This file is the thin part: read the actor's roles, apply the override, expose the
  * answer.
  *
  * The rule: **a user sees the programmes they are entitled to.** A driver or a head of fleet sees
- * fleet, fuel and dispatch — not CCTV access management, not intrusion detection, not visitor
+ * fleet, fuel and dispatch - not CCTV access management, not intrusion detection, not visitor
  * badges. A manager or superadmin sees everything. ADR 0005.
  *
  * **This is a usability control, not a security control.** Until IAM is integrated there is no
@@ -43,7 +43,7 @@ export const isCrossProgrammeActor: boolean = isCrossProgramme(actorRoles);
 /**
  * The programmes this actor may see.
  *
- * Derived from roles, because that is what IAM will do — there is no separate entitlement list to
+ * Derived from roles, because that is what IAM will do - there is no separate entitlement list to
  * drift out of step with the roles the actor already sends. `VITE_SFL_PROGRAMMES` overrides it
  * outright, which is how to look at one programme's screens without rewriting a role list; the
  * development actor switcher sets the same field, and takes precedence over the environment because
@@ -65,7 +65,7 @@ export const entitledTo = (code: ProgrammeCode): boolean => actorProgrammes.incl
  * The systems this actor may see, within the programmes they are entitled to.
  *
  * The finer half of the rule. FTLMP is three systems in one deployable, so programme entitlement
- * alone shows a mailroom officer the whole fleet register and a driver the courier manifests — screens
+ * alone shows a mailroom officer the whole fleet register and a driver the courier manifests - screens
  * they can open and cannot use, because the service refuses every call behind them.
  *
  * `VITE_SFL_SYSTEMS` overrides it outright, the same way `VITE_SFL_PROGRAMMES` overrides the coarser

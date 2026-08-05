@@ -25,7 +25,7 @@ import tools.jackson.databind.ObjectMapper;
  *
  * <p>{@link #record} joins the caller's transaction, so a state change and its audit entry commit or
  * roll back together. {@link #recordAuthorizationDenied} runs in its own transaction because a denial
- * happens on a request that is about to fail — joining that transaction would discard the evidence that
+ * happens on a request that is about to fail - joining that transaction would discard the evidence that
  * the denial occurred.
  */
 @Component
@@ -100,7 +100,7 @@ public class JpaAuditAdapter implements AuditPort {
      * the thing being refused is a dashboard, a report or a collection rather than one record. This
      * guard used to test {@code == null} only, which was not enough: {@code FuelAccessPolicy} and
      * {@code DispatchAccessPolicy} build their denial details with {@code Map.of}, which rejects nulls,
-     * so both substitute {@code ""} — and an empty string slipped past the null check and died in the
+     * so both substitute {@code ""} - and an empty string slipped past the null check and died in the
      * constructor. The denial itself was enforced and returned 403; the audit record of it was thrown
      * away and only logged. Twenty-seven call sites across fuel and dispatch were affected; fleet was
      * not, because its own details builder omits null keys rather than blanking them.
@@ -119,7 +119,7 @@ public class JpaAuditAdapter implements AuditPort {
      * <p>{@link AuditHashChain} hashes {@code occurredAt.toString()}. The JVM clock hands out
      * nanoseconds and {@code timestamptz} keeps microseconds, so the value hashed on the way in was not
      * the value read back on replay, and **every record written by a real clock broke the chain**.
-     * Verification against a live database found it diverging at sequence 8 — the first record written
+     * Verification against a live database found it diverging at sequence 8 - the first record written
      * outside a test.
      *
      * <p>It survived four build passes because it is invisible to the entire unit suite: those tests
@@ -129,7 +129,7 @@ public class JpaAuditAdapter implements AuditPort {
      * fix facilities applied.
      *
      * <p>Records written before this fix cannot be repaired. A hash chain has no mechanism for
-     * amending history — that is the property it exists to provide — so a database carrying pre-fix
+     * amending history - that is the property it exists to provide - so a database carrying pre-fix
      * records will keep reporting tampered at the first of them. See the S166 gap report for what to do
      * about an existing environment.
      */

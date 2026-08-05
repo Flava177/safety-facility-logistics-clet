@@ -21,7 +21,7 @@ interface SetReadinessDialogProps {
  *
  * An assessment is the ordinary route and it computes the outcome, which is right: two officers
  * answering the same checklist should reach the same status. But an estate does not always have a
- * checklist to hand — a space is taken out of use for a burst pipe, or brought back after one — and
+ * checklist to hand - a space is taken out of use for a burst pipe, or brought back after one - and
  * the service exposes `PATCH /rooms/{id}/readiness` for exactly that. Without this dialog that
  * endpoint has no way in, and an operator's only recourse is to invent an assessment.
  *
@@ -29,7 +29,7 @@ interface SetReadinessDialogProps {
  *
  * The critical-blocker rule is enforced by the service and would refuse this write anyway. It is
  * checked here as well, because being told *after* filling in a note that the thing was never
- * possible is a worse experience than being shown the count up front — and because the count is the
+ * possible is a worse experience than being shown the count up front - and because the count is the
  * useful part of the message. {@link setReadinessAction} is the single place that rule is expressed
  * on this side; the disabled option carries its reason rather than restating it.
  *
@@ -68,7 +68,7 @@ const SetReadinessDialog = ({ space, openBlockers, onClose, onSubmit }: SetReadi
     <FormDialog
       open
       title="Set readiness"
-      description={`${space.roomCode} — ${space.name}`}
+      description={`${space.roomCode} - ${space.name}`}
       submitLabel="Set readiness"
       submitting={submitting}
       submitDisabled={!action.allowed || unchanged}

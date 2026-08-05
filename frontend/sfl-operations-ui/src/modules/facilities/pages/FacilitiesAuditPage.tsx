@@ -28,7 +28,7 @@ import { formatDateTime, humaniseCode, orDash } from '../components/facilitiesFo
  * and burying it among thirty state changes hides it.
  *
  * **The integrity result is reported honestly.** A broken chain says which record it broke at and
- * what was expected against what was found — not a red badge. SRS-SFL-S152-03 makes this an escalation
+ * what was expected against what was found - not a red badge. SRS-SFL-S152-03 makes this an escalation
  * to compliance and security, and an escalation needs something an investigator can act on.
  */
 const FacilitiesAuditPage = () => {
@@ -57,7 +57,7 @@ const FacilitiesAuditPage = () => {
       const result = await verifyAuditChain();
       setVerification(result);
       if (result.intact) {
-        notify.notifySuccess(`Audit chain intact — ${result.recordsVerified} records verified.`);
+        notify.notifySuccess(`Audit chain intact - ${result.recordsVerified} records verified.`);
       } else {
         notify.notifyError(
           new Error('Audit integrity check failed. Escalate to compliance and security.'),
@@ -145,7 +145,7 @@ const FacilitiesAuditPage = () => {
             variant={verification.intact ? 'success' : 'error'}
             title={
               verification.intact
-                ? `Chain intact — ${verification.recordsVerified} records verified`
+                ? `Chain intact - ${verification.recordsVerified} records verified`
                 : 'Audit integrity check failed. Escalate to compliance and security.'
             }
           >

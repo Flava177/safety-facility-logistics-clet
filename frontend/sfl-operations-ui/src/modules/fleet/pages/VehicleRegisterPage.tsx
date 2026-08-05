@@ -53,7 +53,7 @@ const emptyFilters: Filters = {
 /**
  * The vehicle register.
  *
- * Filtering, sorting and paging all run server-side — the service owns site scoping, so a
+ * Filtering, sorting and paging all run server-side - the service owns site scoping, so a
  * client-side filter over one page would quietly show the wrong denominator.
  */
 const VehicleRegisterPage = () => {

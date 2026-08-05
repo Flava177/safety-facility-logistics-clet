@@ -35,7 +35,7 @@ public interface ComplianceDocumentRepository {
      * Cross-fleet compliance search.
      *
      * <p>Closes gap 10. There was no search, so the compliance screen fanned out over the first
-     * fifty active vehicles in scope and said so on the page — correct for a small fleet and
+     * fifty active vehicles in scope and said so on the page - correct for a small fleet and
      * quietly wrong for any other.
      */
     List<ComplianceDocument> search(SiteScopeFilter scope, ComplianceDocumentType documentType,

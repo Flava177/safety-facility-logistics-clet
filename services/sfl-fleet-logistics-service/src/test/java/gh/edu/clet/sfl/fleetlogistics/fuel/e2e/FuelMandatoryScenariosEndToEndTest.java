@@ -76,10 +76,10 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         // missing-receipt grace test still resolve an applicable policy at reconcile time; every other field mirrors the critical test.
         fuel.createPolicy(new FuelApplicationService.CreatePolicy(site,"Default",now.minusSeconds(7L*24*3600),null,1,new BigDecimal("50"),new BigDecimal("100"),new BigDecimal("1000"),new BigDecimal("80"),null,null,500,true,24,new BigDecimal("400"),8,Set.of("DIESEL"),Set.of("CLET STATION"),manager,SourceChannel.WEB));
         // Every fixture capture quotes card 1234567890, and since S168fuel-04 an unquoted card is an
-        // anomaly — so the fixture has to register it, exactly as a site must before its transactions
+        // anomaly - so the fixture has to register it, exactly as a site must before its transactions
         // can reconcile. That is the control working, not the fixture accommodating a quirk.
         // "****7890", not "1234567890": capture masks the number on the way in and stores only the
-        // last four, so the register has to be keyed on the same masked form. That is the point — the
+        // last four, so the register has to be keyed on the same masked form. That is the point - the
         // full card number is payment data and never reaches this platform.
         cards.issue(new FuelCardService.IssueCard(site,"****7890","CLET FUEL CARDS",vehicle.id(),
                 driver.id(),LocalDate.now().minusDays(7),null,null,null,null,null,manager,SourceChannel.WEB));
@@ -124,7 +124,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     // 2
     @Test void duplicate_provider_transaction_is_idempotent() {
         Fixture f = newFixture();
-        // Identical command (same idempotency key AND same payload fingerprint) — a re-delivered provider transaction.
+        // Identical command (same idempotency key AND same payload fingerprint) - a re-delivered provider transaction.
         var command = new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-DUP","MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,UUID.randomUUID(),"official trip","tx-dup-"+f.site(),f.manager(),SourceChannel.WEB);
         var first = fuel.capture(command);
         int sizeAfterFirst = transactions(f).size();
@@ -214,7 +214,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
 
-    // SRS-SFL-S168fuel-04 — the card register, which had no implementation at all.
+    // SRS-SFL-S168fuel-04 - the card register, which had no implementation at all.
     @Test void a_fuel_card_must_be_known_active_and_on_the_right_vehicle() {
         Fixture f = newFixture();
         Instant now = Instant.now();
@@ -234,7 +234,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         assertThat(fuel.reconcile(good.id(),f.manager(),SourceChannel.WEB).status())
                 .isEqualTo(FuelTransaction.Status.RECONCILED);
 
-        // Suspended, and the same card stops working — with a reason on the record.
+        // Suspended, and the same card stops working - with a reason on the record.
         cards.transition(new FuelCardService.TransitionCard(card.id(),"suspend","Reported lost",null,null,
                 f.manager(),SourceChannel.WEB));
         var suspended = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-3","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1300,UUID.randomUUID(),null,"tx-card-susp-"+f.site(),f.manager(),SourceChannel.WEB));
@@ -268,7 +268,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
 
         // The same rule, proved on a record the driver did not create and fetches **by id**. The
         // narrowing used to live only in the logbook list's SQL, so a driver holding a colleague's
-        // id read the whole record — journey, route, purpose, passenger notes — through the detail
+        // id read the whole record - journey, route, purpose, passenger notes - through the detail
         // endpoint. A narrowing the collection obeys and the record does not is decorative: the row
         // still crosses the boundary, one at a time instead of in a page. An empty list is not
         // evidence of this rule; a refusal by id is.

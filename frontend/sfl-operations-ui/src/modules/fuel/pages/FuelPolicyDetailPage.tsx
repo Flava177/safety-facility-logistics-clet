@@ -23,7 +23,7 @@ const inForce = (policy: FuelPolicy, at = Date.now()): boolean =>
 /**
  * A fuel policy in full.
  *
- * Read by id. That was not possible when this screen was first built — there was no
+ * Read by id. That was not possible when this screen was first built - there was no
  * `GET /policies/{id}`, so the page walked the actor's sites listing policies until it found one,
  * and a deep link into a policy at a site the picker had not selected was a dead end. A policy
  * outside the actor's scope now answers with the service's own not-found or authorisation error.
@@ -120,7 +120,7 @@ const FuelPolicyDetailPage = () => {
                         label: 'Tank capacity',
                         value:
                           policy.tankCapacity === null
-                            ? 'Not set — rule skipped'
+                            ? 'Not set - rule skipped'
                             : formatNumber(policy.tankCapacity),
                       },
                       {
@@ -185,7 +185,7 @@ const FuelPolicyDetailPage = () => {
                       <p className="text-theme-xs font-semibold text-gray-600">Fuel products</p>
                       {policy.allowedFuelProducts.length === 0 ? (
                         <p className="mt-1 text-theme-sm text-gray-700">
-                          None listed — any product is allowed.
+                          None listed - any product is allowed.
                         </p>
                       ) : (
                         <ul className="mt-1.5 flex flex-wrap gap-1.5">
@@ -201,7 +201,7 @@ const FuelPolicyDetailPage = () => {
                       <p className="text-theme-xs font-semibold text-gray-600">Approved vendors</p>
                       {policy.approvedVendors.length === 0 ? (
                         <p className="mt-1 text-theme-sm text-gray-700">
-                          None listed — any vendor is allowed.
+                          None listed - any vendor is allowed.
                         </p>
                       ) : (
                         <ul className="mt-1.5 flex flex-wrap gap-1.5">
@@ -252,7 +252,7 @@ const FuelPolicyDetailPage = () => {
 
                 <SectionCard title="Editing">
                   <Alert variant="info" title="Policies are not editable">
-                    The service exposes create and read only — there is no update or archive
+                    The service exposes create and read only - there is no update or archive
                     endpoint. Superseding a policy means creating one whose period begins where this
                     one ends; an overlapping period is refused, so an open-ended policy has to be
                     given an end date before a successor can be created, which is not possible today.

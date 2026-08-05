@@ -10,7 +10,7 @@ import java.util.List;
  * {@code DispatchPageResponse}.
  *
  * <p>Before this, every S174 collection returned a bare {@code List<T>} capped at 200 by the
- * application service, with no {@code size} parameter to raise it — no total, no page, and no way
+ * application service, with no {@code size} parameter to raise it - no total, no page, and no way
  * for a client to know whether it held the register or the first two hundred rows of it. A dashboard
  * could only be honest about that by guessing from whether the list came back full.
  *

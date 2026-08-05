@@ -18,8 +18,8 @@ import java.util.UUID;
  * Everything S153 stores, behind one port.
  *
  * <p>One port rather than five, mirroring S152's {@code FacilitiesRepository}. The five aggregates
- * here are read together constantly — a work order needs its fault, its parts and its evidence, and
- * closing it touches the schedule that raised it — so splitting them would produce five interfaces
+ * here are read together constantly - a work order needs its fault, its parts and its evidence, and
+ * closing it touches the schedule that raised it - so splitting them would produce five interfaces
  * that every service injects all of, plus five adapters that all wrap the same transaction.
  *
  * <p>The application layer sees only this. The previous version of these services named JPA types

@@ -74,7 +74,7 @@ interface JpaFacilityRoomRepository extends JpaRepository<FacilityRoomRecord, UU
     List<FacilityRoomRecord> findStaleReadiness(@Param("siteCode") String siteCode,
             @Param("threshold") Instant threshold);
 
-    /** Every active space in a site — the dashboard's input, counted in memory rather than four times. */
+    /** Every active space in a site - the dashboard's input, counted in memory rather than four times. */
     @Query("""
             select r from FacilityRoomRecord r
             where (:siteCode is null or r.siteCode = :siteCode)

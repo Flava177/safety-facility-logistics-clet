@@ -53,7 +53,7 @@ type OpenDialog = 'decide' | 'reschedule' | 'cancel' | 'complete' | null;
  * ## The readiness notice is the point of the screen
  *
  * A confirmed booking on a hall blocked on Tuesday is still confirmed and still in somebody's diary.
- * S159 marks it rather than cancelling it, deliberately — moving it to an `AT_RISK` state would
+ * S159 marks it rather than cancelling it, deliberately - moving it to an `AT_RISK` state would
  * decide on the estate's behalf that Tuesday's leak will still be there on Friday. So the notice says
  * what is wrong and leaves the decision to a person, which is what the flag is for.
  *
@@ -109,7 +109,7 @@ const BookingDetailPage = () => {
       hideBelowLg: true,
       // Worth its own column: an exclusive resource is refused by the database rather than by
       // arithmetic, which is a materially stronger guarantee than "there are three of them".
-      cell: (row) => (row.exclusive ? <StatusChip value="EXCLUSIVE" tone="accent" /> : '—'),
+      cell: (row) => (row.exclusive ? <StatusChip value="EXCLUSIVE" tone="accent" /> : '-'),
     },
     {
       key: 'released',
@@ -138,7 +138,7 @@ const BookingDetailPage = () => {
       width: 180,
       cell: (row) => (
         <span className={row.overdue ? 'font-medium text-error-800' : undefined}>
-          {row.dueBy ? formatDateTime(row.dueBy) : '—'}
+          {row.dueBy ? formatDateTime(row.dueBy) : '-'}
         </span>
       ),
     },
@@ -175,7 +175,7 @@ const BookingDetailPage = () => {
                     tone={bookingStatusTone(record.status)}
                     size="md"
                   />
-                  {/* Beside the status, never instead of it — the two say different things. */}
+                  {/* Beside the status, never instead of it - the two say different things. */}
                   {record.readinessHoldReason && (
                     <StatusChip value="ON_HOLD" label="Readiness hold" tone="blocked" size="md" />
                   )}
@@ -226,7 +226,7 @@ const BookingDetailPage = () => {
                   </p>
                   <p className="mt-2 text-theme-sm">
                     The booking is still {humaniseCode(record.status).toLowerCase()} and still in
-                    everybody&rsquo;s diary — the hold marks it rather than cancelling it, because
+                    everybody&rsquo;s diary - the hold marks it rather than cancelling it, because
                     whether the space is fixed by then is a judgement for a person. Move it or cancel
                     it if it cannot go ahead.
                   </p>
@@ -352,10 +352,10 @@ const BookingDetailPage = () => {
                     { label: 'Requested by', value: record.requestedBy },
                     { label: 'On behalf of', value: orDash(record.requestedFor) },
                     { label: 'Requested', value: formatDateTime(record.requestedAt) },
-                    { label: 'Started', value: record.startedAt ? formatDateTime(record.startedAt) : '—' },
+                    { label: 'Started', value: record.startedAt ? formatDateTime(record.startedAt) : '-' },
                     {
                       label: 'Completed',
-                      value: record.completedAt ? formatDateTime(record.completedAt) : '—',
+                      value: record.completedAt ? formatDateTime(record.completedAt) : '-',
                     },
                     { label: 'Lifecycle', value: humaniseCode(record.lifecycleStatus) },
                     { label: 'Version', value: String(record.metadata.version) },
@@ -380,7 +380,7 @@ const BookingDetailPage = () => {
                     record.approvalRequired ? 'Not yet decided' : 'No approval was needed'
                   }
                   /*
-                    The absence of an approval record is itself the statement that none was needed —
+                    The absence of an approval record is itself the statement that none was needed -
                     there is no separate flag that could fall out of step with it.
                   */
                   emptyHint={

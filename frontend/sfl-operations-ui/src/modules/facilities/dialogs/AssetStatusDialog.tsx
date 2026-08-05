@@ -20,7 +20,7 @@ interface AssetStatusDialogProps {
  * Changing an asset's condition.
  *
  * The dialog's job is to show the *consequence* before the change, not just accept it. Putting a
- * critical generator out of service blocks the examination hall it powers — that is one fact with
+ * critical generator out of service blocks the examination hall it powers - that is one fact with
  * two faces, and an operator who sees only the first will be surprised by the second on the
  * dashboard ten minutes later.
  *

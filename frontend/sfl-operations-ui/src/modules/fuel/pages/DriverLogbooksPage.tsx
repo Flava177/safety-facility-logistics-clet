@@ -33,7 +33,7 @@ import { fuelPaths } from 'shared/layout/navigation';
  * route search are applied here over the returned window and are labelled as such.
  *
  * One service behaviour shapes what an operator sees and is worth knowing: a `FLEET_DRIVER`-only
- * actor gets **their own logbooks only** — `FuelApplicationService.logbooks` passes `ownOnly` from
+ * actor gets **their own logbooks only** - `FuelApplicationService.logbooks` passes `ownOnly` from
  * `isDriverOnly(actor)`. A manager or logistics officer sees the site. The dashboard does not filter
  * this itself; it is simply what came back.
  */
@@ -103,7 +103,7 @@ const DriverLogbooksPage = () => {
         align: 'right',
         cell: (row) =>
           row.endOdometer === null || row.endOdometer === undefined
-            ? '—'
+            ? '-'
             : `${formatNumber(row.endOdometer - row.startOdometer)} km`,
       },
       {

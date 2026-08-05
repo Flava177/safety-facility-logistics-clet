@@ -8,7 +8,7 @@ import { clearSession, decodeClaims, isExpired, readSession, sessionFromTokens, 
  * entitlement, system entitlement and every permission-gated control in the sidebar. Before the login
  * page those came from a comma-separated environment variable that a human typed; they now come from
  * a token, and a parser that silently returns `[]` on a shape it did not expect would hide every
- * screen from a correctly-signed-in operator — a failure that looks exactly like a permissions
+ * screen from a correctly-signed-in operator - a failure that looks exactly like a permissions
  * problem and is not one.
  */
 
@@ -35,7 +35,7 @@ afterEach(() => {
 
 describe('decodeClaims', () => {
   it('reads a base64url payload with no padding', () => {
-    // Keycloak strips the padding. `atob` requires it, so the decoder has to put it back — this is
+    // Keycloak strips the padding. `atob` requires it, so the decoder has to put it back - this is
     // the case that fails if it does not.
     const claims = decodeClaims(tokenWith({ preferred_username: 'fleet.manager', exp: 1 }));
     expect(claims?.preferred_username).toBe('fleet.manager');
@@ -43,8 +43,8 @@ describe('decodeClaims', () => {
 
   it('survives non-ASCII in a display name', () => {
     // Decoding with atob alone mangles anything above U+007F, and CLET names carry accents.
-    const claims = decodeClaims(tokenWith({ name: 'Yaa Asantewaa — Fleet', exp: 1 }));
-    expect(claims?.name).toBe('Yaa Asantewaa — Fleet');
+    const claims = decodeClaims(tokenWith({ name: 'Yaa Asantewaa - Fleet', exp: 1 }));
+    expect(claims?.name).toBe('Yaa Asantewaa - Fleet');
   });
 
   it('returns null rather than throwing on a token that is not one', () => {
@@ -127,8 +127,8 @@ describe('storage', () => {
   /*
     These re-import the module rather than calling clearSession, because the thing being tested is
     what happens on a **page load** that finds a token already in storage. `readSession` caches on
-    first read by design — everything derived from the actor is computed once at module scope, which
-    is what lets the sidebar and route guards be synchronous — so a fresh import is the only honest
+    first read by design - everything derived from the actor is computed once at module scope, which
+    is what lets the sidebar and route guards be synchronous - so a fresh import is the only honest
     way to simulate arriving with storage already populated.
   */
   const freshModule = async () => {
@@ -154,7 +154,7 @@ describe('storage', () => {
 
   it('clears an expired session rather than returning it', async () => {
     // A stale token left in storage produces 401s that look like a permissions problem, so finding
-    // one is treated as finding nothing — and it is removed on the way out rather than left to do
+    // one is treated as finding nothing - and it is removed on the way out rather than left to do
     // it again on the next load.
     const stale = sessionFromTokens(tokenWith({ exp: inAnHour() }), null)!;
     sessionStorage.setItem(

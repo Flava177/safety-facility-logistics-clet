@@ -25,7 +25,7 @@ public interface DispatchRepository {
      *
      * <p>Shaped like the fleet {@code PageResponse} and the fuel {@code FuelPage} so all three
      * modules of this service page the same way from an operator's point of view, but declared here
-     * rather than imported from the API layer — the port must not depend on a transport type.
+     * rather than imported from the API layer - the port must not depend on a transport type.
      *
      * <p>{@code sort} is echoed back because the caller may have asked for a default: a client that
      * cannot see which ordering it got cannot tell a stable page from a shifting one.
@@ -43,7 +43,7 @@ public interface DispatchRepository {
     /**
      * Paging and ordering, normalised.
      *
-     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL — the adapter maps
+     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL - the adapter maps
      * it to a column plus a deterministic tiebreak on {@code id}, because a page over rows that
      * share a sort value will otherwise skip or repeat records between requests.
      */
@@ -118,7 +118,7 @@ public interface DispatchRepository {
     // Custody handovers (append-only)
     CustodyHandover saveHandover(CustodyHandover handover);
     List<CustodyHandover> findHandovers(UUID dispatchId);
-    /** Site-wide custody read. Closes gap 7 — before this, custody was readable per consignment only. */
+    /** Site-wide custody read. Closes gap 7 - before this, custody was readable per consignment only. */
     DispatchPage<CustodyHandover> findHandovers(CustodyQuery query);
     int nextHandoverSequence(UUID dispatchId);
 
@@ -149,7 +149,7 @@ public interface DispatchRepository {
     ScanImportBatch saveScanBatch(ScanImportBatch batch);
     Optional<ScanImportBatch> findScanBatch(UUID id);
     Optional<ScanImportBatch> findScanBatchByReference(String siteCode, String sourceSystem, String batchReference);
-    /** Lists scan batches. Closes gap 3 — a batch was previously reachable only by an id nobody kept. */
+    /** Lists scan batches. Closes gap 3 - a batch was previously reachable only by an id nobody kept. */
     DispatchPage<ScanImportBatch> findScanBatches(ScanBatchQuery query);
     ScanImportRow saveScanRow(ScanImportRow row);
     List<ScanImportRow> findScanRows(UUID batchId);

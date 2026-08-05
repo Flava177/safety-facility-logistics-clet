@@ -84,7 +84,7 @@ const AssetDetailPage = () => {
                 <Alert variant="error" title="This asset is impairing a space">
                   {asset.data.assetCode} is {humaniseCode(asset.data.operationalStatus).toLowerCase()}{' '}
                   and is raising a readiness blocker
-                  {space.data ? ` on ${space.data.roomCode} — ${space.data.name}` : ''}. Returning it
+                  {space.data ? ` on ${space.data.roomCode} - ${space.data.name}` : ''}. Returning it
                   to service resolves that blocker.
                 </Alert>
               )}
@@ -160,7 +160,7 @@ const AssetDetailPage = () => {
                 {space.data ? (
                   <KeyValueGrid
                     items={[
-                      { label: 'Space', value: `${space.data.roomCode} — ${space.data.name}` },
+                      { label: 'Space', value: `${space.data.roomCode} - ${space.data.name}` },
                       {
                         label: 'Space readiness',
                         value: <StatusChip value={space.data.readinessStatus} />,

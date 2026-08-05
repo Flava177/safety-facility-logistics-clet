@@ -87,7 +87,7 @@ public class DispatchIntegrationController {
     /**
      * A carrier reporting movement against a dispatch.
      *
-     * <p><strong>This had no check of any kind</strong> — no permission, and, unlike
+     * <p><strong>This had no check of any kind</strong> - no permission, and, unlike
      * {@link #scannerEvent} directly above it, no HMAC signature and no pass through the integration
      * inbox. Any authenticated caller holding no dispatch permission and scoped to no site could post
      * carrier status for any {@code dispatchId} at any site. The impact today is bounded because

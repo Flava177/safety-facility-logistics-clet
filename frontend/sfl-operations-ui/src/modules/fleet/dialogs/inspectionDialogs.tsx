@@ -23,7 +23,7 @@ import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 
 /**
- * A standalone periodic inspection — the one that has no trip.
+ * A standalone periodic inspection - the one that has no trip.
  *
  * Until `POST /vehicles/{id}/inspections` existed, an inspection could only be recorded against a
  * trip, so a vehicle sitting in the yard could not be inspected at all. That blocked the
@@ -129,7 +129,7 @@ export const RecordStandaloneInspectionDialog = ({
     <FormDialog
       open={open}
       title="Record a periodic inspection"
-      description={`${vehicle.registrationNumber}. No trip is involved — the findings decide the result.`}
+      description={`${vehicle.registrationNumber}. No trip is involved - the findings decide the result.`}
       submitLabel="Record inspection"
       submitting={form.submitting}
       formError={form.formError}
@@ -179,7 +179,7 @@ export const RecordStandaloneInspectionDialog = ({
 
       {findings.length === 0 ? (
         <p className="text-theme-sm text-gray-500">
-          No findings recorded — this inspection will pass. A periodic check with nothing wrong is a
+          No findings recorded - this inspection will pass. A periodic check with nothing wrong is a
           real and useful record, so this is a legitimate outcome rather than an empty form.
         </p>
       ) : (
@@ -237,7 +237,7 @@ export const RecordStandaloneInspectionDialog = ({
       <Alert variant={hasCritical ? 'error' : findings.length > 0 ? 'warning' : 'success'}>
         Expected result: <strong>{humanise(predictedResult)}</strong>
         {hasCritical &&
-          ' — a critical defect fails the inspection, takes the vehicle out of service and opens a defect workflow item so somebody owns the rectification.'}
+          ' - a critical defect fails the inspection, takes the vehicle out of service and opens a defect workflow item so somebody owns the rectification.'}
       </Alert>
     </FormDialog>
   );

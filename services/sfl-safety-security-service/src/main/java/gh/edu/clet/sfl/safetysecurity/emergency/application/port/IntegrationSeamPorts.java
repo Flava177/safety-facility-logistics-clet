@@ -6,7 +6,7 @@ import java.util.UUID;
 /**
  * Provider-neutral integration seams for S174. Grouped here as small interfaces so the workflow depends
  * only on contracts, never on vendor SDKs. Phase-1 recorded adapters implement these; life-safety and
- * lockdown/CCTV are strictly observe-only / seam-only — SFL never actuates certified life-safety hardware.
+ * lockdown/CCTV are strictly observe-only / seam-only - SFL never actuates certified life-safety hardware.
  */
 public final class IntegrationSeamPorts {
 

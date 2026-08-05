@@ -26,13 +26,13 @@ interface RegisterResourceDialogProps {
  * ## What a quantity of exactly one buys
  *
  * It makes the resource **exclusive**, and exclusivity is enforced by the database rather than by
- * arithmetic — the same GIST exclusion constraint that stops two bookings taking one hall. That is
+ * arithmetic - the same GIST exclusion constraint that stops two bookings taking one hall. That is
  * why the field says so: an operator entering `1` for a projector is choosing a stronger guarantee
  * than one entering `2`, and it is not obvious from the number.
  *
  * ## Why this is not the asset register
  *
- * An S152 asset is fixed plant whose condition feeds a space's readiness — a generator, a chiller. A
+ * An S152 asset is fixed plant whose condition feeds a space's readiness - a generator, a chiller. A
  * resource is portable and its scarcity is the point. The same physical projector can move between
  * the two over its life, which is why `assetId` links them as a value rather than a foreign key.
  */
@@ -126,7 +126,7 @@ const RegisterResourceDialog = ({ onClose, onSubmit }: RegisterResourceDialogPro
             error={quantity !== '' && !quantityValid}
             helperText={
               amount === 1
-                ? 'One makes it exclusive — the database refuses a second booking of it.'
+                ? 'One makes it exclusive - the database refuses a second booking of it.'
                 : 'One row for a set, not one row per item.'
             }
           />
@@ -138,8 +138,8 @@ const RegisterResourceDialog = ({ onClose, onSubmit }: RegisterResourceDialogPro
           onChange={setRequiresSetup}
           required
           options={[
-            { value: 'false', label: 'No — it is ready as it stands' },
-            { value: 'true', label: 'Yes — raise a turnaround task when it is booked' },
+            { value: 'false', label: 'No - it is ready as it stands' },
+            { value: 'true', label: 'Yes - raise a turnaround task when it is booked' },
           ]}
           helperText="A booking taking this resource raises a setup task automatically."
         />

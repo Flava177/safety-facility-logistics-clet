@@ -6,7 +6,7 @@ import { cn } from './cn';
  * <p>A dialog body scrolls at `68vh`. On the longer forms that means the fields you filled first have
  * left the screen by the time you reach the submit button, so the last thing you see before
  * committing a record is whatever happened to be at the bottom of the form. This is pinned between
- * the scroll area and the footer for exactly that reason — it is the one part that must not scroll.
+ * the scroll area and the footer for exactly that reason - it is the one part that must not scroll.
  *
  * <p>It reads back what was entered rather than repeating the labels: `Accra HQ → Kumasi Centre`,
  * `13,500 → 13,880 km · 380 km covered`. A derived value is the point. Nobody checks whether an
@@ -18,10 +18,10 @@ import { cn } from './cn';
 
 export interface SummaryItem {
   label: string;
-  /** Blank, null or undefined renders as a dash — "not yet answered" is worth showing. */
+  /** Blank, null or undefined renders as a dash - "not yet answered" is worth showing. */
   value: string | null | undefined;
   /**
-   * Draws the eye to a derived figure — distance covered, a total, a computed window. Reserved for
+   * Draws the eye to a derived figure - distance covered, a total, a computed window. Reserved for
    * values the operator did not type and would not otherwise check.
    */
   emphasis?: boolean;
@@ -60,7 +60,7 @@ const FormSummary = ({ items, className }: FormSummaryProps) => {
                   : 'text-gray-400',
               )}
             >
-              {value || '—'}
+              {value || '-'}
             </dd>
           </div>
         );

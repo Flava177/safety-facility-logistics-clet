@@ -43,7 +43,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The booking workflow — SRS-SFL-S159-02.
+ * The booking workflow - SRS-SFL-S159-02.
  *
  * <h2>The order the checks run in, which is the design</h2>
  *
@@ -55,7 +55,7 @@ import org.springframework.transaction.annotation.Transactional;
  *       learn from a timing difference whether a room exists.</li>
  *   <li><strong>The window itself.</strong> Inverted, zero-length, over the maximum duration, already
  *       finished, or beyond the booking horizon. All data-entry errors, none of them about the estate.</li>
- *   <li><strong>Readiness.</strong> Whether this space can host this purpose at all — see
+ *   <li><strong>Readiness.</strong> Whether this space can host this purpose at all - see
  *       {@link ReadinessHoldPolicy}. Overridable, with a reason, by the few roles that hold it.</li>
  *   <li><strong>Space conflict.</strong> Somebody already has the hall.</li>
  *   <li><strong>Resource conflict.</strong> The hall is free but the projector is not.</li>
@@ -70,8 +70,8 @@ import org.springframework.transaction.annotation.Transactional;
  * written: two requests can both read an empty diary before either writes. The guarantee is the
  * {@code GIST} exclusion constraint in {@code V10}, which the adapter translates back into a
  * {@link FacilitiesException.BookingConflictException} so the loser of a race and somebody who simply
- * asked late get the same error state. Gate four exists to make the ordinary case <em>readable</em> —
- * naming the booking that has the room — not to make it correct.
+ * asked late get the same error state. Gate four exists to make the ordinary case <em>readable</em> -
+ * naming the booking that has the room - not to make it correct.
  *
  * <h2>Whose bookings a requester can see</h2>
  *
@@ -567,7 +567,7 @@ public class BookingApplicationService {
      * people's.
      *
      * <p>{@code FACILITIES_BOOKING_CANCEL} is that permission, and it carries more than its name
-     * suggests — it is the "manage somebody else's booking" grant, covering cancellation, moving and
+     * suggests - it is the "manage somebody else's booking" grant, covering cancellation, moving and
      * marking in use. A second permission that always travelled with it would be ceremony.
      */
     void requireMayAct(ActorContext actor, Booking booking, SourceChannel channel) {

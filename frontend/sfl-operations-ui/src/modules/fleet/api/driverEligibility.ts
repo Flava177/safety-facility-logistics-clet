@@ -5,7 +5,7 @@ import { DriverResponse } from './dto';
 /**
  * Why a driver is not eligible, in the operator's words.
  *
- * The driver endpoints return an eligibility status but no blocker list — only the assessment
+ * The driver endpoints return an eligibility status but no blocker list - only the assessment
  * endpoint carries one, and the register never calls it. A bare "Ineligible" chip therefore reads
  * as a defect rather than a finding, so these reasons are derived from the record itself: licence
  * expiry, medical clearance and lifecycle are the only inputs the response supports, and nothing

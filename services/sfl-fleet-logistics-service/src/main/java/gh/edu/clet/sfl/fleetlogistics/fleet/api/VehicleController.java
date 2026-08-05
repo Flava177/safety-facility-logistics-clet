@@ -221,8 +221,8 @@ class VehicleController {
       *
       * <p>Closes gap 4, which blocked the periodic-inspection half of SRS-SFL-S166-01: inspections
       * could only be recorded against a trip, so a vehicle sitting in the yard could not be inspected
-      * at all. The request record and the service path both existed already —
-      * {@code TripApplicationService.recordInspection} accepts a null trip with an explicit vehicle —
+      * at all. The request record and the service path both existed already -
+      * {@code TripApplicationService.recordInspection} accepts a null trip with an explicit vehicle -
       * and nothing mapped it.
       */
     @PostMapping("/{vehicleId}/inspections")
@@ -253,7 +253,7 @@ class VehicleController {
       * Cross-fleet compliance search.
       *
       * <p>Closes gap 10. Compliance was reachable per vehicle only, so the screen fanned out over the
-      * first fifty active vehicles in scope and said so on the page — correct for a small fleet and
+      * first fifty active vehicles in scope and said so on the page - correct for a small fleet and
       * quietly wrong for any other. Mapped under {@code /vehicles} rather than at the root because
       * a compliance document belongs to a vehicle.
       */

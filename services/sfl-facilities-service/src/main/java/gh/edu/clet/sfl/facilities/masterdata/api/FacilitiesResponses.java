@@ -30,7 +30,7 @@ import java.util.UUID;
  *
  * <p>Explicit response types rather than serialising the aggregates. The pre-S152 controller returned
  * domain records straight onto the wire, which meant every field added to an aggregate silently became
- * part of the public contract — and the aggregates have just grown a great deal.
+ * part of the public contract - and the aggregates have just grown a great deal.
  *
  * <p>{@code createdAt} and {@code active} are preserved on the shapes that had them so the existing
  * facilities dashboard page keeps working against the same JSON.
@@ -118,7 +118,7 @@ public final class FacilitiesResponses {
      * A space.
      *
      * <p>{@code availableForBooking} and {@code availableForExamination} are derived and returned rather
-     * than left for the caller to recompute — the rule combines three fields, and a client that got it
+     * than left for the caller to recompute - the rule combines three fields, and a client that got it
      * subtly wrong would offer a blocked hall for an examination.
      */
     public record RoomResponse(

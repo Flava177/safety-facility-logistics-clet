@@ -33,13 +33,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The work-order workflow — SRS-SFL-S153-02.
+ * The work-order workflow - SRS-SFL-S153-02.
  *
  * <h2>Assignment scope, which is the important part of this class</h2>
  *
  * Site scope is the wrong boundary for a contractor. A vendor technician with
  * {@code X-SFL-Sites: CLET-HQ} and the pre-S153 permission set could read every work order, every
- * fault and every asset condition at the site — including which security equipment was broken.
+ * fault and every asset condition at the site - including which security equipment was broken.
  *
  * <p>So {@link SflRole#VENDOR_TECHNICIAN} is narrowed per record, not per site: a vendor sees and
  * touches only the work orders <strong>assigned to them</strong>. That rule cannot live in the
@@ -48,7 +48,7 @@ import org.springframework.transaction.annotation.Transactional;
  * rather than to a chosen few.
  *
  * <p>The narrowing is by {@code assignedTo} matching the actor's id. A vendor firm with several
- * technicians therefore sees per person, not per firm — which is the stricter reading and the one to
+ * technicians therefore sees per person, not per firm - which is the stricter reading and the one to
  * keep until CLET says otherwise, because widening later is a decision and narrowing later is a
  * regression somebody has already built a habit around.
  *
@@ -201,7 +201,7 @@ public class WorkOrderApplicationService {
      * Closure: the evidence gate, the fault, and the asset's service date.
      *
      * <p>Three things happen and all three are part of one transaction, because a closure that
-     * recorded the service but left the fault open — or the other way round — would leave the estate
+     * recorded the service but left the fault open - or the other way round - would leave the estate
      * disagreeing with itself in a way nobody would notice until an examination.
      */
     @Transactional

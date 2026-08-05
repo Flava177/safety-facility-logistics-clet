@@ -24,7 +24,7 @@ import {
  *
  * The dispatch controllers return the **domain records themselves**, exactly as fuel does, so these
  * mirror `CourierItem`, `Dispatch`, `CustodyHandover`, `DispatchReceipt`, `ReturnReconciliation`,
- * `DispatchExceptionCase` and the scan batch field for field — including `siteCode` arriving as a
+ * `DispatchExceptionCase` and the scan batch field for field - including `siteCode` arriving as a
  * `SiteCode` value object that serialises as `{ value }`.
  *
  * `RecordMetadata`, `SiteCodeValue` and `SourceChannel` are imported from the fuel module rather
@@ -34,7 +34,7 @@ import {
 
 export type { RecordMetadata, SiteCodeValue, SourceChannel };
 
-/** S171-01 — one tracked item, inbound or outbound. */
+/** S171-01 - one tracked item, inbound or outbound. */
 export interface CourierItem {
   id: string;
   itemNumber: string;
@@ -42,7 +42,7 @@ export interface CourierItem {
   direction: ItemDirection;
   itemType: ItemType;
   sensitivity: Sensitivity;
-  /** Derived by the domain from type and sensitivity — not something the caller sets. */
+  /** Derived by the domain from type and sensitivity - not something the caller sets. */
   chainOfCustodyRequired: boolean;
   origin: string;
   destination: string;
@@ -60,7 +60,7 @@ export interface CourierItem {
   metadata: RecordMetadata;
 }
 
-/** S171-02 — a manifest: the consignment, its seals and its trip assignment. */
+/** S171-02 - a manifest: the consignment, its seals and its trip assignment. */
 export interface DispatchManifest {
   id: string;
   manifestNumber: string;
@@ -97,7 +97,7 @@ export interface DispatchManifestItem {
   createdAt: string;
 }
 
-/** An append-only custody handover. There is no update or delete — the chain is the evidence. */
+/** An append-only custody handover. There is no update or delete - the chain is the evidence. */
 export interface CustodyHandover {
   id: string;
   dispatchId: string;
@@ -119,7 +119,7 @@ export interface CustodyHandover {
 
 /** What `CustodyChainPolicy` makes of the recorded handovers. `closable` gates manifest closure. */
 /**
- * `CustodyChainPolicy.Gap` — one break in the chain, as structured data.
+ * `CustodyChainPolicy.Gap` - one break in the chain, as structured data.
  *
  * These used to arrive as formatted strings with the structure baked in
  * (`BROKEN_SEAL@TRANSIT(BROKEN)`), so the client parsed a wire format with a regular expression just
@@ -128,7 +128,7 @@ export interface CustodyHandover {
 export interface CustodyGap {
   reason: 'BROKEN_SEAL' | 'COUNT_MISMATCH' | 'OUT_OF_ORDER';
   hop: CustodyHop;
-  /** The handover that caused it — what lets a screen link straight to the cause. */
+  /** The handover that caused it - what lets a screen link straight to the cause. */
   handoverId: string;
   /** The cause's own particulars: seal state, or the expected and verified counts. */
   detail: Record<string, unknown>;
@@ -140,7 +140,7 @@ export interface CustodyGaps {
   closable: boolean;
 }
 
-/** S171-03 — destination receipt, with the variance the policy derived. */
+/** S171-03 - destination receipt, with the variance the policy derived. */
 export interface DispatchReceipt {
   id: string;
   dispatchId: string;
@@ -161,7 +161,7 @@ export interface DispatchReceipt {
   metadata: RecordMetadata;
 }
 
-/** S171-06 — the return leg measured against the original manifest. */
+/** S171-06 - the return leg measured against the original manifest. */
 export interface ReturnReconciliation {
   id: string;
   dispatchId: string;
@@ -236,7 +236,7 @@ export interface ScanImportRow {
 
 export interface RegisterItemRequest {
   siteCode: string;
-  /** Optional — the service allocates a number when it is blank. */
+  /** Optional - the service allocates a number when it is blank. */
   itemNumber: string | null;
   direction: ItemDirection;
   itemType: ItemType;
@@ -290,7 +290,7 @@ export interface CreateManifestRequest {
 export interface AddManifestItemRequest {
   courierItemId: string;
   expectedSealId: string | null;
-  /** Primitive `int` on the service — never send null. */
+  /** Primitive `int` on the service - never send null. */
   expectedQuantity: number;
 }
 
@@ -334,7 +334,7 @@ export interface ConfirmReceiptRequest {
   recipientName: string;
   expectedRecipient: string | null;
   captureCorrelationId: string | null;
-  /** Primitive `boolean` — marks a capture taken offline at the edge and replayed. */
+  /** Primitive `boolean` - marks a capture taken offline at the edge and replayed. */
   edgeCaptured: boolean;
   capturedAt: string | null;
   signatureFileName: string | null;
@@ -360,7 +360,7 @@ export interface ReconcileReturnRequest {
   retentionClass: string | null;
 }
 
-/** `DispatchExceptionController.ActionRequest` — `value` carries assignee, explanation or reason. */
+/** `DispatchExceptionController.ActionRequest` - `value` carries assignee, explanation or reason. */
 export interface ExceptionActionRequest {
   value: string | null;
   evidenceId: string | null;
@@ -371,7 +371,7 @@ export interface ExceptionActionRequest {
 /**
  * Paging every collection accepts.
  *
- * `sort` is a key from the resource's own allow-list — an unrecognised one falls back to the
+ * `sort` is a key from the resource's own allow-list - an unrecognised one falls back to the
  * default rather than reaching SQL, and the response echoes back the ordering actually applied.
  */
 export interface PagingParams {
@@ -431,7 +431,7 @@ export interface ExceptionSearchParams extends PagingParams {
   unassigned?: boolean;
   securityRelevant?: boolean;
   openOnly?: boolean;
-  /** Cases whose SLA falls before this instant. Open cases only — the service pairs the two. */
+  /** Cases whose SLA falls before this instant. Open cases only - the service pairs the two. */
   dueBefore?: string;
   dispatchId?: string;
   courierItemId?: string;
@@ -448,7 +448,7 @@ export interface CustodySearchParams extends PagingParams {
   siteCode: string;
   dispatchId?: string;
   hop?: CustodyHop | '';
-  /** Matches either side of the handover — who gave it up, or who took it. */
+  /** Matches either side of the handover - who gave it up, or who took it. */
   custodian?: string;
   sealState?: SealState | '';
   from?: string;
@@ -468,7 +468,7 @@ export interface ReceiptSearchParams extends PagingParams {
 /* -------------------------------------------------------------- dashboard */
 
 /**
- * `GET /api/v1/dispatch/dashboard` — the whole payload.
+ * `GET /api/v1/dispatch/dashboard` - the whole payload.
  *
  * Eight counts plus provenance. Unlike the fuel dashboard these are all exception-shaped: the
  * screen's job is to show what is going wrong, and the volume figures have to come from the
@@ -526,7 +526,7 @@ export interface DispatchIntegrationHealth {
 }
 
 /**
- * `DispatchPageResponse<T>` — the envelope every dispatch collection now returns.
+ * `DispatchPageResponse<T>` - the envelope every dispatch collection now returns.
  *
  * Identical in shape to the fleet and fuel ones. Before the gap-closure round these endpoints
  * returned a bare array capped by `size`, which is why the registers paged a window client-side and
@@ -543,7 +543,7 @@ export interface DispatchPageResponse<T> {
   sort: string | null;
 }
 
-/** `DispatchManifestService.ManifestLine` — a manifest line with its courier item resolved. */
+/** `DispatchManifestService.ManifestLine` - a manifest line with its courier item resolved. */
 export interface ManifestLine {
   line: DispatchManifestItem;
   /** Null only if the item was purged; the line survives it. */

@@ -25,7 +25,7 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * Notification drills and what they revealed.
  *
  * A drill is the only evidence that the notification path works. It exercises activation without
- * broadcasting anything, and its three recorded figures — reached, acknowledged, elapsed — are the
+ * broadcasting anything, and its three recorded figures - reached, acknowledged, elapsed - are the
  * performance record SRS-SFL-S174-05 asks for.
  *
  * The acknowledgement rate the domain computes is against the **target**, not against those
@@ -113,7 +113,7 @@ const EmergencyDrillsPage = () => {
         align: 'right',
         cell: (row) =>
           row.status === 'RUNNING' ? (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ) : (
             `${formatNumber(row.reachedRecipients)} · ${percentOf(row.reachedRecipients, row.targetRecipients)}`
           ),
@@ -125,7 +125,7 @@ const EmergencyDrillsPage = () => {
         align: 'right',
         cell: (row) => {
           if (row.status === 'RUNNING') {
-            return <span className="text-gray-500">—</span>;
+            return <span className="text-gray-500">-</span>;
           }
           const rate = percentValue(row.acknowledgedRecipients, row.targetRecipients);
           return (
@@ -236,7 +236,7 @@ const EmergencyDrillsPage = () => {
             />
             <StatCard
               label="Average acknowledgement"
-              value={completed.length ? `${averageAck}%` : '—'}
+              value={completed.length ? `${averageAck}%` : '-'}
               icon="check-circle"
               tone={completed.length && averageAck < 80 ? 'caution' : 'neutral'}
               caption="Against target, across every completed drill"
@@ -244,7 +244,7 @@ const EmergencyDrillsPage = () => {
             <StatCard
               label="Last drill"
               value={
-                latest ? percentOf(latest.acknowledgedRecipients, latest.targetRecipients) : '—'
+                latest ? percentOf(latest.acknowledgedRecipients, latest.targetRecipients) : '-'
               }
               icon="activity"
               caption={
@@ -265,7 +265,7 @@ const EmergencyDrillsPage = () => {
           {bars.length > 0 && (
             <SectionCard
               title="What each drill reached"
-              subtitle="Every bar is its own target — the green segment is the part that closed"
+              subtitle="Every bar is its own target - the green segment is the part that closed"
             >
               <DrillPerformanceChart bars={bars} />
               <DerivedNote>
@@ -289,7 +289,7 @@ const EmergencyDrillsPage = () => {
               <DerivedNote>
                 Acknowledgement is shown against the target, which is how the service computes it. A
                 drill that reached half the site and had every one of them reply still reports fifty
-                per cent — that is the honest reading, because the other half was never told.
+                per cent - that is the honest reading, because the other half was never told.
               </DerivedNote>
             </div>
           </SectionCard>

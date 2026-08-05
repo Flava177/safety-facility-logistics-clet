@@ -16,7 +16,7 @@ import java.util.Set;
  *
  * <ul>
  *   <li><strong>{@link #REJECTED} and {@link #DUPLICATE} are terminal.</strong> A fault dismissed as
- *       either can be reported again, but as a new fault with its own number — reopening would leave
+ *       either can be reported again, but as a new fault with its own number - reopening would leave
  *       an audit trail claiming one report was made when two were.</li>
  *   <li><strong>{@link #RESOLVED} is reachable from {@link #WORK_ORDER_CREATED} only once the work
  *       order is finished</strong>, which the aggregate enforces rather than this enum: the machine

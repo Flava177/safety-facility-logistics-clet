@@ -28,7 +28,7 @@ import tools.jackson.databind.ObjectMapper;
 /**
  * Writes the hash-chained audit trail (SRS-SFL-S152-03).
  *
- * <p>Appends run in the caller's transaction — the requirement asks for the operational record and
+ * <p>Appends run in the caller's transaction - the requirement asks for the operational record and
  * its audit entry "in the same unit of work where possible", so a rolled-back change takes its audit
  * record with it.
  *
@@ -77,7 +77,7 @@ class JpaAuditAdapter implements AuditPort {
      *
      * <p>PostgreSQL {@code timestamptz} stores microsecond precision; a Java {@link Instant} carries
      * nanoseconds. The record hash is computed over {@code occurredAt.toString()}, so an untruncated
-     * instant is hashed at nanosecond precision and read back at microsecond precision — and every
+     * instant is hashed at nanosecond precision and read back at microsecond precision - and every
      * record replays as tampered. Truncating before hashing makes what is stored and what is hashed
      * the same value. Found by replaying the chain against a real database (SRS-SFL-S152-03).
      */

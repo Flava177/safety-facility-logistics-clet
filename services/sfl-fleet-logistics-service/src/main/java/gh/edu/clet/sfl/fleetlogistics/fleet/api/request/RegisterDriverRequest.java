@@ -20,7 +20,7 @@ public record RegisterDriverRequest(
          * The sign-in this driver profile belongs to. Optional.
          *
          * <p>Most driver references are for people who never open SFL, so this is usually absent. When
-         * it is absent the profile is assignable and its holder sees no trips of their own — bind it
+         * it is absent the profile is assignable and its holder sees no trips of their own - bind it
          * later through {@code PATCH /api/v1/fleet/drivers/{driverId}/principal}.
          */
         @Size(max = 160) String principalSubject) {

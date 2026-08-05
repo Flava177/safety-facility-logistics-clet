@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
 /**
  * The single authorisation gate for every S152 command and query.
  *
- * <p>Two questions, both required by SRS-SFL-S152-01 — "Users shall only see and update records
+ * <p>Two questions, both required by SRS-SFL-S152-01 - "Users shall only see and update records
  * inside their assigned site scopes and roles":
  * <ol>
  *   <li><strong>Permission</strong>, derived from roles through {@link FacilitiesPermissionMatrix}.</li>
@@ -80,7 +80,7 @@ public class FacilitiesAuthorization {
      * Refuses an actor holding no site scope at all.
      *
      * <p>Its own error state in SRS-SFL-S152-05 ("No site scope is assigned to your user profile"),
-     * distinct from being refused a particular site — one is a provisioning problem, the other is a
+     * distinct from being refused a particular site - one is a provisioning problem, the other is a
      * permission boundary, and telling a user the wrong one wastes a support call.
      */
     public void requireAnySiteScope(ActorContext actor) {
@@ -89,7 +89,7 @@ public class FacilitiesAuthorization {
         }
     }
 
-    /** {@code true} when the actor may see this site — for filtering lists rather than refusing them. */
+    /** {@code true} when the actor may see this site - for filtering lists rather than refusing them. */
     public boolean canAccessSite(ActorContext actor, String siteCode) {
         return siteCode != null && actor.principal().canAccessSite(siteCode);
     }

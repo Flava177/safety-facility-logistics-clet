@@ -18,7 +18,7 @@ export interface FleetForm<T extends object> {
   errors: FieldErrors<T>;
   touched: Partial<Record<keyof T & string, boolean>>;
   submitting: boolean;
-  /** A failure that is not attributable to one field — shown as a form-level alert. */
+  /** A failure that is not attributable to one field - shown as a form-level alert. */
   formError: FleetApiError | undefined;
   setValue: <K extends keyof T & string>(field: K, value: T[K]) => void;
   setValues: (values: Partial<T>) => void;

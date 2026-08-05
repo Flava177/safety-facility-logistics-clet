@@ -46,7 +46,7 @@ const ReadinessAssessmentsPage = () => {
     [siteCode, roomId],
   );
 
-  /** Only loaded when a space is in context — the dialog needs both to offer a checklist. */
+  /** Only loaded when a space is in context - the dialog needs both to offer a checklist. */
   const space = useApiQuery(
     (signal) => (roomId ? getSpace(roomId, signal) : Promise.resolve(null)),
     [roomId],
@@ -68,7 +68,7 @@ const ReadinessAssessmentsPage = () => {
       key: 'checklist',
       header: 'Checklist',
       hideBelowLg: true,
-      cell: (row) => (row.checklistCode ? `${row.checklistCode} v${row.checklistVersion}` : '—'),
+      cell: (row) => (row.checklistCode ? `${row.checklistCode} v${row.checklistVersion}` : '-'),
     },
     {
       key: 'mode',
@@ -116,7 +116,7 @@ const ReadinessAssessmentsPage = () => {
         title="Readiness assessments"
         subtitle={
           space.data
-            ? `${space.data.roomCode} — ${space.data.name}`
+            ? `${space.data.roomCode} - ${space.data.name}`
             : 'Every inspection recorded against a space'
         }
         crumbs={
@@ -184,7 +184,7 @@ const ReadinessAssessmentsPage = () => {
             const result = await submitAssessment(request);
             setAssessing(false);
             notify.notifySuccess(
-              `Assessment recorded — ${result.outcome.toLowerCase()} at ${result.score}%.`,
+              `Assessment recorded - ${result.outcome.toLowerCase()} at ${result.score}%.`,
               result.outcome === 'BLOCKED'
                 ? 'Critical checks failed, so the space is blocked until they are resolved.'
                 : undefined,

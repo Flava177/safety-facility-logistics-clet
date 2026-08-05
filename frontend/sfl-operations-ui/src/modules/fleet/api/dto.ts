@@ -41,7 +41,7 @@ export interface VehicleResponse {
   id: string;
   registrationNumber: string;
   vin: string | null;
-  /** `true` when the caller lacks `FLEET_VEHICLE_SENSITIVE_READ` — never present a mask as the VIN. */
+  /** `true` when the caller lacks `FLEET_VEHICLE_SENSITIVE_READ` - never present a mask as the VIN. */
   vinMasked: boolean;
   make: string;
   model: string;
@@ -342,7 +342,7 @@ export type TripStatusValue =
 /**
  * The assigned driver's answer, which is a separate axis from `status`.
  *
- * A confirmed trip and an unanswered one are both `ASSIGNED` — the lifecycle has not moved. Reading
+ * A confirmed trip and an unanswered one are both `ASSIGNED` - the lifecycle has not moved. Reading
  * this off `status` is why it is not in that union: a dispatcher needs to see both facts at once.
  */
 export type TripAcknowledgementState = 'PENDING' | 'CONFIRMED' | 'DEFERRED';
@@ -573,7 +573,7 @@ export interface EvidenceResponse {
 }
 
 /**
- * Both fields are required by the service — there is no "all evidence" read.
+ * Both fields are required by the service - there is no "all evidence" read.
  *
  * That is a deliberate constraint rather than a missing feature: evidence is only ever meaningful
  * against the thing it evidences, and a dashboard-wide evidence list would be a browsable index of
@@ -741,7 +741,7 @@ export interface DashboardParams {
 /* ------------------------------------------------- endpoints added in the gap-closure round */
 
 /**
- * `VehicleLocationResponse` — one movement snapshot from a telematics provider.
+ * `VehicleLocationResponse` - one movement snapshot from a telematics provider.
  *
  * A projection, not a source of truth: SFL records what a vendor reported and when. `recordedAt` is
  * what freshness is judged from, and the screen shows it rather than deciding on the reader's behalf
@@ -761,7 +761,7 @@ export interface VehicleLocationResponse {
 }
 
 /**
- * A standalone periodic inspection — the same shape as the trip one, minus the trip.
+ * A standalone periodic inspection - the same shape as the trip one, minus the trip.
  *
  * `findings` is required and non-empty on the service side: an inspection with nothing recorded is
  * an assertion nobody can audit.

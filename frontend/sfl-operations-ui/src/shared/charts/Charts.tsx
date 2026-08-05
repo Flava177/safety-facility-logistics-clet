@@ -21,7 +21,7 @@ import { chartColors, seriesColors } from './palette';
  *
  * <h2>Why the exported shape did not change</h2>
  *
- * `AreaChart`, `BarChart`, `DonutChart` and `Sparkline` keep the props they had under ApexCharts —
+ * `AreaChart`, `BarChart`, `DonutChart` and `Sparkline` keep the props they had under ApexCharts -
  * `categories` and `series` for the first two, `labels`/`values`/`colors` for the donut. Eight module
  * files import them and none needed editing. A migration that also redesigned the API would have
  * meant reviewing eight dashboards for two unrelated reasons at once, and any rendering difference
@@ -59,7 +59,7 @@ interface CategorySeriesProps {
   categories: string[];
   series: Series[];
   height?: number;
-  /** Whole numbers only — counts of vehicles, trips and defects are never fractional. */
+  /** Whole numbers only - counts of vehicles, trips and defects are never fractional. */
   integerAxis?: boolean;
   stacked?: boolean;
   horizontal?: boolean;
@@ -92,7 +92,7 @@ interface TooltipEntry {
  * The shared tooltip.
  *
  * Built rather than configured so it carries the dashboard's own type scale and card treatment, and
- * so a zero is shown rather than dropped — on an operations chart "0 defects" is a reading, and a
+ * so a zero is shown rather than dropped - on an operations chart "0 defects" is a reading, and a
  * missing row reads as missing data.
  */
 const ChartTooltip = ({
@@ -133,7 +133,7 @@ const ChartTooltip = ({
  * Series visibility, driven by the legend.
  *
  * Kept per chart instance rather than lifted, because hiding a series is a reading aid for the
- * person looking at it — not state any other part of the screen should react to.
+ * person looking at it - not state any other part of the screen should react to.
  */
 const useHiddenSeries = () => {
   const [hidden, setHidden] = useState<string[]>([]);
@@ -302,11 +302,11 @@ interface DonutChartProps {
   values: number[];
   colors: string[];
   height?: number;
-  /** Shown in the middle of the ring — usually the total the slices add up to. */
+  /** Shown in the middle of the ring - usually the total the slices add up to. */
   centreLabel?: string;
 }
 
-/** Composition of a whole — readiness mix, workflow status mix. */
+/** Composition of a whole - readiness mix, workflow status mix. */
 export const DonutChart = ({
   labels,
   values,
@@ -319,7 +319,7 @@ export const DonutChart = ({
 
   /*
     Numeric radii rather than percentages, because `activeShape` takes resolved sector props and a
-    percentage string is not one — the hover growth has to be expressed in the same units as the
+    percentage string is not one - the hover growth has to be expressed in the same units as the
     resting size. Derived from the height, less the room the legend takes at the bottom.
   */
   const outerRadius = Math.max(48, Math.round((height - 56) / 2));
@@ -363,7 +363,7 @@ export const DonutChart = ({
       {/*
         The centre total is absolutely positioned rather than drawn into the SVG, so it inherits the
         dashboard's font stack and tabular figures. `pointer-events-none` keeps it out of the way of
-        the slice hover underneath it — without that, the middle of the chart swallows the pointer.
+        the slice hover underneath it - without that, the middle of the chart swallows the pointer.
       */}
       <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8">
         <span className="text-theme-xs" style={{ color: chartColors.text }}>
@@ -386,7 +386,7 @@ interface SparklineProps {
   height?: number;
 }
 
-/** A bare trend line for a KPI card. No axes, no tooltip — shape only. */
+/** A bare trend line for a KPI card. No axes, no tooltip - shape only. */
 export const Sparkline = ({ values, colour = chartColors.navy, height = 42 }: SparklineProps) => (
   <ResponsiveContainer width="100%" height={height}>
     <RechartsArea

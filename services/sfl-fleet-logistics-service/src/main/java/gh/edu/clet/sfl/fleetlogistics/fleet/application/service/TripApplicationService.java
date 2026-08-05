@@ -104,7 +104,7 @@ public class TripApplicationService {
      * the trip's driver.
      *
      * <p>{@code Trip} carries {@code driverId}, a register key, and the record-scope rule is written in
-     * terms of the actor's own id — so the two are joined here through the driver's
+     * terms of the actor's own id - so the two are joined here through the driver's
      * {@code staffReference}, which is the value the actor authenticates as. Fuel already relies on
      * that same equivalence when it refuses a driver a logbook opened for somebody else.
      *
@@ -253,13 +253,13 @@ public class TripApplicationService {
      * <h2>The record check is the whole point</h2>
      *
      * <p>{@code FLEET_TRIP_ACKNOWLEDGE} is held by every driver, so the permission alone would let any
-     * driver confirm or defer any trip in their site — which is worse than not having the feature: a
+     * driver confirm or defer any trip in their site - which is worse than not having the feature: a
      * dispatcher would be reading confirmations from people who are not driving. The permission says
      * "you may answer for a trip"; {@link DriverScopeResolver} says <em>which</em> trip, and both have
      * to pass.
      *
      * <p>A supervising actor is refused too, and deliberately. {@link DriverScope.Everything} means "no
-     * narrowing on reads", not "may answer on a driver's behalf" — a fleet manager confirming a trip
+     * narrowing on reads", not "may answer on a driver's behalf" - a fleet manager confirming a trip
      * for a driver produces a record that says the driver confirmed it, which is exactly the thing the
      * dispatcher is relying on being true. If answering on behalf is ever needed it wants its own
      * permission and its own wording in the audit trail.
@@ -307,13 +307,13 @@ public class TripApplicationService {
      * Refuses an actor a trip that is not assigned to them.
      *
      * <p>Resolved through the {@code principal_subject} binding rather than by comparing the driver's
-     * staff reference against the token subject — the comparison that could never be true once
+     * staff reference against the token subject - the comparison that could never be true once
      * authentication was switched on. See {@link DriverScopeResolver}.
      */
     private void requireOwnAssignment(Trip trip, ActorContext actor) {
         /*
           Resolved as always-narrowed, deliberately. The permission-driven overload would ask "does this
-          actor hold a supervising permission?" — and there is no supervising permission for answering
+          actor hold a supervising permission?" - and there is no supervising permission for answering
           on somebody's behalf, because nobody may. Passing FLEET_TRIP_ACKNOWLEDGE there would be worse
           than useless: every driver holds it, so every driver would resolve as a supervisor and be
           waved through with no binding at all, which is the exact opposite of the rule.
@@ -437,7 +437,7 @@ public class TripApplicationService {
         accessPolicy.require(command.actor(), SflPermission.FLEET_INSPECTION_RECORD, vehicle.siteCode(),
                 INSPECTION_RESOURCE_TYPE, vehicleId.toString());
         // A driver may only inspect the vehicle on their own trip. The owner reference used to be
-        // passed as null, which `requireRecordScope` returns on immediately — so the rule this comment
+        // passed as null, which `requireRecordScope` returns on immediately - so the rule this comment
         // describes has never once been enforced, at the only call site the policy has.
         if (trip != null && trip.driverId() != null) {
             accessPolicy.requireRecordScope(command.actor(), driverOwnerReference(trip.driverId()),
@@ -522,7 +522,7 @@ public class TripApplicationService {
      * Refuses an assignment the readiness policy blocked.
      *
      * <p>Assignment conflicts are reported as a conflict rather than a validation failure, because the
-     * caller's request was well formed — the world simply changed underneath it.
+     * caller's request was well formed - the world simply changed underneath it.
      */
     private static void requireReady(ReadinessAssessment assessment) {
         if (assessment.permitsAssignment()) {

@@ -34,7 +34,7 @@ import { dispatchPaths } from 'shared/layout/navigation';
 /**
  * The courier item register.
  *
- * Site, direction, status, sensitivity, handler and the date range all reach the service — those are
+ * Site, direction, status, sensitivity, handler and the date range all reach the service - those are
  * the six filters `GET /items` accepts. Item type is filtered here over the returned window and is
  * labelled as such, because the endpoint has no parameter for it.
  *
@@ -305,7 +305,7 @@ const CourierItemsPage = () => {
             notifySuccess(
               `${item.itemNumber} registered.`,
               item.chainOfCustodyRequired
-                ? 'It requires a chain of custody — every handover must be recorded.'
+                ? 'It requires a chain of custody - every handover must be recorded.'
                 : 'No chain of custody is required for this item.',
             );
             query.refetch();

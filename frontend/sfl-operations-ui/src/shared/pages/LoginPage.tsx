@@ -14,7 +14,7 @@ import { directorate } from 'shared/layout/navigation';
  * The component this page was specified from is a shadcn block, and it is not used verbatim for two
  * concrete reasons rather than taste.
  *
- * Its classes are shadcn's CSS-variable tokens — `bg-background`, `text-muted-foreground`,
+ * Its classes are shadcn's CSS-variable tokens - `bg-background`, `text-muted-foreground`,
  * `border-input`, `ring-ring`. **This project defines none of them.** Its Tailwind theme is a bespoke
  * scale, so pasting the block would have produced an unstyled form: transparent surfaces, invisible
  * borders, default type. And it ships its own `Button`, `Input`, `Label` and `cn`, all four of which
@@ -22,8 +22,8 @@ import { directorate } from 'shared/layout/navigation';
  *
  * <h2>One error message for a wrong email and a wrong password</h2>
  *
- * An earlier version told them apart — "no account for that address" versus "that password is not
- * right" — on the grounds that this is a development sign-in whose whole account list is printed on
+ * An earlier version told them apart - "no account for that address" versus "that password is not
+ * right" - on the grounds that this is a development sign-in whose whole account list is printed on
  * the page, so there was nothing to protect. The owner asked for the single message, and that is the
  * right default to build in: the moment this page points at real accounts, distinguishing the two
  * turns the form into an account-enumeration oracle. The list below still tells a developer which
@@ -48,8 +48,8 @@ const LoginPage = () => {
       return;
     }
     /*
-      A full navigation rather than a router push. Everything derived from the actor — programme
-      entitlement, system entitlement, the merged permission set, the landing destination — is
+      A full navigation rather than a router push. Everything derived from the actor - programme
+      entitlement, system entitlement, the merged permission set, the landing destination - is
       computed once at module scope, which is what makes the sidebar and route guards synchronous.
       A client-side transition would leave all of it holding the pre-sign-in actor, so the signed-in
       user would land on somebody else's portal.
@@ -140,8 +140,8 @@ const LoginPage = () => {
             <div className="pt-2">
               {/*
                 Blue rather than the platform's `primary`, which is brand navy at #0a1931 and reads
-                as near-black on a white card. `teal-500` is the palette's blue despite the name —
-                the ramp is a sky/blue scale — at #0284c7, which carries 4.6:1 against white for the
+                as near-black on a white card. `teal-500` is the palette's blue despite the name -
+                the ramp is a sky/blue scale - at #0284c7, which carries 4.6:1 against white for the
                 label and holds its meaning as the one thing to press on this page.
               */}
               <button
@@ -156,7 +156,7 @@ const LoginPage = () => {
           {/*
             The account list is on the page deliberately. This is a development sign-in against seeded
             accounts, and hiding the list would mean the only way to use the form is to read the
-            source — while the accounts are in the bundle either way.
+            source - while the accounts are in the bundle either way.
           */}
           <div className="mt-7 border-t border-gray-200 pt-4 text-center">
             <button

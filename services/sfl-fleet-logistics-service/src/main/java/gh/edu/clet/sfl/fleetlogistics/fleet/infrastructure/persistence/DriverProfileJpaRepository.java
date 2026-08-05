@@ -56,8 +56,8 @@ interface DriverProfileJpaRepository extends JpaRepository<DriverProfileEntity, 
      * Paged search.
      *
      * <p>Optional filters use {@code coalesce} rather than {@code :x is null or ...}: PostgreSQL
-     * cannot infer the type of a bind parameter that never appears in a typed position — an
-     * {@code IS NULL} test, or an argument to {@code upper()} or {@code concat()} — and rejects the
+     * cannot infer the type of a bind parameter that never appears in a typed position - an
+     * {@code IS NULL} test, or an argument to {@code upper()} or {@code concat()} - and rejects the
      * prepare with SQLSTATE 42P18. Inside {@code coalesce} the parameter takes its type from the
      * column beside it. Every column used this way is {@code NOT NULL}, so an absent filter still
      * matches every row, exactly as the previous form did.

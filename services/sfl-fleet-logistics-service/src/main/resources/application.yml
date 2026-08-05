@@ -14,7 +14,7 @@ spring:
         # The FTLMP deployable owns two schemas and Hibernate takes one default. It is
         # `fleet_logistics`, which S166, S168_fuel and S171 all map into without qualification.
         # AVAMP's two entities carry an explicit @Table(schema = "asset_visibility") and so resolve
-        # correctly regardless — which is what made folding the deployable in a move rather than a
+        # correctly regardless - which is what made folding the deployable in a move rather than a
         # rewrite. Anything added to `asset_visibility` later must annotate it the same way; relying
         # on the default would silently create the table in the wrong schema and `ddl-auto: validate`
         # would then fail at startup rather than at review.
@@ -24,7 +24,7 @@ spring:
   flyway:
     enabled: true
     # History lives in `fleet_logistics`; both schemas are declared so Flyway creates and manages
-    # each. One interleaved sequence — V1-V26 are fleet, fuel and dispatch, V27-V28 are AVAMP's,
+    # each. One interleaved sequence - V1-V26 are fleet, fuel and dispatch, V27-V28 are AVAMP's,
     # renumbered when the asset-visibility deployable was folded in.
     default-schema: fleet_logistics
     schemas: fleet_logistics,asset_visibility
@@ -63,10 +63,10 @@ sfl:
     allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8092,http://localhost:8093,http://localhost:5005,http://localhost:5173,http://localhost:3000}
   service-boundary:
     schema: fleet_logistics,asset_visibility
-    owns: "Fleet, Transport, Assets & Logistics Management Platform (SFL.FTLMP) — S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom / Courier and Dispatch Tracking, and the AVAMP-Lite asset and device reference layer"
+    owns: "Fleet, Transport, Assets & Logistics Management Platform (SFL.FTLMP) - S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom / Courier and Dispatch Tracking, and the AVAMP-Lite asset and device reference layer"
   security:
     # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
-    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # everything also carried `matchIfMissing = true` - so an environment that simply forgot the
     # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
     # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
     # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
@@ -76,14 +76,14 @@ sfl:
     # The local start script sets it; it stays false for servers and CI.
     open-browser: ${SFL_FLEET_OPEN_BROWSER:false}
     messaging:
-      # local    — events are delivered to the in-process transport and logged (no broker provisioned).
-      # rabbitmq — events are published to the sfl.events exchange.
+      # local    - events are delivered to the in-process transport and logged (no broker provisioned).
+      # rabbitmq - events are published to the sfl.events exchange.
       # Selecting rabbitmq without a broker fails at startup rather than silently dropping events.
       transport: ${SFL_FLEET_EVENT_TRANSPORT:local}
       exchange: ${SFL_FLEET_EVENT_EXCHANGE:sfl.events}
       drain-batch-size: 50
     notification:
-      # recorded — notification intents are persisted and logged; no provider is procured for Phase 1.
+      # recorded - notification intents are persisted and logged; no provider is procured for Phase 1.
       provider: ${SFL_FLEET_NOTIFICATION_PROVIDER:recorded}
     scheduling:
       outbox:

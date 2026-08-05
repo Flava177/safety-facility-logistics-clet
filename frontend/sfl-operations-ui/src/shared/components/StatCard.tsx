@@ -5,7 +5,7 @@ import { cn } from './cn';
 export type StatTone = 'neutral' | 'good' | 'caution' | 'critical' | 'accent';
 
 /**
- * Tone touches the icon plate and the caption — never the figure.
+ * Tone touches the icon plate and the caption - never the figure.
  *
  * A KPI row where every number is a different colour is the loudest thing a dashboard can do, and
  * it makes the two figures that need attention indistinguishable from the six that do not. So the
@@ -36,7 +36,7 @@ interface StatCardProps {
  * A headline figure.
  *
  * Wide and shallow on purpose. Eight of these open the dashboard, and a tall card pushes the charts
- * and the exception lists — the things an operator actually acts on — below the fold.
+ * and the exception lists - the things an operator actually acts on - below the fold.
  */
 const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: StatCardProps) => {
   const palette = tones[tone];

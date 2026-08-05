@@ -18,8 +18,8 @@ import { emergencyPaths } from 'shared/layout/navigation';
 /**
  * Provider and downstream integration health for S174.
  *
- * Two feeds meet in this service and both are readable now. Outbound is the transactional outbox —
- * every activation, approval and closure this service publishes — with a health read and a
+ * Two feeds meet in this service and both are readable now. Outbound is the transactional outbox -
+ * every activation, approval and closure this service publishes - with a health read and a
  * privileged replay. Inbound is the provider callbacks carrying delivery status and
  * acknowledgements, and until gap 3 was closed it had **no read at all**: no inbox endpoint, no
  * rejection count, no message list.
@@ -48,7 +48,7 @@ const EmergencyIntegrationPage = () => {
       } else {
         notifySuccess(
           'Nothing was requeued.',
-          'The service reports this message is not dead lettered — it may already have been replayed.',
+          'The service reports this message is not dead lettered - it may already have been replayed.',
         );
       }
       health.refetch();
@@ -142,7 +142,7 @@ const EmergencyIntegrationPage = () => {
         header: 'Site',
         width: 110,
         hideBelowLg: true,
-        cell: (row) => row.siteScope ?? '—',
+        cell: (row) => row.siteScope ?? '-',
       },
       {
         key: 'received',
@@ -154,7 +154,7 @@ const EmergencyIntegrationPage = () => {
         key: 'failure',
         header: 'Failure',
         width: 240,
-        cell: (row) => row.failureReason ?? <span className="text-gray-500">—</span>,
+        cell: (row) => row.failureReason ?? <span className="text-gray-500">-</span>,
       },
       {
         key: 'attempts',
@@ -207,7 +207,7 @@ const EmergencyIntegrationPage = () => {
                 title={`${outbox.deadLettered} outbound messages are dead lettered`}
               >
                 Downstream systems have not been told about these activations. Replay them below
-                once the cause has been dealt with — a replay returns the message to the pending
+                once the cause has been dealt with - a replay returns the message to the pending
                 queue for another attempt.
               </Alert>
             )}
@@ -278,7 +278,7 @@ const EmergencyIntegrationPage = () => {
                         >
                           A rejected message failed signature verification or schema validation and
                           was never applied, so nothing it carried reached an activation. There is no
-                          inbound replay by design — the sending system has to correct and re-send it.
+                          inbound replay by design - the sending system has to correct and re-send it.
                         </Alert>
                       </div>
                     )}

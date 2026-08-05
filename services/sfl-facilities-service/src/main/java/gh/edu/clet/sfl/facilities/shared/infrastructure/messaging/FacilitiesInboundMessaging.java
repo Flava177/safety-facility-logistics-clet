@@ -19,19 +19,19 @@ import org.springframework.context.annotation.Configuration;
  * <p>Every service could already publish: a business change and its event commit in one transaction,
  * a drainer picks it up, retries with backoff and dead-letters what will not go. Nothing could
  * receive. Every {@code inbox_messages} table existed and every one was empty, because no code in any
- * of the three services subscribed to anything — the sagas were designed, contracted and catalogued,
+ * of the three services subscribed to anything - the sagas were designed, contracted and catalogued,
  * and then not connected.
  *
  * <h2>One queue, bound by programme</h2>
  *
  * <p>Publishers send to one topic exchange, {@code sfl.events}, with the event type as the routing key
- * minus its {@code sfl.} prefix — {@code sfl.ftlmp.vehicle-service-due.v1} routes as
+ * minus its {@code sfl.} prefix - {@code sfl.ftlmp.vehicle-service-due.v1} routes as
  * {@code ftlmp.vehicle-service-due.v1}.
  *
  * <p>This binds {@code ftlmp.#} and {@code ssemp.#}: everything the other two programmes publish,
  * rather than a list of the events facilities happens to react to today. That is deliberate. Binding
  * per event name means every new reaction needs a broker change as well as a handler, and broker
- * changes are the kind that get forgotten between environments — the handler ships, nothing arrives,
+ * changes are the kind that get forgotten between environments - the handler ships, nothing arrives,
  * and it looks like a code bug. Binding by programme means writing a handler is the only step.
  *
  * <p>The cost is that facilities receives events nobody handles. {@code FacilitiesIntegrationListener}
@@ -41,7 +41,7 @@ import org.springframework.context.annotation.Configuration;
  * <h2>Why it is conditional</h2>
  *
  * <p>Declared only when the transport is {@code rabbitmq}. With the default {@code local} transport
- * there is no broker, and a service trying to declare a queue against nothing would fail to start —
+ * there is no broker, and a service trying to declare a queue against nothing would fail to start -
  * turning "no broker provisioned yet", the expected Phase 1 state, into a dead service.
  */
 @Configuration(proxyBeanMethods = false)
@@ -52,7 +52,7 @@ public class FacilitiesInboundMessaging {
     public static final String INBOUND_QUEUE = "sfl.ifimp.inbound";
 
     /**
-     * Whole programmes, not event names — see the class docblock.
+     * Whole programmes, not event names - see the class docblock.
      *
      * <p>AVAMP publishes as {@code asset.*} and lives in the fleet service; add it here when facilities
      * has a reason to care, which today it does not.

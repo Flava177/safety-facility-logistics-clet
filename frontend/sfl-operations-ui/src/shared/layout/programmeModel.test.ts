@@ -6,7 +6,7 @@ import { allSystems, programmesFor, systems, systemsFor } from './programmeModel
  *
  * The first tests in this dashboard, and this is the file that earned them: the module is
  * deliberately free of imports so the decision it encodes can be exercised directly, and the
- * comments in it already describe two live bugs that shipped — `COMMAND_ROLE` losing the whole FTLMP
+ * comments in it already describe two live bugs that shipped - `COMMAND_ROLE` losing the whole FTLMP
  * side of the console, and `SECURITY_OFFICER` never seeing the dispatch exception it was meant to
  * escalate. Both were mapping mistakes no type checker would catch.
  */
@@ -15,7 +15,7 @@ describe('programme entitlement', () => {
     it('entitles a facilities manager to all three IFIMP systems', () => {
       // S153 arrived with the CMMS module and S159 with booking. Entitlement to the three is
       // identical for this role, because the permission matrix puts fault, work-order, booking and
-      // resource reads in its shared read-only set — see the note on `SystemCode` for why they are
+      // resource reads in its shared read-only set - see the note on `SystemCode` for why they are
       // still separate codes.
       expect(systemsFor(['FACILITIES_MANAGER'])).toEqual(['S152', 'S153', 'S159']);
       expect(programmesFor(['FACILITIES_MANAGER'])).toEqual(['IFIMP']);
@@ -40,7 +40,7 @@ describe('programme entitlement', () => {
         The one IFIMP role that is not entitled to S159, and the reason the split is worth a test:
         `VENDOR_TECHNICIAN` is the only facilities role whose matrix entry is an explicit `EnumSet`
         rather than a union with the shared `READ_ONLY` set. Adding `FACILITIES_BOOKING_READ` to that
-        set therefore entitled ten roles to the room diary and left the contractor out — correctly,
+        set therefore entitled ten roles to the room diary and left the contractor out - correctly,
         but silently. If somebody ever rebuilds `VENDOR_TECHNICIAN` on top of `READ_ONLY`, a
         contractor quietly gains the whole estate's diary, and this is what says so.
       */
@@ -54,7 +54,7 @@ describe('programme entitlement', () => {
     it('entitles a technician to booking for turnaround alone', () => {
       // S159 for a narrower reason than the rest: `IFIMP_TECHNICIAN` holds
       // `FACILITIES_SETUP_TASK_MANAGE` and no booking-request permission. The section renders with
-      // the turnaround queue and nothing that reserves a hall — a technician who could book one
+      // the turnaround queue and nothing that reserves a hall - a technician who could book one
       // would be scheduling the estate from the shop floor.
       expect(systemsFor(['IFIMP_TECHNICIAN'])).toContain('S159');
     });
@@ -89,7 +89,7 @@ describe('programme entitlement', () => {
 
     it('names S159 as booking rather than as facilities', () => {
       // The no-entitlement page reads this label. A refused requester should be told they cannot see
-      // "Room & resource booking" — which is what they came for — not "Facility management".
+      // "Room & resource booking" - which is what they came for - not "Facility management".
       expect(systems.S159.programme).toBe('IFIMP');
       expect(systems.S159.label).toBe('Room & resource booking');
     });

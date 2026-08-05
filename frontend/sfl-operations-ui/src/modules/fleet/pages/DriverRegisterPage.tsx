@@ -107,7 +107,7 @@ const DriverRegisterPage = () => {
         cell: (row) => (
           <CellStack
             primary={`Class ${row.licenceClass}`}
-            secondary={row.licenceNumberMasked ? 'Number masked' : (row.licenceNumber ?? '—')}
+            secondary={row.licenceNumberMasked ? 'Number masked' : (row.licenceNumber ?? '-')}
           />
         ),
       },

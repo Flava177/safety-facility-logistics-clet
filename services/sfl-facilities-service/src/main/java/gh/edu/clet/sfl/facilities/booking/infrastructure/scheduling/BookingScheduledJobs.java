@@ -21,8 +21,8 @@ import org.springframework.stereotype.Component;
  *
  * <h2>Why the no-show sweep runs more often than the readiness one</h2>
  *
- * They are answering different questions. A readiness hold is advisory — it flags a booking a human
- * will look at — so fifteen minutes of latency costs nothing. A no-show <em>releases a space</em>,
+ * They are answering different questions. A readiness hold is advisory - it flags a booking a human
+ * will look at - so fifteen minutes of latency costs nothing. A no-show <em>releases a space</em>,
  * and every minute between the grace expiring and the sweep noticing is a minute the hall is unusable
  * by anybody else. Five minutes against a twenty-minute default grace means the room comes back
  * within a quarter of the time it was held for nothing.
@@ -69,7 +69,7 @@ public class BookingScheduledJobs {
             }
         } catch (RuntimeException failure) {
             // Swallowed on purpose. An uncaught exception from a fixedDelay task cancels the schedule
-            // for the life of the process, so one bad row would silently stop every future sweep — the
+            // for the life of the process, so one bad row would silently stop every future sweep - the
             // failure mode least likely to be noticed, on the job whose whole purpose is to notice.
             log.error("Booking readiness sweep failed; it will be retried on the next run", failure);
         }

@@ -100,7 +100,7 @@ class FacilitiesOutboxDrainerTest {
         drainer.drain();
 
         // `contains`, not `containsExactly`: this runs against the shared e2e database, which carries
-        // pending rows from earlier hand-driven verification. Draining those too is correct behaviour —
+        // pending rows from earlier hand-driven verification. Draining those too is correct behaviour -
         // asserting the queue was empty first would be asserting something about the fixture.
         assertThat(transport.sent).extracting(OutboxMessage::id).contains(id);
         assertThat(transport.sent).filteredOn(message -> message.id().equals(id)).singleElement()
@@ -132,7 +132,7 @@ class FacilitiesOutboxDrainerTest {
         assertThat(row.get("failure_reason")).isEqualTo("broker unavailable");
         assertThat(row.get("next_attempt_at")).isNotNull();
 
-        // A second tick inside the backoff window must not pick it up again — that is the whole point of
+        // A second tick inside the backoff window must not pick it up again - that is the whole point of
         // the window. Hammering a broker that is down turns one outage into two.
         drainer.drain();
         assertThat(((Number) row(id).get("attempt_count")).intValue()).isEqualTo(1);

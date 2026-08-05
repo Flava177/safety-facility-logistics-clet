@@ -23,25 +23,25 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>S152, S153 and S159 all write to {@code facilities.outbox_messages} inside the business
  * transaction, which is correct and was only ever half the job: nothing drained the table, so the rows
  * accumulated and no event left the service. Three gap reports describe the same consequence in
- * different words — no S153 escalation, no S159 rejection, no-show or readiness hold, and no
- * cross-module saga — and they are one gap with one fix, which is this class.
+ * different words - no S153 escalation, no S159 rejection, no-show or readiness hold, and no
+ * cross-module saga - and they are one gap with one fix, which is this class.
  *
  * <p><strong>One message, one transaction, claimed with {@code FOR UPDATE SKIP LOCKED}.</strong> The
  * claim and the status write have to be in the same transaction or the lock buys nothing: a row locked
  * by a {@code SELECT ... FOR UPDATE} outside a transaction is released the moment that statement's
  * implicit transaction commits, which is before the message is sent. The transaction is driven through
  * a {@link TransactionTemplate} rather than {@code @Transactional} on a private method, because Spring
- * proxies do not intercept self-invocation — an annotation there would look like a transaction
+ * proxies do not intercept self-invocation - an annotation there would look like a transaction
  * boundary and be nothing of the kind, which is the worst of both.
  *
  * <p>{@code SKIP LOCKED} lets a second instance step over rows the first is holding rather than block
  * behind them, so the drain scales horizontally without leader election. Delivery remains
- * at-least-once — a crash between {@code send} and the commit replays the message — which is why every
+ * at-least-once - a crash between {@code send} and the commit replays the message - which is why every
  * consumer writes {@code eventId} to {@code inbox_messages} before processing.
  *
  * <p><strong>Backoff, not a tight retry loop.</strong> V5 added {@code attempt_count},
  * {@code next_attempt_at}, {@code last_attempt_at} and {@code dead_lettered_at} with a partial index on
- * {@code next_attempt_at WHERE status = 'PENDING'} — the shape of an exponential backoff waiting for
+ * {@code next_attempt_at WHERE status = 'PENDING'} - the shape of an exponential backoff waiting for
  * someone to write it. A broker that is down comes back; hammering it every ten seconds meanwhile turns
  * one outage into two. The delay doubles from {@code retry-base} and is capped.
  *

@@ -8,12 +8,12 @@ import { isPersona, PersonaCode } from './personas';
  * Dashboard navigation.
  *
  * Only destinations that are built and wired to a service appear here. Modules that do not exist
- * yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
+ * yet are not listed at all - a greyed-out "coming soon" entry costs an operator a click to
  * discover nothing, and it makes a working dashboard look half-finished.
  *
  * **Every section declares the programme it belongs to**, and the shell renders only the sections
  * the actor is entitled to. Phase 1 is 13 systems under 4 programme modules delivered as 5
- * services, and those counts do not line up — a programme is a user-facing grouping, a service is
+ * services, and those counts do not line up - a programme is a user-facing grouping, a service is
  * a deployment unit. See `programmes.ts` and ADR 0005.
  *
  * The programme is a property of the **system**, not of the service it happens to ship in. S174 is
@@ -26,13 +26,13 @@ export interface NavItem {
   label: string;
   to: string;
   icon: IconName;
-  /** Matches child routes too — `/fleet/vehicles/42` still highlights "Vehicle register". */
+  /** Matches child routes too - `/fleet/vehicles/42` still highlights "Vehicle register". */
   matchPrefix?: string;
   description?: string;
   /**
    * The permission this screen's first read requires, when it is more than the section's system.
    *
-   * **Absent means the system entitlement is the whole requirement**, which is true of most screens —
+   * **Absent means the system entitlement is the whole requirement**, which is true of most screens -
    * a role entitled to S171 can read courier items, manifests and exception cases.
    *
    * It is not true of dashboards. A mailroom officer is entitled to S171 and holds no
@@ -61,7 +61,7 @@ export interface NavSection {
   /** Which of the four SFL programmes this section belongs to. Drives what a user sees. */
   programme: ProgrammeCode;
   /**
-   * Which system it belongs to — the finer half of the same decision.
+   * Which system it belongs to - the finer half of the same decision.
    *
    * Programme alone is not enough inside FTLMP, where three systems share one deployable: without
    * this, a mailroom officer sees the fleet register and a driver sees the courier manifests.
@@ -73,7 +73,7 @@ export interface NavSection {
 /**
  * S152 CAFM/IWMS routes.
  *
- * The first IFIMP module in this dashboard, and the platform S153 and S159 will attach to — so these
+ * The first IFIMP module in this dashboard, and the platform S153 and S159 will attach to - so these
  * paths are `/facilities/...` rather than `/cafm/...`: a user is looking at facilities, and which
  * system inside IFIMP serves a screen is not their problem.
  *
@@ -88,7 +88,7 @@ export const facilitiesPaths = {
   siteDetail: (siteId: string) => `/facilities/sites/${siteId}`,
   /*
     Buildings have a detail route and no register. A building is only ever reached from the site that
-    owns it — nobody searches an estate for a building — and a fourth register would be a sidebar
+    owns it - nobody searches an estate for a building - and a fourth register would be a sidebar
     entry whose whole content is "choose a site first".
   */
   buildingDetail: (buildingId: string) => `/facilities/buildings/${buildingId}`,
@@ -127,14 +127,14 @@ export const facilitiesPaths = {
  * more than a URL that mirrors the service topology.
  *
  * Availability is a destination, not a dialog on the diary. It is where a booking begins, it takes
- * eight fields, and its answer is a page of spaces with reasons — none of which fits in a modal, and
+ * eight fields, and its answer is a page of spaces with reasons - none of which fits in a modal, and
  * all of which somebody will want to link to.
  */
 export const bookingPaths = {
   diary: '/bookings',
   /*
     Static siblings of `:bookingId`. React Router ranks a static segment above a dynamic one, so
-    `/bookings/availability` never resolves as a booking whose id is the word "availability" — and
+    `/bookings/availability` never resolves as a booking whose id is the word "availability" - and
     ids are UUIDs regardless. Keep new static children out of the UUID shape and this stays true.
   */
   availability: '/bookings/availability',
@@ -162,7 +162,7 @@ export const fleetPaths = {
  * S168 fuel routes.
  *
  * Policy detail has no endpoint of its own (`GET /policies/{id}` does not exist), so the screen
- * selects out of the site's policy list — the route still exists because a policy is a record an
+ * selects out of the site's policy list - the route still exists because a policy is a record an
  * operator links to and comes back to.
  */
 export const fuelPaths = {
@@ -206,7 +206,7 @@ export const dispatchPaths = {
  *
  * Break-glass is a destination rather than a mode on the compose dialog. It is a different
  * authorisation, it creates a different obligation, and in a declared emergency it has to be one
- * click from anywhere — a screen that is both a warning and the shortest path is what that needs.
+ * click from anywhere - a screen that is both a warning and the shortest path is what that needs.
  *
  * Templates and scenarios share a screen, and so do audience groups and recipient zones: each pair
  * answers one question between them and is chosen together on every activation. Only the template
@@ -225,7 +225,7 @@ export const emergencyPaths = {
 };
 
 /**
- * Personal landings — the "what do I have to do today" views.
+ * Personal landings - the "what do I have to do today" views.
  *
  * Under `/me/` rather than inside a system's routes because they cross systems: a driver's day is
  * S166 assignments and an S168 logbook, and filing either under the other would be arbitrary. The
@@ -246,7 +246,7 @@ export const navSections: NavSection[] = [
   //
   // First in the list on purpose. `landingPath()` returns the first item of the first entitled
   // section, so putting these ahead of the operator sections is what makes a driver open on their
-  // own day rather than on the fleet dashboard — with no change to the router or the shell.
+  // own day rather than on the fleet dashboard - with no change to the router or the shell.
   //
   // Each is `persona`-gated, so an operator never sees them: the sections below are unchanged for
   // everybody who was already served.
@@ -435,7 +435,7 @@ export const navSections: NavSection[] = [
         to: bookingPaths.setupTasks,
         icon: 'clipboard',
         description: 'What has to happen to a room before its next booking',
-        // BOOKING_READ, not SETUP_TASK_MANAGE — read off `BookingSetupService.queue`, which gates the
+        // BOOKING_READ, not SETUP_TASK_MANAGE - read off `BookingSetupService.queue`, which gates the
         // queue on reading bookings and reserves SETUP_TASK_MANAGE for raising and resolving a task.
         // Gating the screen on the write permission would hide the queue from everybody who can only
         // look at it, which is most of the people who need to.
@@ -573,7 +573,7 @@ export const navSections: NavSection[] = [
         matchPrefix: fleetPaths.vehicles,
         description: 'Fleet inventory and readiness',
         // A driver holds this: they need to look up the vehicle they are taking out. Registering,
-        // editing and retiring one are FLEET_VEHICLE_MANAGE, which they do not hold — the page
+        // editing and retiring one are FLEET_VEHICLE_MANAGE, which they do not hold - the page
         // hides those controls rather than offering a button the service refuses.
         permission: 'FLEET_VEHICLE_READ',
       },
@@ -586,7 +586,7 @@ export const navSections: NavSection[] = [
         /*
           A driver holds FLEET_DRIVER_READ and sees the list, the same way they see the vehicle
           register: they work alongside these people and need to look them up. What they do not hold
-          is FLEET_DRIVER_MANAGE — so no registering, editing or retiring, including of themselves —
+          is FLEET_DRIVER_MANAGE - so no registering, editing or retiring, including of themselves -
           and no FLEET_DRIVER_SENSITIVE_READ, so licence numbers arrive masked from the service
           rather than being hidden by this screen.
 
@@ -616,8 +616,8 @@ export const navSections: NavSection[] = [
         to: fleetPaths.governance,
         icon: 'document',
         description: 'Closure evidence and audit trail',
-        // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second — they attach
-        // evidence to their own trip closure — and that is deliberately not a licence to read the
+        // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second - they attach
+        // evidence to their own trip closure - and that is deliberately not a licence to read the
         // fleet's evidence library or replay the audit chain.
         permission: 'FLEET_EVIDENCE_READ',
       },
@@ -701,7 +701,7 @@ export const navSections: NavSection[] = [
         matchPrefix: fuelPaths.policies,
         description: 'Effective-dated limits the rules are read from',
         // The limits every reconciliation is judged against. A driver being judged by them is not a
-        // reason to let them read — still less edit — the thresholds.
+        // reason to let them read - still less edit - the thresholds.
         permission: 'FUEL_POLICY_READ',
       },
       {
@@ -775,7 +775,7 @@ export const navSections: NavSection[] = [
   },
   {
     // SSEMP, not FTLMP. S174 is its own deployable service but it belongs to the safety,
-    // security and emergency programme — so a fleet operator does not see it, and a SOC
+    // security and emergency programme - so a fleet operator does not see it, and a SOC
     // operator or emergency coordinator does. ADR 0005.
     heading: 'Emergency notifications',
     programme: 'SSEMP',
@@ -803,7 +803,7 @@ export const navSections: NavSection[] = [
         icon: 'zap',
         description: 'Declared-emergency send with no approval',
         // The one screen in the platform that sends without approval. It is offered only to an
-        // actor who may actually press it — a break-glass page somebody cannot use is worse than
+        // actor who may actually press it - a break-glass page somebody cannot use is worse than
         // absent, because in a declared emergency they will try.
         permission: 'EMERGENCY_BREAK_GLASS_SEND',
       },
@@ -854,13 +854,13 @@ export const directorate = {
 };
 
 /** The navigation sections this actor is entitled to, in declared order. */
-/** No persona named means "everyone who is entitled" — the ordinary case. */
+/** No persona named means "everyone who is entitled" - the ordinary case. */
 const suitsPersona = (persona?: PersonaCode): boolean => persona === undefined || isPersona(persona);
 
 export const entitledSections = (): NavSection[] =>
   navSections
     .filter((section) => entitledTo(section.programme) && entitledToSystem(section.system))
-    // Then drop the items the actor cannot read, and any section left with none — an empty heading is
+    // Then drop the items the actor cannot read, and any section left with none - an empty heading is
     // worse than no heading. `permits` returns true for everything when the services could not be
     // asked, so a failed lookup never hides a screen.
     .map((section) => ({
@@ -872,7 +872,7 @@ export const entitledSections = (): NavSection[] =>
 /**
  * Where an actor lands when they open the application.
  *
- * The first destination of the first programme they are entitled to — **not** the fleet dashboard,
+ * The first destination of the first programme they are entitled to - **not** the fleet dashboard,
  * which is only the right answer for a fleet user. `null` when they are entitled to nothing, which
  * the router turns into an explanation rather than a redirect loop.
  */

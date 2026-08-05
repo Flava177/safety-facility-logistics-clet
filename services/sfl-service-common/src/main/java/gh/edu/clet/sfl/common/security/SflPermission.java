@@ -10,7 +10,7 @@ public enum SflPermission {
     // The four work-order permissions above predate S152 and are kept, because they already name the
     // right things. S153 adds the rest of what SRS-SFL-S153-01..03 needs: the fault side of the
     // workflow, the transitions the old three-state model had nowhere for, preventive scheduling,
-    // vendors, and evidence — which is separated into read and export because S153-03 makes export a
+    // vendors, and evidence - which is separated into read and export because S153-03 makes export a
     // distinct authorised act with a recorded reason, not simply a stronger form of reading.
     FACILITIES_FAULT_REPORT,
     FACILITIES_FAULT_READ,
@@ -96,7 +96,7 @@ public enum SflPermission {
      * Confirm or defer a trip assigned to you.
      *
      * <p>A driver's permission, and the only write in the fleet register they hold. Separate from
-     * {@code FLEET_TRIP_MANAGE} because it is not a dispatcher's power scoped down — it answers for
+     * {@code FLEET_TRIP_MANAGE} because it is not a dispatcher's power scoped down - it answers for
      * one trip, the actor's own, and grants nothing over anybody else's.
      */
     FLEET_TRIP_ACKNOWLEDGE,

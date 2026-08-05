@@ -7,7 +7,7 @@ import { cn } from './cn';
  * Form controls for the whole dashboard.
  *
  * Every control is white with a grey hairline, a real label above it, and one line reserved
- * underneath for a hint or an error — so a field never changes height when validation fires and a
+ * underneath for a hint or an error - so a field never changes height when validation fires and a
  * form never jumps under the operator's cursor. Errors recolour the border and the helper line;
  * they never replace the label, because the operator still needs to know which field is wrong.
  */
@@ -16,7 +16,7 @@ import { cn } from './cn';
  * A form control's border is the only thing that says "this is a control", so SC 1.4.11 asks it to
  * reach 3:1 against the surrounding white. Borders/Main/default in the design system is Cloud Grey
  * 600; this uses grey-500 (4.9:1), which clears the bar while staying lighter than the text.
- * Placeholders are grey-500 for the same reason the label is grey-800 — both are read.
+ * Placeholders are grey-500 for the same reason the label is grey-800 - both are read.
  *
  * Focus is not styled here. The dashboard has one focus treatment, defined once in `index.css` as a
  * 2px teal outline with an offset, so every focusable thing on the page looks focused the same way.
@@ -172,7 +172,7 @@ export interface NumberInputProps extends CommonProps {
   min?: number;
   max?: number;
   step?: number;
-  /** Rendered inside the control on the right — "km", "L", "%". */
+  /** Rendered inside the control on the right - "km", "L", "%". */
   suffix?: string;
 }
 
@@ -346,7 +346,7 @@ interface EnumSelectProps<T extends string> extends CommonProps {
   value: T | '';
   options: readonly T[];
   onChange: (value: T | '') => void;
-  /** Adds a blank option — use for filters, never for a `@NotNull` request field. */
+  /** Adds a blank option - use for filters, never for a `@NotNull` request field. */
   allowEmpty?: boolean;
   emptyLabel?: string;
   renderOptionLabel?: (option: T) => string;

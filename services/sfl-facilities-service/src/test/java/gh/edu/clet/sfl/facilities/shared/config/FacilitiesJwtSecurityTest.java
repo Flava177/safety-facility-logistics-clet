@@ -23,8 +23,8 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * The production security chain, executed.
  *
- * <p><strong>Why this test did not exist and had to.</strong> {@code keycloakSecurity} — the chain
- * that runs in every environment that is not a developer's laptop — had no test at all. Searching
+ * <p><strong>Why this test did not exist and had to.</strong> {@code keycloakSecurity} - the chain
+ * that runs in every environment that is not a developer's laptop - had no test at all. Searching
  * every {@code src/test/java} in the reactor for {@code keycloakSecurity},
  * {@code sfl.security.enabled=true} or {@code JwtAuthenticationToken} returned nothing. The only
  * filter chain that will ever face a real user had never been executed across four build passes,
@@ -37,7 +37,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * this was a {@code @WebMvcTest} and it could not work: a slice has no {@code HttpSecurity} bean for
  * a filter chain to be built on, which is exactly why the existing controller tests exclude the
  * resource-server auto-configuration and set {@code addFilters = false}. Testing the chain means
- * booting the application that owns it — so this needs a database, like every other honest test in
+ * booting the application that owns it - so this needs a database, like every other honest test in
  * this service.
  *
  * <p>The decoder is mocked because {@code jwt()} injects an already-decoded token. What is under test
@@ -81,7 +81,7 @@ class FacilitiesJwtSecurityTest {
     @DisplayName("an X-SFL-User header cannot stand in for a token once security is on")
     void a_header_is_not_an_identity() throws Exception {
         // The header path stays for local development. This pins that it cannot assert an identity
-        // while the chain is armed — which is the risk of keeping it at all, and the reason AVAMP's
+        // while the chain is armed - which is the risk of keeping it at all, and the reason AVAMP's
         // raw `@RequestHeader` actor had to go in this same pass.
         mockMvc.perform(get("/api/v1/facilities/sites")
                         .header("X-SFL-User", "somebody.else")
@@ -99,18 +99,18 @@ class FacilitiesJwtSecurityTest {
     @Test
     @DisplayName("a token whose roles do not carry the permission is refused, and refused as 403")
     void a_token_without_the_permission_is_forbidden() throws Exception {
-        // 401 and 403 are different answers to different questions — "who are you" versus "you may
+        // 401 and 403 are different answers to different questions - "who are you" versus "you may
         // not". A chain that returned 401 here would tell an authenticated user to sign in again.
         mockMvc.perform(get("/api/v1/facilities/audit/integrity").with(jwt().jwt(requester())))
                 .andExpect(status().isForbidden());
     }
 
     @Test
-    @DisplayName("the health probe stays open — a load balancer cannot present a token")
+    @DisplayName("the health probe stays open - a load balancer cannot present a token")
     void health_is_open() throws Exception {
         // Asserted as "not refused" rather than 200. The probe reports 503 here because this pass
         // added the AMQP starter and no broker is running in a test, and that is the right answer to
-        // "are you healthy" — it is not the question. What this pins is that the chain lets the probe
+        // "are you healthy" - it is not the question. What this pins is that the chain lets the probe
         // through at all, which a 401 would not.
         mockMvc.perform(get("/actuator/health"))
                 .andExpect(result -> {

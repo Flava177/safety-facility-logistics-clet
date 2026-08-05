@@ -19,7 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Room turnaround — SRS-SFL-S159-02, "setup task".
+ * Room turnaround - SRS-SFL-S159-02, "setup task".
  *
  * <p>Deliberately thin, and see {@link SetupTask} for why it is not an S153 work order: routing a
  * twenty-minute chair rearrangement through the CMMS would put it in the same queue as a failed

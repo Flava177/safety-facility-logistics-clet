@@ -19,7 +19,7 @@ import { canRequest } from '../api/workflow';
 import { bookingStatusTone, formatWindow } from '../components/bookingFormat';
 
 /**
- * The diary — SRS-SFL-S159-01.
+ * The diary - SRS-SFL-S159-01.
  *
  * The register S159 has had an API for since it shipped and no screen at all.
  *
@@ -28,7 +28,7 @@ import { bookingStatusTone, formatWindow } from '../components/bookingFormat';
  * register arrives already narrowed. There is deliberately no client-side filter: one would be a
  * display convention, and the rows would still have crossed the boundary.
  *
- * **The readiness hold is a column, not a status.** S159 decided that deliberately — a confirmed
+ * **The readiness hold is a column, not a status.** S159 decided that deliberately - a confirmed
  * booking on a hall blocked on Tuesday is still a confirmed booking somebody has in their diary, and
  * moving it to an `AT_RISK` state would decide on the estate's behalf that Tuesday's leak will still
  * be there on Friday. So the status says what the booking is and the hold says what the estate
@@ -50,8 +50,8 @@ const BookingDiaryPage = () => {
             One value goes to the service; the rest are applied to the returned set below.
 
             `BookingQuery` takes a single status and a single purpose, so a multi-select cannot be
-            pushed down whole. Sending the first narrows the fetch — which matters, the register is
-            capped at 200 — and the remainder is filtered here. That is a compromise and it is worth
+            pushed down whole. Sending the first narrows the fetch - which matters, the register is
+            capped at 200 - and the remainder is filtered here. That is a compromise and it is worth
             naming: with more than one value selected the cap applies to a *wider* set than the
             filter shows, so a very large site could clip. Widening the query to accept a list is the
             real fix and belongs in the service.
@@ -78,7 +78,7 @@ const BookingDiaryPage = () => {
   /*
     Counts come from what the service returned, so they describe the data in hand rather than the
     whole register. A count that claimed to be the site total would be a promise this screen cannot
-    keep — the fetch is capped and a requester's view is narrowed per record.
+    keep - the fetch is capped and a requester's view is narrowed per record.
   */
   const countBy = (pick: (booking: Booking) => string) =>
     fetched.reduce<Record<string, number>>((tally, booking) => {
@@ -111,7 +111,7 @@ const BookingDiaryPage = () => {
       cell: (booking) => (
         <CellStack
           primary={formatWindow(booking.startsAt, booking.endsAt)}
-          // The occupied window, not the booked one — it is what the next requester is refused on.
+          // The occupied window, not the booked one - it is what the next requester is refused on.
           secondary={
             booking.setupMinutes > 0 || booking.teardownMinutes > 0
               ? `Holds ${formatWindow(booking.occupiedFrom, booking.occupiedTo)}`
@@ -151,7 +151,7 @@ const BookingDiaryPage = () => {
             <StatusChip value="ON_HOLD" label="On hold" tone="blocked" />
           </span>
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400">-</span>
         ),
     },
   ];

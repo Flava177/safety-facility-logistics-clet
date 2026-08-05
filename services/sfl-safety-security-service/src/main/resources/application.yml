@@ -16,15 +16,15 @@ spring:
         # will land. S174 is unaffected: its persistence is plain JDBC with every statement
         # schema-qualified (`emergency_notification.activations`, and so on), so it neither reads
         # nor needs this setting. Anything mapped into `emergency_notification` later must therefore
-        # carry an explicit @Table(schema = "emergency_notification") — the way AVAMP's entities do
-        # in the fleet service — rather than relying on the default and silently resolving here.
+        # carry an explicit @Table(schema = "emergency_notification") - the way AVAMP's entities do
+        # in the fleet service - rather than relying on the default and silently resolving here.
         default_schema: safety_security
         jdbc:
           time_zone: UTC
   flyway:
     enabled: true
     # History lives in `safety_security`; both schemas are declared so Flyway creates and manages
-    # each one. The two migration series are interleaved in a single version sequence — V1 is the
+    # each one. The two migration series are interleaved in a single version sequence - V1 is the
     # SSEMP foundation, V2-V9 are S174's, renumbered when the emergency deployable was folded in.
     default-schema: safety_security
     schemas: safety_security,emergency_notification
@@ -52,13 +52,13 @@ management:
 sfl:
   security:
     # Secure unless deliberately opened, matching the other two platforms. This key was absent
-    # entirely, and so was any filter chain to read it — which did not leave the service open, it
+    # entirely, and so was any filter chain to read it - which did not leave the service open, it
     # left Spring Security's default securing everything including /actuator/health, so the service
     # answered 401 to its own probe. See SafetySecurityConfiguration.
     enabled: ${SFL_SECURITY_ENABLED:true}
   service-boundary:
     schema: safety_security,emergency_notification
-    owns: "Safety, Security & Emergency Management Platform (SFL.SSEMP) — S160, S160a, S161, S162, S162a, S163 and S174"
+    owns: "Safety, Security & Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174"
   emergency:
     # Outbound provider delivery uses a self-contained transactional outbox with a recorded local sink
     # (no broker required for Phase 1); failed deliveries dead-letter and are replayable.

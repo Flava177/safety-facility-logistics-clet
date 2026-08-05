@@ -8,7 +8,7 @@ import java.util.UUID;
 /**
  * The S174 workflow aggregate. Routine activations are approval-gated before send; break-glass activations
  * (declared emergency, authorised role, break-glass-eligible template) send immediately and record
- * after-the-fact approval, which gates closure. SFL governs — it never actuates certified life-safety
+ * after-the-fact approval, which gates closure. SFL governs - it never actuates certified life-safety
  * hardware (Arch §0E). Transitions are explicit and return copies; the domain enforces source-state and
  * closure-evidence rules, the application layer enforces authorization and cross-record gating.
  */

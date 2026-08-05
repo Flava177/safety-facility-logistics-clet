@@ -10,8 +10,8 @@ import java.util.UUID;
  *
  * <p>{@code uq_fuel_import_file} on {@code (site_code, source_system, file_hash)} already refused
  * this; what was missing was a mapped error, so the duplicate surfaced as an unhandled 500 with
- * Spring's default body. Nothing is duplicated when it happens — every row goes through the
- * idempotent capture command first — and the message says so.
+ * Spring's default body. Nothing is duplicated when it happens - every row goes through the
+ * idempotent capture command first - and the message says so.
  */
 public class FuelImportAlreadyProcessedException extends FleetDomainException {
 

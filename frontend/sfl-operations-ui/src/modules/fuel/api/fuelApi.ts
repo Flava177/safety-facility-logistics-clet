@@ -79,7 +79,7 @@ export const fuelPoliciesApi = {
   create: (body: CreatePolicyRequest) => apiClient.post<FuelPolicy>(`${BASE}/policies`, body),
 };
 
-/** Fuel card register. The wire payload is masked only — no full payment-card number is accepted. */
+/** Fuel card register. The wire payload is masked only - no full payment-card number is accepted. */
 export const fuelCardsApi = {
   search: (params: CardSearchParams, signal?: AbortSignal) =>
     apiClient.get<FuelPageResponse<FuelCard>>(
@@ -151,7 +151,7 @@ export const fuelTransactionsApi = {
     }),
 
   /**
-   * `GET /reports/transactions.csv` — a `text/csv` download of the site's most recent transactions.
+   * `GET /reports/transactions.csv` - a `text/csv` download of the site's most recent transactions.
    *
    * Fetched rather than linked: the endpoint needs `FUEL_REPORT_EXPORT` and the actor comes from the
    * `X-SFL-*` headers, which a browser navigation would not send.
@@ -186,7 +186,7 @@ export const driverLogbooksApi = {
   findById: (logbookId: string, signal?: AbortSignal) =>
     apiClient.get<DriverLogbook>(`${BASE}/logbooks/${logbookId}`, undefined, signal),
 
-  /** The record's transitions, from the audit log — draft through review to approval. */
+  /** The record's transitions, from the audit log - draft through review to approval. */
   history: (logbookId: string, signal?: AbortSignal) =>
     apiClient.get<FuelAuditEvent[]>(`${BASE}/logbooks/${logbookId}/history`, undefined, signal),
 
@@ -201,7 +201,7 @@ export const driverLogbooksApi = {
    * One path serves all six transitions.
    *
    * `comment` is the single free-text field the service takes; which of the domain's fields it
-   * lands in depends on the action — `reviewComment` for return and approve, `transitionReason`
+   * lands in depends on the action - `reviewComment` for return and approve, `transitionReason`
    * for reopen and cancel.
    */
   transition: (logbookId: string, action: LogbookTransition, body: LogbookTransitionRequest) =>
@@ -254,7 +254,7 @@ export const fuelAnomaliesApi = {
 
 export const fuelImportsApi = {
   /**
-   * `POST /imports/csv` — multipart, with the site and source system as query parameters.
+   * `POST /imports/csv` - multipart, with the site and source system as query parameters.
    *
    * A file already imported for this site and source system is refused with 409
    * `FUEL_IMPORT_ALREADY_PROCESSED` **before** any row is captured.
@@ -278,7 +278,7 @@ export const fuelImportsApi = {
   /**
    * One batch header.
    *
-   * The response also carries every row, which is why {@link rows} exists — a file of thousands made
+   * The response also carries every row, which is why {@link rows} exists - a file of thousands made
    * the detail read unusable, and the screen filtered those rows in the browser.
    */
   findById: (batchId: string, signal?: AbortSignal) =>
@@ -300,7 +300,7 @@ export const fuelImportsApi = {
 };
 
 export const fuelIntegrationsApi = {
-  /** Inbound provider webhook health — shared inbox, not filtered to fuel or to a site. */
+  /** Inbound provider webhook health - shared inbox, not filtered to fuel or to a site. */
   inboundHealth: (signal?: AbortSignal) =>
     apiClient.get<IntegrationHealth>(`${BASE}/integrations/health`, undefined, signal),
 
@@ -322,7 +322,7 @@ export const fuelDashboardApi = {
    * Spend and volume by day, aggregated by the service.
    *
    * The spend chart used to bucket a page of transactions in the browser, so it described that page
-   * rather than the site — and quietly under-reported the moment a busy fortnight exceeded one page.
+   * rather than the site - and quietly under-reported the moment a busy fortnight exceeded one page.
    */
   dailyTotals: (siteCode: string, from: string, to: string, signal?: AbortSignal) =>
     apiClient.get<DailyFuelTotals[]>(

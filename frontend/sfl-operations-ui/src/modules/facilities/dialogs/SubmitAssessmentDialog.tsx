@@ -15,7 +15,7 @@ interface SubmitAssessmentDialogProps {
 }
 
 /**
- * Submitting a readiness assessment — the module's primary field workflow.
+ * Submitting a readiness assessment - the module's primary field workflow.
  *
  * Two decisions shape it:
  *
@@ -82,7 +82,7 @@ const SubmitAssessmentDialog = ({
     <FormDialog
       open
       title="Assess readiness"
-      description={`${space.roomCode} — ${space.name}`}
+      description={`${space.roomCode} - ${space.name}`}
       submitLabel="Submit assessment"
       submitting={submitting}
       submitDisabled={!checklist || unanswered.length > 0}
@@ -109,7 +109,7 @@ const SubmitAssessmentDialog = ({
             required
             options={applicable.map((candidate) => ({
               value: candidate.id,
-              label: `${candidate.checklistCode} v${candidate.version} — ${candidate.name}`,
+              label: `${candidate.checklistCode} v${candidate.version} - ${candidate.name}`,
             }))}
             helperText="The most specific applicable checklist is selected by default."
           />

@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Reading, exporting and holding evidence — SRS-SFL-S153-03.
+ * Reading, exporting and holding evidence - SRS-SFL-S153-03.
  *
  * <p>Attachment lives on the work-order controller, because evidence is always attached to one and
  * the URL should say so. What is here is everything that happens to a piece of evidence <em>after</em>

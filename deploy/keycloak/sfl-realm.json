@@ -1,7 +1,7 @@
 {
   "realm": "sfl",
   "enabled": true,
-  "displayName": "CLET Cluster 9 — SFL",
+  "displayName": "CLET Cluster 9 - SFL",
   "sslRequired": "none",
   "registrationAllowed": false,
   "accessTokenLifespan": 1800,

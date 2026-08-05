@@ -73,7 +73,7 @@ export type IconName =
   | 'target';
 
 const glyphs: Record<IconName, ReactElement> = {
-  /** A block with windows — the estate hierarchy's buildings and spaces. */
+  /** A block with windows - the estate hierarchy's buildings and spaces. */
   building: (
     <>
       <path d="M4 21V5.5A1.5 1.5 0 0 1 5.5 4h7A1.5 1.5 0 0 1 14 5.5V21" />
@@ -82,7 +82,7 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M7 8h4M7 12h4M7 16h4M17 14h1M17 17.5h1" />
     </>
   ),
-  /** Stacked planes — a zone, which groups buildings, floors, spaces and devices. */
+  /** Stacked planes - a zone, which groups buildings, floors, spaces and devices. */
   layers: (
     <>
       <path d="M12 3 3 7.5l9 4.5 9-4.5L12 3z" />
@@ -314,7 +314,7 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M5 20c.6-3.6 3.4-5.6 7-5.6s6.4 2 7 5.6" />
     </>
   ),
-  // A pump with its hose — the fuel module's mark. Drawn at the same 1.7 stroke as the rest.
+  // A pump with its hose - the fuel module's mark. Drawn at the same 1.7 stroke as the rest.
   fuel: (
     <>
       <path d="M4 20.5V5.5A2 2 0 0 1 6 3.5h5a2 2 0 0 1 2 2v15" />
@@ -345,7 +345,7 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M4.5 19.5h15" />
     </>
   ),
-  // A sealed parcel — the courier item mark.
+  // A sealed parcel - the courier item mark.
   package: (
     <>
       <path d="M12 3l8 4.2v9.6L12 21l-8-4.2V7.2z" />
@@ -361,7 +361,7 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M8.5 11h7M8.5 14.5h7M8.5 18h4" />
     </>
   ),
-  // A padlock over a shield — chain of custody.
+  // A padlock over a shield - chain of custody.
   'shield-lock': (
     <>
       <path d="M12 3l7 3v5.5c0 4.3-2.9 8-7 9.5-4.1-1.5-7-5.2-7-9.5V6z" />

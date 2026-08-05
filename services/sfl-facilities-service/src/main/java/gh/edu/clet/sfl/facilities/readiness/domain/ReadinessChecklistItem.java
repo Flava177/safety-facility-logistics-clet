@@ -13,7 +13,7 @@ import java.util.UUID;
  * the same hall to the same standard.
  *
  * <p>{@code weight} contributes to the readiness score only. A zero-weight item still raises its
- * blocker — "does the fire door close" is pass/fail, not a percentage.
+ * blocker - "does the fire door close" is pass/fail, not a percentage.
  */
 public record ReadinessChecklistItem(
         UUID id,

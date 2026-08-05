@@ -17,8 +17,8 @@ import org.springframework.web.servlet.resource.PathResourceResolver;
  *
  * <p>{@code /fleet}, {@code /fuel} and {@code /dispatch} used to serve pages of their own. ADR 0006
  * retired them: two interfaces over one service drift, and these had, so each now redirects to the
- * dashboard route that replaced it. The redirect is registered only when the bundle is present —
- * sending somebody to a route that is not being served would replace a working page with a bare 404 —
+ * dashboard route that replaced it. The redirect is registered only when the bundle is present -
+ * sending somebody to a route that is not being served would replace a working page with a bare 404 -
  * and without it the request falls through to a notice page that says where the screens went and how
  * to build them.
  *
@@ -115,7 +115,7 @@ class FleetWebConfiguration {
      *
      * <p>A redirect rather than a forward, so the address bar ends up on the route that is really
      * being served and a refresh does not land back here. When the bundle is absent there is nothing
-     * to redirect to, so the request falls through to the directory's notice page instead — which
+     * to redirect to, so the request falls through to the directory's notice page instead - which
      * explains the move and says how to build the dashboard.
      */
     private static void retire(ViewControllerRegistry registry, String from, String to, boolean uiBundled) {

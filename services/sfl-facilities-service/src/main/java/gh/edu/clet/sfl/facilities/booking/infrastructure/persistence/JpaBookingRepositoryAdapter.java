@@ -30,12 +30,12 @@ import org.springframework.stereotype.Repository;
  * This is the class where the double-booking guarantee becomes a message somebody can read.
  *
  * <p>{@code BookingApplicationService} checks for conflicts before it writes, and that check is
- * genuinely useful — it names the booking that has the hall. It is also not a guarantee: two requests
+ * genuinely useful - it names the booking that has the hall. It is also not a guarantee: two requests
  * can both read an empty diary before either writes. The guarantee is the {@code GIST} exclusion
  * constraint in V10, and when it fires the loser gets a PostgreSQL error naming an index.
  *
  * <p>{@link #saveBooking} and {@link #saveAllocation} therefore flush inside a {@code try} and
- * translate that error into {@link FacilitiesException.BookingConflictException} — the same exception
+ * translate that error into {@link FacilitiesException.BookingConflictException} - the same exception
  * the pre-write check raises. Losing a race and asking late become one error state, which is the
  * right outcome: from the requester's side they are the same event, and the difference is a detail of
  * how close together two people pressed a button.
@@ -60,7 +60,7 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
      * pgjdbc sends {@code UNSPECIFIED} for a null {@code Instant}. String, UUID and enum parameters
      * carry a concrete OID, which is why the idiom works for them.
      *
-     * <p>{@code Instant.MIN} and {@code Instant.MAX} are not usable here — both fall outside what
+     * <p>{@code Instant.MIN} and {@code Instant.MAX} are not usable here - both fall outside what
      * {@code timestamptz} can represent. These two are far enough outside any real booking to be
      * unbounded in practice and inside the column's range.
      */
@@ -101,7 +101,7 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
     public void lockResources(Collection<UUID> resourceIds) {
         // Sorted, so two transactions wanting the same pair take them in the same order. Unsorted,
         // one could hold the projector and want the lectern while the other holds the lectern and
-        // wants the projector — which is the deadlock this whole mechanism exists to prevent, moved
+        // wants the projector - which is the deadlock this whole mechanism exists to prevent, moved
         // one level up rather than removed.
         resourceIds.stream()
                 .sorted()
@@ -350,12 +350,12 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
      * <ul>
      *   <li><strong>The exclusion constraint fired.</strong> Matched on the constraint name found
      *       anywhere in the exception chain. Coarser than unwrapping a {@code PSQLException} for its
-     *       {@code SQLSTATE}, and deliberately so — that would make this the only class in the
+     *       {@code SQLSTATE}, and deliberately so - that would make this the only class in the
      *       service that cares which driver is underneath. The names are ours and distinctive.</li>
      *   <li><strong>A deadlock.</strong> Two transactions each insert a row for the same space, then
      *       each has to check the constraint against the other's uncommitted row, and they wait on
      *       each other; PostgreSQL aborts an arbitrary victim with {@code SQLSTATE 40P01}. The
-     *       advisory lock taken in {@code lockSpace} makes this rare, and rare is not never — a hash
+     *       advisory lock taken in {@code lockSpace} makes this rare, and rare is not never - a hash
      *       collision or a resource taken in an unusual order can still produce one. Untranslated it
      *       reaches the requester as a 500, which is the wrong answer to "can I have the hall?".</li>
      * </ul>

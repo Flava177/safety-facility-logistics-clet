@@ -34,15 +34,15 @@ public class FuelAccessPolicy {
     /**
      * Refuses a driver-only actor a record they did not create.
      *
-     * <p>The {@link #isDriverOnly} narrowing was applied to the logbook <em>list</em> — in SQL, on
-     * {@code created_by} — and nowhere else. So a driver holding a colleague's logbook id read it in
+     * <p>The {@link #isDriverOnly} narrowing was applied to the logbook <em>list</em> - in SQL, on
+     * {@code created_by} - and nowhere else. So a driver holding a colleague's logbook id read it in
      * full through the detail endpoint: journey, route, purpose and passenger notes. **A narrowing
      * only the collection obeys is decorative**, because the record still crosses the boundary, just
      * one at a time rather than in a page. The rule has to be enforced wherever a record is returned.
      *
      * <p>Ownership is {@code createdBy}, deliberately the same column the list query filters on, so
      * the collection and the record cannot disagree about who owns what. Creation is guarded
-     * separately and more strictly — against the driver reference on the trip — because "may I create
+     * separately and more strictly - against the driver reference on the trip - because "may I create
      * this?" and "is this mine?" are different questions and the first has a stronger answer.
      *
      * <p>Raised as {@link FleetAuthorizationException} rather than an {@code IllegalStateException},

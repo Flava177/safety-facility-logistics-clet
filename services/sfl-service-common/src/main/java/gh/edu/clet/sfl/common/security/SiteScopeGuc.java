@@ -17,14 +17,14 @@ import org.springframework.transaction.TransactionExecutionListener;
  *
  * <p>This is the half of ADR 0007 that carries the principal across the boundary. The policies
  * themselves live in each service's migration and read {@code app.site_scopes}; nothing sets that
- * without this class, and a policy reading an unset GUC returns no rows — deliberately, because a
+ * without this class, and a policy reading an unset GUC returns no rows - deliberately, because a
  * second layer that opens up when the first forgets to speak is not a second layer.
  *
  * <h2>Why a transaction listener and not a connection wrapper</h2>
  *
  * <p>{@code SET LOCAL} only has meaning inside a transaction: outside one it applies to a statement
  * that has already ended. Setting the GUC when a connection is handed out would therefore have to use
- * {@code SET} instead, and a plain {@code SET} survives the connection's return to the pool — so the
+ * {@code SET} instead, and a plain {@code SET} survives the connection's return to the pool - so the
  * next request to borrow it would inherit a stranger's scopes. That is the exact failure this design
  * is accused of and the reason it is built this way: {@code SET LOCAL} is rolled back with the
  * transaction, whether it commits or not, so a pooled connection is always clean.
@@ -32,7 +32,7 @@ import org.springframework.transaction.TransactionExecutionListener;
  * <h2>Why the value is quoted rather than bound</h2>
  *
  * <p>{@code SET LOCAL} does not accept a bind parameter. The value is therefore escaped and quoted
- * here, and — more importantly — the input is constrained rather than trusted: a site code that is not
+ * here, and - more importantly - the input is constrained rather than trusted: a site code that is not
  * a plain identifier is dropped before it reaches the statement. Site codes are normalised upstream by
  * {@code EstateCodes}, so anything failing that test is not a site code that could have matched a row
  * anyway, and dropping it narrows rather than widens.
@@ -89,7 +89,7 @@ public final class SiteScopeGuc implements TransactionExecutionListener {
      * The scopes as a comma-separated list the policy can split.
      *
      * <p>Anything that is not a plain site identifier is dropped. {@code SET LOCAL} takes no bind
-     * parameter, so this is the boundary that has to be sound — and constraining the input is a
+     * parameter, so this is the boundary that has to be sound - and constraining the input is a
      * stronger guarantee than escaping it, because a dropped scope narrows what the caller sees while
      * a mis-escaped one could widen it.
      */

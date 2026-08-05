@@ -28,7 +28,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The work-order workflow — SRS-SFL-S153-02, -03.
+ * The work-order workflow - SRS-SFL-S153-02, -03.
  *
  * <p>{@code /from-fault}, the assignment path and the closure path keep the spellings the pre-S152
  * service used, so existing callers and runbooks still resolve. Everything else is new: the four
@@ -61,7 +61,7 @@ public class WorkOrderController {
     @PostMapping("/from-fault")
     @Operation(summary = "Raise a work order against a reported fault",
             description = "SRS-SFL-S153-02. The SLA is computed from the site's configuration, its "
-                    + "operating mode and — where a vendor is named — the contracted response time, "
+                    + "operating mode and - where a vendor is named - the contracted response time, "
                     + "whichever is tighter.")
     public ResponseEntity<ApiResponse<MaintenanceResponses.WorkOrderResponse>> createFromFault(
             @Valid @RequestBody MaintenanceRequests.CreateWorkOrder request, HttpServletRequest http) {
@@ -95,7 +95,7 @@ public class WorkOrderController {
 
     @PatchMapping("/{workOrderId}/hold")
     @Operation(summary = "Put a work order on hold",
-            description = "For something outside the assignee's control — a part, an access window, a "
+            description = "For something outside the assignee's control - a part, an access window, a "
                     + "vendor. The reason is required. Time on hold is accumulated but does not stop "
                     + "the SLA clock: a hall is no less unusable because the reason is a supplier.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> hold(@PathVariable UUID workOrderId,
@@ -105,7 +105,7 @@ public class WorkOrderController {
 
     @PatchMapping("/{workOrderId}/completion")
     @Operation(summary = "The assignee says the work is done",
-            description = "Not yet accepted. Closure is a separate, authorised act — see /closure.")
+            description = "Not yet accepted. Closure is a separate, authorised act - see /closure.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> complete(@PathVariable UUID workOrderId,
             @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
         return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.COMPLETE, request,

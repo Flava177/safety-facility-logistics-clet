@@ -13,7 +13,7 @@ interface ExportEvidenceDialogProps {
 }
 
 /**
- * Approving an export of evidence — SRS-SFL-S153-03.
+ * Approving an export of evidence - SRS-SFL-S153-03.
  *
  * The requirement asks for "role permission, justification and audit logging", and all three are
  * real here. The permission is checked before this dialog is offered; the justification and the

@@ -12,13 +12,13 @@ import java.time.Instant;
  * The system-managed fields, mapped once and embedded in every estate entity.
  *
  * <p>Seven columns that SRS-SFL-S152-01 requires on every operational record. Declaring them in one
- * {@code @Embeddable} rather than copying them into seven entities is what stops the set drifting —
+ * {@code @Embeddable} rather than copying them into seven entities is what stops the set drifting -
  * an entity that forgot {@code correlation_id} would produce audit records nobody can trace, and the
  * omission would be invisible in review.
  *
  * <p>The column names match V6 exactly. {@code record_version} rather than {@code version} because
  * {@code version} is a reserved-ish word in enough tooling to be worth avoiding, and because this is
- * an application-managed optimistic lock rather than a JPA {@code @Version} — the domain increments
+ * an application-managed optimistic lock rather than a JPA {@code @Version} - the domain increments
  * it through {@link RecordMetadata#modifiedBy}, so a change cannot happen without the version moving.
  */
 @Embeddable

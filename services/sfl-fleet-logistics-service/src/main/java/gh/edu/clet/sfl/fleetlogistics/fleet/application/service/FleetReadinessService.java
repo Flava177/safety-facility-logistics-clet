@@ -48,14 +48,14 @@ public class FleetReadinessService {
         this.clock = clock;
     }
 
-    /** "Is this vehicle ready right now?" — the register and dashboard question. */
+    /** "Is this vehicle ready right now?" - the register and dashboard question. */
     @Transactional(readOnly = true)
     public ReadinessAssessment assessVehicle(Vehicle vehicle) {
         return assess(vehicle, null, null, OperatingMode.ROUTINE, null, null, false);
     }
 
     /**
-     * "Can this vehicle and driver take this trip?" — the assignment question.
+     * "Can this vehicle and driver take this trip?" - the assignment question.
      *
      * @param excludingTripId the trip being (re)assigned, so it does not conflict with itself
      * @param inspectionRequired whether a valid inspection is a precondition; true when starting a trip

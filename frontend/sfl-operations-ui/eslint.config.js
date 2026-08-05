@@ -8,7 +8,7 @@ import tseslint from 'typescript-eslint';
  * ESLint for the SFL Operations dashboards.
  *
  * Every plugin this needs was already in `package.json` and the `lint` script has been there from
- * the start — **there was no config file, so the script had never run once.** Several
+ * the start - **there was no config file, so the script had never run once.** Several
  * `eslint-disable-next-line react-hooks/exhaustive-deps` comments in this codebase were therefore
  * written against a linter that was not checking anything; each was re-examined when this landed.
  *
@@ -67,8 +67,8 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': 'off',
 
       /**
-       * `any` is not banned outright because the wire boundary genuinely has untyped shapes — an
-       * unmapped error body, a `Record<string, unknown>` detail map — and forcing a cast there
+       * `any` is not banned outright because the wire boundary genuinely has untyped shapes - an
+       * unmapped error body, a `Record<string, unknown>` detail map - and forcing a cast there
        * makes the code less honest rather than more. It is a warning so a new one is visible.
        */
       '@typescript-eslint/no-explicit-any': 'warn',

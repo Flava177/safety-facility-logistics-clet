@@ -22,28 +22,28 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
 /**
  * Maps every failure to the platform envelope and the status its SRS error state implies.
  *
- * <p>The envelope is {@code ApiResponse<T>} — {@code {data, error}} — because that is what the other
+ * <p>The envelope is {@code ApiResponse<T>} - {@code {data, error}} - because that is what the other
  * 35 controllers in this platform emit and what the dashboard's single API client parses. S152
  * originally returned bare payloads with its own error shape; the client returns {@code envelope.data}
  * and would have read every successful response as {@code undefined}. Thirty-five controllers set the
  * convention, so the five here were changed rather than the shared client taught a per-service policy.
  *
  * <p>Field errors travel in {@code data}, which is where {@code FleetApiError.fromEnvelope} looks for
- * them — an array there becomes the form's per-field messages.
+ * them - an array there becomes the form's per-field messages.
  *
  * <p>The status table this encodes:
  *
  * <ul>
- *   <li>Unauthorised scope, restricted drilldown, no scope — <strong>403</strong></li>
- *   <li>Record not found — <strong>404</strong></li>
- *   <li>Duplicate identifier, version conflict, idempotency key conflict — <strong>409</strong></li>
- *   <li>Invalid transition, readiness blocked, readiness locked, mode transition — <strong>422</strong></li>
- *   <li>Audit chain failure — <strong>500</strong></li>
- *   <li>Everything else — <strong>400</strong></li>
+ *   <li>Unauthorised scope, restricted drilldown, no scope - <strong>403</strong></li>
+ *   <li>Record not found - <strong>404</strong></li>
+ *   <li>Duplicate identifier, version conflict, idempotency key conflict - <strong>409</strong></li>
+ *   <li>Invalid transition, readiness blocked, readiness locked, mode transition - <strong>422</strong></li>
+ *   <li>Audit chain failure - <strong>500</strong></li>
+ *   <li>Everything else - <strong>400</strong></li>
  * </ul>
  *
  * <p>422 rather than 400 for the domain-rule refusals is deliberate: the request was well-formed and
- * the server understood it — it is the estate's current state that forbids it. A client that retried a
+ * the server understood it - it is the estate's current state that forbids it. A client that retried a
  * 400 after fixing its payload would retry a 422 forever.
  */
 @RestControllerAdvice
@@ -122,8 +122,8 @@ class FacilitiesApiExceptionHandler {
      *
      * <p>Two very different failures arrive as one exception type, and reporting them alike sends a
      * caller down the wrong path entirely. Discriminated on the SQL state rather than the message text,
-     * so it does not depend on a driver's wording: 23503 is a foreign-key violation — a reference to
-     * something that does not exist — and anything else here is a uniqueness race the pre-write check
+     * so it does not depend on a driver's wording: 23503 is a foreign-key violation - a reference to
+     * something that does not exist - and anything else here is a uniqueness race the pre-write check
      * lost.
      */
     @ExceptionHandler(DataIntegrityViolationException.class)

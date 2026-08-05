@@ -20,8 +20,8 @@ import org.springframework.test.context.DynamicPropertySource;
 /**
  * The migrations, applied to a real PostgreSQL (SRS-SFL-S152-01…05).
  *
- * <p>V6 does non-trivial work — it rewrites six live tables, backfills provenance, classifies existing
- * rows into space types and drops the {@code active} column — and V7 seeds a checklist per site inside
+ * <p>V6 does non-trivial work - it rewrites six live tables, backfills provenance, classifies existing
+ * rows into space types and drops the {@code active} column - and V7 seeds a checklist per site inside
  * a PL/pgSQL loop. None of that is exercised by a unit test, and a migration that fails on first
  * deploy is the worst place to find out.
  *
@@ -30,7 +30,7 @@ import org.springframework.test.context.DynamicPropertySource;
  * {@code @Testcontainers(disabledWithoutDocker = true)}, and on Windows that predicate asks a question
  * with the wrong answer: the <em>Java</em> Docker client cannot reach the named pipe even while the
  * daemon is running and {@code docker ps} works. All twelve of these tests were therefore skipped on
- * every single run in the environment this service is developed in — so the migration evidence the
+ * every single run in the environment this service is developed in - so the migration evidence the
  * class exists to produce never existed. Pointing it at a running PostgreSQL is what makes it real.
  */
 @EnabledIf(value = "gh.edu.clet.sfl.facilities.FacilitiesPostgresSupport#databaseAvailable",
@@ -59,21 +59,21 @@ class FacilitiesMigrationIntegrationTest {
     /**
      * Fails the run early, and usefully, when the database is not empty.
      *
-     * <p>This suite asserts absolute facts about a virgin schema — the audit chain sits at genesis,
-     * the configuration defaults are exactly what V5 wrote — and several cases insert rows at fixed
+     * <p>This suite asserts absolute facts about a virgin schema - the audit chain sits at genesis,
+     * the configuration defaults are exactly what V5 wrote - and several cases insert rows at fixed
      * site codes. Run a second time against the same database, it fails on duplicate keys and a chain
      * that has moved, six tests in, saying nothing whatever about the migrations. That happened twice
      * in one afternoon and cost twenty minutes each time working out that the tests were fine.
      *
      * <p>Checked rather than cleaned. Automatically dropping the schema would make a mistyped
-     * {@code SFL_FACILITIES_TEST_DB_URL} destroy whichever database it pointed at — including
+     * {@code SFL_FACILITIES_TEST_DB_URL} destroy whichever database it pointed at - including
      * {@code sfl_facilities_service_e2e}, which is shared with the hand-driven verification runs. A
      * precondition that explains itself is worth more here than a convenience that can take real data
      * with it.
      *
      * <p>{@code @BeforeAll}, not {@code @BeforeEach}, and that distinction is the whole point: this
      * suite inserts as it goes, so a per-test version of this check passes for the first test and
-     * then fails for the other eleven — reporting the suite's own fixtures as contamination. Written
+     * then fails for the other eleven - reporting the suite's own fixtures as contamination. Written
      * that way first, and it turned a green run red.
      */
     @BeforeAll
@@ -83,7 +83,7 @@ class FacilitiesMigrationIntegrationTest {
         assertThat(existingSites)
                 .withFailMessage("""
                         This database has been used before (%d site rows). The migration suite proves \
-                        V1..V23 apply to an empty schema, so it must start from one — it is not the \
+                        V1..V23 apply to an empty schema, so it must start from one - it is not the \
                         suite that is failing.
 
                         Recreate it:
@@ -245,14 +245,14 @@ class FacilitiesMigrationIntegrationTest {
     /**
      * The seeded checklists exist for the sites present when V7 ran.
      *
-     * <p>A fresh database has no sites, so the loop seeds nothing — which is correct, and worth
+     * <p>A fresh database has no sites, so the loop seeds nothing - which is correct, and worth
      * asserting so nobody later "fixes" the loop into creating orphan checklists.
      */
     @Test
     void the_readiness_checklist_seed_matches_the_sites_that_existed_when_it_ran() {
         // Counted per seeded site, not against `count(*) from sites`. V7 seeds two checklists for each
         // site that exists **at the moment it runs**, and the original assertion multiplied the site
-        // count as it stands *now* — so it passed only while no sibling test had inserted a site, and
+        // count as it stands *now* - so it passed only while no sibling test had inserted a site, and
         // failed as soon as one ran first. Its intent, which the method name states exactly, is that
         // the seed is two-per-site and references nothing that is not a site; that is what is asserted.
         List<Map<String, Object>> perSite = jdbc().queryForList(

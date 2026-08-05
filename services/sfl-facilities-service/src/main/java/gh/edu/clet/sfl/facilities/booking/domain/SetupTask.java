@@ -14,7 +14,7 @@ import java.util.UUID;
  * The obvious move is to raise a maintenance work order and get the queue, the SLA and the closure
  * evidence for free. It is the wrong move, and the reason is what would end up in that queue.
  *
- * <p>A setup task is a twenty-minute room turnaround — chairs into examination layout, a projector
+ * <p>A setup task is a twenty-minute room turnaround - chairs into examination layout, a projector
  * wheeled in, water on the table. Routing that through the CMMS would put it in the same queue as a
  * failed standby generator, give it an escalation ladder, and demand closure evidence before anybody
  * could say the chairs were straight. The queue would fill with turnarounds and the generator would
@@ -23,8 +23,8 @@ import java.util.UUID;
  * <p>So this stays deliberately thin: what, by when, done or not, and who did it. If a setup reveals
  * something actually broken, that is a fault, and S153 already has a register for it.
  *
- * @param dueBy when the room must be ready. Defaults to the start of the occupied window — allowing
- *        for the setup buffer — rather than to the booking start itself.
+ * @param dueBy when the room must be ready. Defaults to the start of the occupied window - allowing
+ *        for the setup buffer - rather than to the booking start itself.
  */
 public record SetupTask(
         UUID id,

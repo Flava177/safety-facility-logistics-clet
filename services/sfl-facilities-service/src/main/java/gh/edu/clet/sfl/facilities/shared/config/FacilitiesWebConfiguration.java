@@ -12,7 +12,7 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 /**
  * CORS for the facilities API, and the retirement of this service's own page.
  *
- * <p>{@code /} used to serve the SFL Facilities Dashboard — the only user interface SFL.IFIMP had.
+ * <p>{@code /} used to serve the SFL Facilities Dashboard - the only user interface SFL.IFIMP had.
  * ADR 0006 decision 3 kept it explicitly, and only until IFIMP had dashboard screens; S152 is those
  * screens, so the condition it was kept under is now met and it redirects like the other four.
  *
@@ -31,12 +31,12 @@ class FacilitiesWebConfiguration {
      * <strong>5005</strong>, and neither was here before S152 had a UI. The dashboard bundle is served
      * by {@code sfl-fleet-logistics-service} on 8093 and calls this service across origins, exactly as
      * it does the SSEMP service on 8092; {@code npm run dev} serves it from 5005. Without both, a
-     * screen fails in a browser while every equivalent curl succeeds — which is a genuinely confusing
+     * screen fails in a browser while every equivalent curl succeeds - which is a genuinely confusing
      * way to lose an afternoon.
      *
      * <p>8091 is kept for the service's own static page and 8092 for SSEMP; 5173 and 3000 for a
      * default Vite or CRA port. 8094 and 8095 were dropped when the asset-visibility and emergency
-     * deployables were folded into FTLMP and SSEMP — nothing listens on them now, and an origin list
+     * deployables were folded into FTLMP and SSEMP - nothing listens on them now, and an origin list
      * that names a dead port is a list nobody trusts to be current.
      */
     @Bean
@@ -62,7 +62,7 @@ class FacilitiesWebConfiguration {
                         // `X-Correlation-ID` has to be exposed or the browser cannot read it: the
                         // client puts it on every error it raises, and cross-origin that read
                         // silently returns null. The correlation ID would then be present in the
-                        // service log and absent from the message the operator is looking at —
+                        // service log and absent from the message the operator is looking at -
                         // which is the one moment it exists to be useful.
                         .exposedHeaders("Location", "X-Correlation-ID");
                 registry.addMapping("/actuator/**")

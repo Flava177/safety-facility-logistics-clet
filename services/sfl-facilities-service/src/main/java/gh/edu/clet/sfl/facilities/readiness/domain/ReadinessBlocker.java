@@ -10,7 +10,7 @@ import java.util.UUID;
  * A reason a space is not ready (SRS-SFL-S152-05, "blockers by severity").
  *
  * <p>The blocker, not the status, is the useful record. A dashboard that says a hall is {@code BLOCKED}
- * tells an operator to go and find out why; a dashboard that lists "fire door will not latch —
+ * tells an operator to go and find out why; a dashboard that lists "fire door will not latch -
  * CRITICAL, raised 2 hours ago" tells them what to do. The status is derived from these.
  *
  * <p>Resolution is recorded rather than deleted: §21.2 requires records used for examination
@@ -55,7 +55,7 @@ public record ReadinessBlocker(
      * Closes the blocker.
      *
      * <p>Requires a note. "Required evidence must be attached before closure" is the S152-02 rule for
-     * workflow closure, and a blocker cleared with no explanation is the readiness equivalent — it
+     * workflow closure, and a blocker cleared with no explanation is the readiness equivalent - it
      * leaves a reviewer unable to tell a fix from a dismissal.
      */
     public ReadinessBlocker resolve(String notes, String actorId, Instant at) {

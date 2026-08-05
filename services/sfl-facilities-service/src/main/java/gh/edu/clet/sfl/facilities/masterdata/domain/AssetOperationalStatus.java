@@ -11,7 +11,7 @@ package gh.edu.clet.sfl.facilities.masterdata.domain;
 public enum AssetOperationalStatus {
 
     OPERATIONAL,
-    /** Working, but below specification — a lift running on one of two motors. */
+    /** Working, but below specification - a lift running on one of two motors. */
     DEGRADED,
     UNDER_MAINTENANCE,
     OUT_OF_SERVICE,

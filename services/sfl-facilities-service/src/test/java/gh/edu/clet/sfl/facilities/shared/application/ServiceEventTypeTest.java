@@ -12,7 +12,7 @@ import org.junit.jupiter.params.provider.ValueSource;
  *
  * <p>Fleet asserts the same regex over {@code FleetEventType} because every fleet event routes through
  * one enum. Facilities publishes string literals from around fifty call sites, so the equivalent
- * assurance has to sit on the write path — which is what {@link ServiceEventType} is — and this test
+ * assurance has to sit on the write path - which is what {@link ServiceEventType} is - and this test
  * pins the shapes that were actually wrong before the rename rather than only the shape that is right.
  */
 class ServiceEventTypeTest {

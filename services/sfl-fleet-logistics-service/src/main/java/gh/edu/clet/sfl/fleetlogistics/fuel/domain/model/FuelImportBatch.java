@@ -10,7 +10,7 @@ import java.util.UUID;
  * A CSV import, file-level, with its retained row outcomes.
  *
  * <p>Written on every upload since S168 shipped and, until now, readable only in the response to the
- * upload itself — so an operator who navigated away lost the record of which rows were rejected and
+ * upload itself - so an operator who navigated away lost the record of which rows were rejected and
  * why. The rows are the point: a batch is never rejected as a whole for one bad row, and
  * {@code rejectedRows} is a count of individual failures each carrying its own reason.
  *

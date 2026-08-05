@@ -15,7 +15,7 @@ interface ReadinessChartProps {
   /**
    * Names what the ring adds up to.
    *
-   * The figure in the middle is the sum of the slices — the kit's donut derives it rather than
+   * The figure in the middle is the sum of the slices - the kit's donut derives it rather than
    * accepting one, which keeps the centre from disagreeing with the arcs around it.
    */
   centreLabel: string;
@@ -29,7 +29,7 @@ interface ReadinessChartProps {
  * blocked vehicles in one glance, and the actionable count sits on the indicator card above.
  *
  * These three slices are statuses rather than plain categories, so they take the tone palette
- * instead of the categorical sequence — green, amber and red here mean exactly what they mean on a
+ * instead of the categorical sequence - green, amber and red here mean exactly what they mean on a
  * `StatusChip`. Three is also the ceiling: a ring that needs a fourth hue wants a table.
  */
 const ReadinessChart = ({ slices, centreLabel, height = 280 }: ReadinessChartProps) => (

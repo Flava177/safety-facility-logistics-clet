@@ -10,7 +10,7 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * <p>Modelled on {@code FleetPostgresSupport}, and added for the same reason it exists there: the
  * migration suite used to be gated on {@code @Testcontainers(disabledWithoutDocker = true)}, which
  * asks whether the <em>Java</em> Docker client can reach the daemon. On Windows it frequently cannot
- * — the named-pipe transport fails even while {@code docker ps} works from a shell — so the twelve
+ * - the named-pipe transport fails even while {@code docker ps} works from a shell - so the twelve
  * tests that prove {@code V1..V10} apply and that Hibernate validates against them were skipped on
  * every run, in the one environment where they were most needed.
  *
@@ -22,8 +22,8 @@ import org.testcontainers.containers.PostgreSQLContainer;
  * </pre>
  *
  * <p><strong>That database must be empty.</strong> The migration suite proves {@code V1..V10} apply
- * to a virgin schema and asserts absolute facts about the result — the audit chain sits at genesis,
- * the seeded configuration defaults are exactly what V5 wrote — and several of its cases insert rows
+ * to a virgin schema and asserts absolute facts about the result - the audit chain sits at genesis,
+ * the seeded configuration defaults are exactly what V5 wrote - and several of its cases insert rows
  * at fixed site codes. Pointed at a database that has already been used, it fails on duplicate keys
  * and on a chain that has moved, which says nothing about the migrations. Testcontainers handed it a
  * fresh database implicitly; an external one has to be recreated by the caller:

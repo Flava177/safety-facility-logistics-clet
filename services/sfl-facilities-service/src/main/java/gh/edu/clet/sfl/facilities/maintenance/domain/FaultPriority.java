@@ -4,8 +4,8 @@ package gh.edu.clet.sfl.facilities.maintenance.domain;
  * How urgent a fault or work order is, and therefore what SLA it earns.
  *
  * <p>The ordering is meaningful and relied upon. SRS-SFL-S153-02 makes priority an input to the SLA
- * calculation, and two configurable thresholds — the priority at which closure evidence becomes
- * mandatory, and the priority at which a fault raises a readiness blocker — are both expressed as
+ * calculation, and two configurable thresholds - the priority at which closure evidence becomes
+ * mandatory, and the priority at which a fault raises a readiness blocker - are both expressed as
  * "at least this". {@link #atLeast} is that comparison, in one place, so the two rules cannot drift
  * into disagreeing about what "high or above" means.
  */

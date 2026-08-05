@@ -15,7 +15,7 @@ import { listDeviceReferences } from '../api/facilitiesApi';
 import { humaniseCode, orDash, relativeTime } from '../components/facilitiesFormat';
 
 /**
- * Device references — the identity and location of devices vendor systems operate.
+ * Device references - the identity and location of devices vendor systems operate.
  *
  * S152 does not run cameras, readers or panels; it owns where each one is, so that a CCTV event, an
  * access denial or a fire alarm can be placed in a space and a zone without every consuming system

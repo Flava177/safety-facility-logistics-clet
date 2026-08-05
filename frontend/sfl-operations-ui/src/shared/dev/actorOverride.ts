@@ -57,7 +57,7 @@ export interface ActorOverride {
   /**
    * System codes, mirroring `VITE_SFL_SYSTEMS`.
    *
-   * The finer grain. Empty derives from the roles, which is what a real sign-in does — the presets
+   * The finer grain. Empty derives from the roles, which is what a real sign-in does - the presets
    * leave it blank for that reason and narrow by role instead.
    */
   systems: string;
@@ -71,7 +71,7 @@ const text = (value: unknown): string => (typeof value === 'string' ? value : ''
 /**
  * The stored override, or `undefined`.
  *
- * Returns `undefined` in a production build without touching storage, and on anything unreadable —
+ * Returns `undefined` in a production build without touching storage, and on anything unreadable -
  * a corrupt entry falls back to the environment defaults rather than half-applying.
  */
 export const readActorOverride = (): ActorOverride | undefined => {
@@ -125,5 +125,5 @@ export const clearActorOverride = (): void => {
   }
 };
 
-/** `true` when an override is in force — the badge that stops it being mistaken for the default. */
+/** `true` when an override is in force - the badge that stops it being mistaken for the default. */
 export const actorOverridden: boolean = readActorOverride() !== undefined;

@@ -12,7 +12,7 @@ import java.util.Map;
  * grounds that a second notifier would be a second place for CLET's escalation contact list to be
  * wrong. That reasoning is sound and this port does not contradict it: the contact list still lives in
  * exactly one place per deployable, behind one port with one adapter, and a real provider replaces the
- * adapter by configuration. What was not sound was the consequence — publishing an event nobody
+ * adapter by configuration. What was not sound was the consequence - publishing an event nobody
  * consumed and treating the requirement as met. It was not met, the gap report said so, and it stayed
  * unmet for three passes.
  *
@@ -24,7 +24,7 @@ import java.util.Map;
  */
 public interface NotificationPort {
 
-    /** Notifies one person — an assignee, a reporter, a requester. */
+    /** Notifies one person - an assignee, a reporter, a requester. */
     void notifyRecipient(String siteCode, String recipient, NotificationKind kind, String subjectReference,
             Map<String, String> context);
 
@@ -41,7 +41,7 @@ public interface NotificationPort {
         WORK_OVERDUE,
         WORK_ESCALATED,
         WORK_BLOCKED,
-        /** The response deadline passed with nobody having picked the work up — distinct from OVERDUE. */
+        /** The response deadline passed with nobody having picked the work up - distinct from OVERDUE. */
         RESPONSE_OVERDUE,
         FAULT_ESCALATED,
         EVIDENCE_REQUIRED

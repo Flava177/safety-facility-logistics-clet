@@ -26,10 +26,10 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Fault reporting and triage — SRS-SFL-S153-01, -02.
+ * Fault reporting and triage - SRS-SFL-S153-01, -02.
  *
  * <p>The path is unchanged from the pre-S152 version, deliberately: {@code /api/v1/facilities/faults}
- * is printed in the S153 guide and in runbooks. Everything underneath changed — the actor now comes
+ * is printed in the S153 guide and in runbooks. Everything underneath changed - the actor now comes
  * from {@link FacilitiesActorResolver} rather than a raw {@code X-SFL-User} header, every handler is
  * authorised and site-scoped, and every response carries the platform envelope.
  */

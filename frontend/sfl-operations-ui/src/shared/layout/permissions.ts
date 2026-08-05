@@ -3,8 +3,8 @@
  *
  * <h2>Generated from `SflPermission`, and why that matters more than it looks</h2>
  *
- * `permits()` used to take a `string`. A permission name is a string on the wire — it arrives from
- * `/actor/permissions` as JSON — so a string felt natural, and it was wrong in a way that fails
+ * `permits()` used to take a `string`. A permission name is a string on the wire - it arrives from
+ * `/actor/permissions` as JSON - so a string felt natural, and it was wrong in a way that fails
  * silently and permanently: `permits('FLEET_VEHICLE_MANAGEE')` returns **false**, which hides the
  * control. Not an error, not a warning. A gated button that never appears for anyone, and the only
  * symptom is a user saying they cannot find something.
@@ -16,7 +16,7 @@
  *
  * Transcribed from `services/sfl-service-common/.../SflPermission.java`. A permission added there and
  * not here is a compile error at the call site the moment somebody tries to gate on it, which is the
- * failure mode you want — loud, immediate, and at the point of use.
+ * failure mode you want - loud, immediate, and at the point of use.
  *
  * <h2>When this platform moves to an external IAM</h2>
  *

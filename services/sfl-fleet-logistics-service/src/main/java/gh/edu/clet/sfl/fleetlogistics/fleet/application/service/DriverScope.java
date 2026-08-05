@@ -10,7 +10,7 @@ import java.util.UUID;
  * <p>There are three answers, and the third is the one that gets forgotten. A supervising actor sees
  * everything their site scope allows; a driver bound to a profile sees that driver's records; and a
  * driver bound to <em>no</em> profile sees nothing at all. Expressed as a {@code UUID driverId} that
- * is sometimes null, the first and third cases have the same representation — and "no driver filter"
+ * is sometimes null, the first and third cases have the same representation - and "no driver filter"
  * read as "no narrowing" is precisely how an unbound driver ends up seeing every trip at their site.
  * That is not a hypothetical: it is the shape the fuel logbook filter already has, where {@code ownOnly}
  * false and {@code actorId} null are indistinguishable at the SQL layer.
@@ -18,7 +18,7 @@ import java.util.UUID;
  * <p>Sealed, so the set of answers is closed and a new one cannot be added from outside this package
  * without the compiler pointing at every place that handles them. (An exhaustive {@code switch} would
  * make that a compile error rather than a review comment, but pattern switches are a preview feature
- * on this project's Java 17 — so call sites test with {@code instanceof} and default to refusing.)
+ * on this project's Java 17 - so call sites test with {@code instanceof} and default to refusing.)
  *
  * <h2>The identity provider question</h2>
  *
@@ -41,8 +41,8 @@ public sealed interface DriverScope {
      * A driver-only actor with no driver profile bound to their identity.
      *
      * <p>They see nothing, which is a deliberate decision and not a degradation: a driver whose
-     * binding is missing or mis-set is an administrative problem, and the alternative reading — show
-     * them their whole site meanwhile — hands one person every other driver's movements.
+     * binding is missing or mis-set is an administrative problem, and the alternative reading - show
+     * them their whole site meanwhile - hands one person every other driver's movements.
      *
      * <p>{@code reason} is carried so the interface can say why the list is empty rather than
      * presenting an unbound driver with a blank screen that looks like "you have no trips today".

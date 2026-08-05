@@ -1,6 +1,6 @@
 # SFL backend services
 
-Java 17 · Spring Boot 4.1 · Maven multi-module. **Three deployables** — one per platform — plus a
+Java 17 · Spring Boot 4.1 · Maven multi-module. **Three deployables** - one per platform - plus a
 shared kernel.
 
 | Module                        | Platform | Systems                          | Schemas                                 | Port   |
@@ -8,7 +8,7 @@ shared kernel.
 | `sfl-facilities-service`      | IFIMP    | S152, S153, S159                 | `facilities`                            | `8091` |
 | `sfl-safety-security-service` | SSEMP    | S174; S160–S163 not built        | `safety_security`, `emergency_notification` | `8092` |
 | `sfl-fleet-logistics-service` | FTLMP    | S166, S168_fuel, S171, AVAMP-Lite | `fleet_logistics`, `asset_visibility`   | `8093` |
-| `sfl-service-common`          | —        | Shared kernel                    | —                                       | —      |
+| `sfl-service-common`          | -        | Shared kernel                    | -                                       | -      |
 
 Of SSEMP only S174 is built; S160–S163 are foundation and migration, and four of the six are
 Buy-and-Integrate under `docs/phase-1-system-classification.md`.
@@ -17,8 +17,8 @@ Buy-and-Integrate under `docs/phase-1-system-classification.md`.
 ### Why three, and why five schemas
 
 S174 and AVAMP-Lite were separate deployables (`8095` and `8094`) until 5 August 2026. Consolidating
-to three aligns the deployables with the three F&L units the system mapping actually names —
-Building & Infrastructure, Health Safety & Security, Transportation & Logistics — and with the SRS's
+to three aligns the deployables with the three F&L units the system mapping actually names -
+Building & Infrastructure, Health Safety & Security, Transportation & Logistics - and with the SRS's
 own module boundaries.
 
 **The schemas did not merge, and must not.** A deployable is a unit of release; a schema is a unit of
@@ -42,7 +42,7 @@ envelopes. It is a library, not a service.
 
 ## Databases
 
-Each deployable owns a separate PostgreSQL database boundary — a runtime database and a separate
+Each deployable owns a separate PostgreSQL database boundary - a runtime database and a separate
 end-to-end one, as local Docker containers.
 
 | Service                       | Runtime database              | Port   | E2E database                      | Port    |
@@ -81,8 +81,8 @@ been built, the service starts normally and logs how to build it.
 
 **Two things about running the tests.**
 
-Testcontainers is skipped in the Windows development environment — the Java Docker client cannot
-reach the named pipe — so the end-to-end suites report as skipped rather than failing. A plain
+Testcontainers is skipped in the Windows development environment - the Java Docker client cannot
+reach the named pipe - so the end-to-end suites report as skipped rather than failing. A plain
 `mvnw test` therefore goes green while whole suites never ran. CI fails the build if anything
 skipped; see the root README for the three environment variables that enable them locally.
 
@@ -117,14 +117,14 @@ no framework.
 - Paths are `/api/v1/<domain>/<resource>`.
 - Every response uses the `{data, error}` envelope.
 - `Idempotency-Key` is honoured on state-creating POSTs only.
-- `X-Correlation-ID` flows end to end, and is **exposed** as a CORS response header — without that
+- `X-Correlation-ID` flows end to end, and is **exposed** as a CORS response header - without that
   the browser client reads `null` cross-origin and every error loses the one identifier tying it to
   a service log.
 - Error codes carry the SRS's own wording for SRS-defined codes.
 
 There is no authentication locally: `sfl.security.enabled=false` and the actor is asserted through
 `X-SFL-*` headers, which Swagger UI declares globally so they can be filled in once. Authorisation
-is enforced correctly against whatever actor it is given — but identity is not yet verified. In
+is enforced correctly against whatever actor it is given - but identity is not yet verified. In
 production the same actor context is derived from the OIDC/JWT principal and the headers are
 ignored.
 
@@ -132,17 +132,17 @@ ignored.
 
 Flyway, with `ddl-auto: validate`. Two rules:
 
-- Use `VARCHAR(n)` with a length `CHECK`, never `CHAR(n)` — Hibernate rejects the latter at schema
+- Use `VARCHAR(n)` with a length `CHECK`, never `CHAR(n)` - Hibernate rejects the latter at schema
   validation, and the failure does not name the column.
 - Alter and backfill rather than drop and recreate.
 
 ## Boundary rules
 
 - A service owns its own schemas only, and each module inside it owns exactly one. No cross-schema
-  foreign keys in either direction — not between services, and not between two schemas that happen
+  foreign keys in either direction - not between services, and not between two schemas that happen
   to share a database. Cross-context identifiers are held by value.
-- Cross-service changes are published through the service outbox. No drainer exists yet — events
+- Cross-service changes are published through the service outbox. No drainer exists yet - events
   are recorded, not delivered.
 - External events are consumed idempotently through the service inbox.
 - Vendor payloads go through adapters. No vendor model reaches a domain package.
-- Store evidence references and hashes only — never large files or CCTV video.
+- Store evidence references and hashes only - never large files or CCTV video.

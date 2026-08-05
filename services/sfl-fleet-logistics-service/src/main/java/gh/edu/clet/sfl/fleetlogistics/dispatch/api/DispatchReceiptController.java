@@ -45,7 +45,7 @@ public class DispatchReceiptController {
       * Destination receipts.
       *
       * <p>A {@code dispatchId} reads one consignment's receipts. A {@code siteCode} reads across
-      * them — closing gap 7, so "every variance this month" is a query rather than a manifest-by-
+      * them - closing gap 7, so "every variance this month" is a query rather than a manifest-by-
       * manifest hunt.
       */
     @GetMapping

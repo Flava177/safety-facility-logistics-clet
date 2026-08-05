@@ -21,12 +21,12 @@ const initials = (name: string): string =>
  *
  * Destinations are grouped under quiet section labels rather than separated by rules, so the items
  * read as several short lists instead of one long one. The active item takes a tinted pill and gold
- * text — enough to find at a glance, not so much that it competes with the work surface. Only built
+ * text - enough to find at a glance, not so much that it competes with the work surface. Only built
  * destinations appear; there are no placeholder entries.
  *
  * **Sections are filtered by programme entitlement.** A fleet operator sees fleet, fuel and
  * dispatch; they do not see emergency mass notification, which is SSEMP. A manager or superadmin
- * sees everything. See `programmes.ts` and ADR 0005 — and note that this is a usability control,
+ * sees everything. See `programmes.ts` and ADR 0005 - and note that this is a usability control,
  * never the enforcement point: every service authorises every call on its own.
  */
 const Sidebar = () => {
@@ -59,7 +59,7 @@ const Sidebar = () => {
 
                 They were `text-gray-500` at the same weight as an inactive item, so "Operations" and
                 "Trips & assignments" carried equal visual weight and the sidebar read as one long
-                list. A heading's job is to be scannable and *not* look pressable — so it takes the
+                list. A heading's job is to be scannable and *not* look pressable - so it takes the
                 brand navy, a heavier weight and letter-spacing, none of which any nav item uses.
                 Colour is not doing the work alone: the spacing above and the tracking separate them
                 for anyone who cannot distinguish the hues.

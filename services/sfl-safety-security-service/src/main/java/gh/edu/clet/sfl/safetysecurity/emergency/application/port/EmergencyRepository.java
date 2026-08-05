@@ -25,7 +25,7 @@ public interface EmergencyRepository {
      *
      * <p>Shaped like the fleet {@code PageResponse}, the fuel {@code FuelPage} and the dispatch
      * {@code DispatchPage}, so every SFL collection pages the same way from an operator's point of
-     * view — but declared here rather than imported from the API layer, because the port must not
+     * view - but declared here rather than imported from the API layer, because the port must not
      * depend on a transport type.
      *
      * <p>{@code sort} is echoed back because the caller may have asked for a default: a client that
@@ -44,7 +44,7 @@ public interface EmergencyRepository {
     /**
      * Paging and ordering, normalised.
      *
-     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL — the adapter maps
+     * <p>{@code sort} is a key from the resource's own allow-list, never raw SQL - the adapter maps
      * it to a column plus a deterministic tiebreak on {@code id}, because a page over rows that
      * share a sort value will otherwise skip or repeat records between requests.
      */
@@ -112,7 +112,7 @@ public interface EmergencyRepository {
     EmergencyPage<NotificationActivation> findActivations(ActivationQuery query);
     void saveActivationHistory(UUID activationId, String fromStatus, String toStatus, String action, String actor,
             String comment, Instant occurredAt, String correlationId);
-    /** The activation's recorded transitions, oldest first. Closes gap 4 — written since day one, read by nothing. */
+    /** The activation's recorded transitions, oldest first. Closes gap 4 - written since day one, read by nothing. */
     List<ActivationHistoryEntry> findActivationHistory(UUID activationId);
 
     // Channels
@@ -139,7 +139,7 @@ public interface EmergencyRepository {
 
     // Dashboard read model
     Map<String, Object> dashboardCounts(List<String> sites, String site);
-    /** Counts split by a dimension — channel, priority, mode or status. Closes gap 12. */
+    /** Counts split by a dimension - channel, priority, mode or status. Closes gap 12. */
     Map<String, Map<String, Long>> dashboardBreakdown(List<String> sites, String site);
     void saveDashboardSnapshot(String scopeKey, String siteCode, Instant generatedAt, boolean stale,
             Map<String, Object> counts, Instant sourceUpdatedAt, String warnings);

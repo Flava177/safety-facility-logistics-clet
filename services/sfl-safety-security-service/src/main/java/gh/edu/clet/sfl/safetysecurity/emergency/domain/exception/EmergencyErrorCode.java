@@ -2,7 +2,7 @@ package gh.edu.clet.sfl.safetysecurity.emergency.domain.exception;
 
 /**
  * S174 error catalog. The messages for SRS-defined states are the SRS <em>Error States</em> wording,
- * verbatim — that text is contract and is asserted in tests. The numeric HTTP status is carried here (as a
+ * verbatim - that text is contract and is asserted in tests. The numeric HTTP status is carried here (as a
  * plain int) so the domain stays framework-free; the API layer translates it to a response status.
  */
 public enum EmergencyErrorCode {

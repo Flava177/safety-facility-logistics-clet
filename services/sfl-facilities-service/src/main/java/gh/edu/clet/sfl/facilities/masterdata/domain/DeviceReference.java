@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * A stable reference to a device a vendor system operates (SRS-SFL-S152-01, -04).
  *
- * <p>S152 does not run cameras, readers or panels — those are Buy-and-Integrate systems. What it owns
+ * <p>S152 does not run cameras, readers or panels - those are Buy-and-Integrate systems. What it owns
  * is the <em>identity and location</em> of each device, so that a CCTV event, an access denial or a
  * fire alarm can be placed in a room and a zone without every consuming system inventing its own
  * device registry.
@@ -45,7 +45,7 @@ public record DeviceReference(
         Objects.requireNonNull(metadata, "metadata is required");
     }
 
-    /** Registers a device. Status starts {@code UNKNOWN} — no vendor feed has reported on it yet. */
+    /** Registers a device. Status starts {@code UNKNOWN} - no vendor feed has reported on it yet. */
     public static DeviceReference register(UUID id, String siteCode, String deviceCode, String name,
             DeviceReferenceType type, UUID roomId, String locationCode, String vendor, String externalReference,
             String actorId, Instant at, SourceChannel channel, String correlationId) {
@@ -59,7 +59,7 @@ public record DeviceReference(
      * Records what a vendor feed reported.
      *
      * <p>{@code statusReportedAt} is the vendor's own observation time where supplied, not our receipt
-     * time — the dashboard's staleness warning is about how old the *observation* is, and using
+     * time - the dashboard's staleness warning is about how old the *observation* is, and using
      * receipt time would report a six-hour-old reading as fresh.
      */
     public DeviceReference reportStatus(DeviceOperationalStatus newStatus, Instant reportedAt, String actorId,

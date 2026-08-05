@@ -68,7 +68,7 @@ const bucketByDay = (
 /**
  * Page-header metadata: when the snapshot was taken, what it covers, what it reconciled.
  *
- * These are facts about the query rather than statuses, so they carry no tone — three coloured chips
+ * These are facts about the query rather than statuses, so they carry no tone - three coloured chips
  * directly above a KPI row is the loudest thing the header can do, and it spends attention on
  * provenance instead of on the numbers. Staleness is the one thing here that is a status, and it is
  * marked with an icon and a name assistive technology can read: the previous build said it by
@@ -91,7 +91,7 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  *
  * Indicators come from the service's own dashboard snapshot; the trend and the sparklines are
  * bucketed from the trip and workflow records themselves, because the service exposes no
- * time-series endpoint. Nothing on this page is synthetic — where there is no history to show, no
+ * time-series endpoint. Nothing on this page is synthetic - where there is no history to show, no
  * trend is drawn.
  */
 const FleetDashboardPage = () => {
@@ -158,8 +158,8 @@ const FleetDashboardPage = () => {
   /**
    * The documents behind the expired-compliance indicator.
    *
-   * There is no compliance-document search endpoint — documents are only readable per vehicle or
-   * through this indicator drilldown — so the panel lists what the service itself counts, and never
+   * There is no compliance-document search endpoint - documents are only readable per vehicle or
+   * through this indicator drilldown - so the panel lists what the service itself counts, and never
    * an expiry horizon the service was not asked about.
    */
   const expiredCompliance = useApiQuery(
@@ -312,8 +312,8 @@ const FleetDashboardPage = () => {
         crumbs={[{ label: 'Fleet' }]}
         actions={
           /*
-           * Refresh only. A "Plan a trip" button here could not open the create dialog — it lives
-           * on the trip queue — so it merely carried the operator to that page to press the same
+           * Refresh only. A "Plan a trip" button here could not open the create dialog - it lives
+           * on the trip queue - so it merely carried the operator to that page to press the same
            * button again. The action belongs where it works.
            */
           <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
@@ -383,7 +383,7 @@ const FleetDashboardPage = () => {
 
               {/*
                * Eight indicators, one grid. Tone is spent only where the measure is an exception
-               * class in its own right — a blocker, an escalation, something overdue — and only
+               * class in its own right - a blocker, an escalation, something overdue - and only
                * while the count is non-zero, so a clean fleet reads as eight quiet cards rather
                * than eight green ones. The figures themselves are navy throughout.
                */}

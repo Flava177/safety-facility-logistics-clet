@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * the arrow pointing from the module that reports to the module that owns the facts. Nothing in
  * {@code dashboard} imports a fault or a work order.
  *
- * <p>Reads are deliberately narrow — two counts and a set of location codes. A dashboard that pulled
+ * <p>Reads are deliberately narrow - two counts and a set of location codes. A dashboard that pulled
  * whole work orders across this boundary would end up re-deriving S153's own rules about what counts
  * as open, and the two answers would eventually disagree.
  */

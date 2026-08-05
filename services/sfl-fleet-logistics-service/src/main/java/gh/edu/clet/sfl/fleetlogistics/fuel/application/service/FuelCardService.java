@@ -18,18 +18,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The fuel-card register — SRS-SFL-S168fuel-04, which had no implementation at all.
+ * The fuel-card register - SRS-SFL-S168fuel-04, which had no implementation at all.
  *
  * <p>{@code fuel_transactions.masked_card_reference} has been captured since V10 as a bare string.
  * The platform could tell you which card was used and could answer nothing about it: whether the card
  * is ours, whether it is still active, whether it belongs to the vehicle that was filled. The C9
  * mapping gives S168_fuel "anti-fraud controls" as its purpose, and the commonest fuel fraud is a card
- * assigned to one vehicle filling another — which needs a register to be visible at all.
+ * assigned to one vehicle filling another - which needs a register to be visible at all.
  *
  * <p><strong>Issuing is a manager's act.</strong> A fuel card is a payment instrument, so
  * {@code FUEL_CARD_MANAGE} sits with {@code FLEET_MANAGER} and {@code SFL_ADMIN}; the logistics officer
  * who runs fuel operations day to day gets {@code FUEL_CARD_READ} and cannot issue one. A driver gets
- * neither — the register says which cards exist and who holds them, which is not a driver's business.
+ * neither - the register says which cards exist and who holds them, which is not a driver's business.
  */
 @Service
 public class FuelCardService {
@@ -57,7 +57,7 @@ public class FuelCardService {
         access.require(command.actor(), SflPermission.FUEL_CARD_MANAGE, command.siteCode(), "FuelCard", null);
         SiteCode site = SiteCode.of(command.siteCode());
         // A live card already answering to this reference means somebody is re-issuing without
-        // cancelling, and the partial unique index would refuse it anyway — better to say why here.
+        // cancelling, and the partial unique index would refuse it anyway - better to say why here.
         repository.findLiveCardByReference(site.value(), command.maskedReference()).ifPresent(existing -> {
             throw new IllegalStateException("A live fuel card already exists for reference "
                     + command.maskedReference() + " at " + site.value()
@@ -84,8 +84,8 @@ public class FuelCardService {
     /**
      * Assignment and lifecycle, in one place.
      *
-     * <p>One entry point rather than five, because every one of these is the same shape — read, check,
-     * move, audit — and five near-identical methods is where the audit call gets forgotten on the
+     * <p>One entry point rather than five, because every one of these is the same shape - read, check,
+     * move, audit - and five near-identical methods is where the audit call gets forgotten on the
      * sixth.
      */
     @Transactional

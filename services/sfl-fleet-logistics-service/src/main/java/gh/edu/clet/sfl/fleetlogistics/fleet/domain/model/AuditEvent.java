@@ -9,7 +9,7 @@ import java.util.UUID;
  *
  * <p>Carries actor, timestamp, action, source channel, before/after values and correlation ID, and the
  * two hash-chain fields that make the log tamper-evident. {@code beforeValue}/{@code afterValue} are
- * canonical JSON produced by the application layer — the domain treats them as opaque text so that no
+ * canonical JSON produced by the application layer - the domain treats them as opaque text so that no
  * JSON library is needed here.
  *
  * <p>A record is created "unsealed" ({@code recordHash == null}) and sealed by {@link AuditHashChain}

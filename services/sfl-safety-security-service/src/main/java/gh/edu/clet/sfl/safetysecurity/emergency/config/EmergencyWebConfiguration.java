@@ -13,12 +13,12 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
  *
  * <p>{@code /emergency} used to serve a page of its own. ADR 0006 retired it in favour of the
  * dashboard's emergency screens, which are served by the fleet service and call this one across
- * origins — so unlike the fleet redirects, the target here is on another host and has to be
+ * origins - so unlike the fleet redirects, the target here is on another host and has to be
  * configured. {@code sfl.dashboard.base-url} is that configuration; behind a gateway it becomes a
  * same-origin path prefix and nothing else changes.
  *
  * <p>The allowed-origin default lost {@code :8095} and gained {@code :8092} when S174 was folded into
- * this deployable. That is not cosmetic — a stale origin list is invisible to curl and fatal in a
+ * this deployable. That is not cosmetic - a stale origin list is invisible to curl and fatal in a
  * browser, which is exactly how the facilities service shipped a CORS list that allowed neither
  * front end.
  */

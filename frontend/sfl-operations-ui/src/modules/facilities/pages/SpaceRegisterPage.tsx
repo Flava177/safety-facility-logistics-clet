@@ -25,7 +25,7 @@ import {
  *
  * The most-visited screen in the module, because a space is what every other IFIMP system points at:
  * S153 raises faults against one, S159 will book one, S162a zones contain one. It is therefore a
- * search rather than a list — an estate of any size is not browsable — and it leads with readiness,
+ * search rather than a list - an estate of any size is not browsable - and it leads with readiness,
  * which is the column an operator is actually scanning for.
  */
 const SpaceRegisterPage = () => {
@@ -51,7 +51,7 @@ const SpaceRegisterPage = () => {
     [siteCode, spaceType, readiness, page, size],
   );
 
-  /** Any filter change returns to the first page — page 4 of a new filter is meaningless. */
+  /** Any filter change returns to the first page - page 4 of a new filter is meaningless. */
   const changeFilter = (apply: () => void) => {
     apply();
     setPage(0);

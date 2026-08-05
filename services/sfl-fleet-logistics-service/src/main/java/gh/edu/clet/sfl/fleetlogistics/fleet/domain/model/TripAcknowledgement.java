@@ -6,15 +6,15 @@ import java.util.Objects;
 /**
  * The assigned driver's answer to a trip assignment.
  *
- * <p>Kept as a value object rather than four loose columns on {@link Trip} so the invariant — a
- * deferral has a reason, a pending acknowledgement has neither actor nor timestamp — lives in one
+ * <p>Kept as a value object rather than four loose columns on {@link Trip} so the invariant - a
+ * deferral has a reason, a pending acknowledgement has neither actor nor timestamp - lives in one
  * place and cannot be half-applied by a caller that sets the state and forgets the reason.
  *
  * @param state who has answered and how
  * @param reason why the driver deferred; null unless {@code state} is
  *        {@link TripAcknowledgementState#DEFERRED}
  * @param answeredAt when the driver answered; null while pending
- * @param answeredBy the identity that answered — the actor's subject, so the record survives a rename
+ * @param answeredBy the identity that answered - the actor's subject, so the record survives a rename
  */
 public record TripAcknowledgement(
         TripAcknowledgementState state,

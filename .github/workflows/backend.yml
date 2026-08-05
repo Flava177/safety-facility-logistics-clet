@@ -6,7 +6,7 @@ name: Backend
 # mandatory-scenario evidence for S166, S168_fuel, S171 and S174 resolve their database from
 # SFL_*_TEST_DB_URL first and Testcontainers second. Nothing set those variables and the Java Docker
 # client could not reach the daemon on the development platform, so 102 tests skipped on every run for
-# four build passes — and a skip reads as a pass in a summary line. Producing that evidence must not
+# four build passes - and a skip reads as a pass in a summary line. Producing that evidence must not
 # depend on a developer remembering an environment variable.
 
 on:
@@ -78,7 +78,7 @@ jobs:
       # the build itself was green.
       #
       # `sfl-safety-security-service` is in this list even though it has no tests, and that is the
-      # point. It was omitted, so CI never compiled it — and on 1 Aug 2026 it turned out to have no
+      # point. It was omitted, so CI never compiled it - and on 1 Aug 2026 it turned out to have no
       # @SpringBootApplication class and no security configuration, meaning it could not start at all
       # while four documents described it as a service that boots. A module outside the build is a
       # module nothing can tell you about. Prefer `-pl` listing every module over a shorter list.
@@ -88,7 +88,7 @@ jobs:
         shell: bash
 
       # Compiling is not starting. The two defects above survived a green build precisely because
-      # nothing ever launched the artefact, so the context is loaded here — which is what would have
+      # nothing ever launched the artefact, so the context is loaded here - which is what would have
       # caught a missing main class the day it was written.
       - name: Every service context loads
         working-directory: services
@@ -97,7 +97,7 @@ jobs:
           for m in sfl-facilities-service sfl-safety-security-service sfl-fleet-logistics-service; do
             main=$(find "$m/src/main/java" -name '*Application.java' | head -1)
             if [ -z "$main" ]; then
-              echo "::error::$m has no @SpringBootApplication class — it cannot start."
+              echo "::error::$m has no @SpringBootApplication class - it cannot start."
               exit 1
             fi
             echo "  $m -> $(basename "$main")"
@@ -114,7 +114,7 @@ jobs:
             | sed 's/[^0-9]//g' | awk '{s+=$1} END {print s+0}')
           echo "Total skipped: $skipped"
           if [ "$skipped" -gt 0 ]; then
-            echo "::error::$skipped test(s) skipped. The e2e suites must run in CI — check the SFL_*_TEST_DB_URL variables and the service containers."
+            echo "::error::$skipped test(s) skipped. The e2e suites must run in CI - check the SFL_*_TEST_DB_URL variables and the service containers."
             grep -l 'skipped="[1-9]' */target/surefire-reports/*.xml || true
             exit 1
           fi

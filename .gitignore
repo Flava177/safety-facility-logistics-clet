@@ -442,7 +442,7 @@ $RECYCLE.BIN/
 .eslintcache
 tmp/
 
-# Local scratch and design binaries — the .fig lives in Figma, not in git
+# Local scratch and design binaries ï¿½ the .fig lives in Figma, not in git
 COMMIT_MSG_*.txt
 *.fig
 
@@ -458,7 +458,7 @@ COMMIT_MSG_*.txt
 # The docs tree, including the SRS binaries, which do not belong in git at all.
 docs/
 
-# Assistant and agent scratch â€” never committed.
+# Assistant and agent scratch - never committed.
 .agents/
 .codex/
 .claude/

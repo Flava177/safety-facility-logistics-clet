@@ -26,7 +26,7 @@ const SEARCH_LIMIT = 100;
  *
  * The counters come from the health projection; the messages come from `GET /integrations/messages`.
  * That search is why this page changed: replay takes a message identifier, and the only messages the
- * dashboard could see were the handful the health projection happened to carry — so replaying a dead
+ * dashboard could see were the handful the health projection happened to carry - so replaying a dead
  * letter meant knowing its id from somewhere else entirely. Dead-letter replay was a documented
  * capability that could not be reached from here at all.
  *
@@ -34,7 +34,7 @@ const SEARCH_LIMIT = 100;
  * field is a compile error instead of an empty cell.
  *
  * Replay is offered on any message that is not already `PROCESSED`. That mirrors the service, which
- * treats replaying a processed message as a no-op rather than an error — the operation is
+ * treats replaying a processed message as a no-op rather than an error - the operation is
  * idempotent, and the audit entry is written either way.
  */
 const IntegrationHealthPage = () => {
@@ -138,7 +138,7 @@ const IntegrationHealthPage = () => {
         width: 100,
         hideBelowLg: true,
         cell: (row) => (
-          <span className="text-theme-xs text-gray-600">{row.siteCode ?? '—'}</span>
+          <span className="text-theme-xs text-gray-600">{row.siteCode ?? '-'}</span>
         ),
       },
       {
@@ -160,7 +160,7 @@ const IntegrationHealthPage = () => {
         hideBelowLg: true,
         cell: (row) => (
           <span className="font-mono text-theme-xs text-gray-600">
-            {row.correlationId ? row.correlationId.slice(0, 8) : '—'}
+            {row.correlationId ? row.correlationId.slice(0, 8) : '-'}
           </span>
         ),
       },
@@ -332,7 +332,7 @@ const IntegrationHealthPage = () => {
                   value={replayId}
                   onChange={setReplayId}
                   className="sm:max-w-[420px] sm:flex-1"
-                  helperText="Privileged and idempotent — replaying the same message twice is safe."
+                  helperText="Privileged and idempotent - replaying the same message twice is safe."
                 />
                 <Button
                   variant="primary"

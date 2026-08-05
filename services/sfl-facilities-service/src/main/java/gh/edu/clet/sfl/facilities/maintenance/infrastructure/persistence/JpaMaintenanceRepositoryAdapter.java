@@ -27,7 +27,7 @@ import org.springframework.stereotype.Repository;
  * Each {@code save*} looks the row up and calls {@code apply(...)} on the managed entity rather than
  * constructing a detached one and handing it to {@code save}. Both work; the difference shows on
  * update. A detached entity with a matching id makes Hibernate issue a select-then-update anyway, and
- * — more importantly — silently overwrites any column the mapping forgot, because a null field on a
+ * - more importantly - silently overwrites any column the mapping forgot, because a null field on a
  * fresh object is indistinguishable from a deliberate null. Applying onto the managed instance keeps
  * the aggregate the single source of every column, which is the property the {@code apply} methods
  * exist to give.

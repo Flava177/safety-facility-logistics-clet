@@ -17,7 +17,7 @@ interface AssignWorkOrderDialogProps {
 /**
  * Assigning and reassigning, which are the same call.
  *
- * Reassignment is not a different state — it is a change of owner that the audit trail records. So
+ * Reassignment is not a different state - it is a change of owner that the audit trail records. So
  * there is one dialog and one endpoint, and the only thing that changes is the wording.
  *
  * ## Why the vendor list shows unassignable vendors instead of hiding them
@@ -26,7 +26,7 @@ interface AssignWorkOrderDialogProps {
  * leave a supervisor wondering where a contractor they use every week has gone; showing them
  * disabled, with the service's own reason, answers the question in the place it is asked. The
  * `assignable` and `unassignableReason` fields come down the wire for exactly this, so no date
- * arithmetic happens here — a contract that expires mid-session expires for both sides at once.
+ * arithmetic happens here - a contract that expires mid-session expires for both sides at once.
  */
 const AssignWorkOrderDialog = ({ order, onClose, onSubmit }: AssignWorkOrderDialogProps) => {
   const [assignedTo, setAssignedTo] = useState(order.assignedTo ?? '');
@@ -65,7 +65,7 @@ const AssignWorkOrderDialog = ({ order, onClose, onSubmit }: AssignWorkOrderDial
     <FormDialog
       open
       title={order.assignedTo ? 'Reassign work order' : 'Assign work order'}
-      description={`${order.workOrderNumber} — ${order.title}`}
+      description={`${order.workOrderNumber} - ${order.title}`}
       submitLabel={order.assignedTo ? 'Reassign' : 'Assign'}
       submitting={submitting}
       submitDisabled={!action.allowed}
@@ -97,13 +97,13 @@ const AssignWorkOrderDialog = ({ order, onClose, onSubmit }: AssignWorkOrderDial
           value={vendorId}
           onChange={setVendorId}
           allowEmpty
-          emptyLabel="In house — no vendor"
+          emptyLabel="In house - no vendor"
           error={!action.allowed}
           options={(vendors.data ?? []).map((candidate) => ({
             value: candidate.id,
             label: candidate.assignable
               ? `${candidate.name} (${candidate.vendorCode})`
-              : `${candidate.name} — unavailable`,
+              : `${candidate.name} - unavailable`,
           }))}
           helperText={
             action.reason ??

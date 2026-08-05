@@ -8,7 +8,7 @@ export type ButtonSize = 'sm' | 'md';
 /**
  * Action styles, with their measured contrast against the surface they sit on.
  *
- * `primary` is CLET Navy — the same filled dark button the rest of the platform uses for "make a
+ * `primary` is CLET Navy - the same filled dark button the rest of the platform uses for "make a
  * new thing". `accent` keeps CLET Gold for the one action that starts a piece of field work, and
  * its label is navy: white on gold-700 is 2.9:1 and fails SC 1.4.3, while navy on the same fill is
  * 6.2:1. Gold is a colour to be seen with, not read through.
