@@ -43,6 +43,7 @@ import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 import { useRecentValues } from 'shared/hooks/useRecentValues';
 import FormSummary from 'shared/components/FormSummary';
+import PlaceField from 'shared/components/PlaceField';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -276,18 +277,18 @@ export const CreateTripDialog = ({
           }
           {...form.fieldProps('operatingMode')}
         />
-        <TextInput
+        <PlaceField
           label="Origin"
           required
-          suggestions={recentOrigins}
+          recent={recentOrigins}
           value={form.values.origin}
           onChange={(value) => form.setValue('origin', value)}
           {...form.fieldProps('origin')}
         />
-        <TextInput
+        <PlaceField
           label="Destination"
           required
-          suggestions={recentDestinations}
+          recent={recentDestinations}
           value={form.values.destination}
           onChange={(value) => form.setValue('destination', value)}
           {...form.fieldProps('destination')}
