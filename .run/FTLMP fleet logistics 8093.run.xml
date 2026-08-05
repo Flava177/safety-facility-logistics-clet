@@ -1,0 +1,17 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="FTLMP fleet logistics 8093" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="sfl-fleet-logistics-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication" />
+    <envs>
+      <env name="SFL_PORT" value="8093" />
+      <env name="SFL_FLEET_LOGISTICS_DB_URL" value="jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service" />
+      <env name="SFL_DB_USERNAME" value="sfl" />
+      <env name="SFL_DB_PASSWORD" value="sfl" />
+      <env name="SFL_SECURITY_ENABLED" value="false" />
+      <env name="SFL_FLEET_OPEN_BROWSER" value="true" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

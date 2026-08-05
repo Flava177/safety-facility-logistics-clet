@@ -89,8 +89,21 @@ const fetchOne = async (source: Source): Promise<string[]> => {
  * Resolves the actor's permissions. Never throws, never rejects.
  *
  * Leaves the set null when **every** source failed, which is what makes the fail-open default kick in.
- * A partial answer is still an answer: if fleet replies and emergency does not, the fleet permissions
- * narrow fleet items and the S174 items stay visible because nothing is known about them.
+ *
+ * <p><strong>A partial answer is not a partial fail-open, and this comment used to claim it was.</strong>
+ * It said that if fleet replied and SSEMP did not, "the S174 items stay visible because nothing is
+ * known about them". That is not what happens. Everything merges into one flat set, and `permits()`
+ * only fails open when `granted` is `null` — so the moment *any* service answers, a permission absent
+ * from the merged set reads as **denied**, not as unknown.
+ *
+ * <p>The practical consequence is worth stating because it looks like a permissions problem and is
+ * not one: start the fleet service alone and the dashboard still loads — fleet serves it — fleet
+ * answers for its own permissions, and every facilities and emergency control silently disappears.
+ * No error, no empty state, no failed request the operator can see. It presents as "this account
+ * cannot do that" when the truth is "that service is not running".
+ *
+ * <p>Run all three, or read the sidebar as fiction. See CLAUDE.md, which records the same trap for
+ * the case of a module missing from `SOURCES`.
  */
 export const loadActorPermissions = async (): Promise<void> => {
   const results = await Promise.all(SOURCES.map(fetchOne));

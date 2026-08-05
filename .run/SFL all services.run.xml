@@ -1,0 +1,8 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="SFL all services" type="CompoundRunConfigurationType">
+    <toRun name="IFIMP facilities 8091" type="SpringBootApplicationConfigurationType" />
+    <toRun name="SSEMP safety security 8092" type="SpringBootApplicationConfigurationType" />
+    <toRun name="FTLMP fleet logistics 8093" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

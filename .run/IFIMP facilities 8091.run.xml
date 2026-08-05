@@ -1,0 +1,16 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="IFIMP facilities 8091" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="sfl-facilities-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.facilities.FacilitiesServiceApplication" />
+    <envs>
+      <env name="SFL_PORT" value="8091" />
+      <env name="SFL_FACILITIES_DB_URL" value="jdbc:postgresql://localhost:5441/sfl_facilities_service" />
+      <env name="SFL_DB_USERNAME" value="sfl" />
+      <env name="SFL_DB_PASSWORD" value="sfl" />
+      <env name="SFL_SECURITY_ENABLED" value="false" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>
