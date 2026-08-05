@@ -457,8 +457,22 @@ public class VehicleApplicationService {
         if (eventType == null) {
             return;
         }
+        // `registrationNumber` and `siteCode` are not decoration — they are the contract.
+        //
+        // Two code paths publish this same event type: here, when a recorded service changes the
+        // status, and `ComplianceServiceSweepService`, when the daily sweep notices one has fallen
+        // due. They emitted *different bodies*, and this one omitted both the registration and the
+        // site. A consumer reading the documented payload therefore worked for events from the sweep
+        // and silently dropped events from here, which is the worst shape a bug can take: the same
+        // event name meaning two things depending on which code path raised it.
+        //
+        // It survived because nothing had ever consumed an event. The `local` transport logs the
+        // payload and discards it, so no reader existed to notice the field was missing. The first
+        // real consumer found it within a minute of the broker going in.
         Map<String, Object> payload = new LinkedHashMap<>();
         payload.put("vehicleId", after.id().toString());
+        payload.put("registrationNumber", after.registrationNumber().value());
+        payload.put("siteCode", after.siteCode().value());
         payload.put("serviceStatus", after.serviceStatus().name());
         payload.put("nextDueOn", record.nextDueOn() == null ? null : record.nextDueOn().toString());
         payload.put("nextDueOdometer", record.nextDueOdometer());

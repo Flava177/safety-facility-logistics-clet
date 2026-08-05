@@ -19,6 +19,34 @@ spring:
     default-schema: facilities
     schemas: facilities
     locations: classpath:db/migration
+  rabbitmq:
+    # Only used when `sfl.facilities.messaging.transport=rabbitmq`. Boot creates the connection
+    # factory from these regardless, but nothing opens a connection until a publisher or a listener
+    # asks for one — which is why a default `local` deployment needs no broker running.
+    host: ${SFL_RABBITMQ_HOST:localhost}
+    port: ${SFL_RABBITMQ_PORT:5672}
+    username: ${SFL_RABBITMQ_USERNAME:sfl}
+    password: ${SFL_RABBITMQ_PASSWORD:sfl}
+    listener:
+      simple:
+        # Concurrency stays at one: the ordering that matters here is per vehicle, and one consumer is
+        # the simplest way to keep it. Two would be faster and would let a DUE and an OVERDUE for the
+        # same vehicle land out of order.
+        concurrency: 1
+        max-concurrency: 1
+        # Requeue on rejection, paired deliberately with how the handler fails.
+        #
+        # The handler throws only for the unexpected — a database blip, a lock timeout — where
+        # retrying is exactly right, and its transaction takes the inbox claim back with it so the
+        # redelivery is processed rather than skipped. Anything that can never succeed (an unreadable
+        # body, a payload missing the fields the fault needs) is logged and *returned* instead, which
+        # leaves the claim committed and acknowledges the message, so it cannot loop.
+        #
+        # The residual risk is honest: a genuine bug in the handler would requeue forever and fill the
+        # log. That is the trade for not losing a transient failure, and it is the right way round for
+        # a development broker with no dead-letter exchange behind it. A real deployment on S217 gets
+        # a DLQ and this becomes `false`.
+        default-requeue-rejected: true
   security:
     oauth2:
       resourceserver:

@@ -1,6 +1,6 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="SFL databases" type="ShConfigurationType">
-    <option name="SCRIPT_TEXT" value="docker compose -f compose.service-dbs.yml up -d facilities-postgres safety-security-postgres fleet-vehicle-postgres" />
+  <configuration default="false" name="SFL infrastructure" type="ShConfigurationType">
+    <option name="SCRIPT_TEXT" value="docker compose -f compose.service-dbs.yml up -d facilities-postgres safety-security-postgres fleet-vehicle-postgres &amp;&amp; docker compose -f compose.broker.yml up -d" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="true" />
     <option name="SCRIPT_PATH" value="" />
     <option name="SCRIPT_OPTIONS" value="" />
