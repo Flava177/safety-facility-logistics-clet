@@ -31,10 +31,12 @@ import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import { EvidenceFileActions } from 'shared/components/EvidenceFileField';
 import StatusChip from 'shared/components/StatusChip';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
+import { canRunReconciliation, canVoidFuel } from 'modules/fleet/api/access';
 
 /**
  * A fuel transaction, its reconciliation outcome and the cases that outcome raised.
@@ -223,23 +225,28 @@ const FuelTransactionDetailPage = () => {
 
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="primary"
-                  startIcon="scale"
-                  loading={reconciling}
-                  disabled={!transactionReconcilable(record)}
-                  onClick={reconcile}
-                >
-                  {transactionReconciled(record) ? 'Reconcile again' : 'Reconcile'}
-                </Button>
-                <Button
-                  variant="danger"
-                  startIcon="close"
-                  disabled={!transactionVoidable(record)}
-                  onClick={() => setVoiding(true)}
-                >
-                  Void
-                </Button>
+                {canRunReconciliation() && (
+                  <Button
+                    variant="primary"
+                    startIcon="scale"
+                    loading={reconciling}
+                    disabled={!transactionReconcilable(record)}
+                    onClick={reconcile}
+                  >
+                    {transactionReconciled(record) ? 'Reconcile again' : 'Reconcile'}
+                  </Button>
+                )}
+                {/* Void is irreversible and separately granted - a reader must not be offered it. */}
+                {canVoidFuel() && (
+                  <Button
+                    variant="danger"
+                    startIcon="close"
+                    disabled={!transactionVoidable(record)}
+                    onClick={() => setVoiding(true)}
+                  >
+                    Void
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   startIcon="truck"
@@ -300,19 +307,68 @@ const FuelTransactionDetailPage = () => {
                         label: 'Odometer reading',
                         value: `${formatNumber(record.odometerReading)} km`,
                       },
-                      { label: 'Occurred at', value: formatDateTime(record.occurredAt) },
+                      { label: 'Fuel purchased at', value: formatDateTime(record.occurredAt) },
                       {
                         label: 'Card reference',
                         value: record.maskedCardReference ?? '-',
                         masked: Boolean(record.maskedCardReference),
                       },
-                      {
-                        label: 'Receipt evidence',
-                        value: record.receiptEvidenceId ?? 'None held',
-                      },
                       { label: 'Comments', value: record.comments ?? '-', span: 2 },
                     ]}
                   />
+                </SectionCard>
+
+                {/*
+                  The receipt and the pump reading, side by side and openable.
+
+                  This is the point of storing both. A reviewer asking "did this driver really buy
+                  GHS 240 of fuel" cannot answer it from the numbers - the numbers are what is in
+                  question - and they cannot answer it from an evidence identifier either. They
+                  answer it by looking at what the attendant wrote and what the pump displayed, and
+                  seeing whether the two agree with each other and with the claim.
+                */}
+                <SectionCard
+                  title="Evidence"
+                  subtitle="What the vendor wrote, and what the pump showed"
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1.5 text-theme-sm font-semibold text-gray-800">Receipt</p>
+                      {record.receiptEvidenceId ? (
+                        <EvidenceFileActions
+                          evidenceId={record.receiptEvidenceId}
+                          fileName={`receipt-${record.id.slice(0, 8)}`}
+                          onError={notifyError}
+                        />
+                      ) : (
+                        <p className="text-theme-xs text-gray-500">
+                          None held.{' '}
+                          {record.sourceSystem === 'MANUAL'
+                            ? 'A manual capture without a receipt fails the RECEIPT rule once the grace window closes.'
+                            : 'Provider-fed records rarely carry one.'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-theme-sm font-semibold text-gray-800">
+                        Pump meter reading
+                      </p>
+                      {record.pumpEvidenceId ? (
+                        <EvidenceFileActions
+                          evidenceId={record.pumpEvidenceId}
+                          fileName={`pump-${record.id.slice(0, 8)}`}
+                          onError={notifyError}
+                        />
+                      ) : (
+                        <p className="text-theme-xs text-gray-500">
+                          None held.{' '}
+                          {record.sourceSystem === 'MANUAL'
+                            ? 'Required on manual captures - see the PUMP_IMAGE rule below.'
+                            : 'Only manual captures carry one.'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </SectionCard>
 
                 <SectionCard

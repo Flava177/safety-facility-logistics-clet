@@ -140,6 +140,8 @@ export interface FuelTransaction {
   maskedCardReference: string | null;
   odometerReading: number;
   receiptEvidenceId: string | null;
+  /** Photograph of the pump meter. Null on provider-fed and imported records, which never have one. */
+  pumpEvidenceId: string | null;
   comments: string | null;
   status: FuelTransactionStatus;
   lifecycle: FuelTransactionLifecycle;
@@ -268,7 +270,39 @@ export interface CaptureTransactionRequest {
   /** Primitive `long`. */
   odometerReading: number;
   receiptEvidenceId: string | null;
+  /** Photograph of the pump meter - the independent witness to the receipt. */
+  pumpEvidenceId: string | null;
   comments: string | null;
+}
+
+/**
+ * A price a vendor posts for a product, over a period.
+ *
+ * <p>The capture form reads this so the price per litre is filled in rather than asked for. That is
+ * the point of it: it is the one number in a fuel claim that is not the claimant's to choose.
+ */
+export interface FuelPostedPrice {
+  id: string;
+  siteCode: string;
+  vendor: string;
+  fuelProduct: string;
+  unitPrice: number;
+  currency: string;
+  effectiveFrom: string;
+  effectiveTo: string | null;
+  source: 'ADMINISTERED' | 'PROVIDER_FEED' | 'INVOICE';
+  notes: string | null;
+}
+
+export interface RecordPostedPriceRequest {
+  siteCode: string;
+  vendor: string;
+  fuelProduct: string;
+  unitPrice: number;
+  currency: string;
+  effectiveFrom?: string | null;
+  source?: FuelPostedPrice['source'];
+  notes?: string | null;
 }
 
 export interface CreateLogbookRequest {

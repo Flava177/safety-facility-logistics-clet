@@ -4,6 +4,7 @@ import { FuelPolicy } from 'modules/fuel/api/dto';
 import { fuelPoliciesApi } from 'modules/fuel/api/fuelApi';
 import { CreatePolicyDialog } from 'modules/fuel/dialogs/policyDialogs';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
+import PostedPricePanel from 'modules/fuel/components/PostedPricePanel';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -18,6 +19,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { formatDate, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canManageFuelPolicies } from 'modules/fleet/api/access';
 
 /** A policy covers `now` when it is ACTIVE and now falls inside its effective period. */
 const inForce = (policy: FuelPolicy, at = Date.now()): boolean =>
@@ -174,9 +176,13 @@ const FuelPoliciesPage = () => {
         subtitle="The effective-dated limits every reconciliation is read from."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Fuel policies' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
-            Create policy
-          </Button>
+          // A policy is the rule set every reconciliation is judged against; writing one is a fleet
+          // manager's act, not a reader's.
+          canManageFuelPolicies() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
+              Create policy
+            </Button>
+          ) : undefined
         }
       />
 
@@ -228,6 +234,13 @@ const FuelPoliciesPage = () => {
             />
           </DataState>
         </SectionCard>
+
+        {/*
+          Beside the policies rather than on a screen of its own: a posted price is a rule set by the
+          same person under the same permission, and the two are read together when a price deviation
+          case is being judged.
+        */}
+        <PostedPricePanel siteCode={siteCode} />
 
         {currentlyInForce.length > 0 && (
           <SectionCard

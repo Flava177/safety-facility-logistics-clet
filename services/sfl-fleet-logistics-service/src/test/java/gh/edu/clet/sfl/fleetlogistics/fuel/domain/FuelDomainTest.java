@@ -23,8 +23,31 @@ class FuelDomainTest {
     private static final Instant NOW=Instant.parse("2026-07-22T08:00:00Z");
     private static RecordMetadata metadata(){return RecordMetadata.createdBy("driver-1",NOW,SourceChannel.WEB,"fuel-test");}
 
-    @Test void monetary_total_is_exact_and_card_is_masked(){var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of("ACCRA"),"P-1","MANUAL",UUID.randomUUID(),UUID.randomUUID(),null,NOW,"VENDOR",null,"DIESEL",new BigDecimal("12.345"),"LITRE",new BigDecimal("10.0000"),new BigDecimal("123.45"),Currency.getInstance("GHS"),"1234567890123456",1000,null,null,FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,NOW,"key",metadata());assertThat(tx.totalCost()).isEqualByComparingTo("123.45");assertThat(tx.maskedCardReference()).isEqualTo("****3456");}
-    @Test void inconsistent_total_is_rejected(){assertThatThrownBy(()->new FuelTransaction(UUID.randomUUID(),SiteCode.of("ACCRA"),null,"MANUAL",UUID.randomUUID(),UUID.randomUUID(),null,NOW,"V",null,"DIESEL",new BigDecimal("2"),"L",new BigDecimal("10"),new BigDecimal("99"),Currency.getInstance("GHS"),null,1,null,null,FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,NOW,"k",metadata())).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("totalCost");}
+    @Test void monetary_total_is_exact_and_card_is_masked(){var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of("ACCRA"),"P-1","MANUAL",UUID.randomUUID(),UUID.randomUUID(),null,NOW,"VENDOR",null,"DIESEL",new BigDecimal("12.345"),"LITRE",new BigDecimal("10.0000"),new BigDecimal("123.45"),Currency.getInstance("GHS"),"1234567890123456",1000,null,null,null,FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,NOW,"key",metadata());assertThat(tx.totalCost()).isEqualByComparingTo("123.45");assertThat(tx.maskedCardReference()).isEqualTo("****3456");}
+    @Test void inconsistent_total_is_rejected(){assertThatThrownBy(()->new FuelTransaction(UUID.randomUUID(),SiteCode.of("ACCRA"),null,"MANUAL",UUID.randomUUID(),UUID.randomUUID(),null,NOW,"V",null,"DIESEL",new BigDecimal("2"),"L",new BigDecimal("10"),new BigDecimal("99"),Currency.getInstance("GHS"),null,1,null,null,null,FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,NOW,"k",metadata())).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("totalCost");}
+
+    /**
+     * The two evidence slots are independent, and a transaction is valid with neither.
+     *
+     * <p>Both halves are worth pinning. Whether an image is required is a policy question the
+     * reconciliation rules answer - if it hardened into an invariant here, the provider integration
+     * would stop being able to deliver its own records, which never have photographs at all.
+     */
+    @Test void receipt_and_pump_evidence_are_separate_and_optional(){
+        UUID receipt=UUID.randomUUID();
+        UUID pump=UUID.randomUUID();
+        var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of("ACCRA"),"P-2","MANUAL",UUID.randomUUID(),
+                UUID.randomUUID(),null,NOW,"GOIL",null,"DIESEL",new BigDecimal("10"),"LITRE",
+                new BigDecimal("15.0000"),new BigDecimal("150.00"),Currency.getInstance("GHS"),null,1000,
+                receipt,pump,null,FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,NOW,"k",
+                metadata());
+        assertThat(tx.receiptEvidenceId()).isEqualTo(receipt);
+        assertThat(tx.pumpEvidenceId()).isEqualTo(pump);
+        // Carried through a state change rather than dropped - the commonest way a nullable field on
+        // a copy-constructor record quietly disappears.
+        assertThat(tx.withStatus(FuelTransaction.Status.RECONCILED,metadata()).pumpEvidenceId()).isEqualTo(pump);
+        assertThat(tx.voided("duplicate claim",metadata()).pumpEvidenceId()).isEqualTo(pump);
+    }
     @Test void policy_is_effective_dated_and_normalises_allowlists(){var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of("ACCRA"),"Default",NOW,null,1,new BigDecimal("100"),null,null,new BigDecimal("120"),null,null,500,true,24,new BigDecimal("500"),8,Set.of("diesel"),Set.of("vendor"),FuelPolicy.Status.ACTIVE,metadata());assertThat(p.appliesAt(NOW.plusSeconds(1))).isTrue();assertThat(p.allowsProduct("DIESEL")).isTrue();assertThat(p.allowsVendor("Vendor")).isTrue();}
     @Test void approved_logbook_is_locked_until_privileged_reopen(){var l=logbook().submit(NOW.plusSeconds(1),metadata()).startReview(metadata()).approved(NOW.plusSeconds(2),"ok",metadata());assertThat(l.status()).isEqualTo(DriverLogbook.Status.APPROVED);assertThatThrownBy(()->l.submit(NOW,metadata())).isInstanceOf(IllegalStateException.class);assertThat(l.reopened("audit correction",metadata()).status()).isEqualTo(DriverLogbook.Status.REOPENED);}
     @Test void logbook_odometer_cannot_regress(){assertThatThrownBy(()->new DriverLogbook(UUID.randomUUID(),"LOG-1",SiteCode.of("ACCRA"),UUID.randomUUID(),UUID.randomUUID(),null,LocalDate.now(),NOW,NOW.plusSeconds(10),"A","B",null,DriverLogbook.UseClassification.OFFICIAL,"Work",null,100L,99L,true,null,DriverLogbook.Status.DRAFT,null,null,null,null,metadata())).isInstanceOf(IllegalArgumentException.class).hasMessageContaining("regresses");}

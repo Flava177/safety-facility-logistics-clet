@@ -18,6 +18,8 @@ import {
   FuelPageResponse,
   FuelImportRow,
   FuelPolicy,
+  FuelPostedPrice,
+  RecordPostedPriceRequest,
   FuelReconciliation,
   FuelTransaction,
   ImportResult,
@@ -101,6 +103,28 @@ export const fuelCardsApi = {
     apiClient.post<FuelCard>(`${BASE}/cards/${cardId}/${action}`, body, {
       idempotent: false,
     }),
+};
+
+/**
+ * Approved vendors and the prices they post.
+ *
+ * <p>Both reads exist to take two decisions away from whoever is filling in the capture form. The
+ * vendor was free text, so "GOIL", "Goil Tema" and "goil" were three different vendors to the
+ * approved-vendor rule; the price per litre was a number the claimant typed, which is the one number
+ * in a fuel claim they should not be choosing.
+ */
+export const fuelPricesApi = {
+  /** Vendors the site's in-force policy approves. Empty means the policy approves any vendor. */
+  providers: (siteCode: string, signal?: AbortSignal) =>
+    apiClient.get<string[]>(`${BASE}/providers`, { siteCode }, signal),
+
+  postedPrices: (
+    params: { siteCode: string; vendor?: string; fuelProduct?: string; inForceOnly?: boolean },
+    signal?: AbortSignal,
+  ) => apiClient.get<FuelPostedPrice[]>(`${BASE}/posted-prices`, asQuery(params), signal),
+
+  record: (body: RecordPostedPriceRequest) =>
+    apiClient.post<FuelPostedPrice>(`${BASE}/posted-prices`, body, { idempotent: false }),
 };
 
 export const fuelTransactionsApi = {

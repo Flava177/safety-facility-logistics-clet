@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPostedPrice;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
@@ -159,6 +160,27 @@ public interface FuelRepository {
      * as an overlap. Used to enforce the documented no-overlap invariant at creation.
      */
     List<FuelPolicy> findOverlappingActivePolicies(String siteCode, Instant from, Instant to, UUID excludingId);
+
+    // --- posted prices -------------------------------------------------------------------------
+
+    FuelPostedPrice savePostedPrice(FuelPostedPrice price);
+
+    /**
+     * The price posted for this vendor and product at that instant, if one is on file.
+     *
+     * <p>Empty is a real and common answer, not a failure: a site that has not recorded its forecourt
+     * prices yet has none, and the reconciliation rule says so rather than inventing a comparison. The
+     * caller must treat "no reference price" and "price matches" as different outcomes, because the
+     * first is a configuration gap somebody should close and the second is a transaction that passed.
+     */
+    Optional<FuelPostedPrice> findPostedPrice(String siteCode, String vendor, String fuelProduct, Instant at);
+
+    /** Every price on file for a site, newest effective date first. Vendor and product are optional. */
+    List<FuelPostedPrice> findPostedPrices(String siteCode, String vendor, String fuelProduct, boolean inForceOnly,
+            Instant at);
+
+    /** The open-ended price for this vendor and product, which a new one must close. */
+    Optional<FuelPostedPrice> findOpenPostedPrice(String siteCode, String vendor, String fuelProduct);
 
     // --- transactions --------------------------------------------------------------------------
 

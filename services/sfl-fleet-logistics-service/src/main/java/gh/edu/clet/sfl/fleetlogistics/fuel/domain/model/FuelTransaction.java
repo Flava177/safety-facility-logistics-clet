@@ -9,13 +9,28 @@ import java.util.Currency;
 import java.util.Objects;
 import java.util.UUID;
 
-/** Provider-neutral fuel transaction with immutable source provenance. */
+/**
+ * Provider-neutral fuel transaction with immutable source provenance.
+ *
+ * <h2>The two evidence fields, and why there are two</h2>
+ *
+ * <p>{@code receiptEvidenceId} is what the vendor was willing to put in writing.
+ * {@code pumpEvidenceId} is a photograph of the pump meter: what the pump actually dispensed. They
+ * are separate because they are separate witnesses, and the fraud this platform is most exposed to -
+ * a driver and an attendant agreeing on a receipt larger than the sale - is invisible to either one
+ * alone and obvious when the two are put side by side.
+ *
+ * <p>Neither is mandatory in the record itself. Whether one is required is a policy question
+ * ({@code receiptRequired}, and its grace window), not an invariant of the aggregate: a provider feed
+ * legitimately delivers transactions with no images at all, and refusing them here would mean
+ * refusing the integration.
+ */
 public record FuelTransaction(UUID id, SiteCode siteCode, String providerTransactionId, String sourceSystem,
         UUID vehicleId, UUID driverId, UUID tripId, Instant occurredAt, String vendorReference,
         String stationReference, String fuelProduct, BigDecimal quantity, String quantityUnit,
         BigDecimal unitPrice, BigDecimal totalCost, Currency currency, String maskedCardReference,
-        long odometerReading, UUID receiptEvidenceId, String comments, Status status, Lifecycle lifecycle,
-        Instant ingestionTimestamp, String idempotencyKey, RecordMetadata metadata) {
+        long odometerReading, UUID receiptEvidenceId, UUID pumpEvidenceId, String comments, Status status,
+        Lifecycle lifecycle, Instant ingestionTimestamp, String idempotencyKey, RecordMetadata metadata) {
 
     public enum Status { RECEIVED, VALIDATING, MATCHED, RECONCILED, EXCEPTION, REJECTED, VOIDED }
     public enum Lifecycle { ACTIVE, VOIDED, ARCHIVED }
@@ -43,16 +58,16 @@ public record FuelTransaction(UUID id, SiteCode siteCode, String providerTransac
         if (status == Status.VOIDED || lifecycle != Lifecycle.ACTIVE) throw new IllegalStateException("fuel transaction is immutable");
         return new FuelTransaction(id, siteCode, providerTransactionId, sourceSystem, vehicleId, driverId, tripId,
                 occurredAt, vendorReference, stationReference, fuelProduct, quantity, quantityUnit, unitPrice,
-                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, comments, next,
-                lifecycle, ingestionTimestamp, idempotencyKey, changed);
+                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, pumpEvidenceId,
+                comments, next, lifecycle, ingestionTimestamp, idempotencyKey, changed);
     }
 
     public FuelTransaction voided(String reason, RecordMetadata changed) {
         require(reason, "void reason");
         return new FuelTransaction(id, siteCode, providerTransactionId, sourceSystem, vehicleId, driverId, tripId,
                 occurredAt, vendorReference, stationReference, fuelProduct, quantity, quantityUnit, unitPrice,
-                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, reason, Status.VOIDED,
-                Lifecycle.VOIDED, ingestionTimestamp, idempotencyKey, changed);
+                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, pumpEvidenceId,
+                reason, Status.VOIDED, Lifecycle.VOIDED, ingestionTimestamp, idempotencyKey, changed);
     }
 
     private static String mask(String value) {

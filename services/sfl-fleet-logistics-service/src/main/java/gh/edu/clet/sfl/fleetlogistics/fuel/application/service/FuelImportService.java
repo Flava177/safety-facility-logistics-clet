@@ -97,7 +97,10 @@ public class FuelImportService {
                 required(r, "fuelProduct"), new BigDecimal(required(r, "quantity")), required(r, "quantityUnit"),
                 new BigDecimal(required(r, "unitPrice")), decimal(r.get("totalCost")), required(r, "currency"),
                 r.get("cardReference"), Long.parseLong(required(r, "odometerReading")),
-                uuid(r, "receiptEvidenceId", false), r.get("comments"), key, actor, SourceChannel.IMPORT);
+                // A CSV import carries no pump photograph and never will: the file is a provider's
+                // ledger, not a driver's submission. The PUMP_IMAGE rule only applies to MANUAL
+                // captures for exactly this reason.
+                uuid(r, "receiptEvidenceId", false), null, r.get("comments"), key, actor, SourceChannel.IMPORT);
     }
 
     private static List<String> parse(String line) {

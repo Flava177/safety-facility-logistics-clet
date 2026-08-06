@@ -83,6 +83,18 @@ export const ANOMALY_TYPES = [
   'CARD_LIMIT_EXCEEDED',
   'CARD_DAILY_LIMIT_EXCEEDED',
   'CARD_MONTHLY_LIMIT_EXCEEDED',
+  /**
+   * The price per litre is not what the provider posted at the time.
+   *
+   * <p>Kept distinct from COST_VARIANCE, which compares against the previous fill for the same
+   * vehicle. That one detects a change and so fires on a genuine price rise; this one detects a
+   * departure from the forecourt price and so catches a steady overstatement the other never sees.
+   */
+  'PRICE_DEVIATION',
+  /** The receipt or pump photograph has been submitted before at this site. */
+  'EVIDENCE_REUSED',
+  /** A manual capture with no photograph of the pump meter, where the policy requires one. */
+  'MISSING_PUMP_IMAGE',
 ] as const;
 export type AnomalyType = (typeof ANOMALY_TYPES)[number];
 

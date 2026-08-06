@@ -88,12 +88,12 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
 
     /** A clean, policy-compliant capture (20 L DIESEL, approved vendor, receipt present). */
     private FuelTransaction captureValid(Fixture f, String provider, long reading, Instant occurredAt) {
-        return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),f.driver().id(),null,occurredAt,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",reading,UUID.randomUUID(),"official trip","tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
+        return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),f.driver().id(),null,occurredAt,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",reading,UUID.randomUUID(),null,"official trip","tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 
     /** A capture of 70 L against the 50 L per-transaction limit, receipt present so the only failure is the limit. */
     private FuelTransaction captureExcessive(Fixture f, String provider, long reading) {
-        return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("70"),"LITRE",new BigDecimal("10"),new BigDecimal("700"),"GHS","1234567890",reading,UUID.randomUUID(),null,"tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
+        return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("70"),"LITRE",new BigDecimal("10"),new BigDecimal("700"),"GHS","1234567890",reading,UUID.randomUUID(),null,null,"tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 
     /** The first page at the size these scenarios need; every fuel collection is paged. */
@@ -125,7 +125,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
     @Test void duplicate_provider_transaction_is_idempotent() {
         Fixture f = newFixture();
         // Identical command (same idempotency key AND same payload fingerprint) - a re-delivered provider transaction.
-        var command = new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-DUP","MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,UUID.randomUUID(),"official trip","tx-dup-"+f.site(),f.manager(),SourceChannel.WEB);
+        var command = new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-DUP","MANUAL",f.vehicle().id(),f.driver().id(),null,Instant.now(),"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,UUID.randomUUID(),null,"official trip","tx-dup-"+f.site(),f.manager(),SourceChannel.WEB);
         var first = fuel.capture(command);
         int sizeAfterFirst = transactions(f).size();
         var second = fuel.capture(command);
@@ -146,7 +146,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         Fixture f = newFixture();
         // receiptRequired=true, graceHours=24; occurredAt = now-(24+1)h so the receipt grace has already elapsed at reconcile time.
         Instant afterGrace = Instant.now().minus(Duration.ofHours(25));
-        var tx = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-MR","MANUAL",f.vehicle().id(),f.driver().id(),null,afterGrace,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,null,"no receipt","tx-mr-"+f.site(),f.manager(),SourceChannel.WEB));
+        var tx = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-MR","MANUAL",f.vehicle().id(),f.driver().id(),null,afterGrace,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("20"),"LITRE",new BigDecimal("10"),new BigDecimal("200"),"GHS","1234567890",1100,null,null,"no receipt","tx-mr-"+f.site(),f.manager(),SourceChannel.WEB));
         var reconciled = fuel.reconcile(tx.id(),f.manager(),SourceChannel.WEB);
         assertThat(reconciled.status()).isEqualTo(FuelTransaction.Status.EXCEPTION);
         assertThat(anomalies(f)).extracting(FuelAnomalyCase::type).contains(FuelAnomalyCase.Type.MISSING_RECEIPT);
@@ -221,7 +221,7 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
 
         // masked_card_reference has been captured since V10 and meant nothing: an unknown card
         // reconciled clean. Now it is an exception, which is what "anti-fraud control" requires.
-        var unknown = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-1","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****9999",1100,UUID.randomUUID(),null,"tx-card-unknown-"+f.site(),f.manager(),SourceChannel.WEB));
+        var unknown = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-1","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****9999",1100,UUID.randomUUID(),null,null,"tx-card-unknown-"+f.site(),f.manager(),SourceChannel.WEB));
         assertThat(fuel.reconcile(unknown.id(),f.manager(),SourceChannel.WEB).status())
                 .isEqualTo(FuelTransaction.Status.EXCEPTION);
         assertThat(anomalyOfType(f, FuelAnomalyCase.Type.CARD_UNKNOWN)).isNotNull();
@@ -230,21 +230,21 @@ class FuelMandatoryScenariosEndToEndTest extends FleetPostgresSupport {
         var card = cards.issue(new FuelCardService.IssueCard(f.site(),"****1234","CLET FUEL CARDS",
                 f.vehicle().id(), f.driver().id(), LocalDate.now().minusDays(1), null, null, null,
                 new BigDecimal("500"), null, f.manager(), SourceChannel.WEB));
-        var good = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-2","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1200,UUID.randomUUID(),null,"tx-card-good-"+f.site(),f.manager(),SourceChannel.WEB));
+        var good = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-2","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1200,UUID.randomUUID(),null,null,"tx-card-good-"+f.site(),f.manager(),SourceChannel.WEB));
         assertThat(fuel.reconcile(good.id(),f.manager(),SourceChannel.WEB).status())
                 .isEqualTo(FuelTransaction.Status.RECONCILED);
 
         // Suspended, and the same card stops working - with a reason on the record.
         cards.transition(new FuelCardService.TransitionCard(card.id(),"suspend","Reported lost",null,null,
                 f.manager(),SourceChannel.WEB));
-        var suspended = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-3","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1300,UUID.randomUUID(),null,"tx-card-susp-"+f.site(),f.manager(),SourceChannel.WEB));
+        var suspended = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-3","MANUAL",f.vehicle().id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1300,UUID.randomUUID(),null,null,"tx-card-susp-"+f.site(),f.manager(),SourceChannel.WEB));
         assertThat(fuel.reconcile(suspended.id(),f.manager(),SourceChannel.WEB).status())
                 .isEqualTo(FuelTransaction.Status.EXCEPTION);
 
         // Reinstated but pointed at another vehicle: the commonest fuel fraud there is, and now visible.
         cards.transition(new FuelCardService.TransitionCard(card.id(),"reinstate",null,null,null,f.manager(),SourceChannel.WEB));
         var otherVehicle = vehicleService.register(new RegisterVehicleCommand("GN2-"+f.site(),null,"Toyota","Hilux",2024,VehicleCategory.PICKUP,5,f.site(),"Transport","Fleet Manager",null,1000,false,Set.of(),f.manager(),SourceChannel.WEB,"vehicle2-"+f.site()));
-        var wrongVehicle = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-4","MANUAL",otherVehicle.id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1400,UUID.randomUUID(),null,"tx-card-wrong-"+f.site(),f.manager(),SourceChannel.WEB));
+        var wrongVehicle = fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),"PROVIDER-CARD-4","MANUAL",otherVehicle.id(),f.driver().id(),null,now,"CLET STATION","PUMP-1","DIESEL",new BigDecimal("40"),"LITRE",new BigDecimal("10"),new BigDecimal("400"),"GHS","****1234",1400,UUID.randomUUID(),null,null,"tx-card-wrong-"+f.site(),f.manager(),SourceChannel.WEB));
         assertThat(fuel.reconcile(wrongVehicle.id(),f.manager(),SourceChannel.WEB).status())
                 .isEqualTo(FuelTransaction.Status.EXCEPTION);
         assertThat(anomalyOfType(f, FuelAnomalyCase.Type.CARD_VEHICLE_MISMATCH)).isNotNull();

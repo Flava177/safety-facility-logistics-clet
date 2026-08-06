@@ -12,7 +12,33 @@ public record FuelAnomalyCase(UUID id, String anomalyNumber, SiteCode siteCode, 
         UUID logbookId, UUID vehicleId, UUID driverId, UUID tripId, Type type, Severity severity, boolean material,
         Status status, String assignee, Instant slaDueAt, String explanation, UUID evidenceId, Decision decision,
         String closureReason, int escalationLevel, List<String> detectedRules, RecordMetadata metadata) {
-    public enum Type { DUPLICATE, MISSING_RECEIPT, LIMIT_EXCEEDED, TANK_CAPACITY, FUEL_PRODUCT, IDENTITY_MISMATCH, OUTSIDE_TRIP, VEHICLE_UNAVAILABLE, DRIVER_INELIGIBLE, ODOMETER_REGRESSION, ODOMETER_JUMP, ABNORMAL_CONSUMPTION, LOGBOOK_MISMATCH, VENDOR, UNUSUAL_PATTERN, MISSING_LOGBOOK, COST_VARIANCE, DAILY_LIMIT_EXCEEDED, MONTHLY_LIMIT_EXCEEDED, /* SRS-SFL-S168fuel-04: the card is not in the register, or not live. */ CARD_UNKNOWN, /* The card is assigned to a different vehicle than the one filled - the commonest fuel fraud. */ CARD_VEHICLE_MISMATCH, /* Over the ceiling set on the card itself, which overrides the site policy. */ CARD_LIMIT_EXCEEDED, CARD_DAILY_LIMIT_EXCEEDED, CARD_MONTHLY_LIMIT_EXCEEDED }
+    public enum Type { DUPLICATE, MISSING_RECEIPT, LIMIT_EXCEEDED, TANK_CAPACITY, FUEL_PRODUCT, IDENTITY_MISMATCH, OUTSIDE_TRIP, VEHICLE_UNAVAILABLE, DRIVER_INELIGIBLE, ODOMETER_REGRESSION, ODOMETER_JUMP, ABNORMAL_CONSUMPTION, LOGBOOK_MISMATCH, VENDOR, UNUSUAL_PATTERN, MISSING_LOGBOOK, COST_VARIANCE, DAILY_LIMIT_EXCEEDED, MONTHLY_LIMIT_EXCEEDED, /* SRS-SFL-S168fuel-04: the card is not in the register, or not live. */ CARD_UNKNOWN, /* The card is assigned to a different vehicle than the one filled - the commonest fuel fraud. */ CARD_VEHICLE_MISMATCH, /* Over the ceiling set on the card itself, which overrides the site policy. */ CARD_LIMIT_EXCEEDED, CARD_DAILY_LIMIT_EXCEEDED, CARD_MONTHLY_LIMIT_EXCEEDED,
+        /**
+         * The price per litre is not what the vendor posted when the fuel was bought.
+         *
+         * <p>Distinct from COST_VARIANCE, which compares a transaction to the previous one for the
+         * same vehicle. That is a change detector: it fires on a national price rise and stays silent
+         * on a steady overstatement. This compares against the forecourt price actually in force, so
+         * it does the opposite, and the two are worth keeping apart in the queue.
+         */
+        PRICE_DEVIATION,
+        /**
+         * A receipt or pump photograph that has been submitted before at this site.
+         *
+         * <p>The cheapest fraud to commit and, once the bytes are stored and hashed, the cheapest to
+         * catch: photograph one pump, claim four fills. Raised on the digest, so a re-photographed
+         * receipt is not caught by it - which is why it sits alongside the price and volume rules
+         * rather than in place of them.
+         */
+        EVIDENCE_REUSED,
+        /**
+         * No photograph of the pump meter, where the policy requires one.
+         *
+         * <p>Separate from MISSING_RECEIPT because they fail for different reasons and are resolved by
+         * different people: a receipt can be produced later from the vendor, a pump reading cannot be
+         * produced at all once the vehicle has driven away.
+         */
+        MISSING_PUMP_IMAGE }
     public enum Severity { LOW, MEDIUM, HIGH, CRITICAL }
     public enum Status { DETECTED, ASSIGNED, UNDER_REVIEW, AWAITING_EXPLANATION, EXPLANATION_RECEIVED, APPROVED, REJECTED, ESCALATED, CLOSED, HELD, CANCELLED, REOPENED }
     public enum Decision { APPROVED, REJECTED }

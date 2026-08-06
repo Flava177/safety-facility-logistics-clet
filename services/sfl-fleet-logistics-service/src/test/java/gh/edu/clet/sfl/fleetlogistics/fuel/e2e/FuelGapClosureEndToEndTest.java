@@ -96,7 +96,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
             long reading, String cardReference, Instant occurredAt) {
         return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),
                 f.driver().id(),null,occurredAt,"CLET STATION","PUMP-1","DIESEL",litres,"LITRE",
-                unitPrice,null,"GHS",cardReference,reading,UUID.randomUUID(),null,
+                unitPrice,null,"GHS",cardReference,reading,UUID.randomUUID(),null,null,
                 "tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 

@@ -14,6 +14,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelCard;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPostedPrice;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
@@ -185,17 +186,92 @@ public class JdbcFuelRepository implements FuelRepository {
         return jdbc.query(sql.toString(), this::policy, args.toArray());
     }
 
+    /* ------------------------------------------------------------------------- posted prices */
+
+    @Override public FuelPostedPrice savePostedPrice(FuelPostedPrice p) {
+        int updated = jdbc.update("""
+            UPDATE fleet_logistics.fuel_posted_prices SET unit_price=?,currency=?,effective_to=?,source=?,notes=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?
+            """, p.unitPrice(), p.currency(), ts(p.effectiveTo()), p.source().name(), p.notes(),
+                p.metadata().lastModifiedBy(), ts(p.metadata().lastModifiedAt()),
+                p.metadata().sourceChannel().name(), p.metadata().auditCorrelationId(), p.id(),
+                p.metadata().version());
+        if (updated == 0 && findPostedPriceById(p.id()).isEmpty()) {
+            jdbc.update("""
+                INSERT INTO fleet_logistics.fuel_posted_prices (id,site_code,vendor,fuel_product,unit_price,currency,effective_from,effective_to,source,notes,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, p.id(), p.siteCode().value(), p.vendor(), p.fuelProduct(), p.unitPrice(), p.currency(),
+                    ts(p.effectiveFrom()), ts(p.effectiveTo()), p.source().name(), p.notes(),
+                    p.metadata().createdBy(), ts(p.metadata().createdAt()), p.metadata().lastModifiedBy(),
+                    ts(p.metadata().lastModifiedAt()), p.metadata().sourceChannel().name(),
+                    p.metadata().auditCorrelationId(), p.metadata().version());
+        } else if (updated == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException("FuelPostedPrice version conflict");
+        }
+        return findPostedPriceById(p.id()).orElseThrow();
+    }
+
+    private Optional<FuelPostedPrice> findPostedPriceById(UUID id) {
+        return one("SELECT * FROM fleet_logistics.fuel_posted_prices WHERE id=?", this::postedPrice, id);
+    }
+
+    @Override public Optional<FuelPostedPrice> findPostedPrice(String site, String vendor, String product,
+            Instant at) {
+        // ORDER BY effective_from DESC LIMIT 1 rather than trusting the interval to be unique: the
+        // partial unique index only guarantees one *open* row per vendor and product, and closed rows
+        // can legitimately abut. Newest-wins is the same rule findApplicablePolicy uses.
+        return one("""
+            SELECT * FROM fleet_logistics.fuel_posted_prices
+            WHERE site_code=? AND vendor=? AND fuel_product=? AND effective_from<=?
+              AND (effective_to IS NULL OR effective_to>?)
+            ORDER BY effective_from DESC LIMIT 1
+            """, this::postedPrice, site, vendor.toUpperCase(), product.toUpperCase(), ts(at), ts(at));
+    }
+
+    @Override public List<FuelPostedPrice> findPostedPrices(String site, String vendor, String product,
+            boolean inForceOnly, Instant at) {
+        StringBuilder sql = new StringBuilder(
+                "SELECT * FROM fleet_logistics.fuel_posted_prices WHERE site_code=?");
+        List<Object> args = new ArrayList<>();
+        args.add(site);
+        if (vendor != null && !vendor.isBlank()) {
+            sql.append(" AND vendor=?");
+            args.add(vendor.toUpperCase());
+        }
+        if (product != null && !product.isBlank()) {
+            sql.append(" AND fuel_product=?");
+            args.add(product.toUpperCase());
+        }
+        if (inForceOnly) {
+            sql.append(" AND effective_from<=? AND (effective_to IS NULL OR effective_to>?)");
+            args.add(ts(at));
+            args.add(ts(at));
+        }
+        sql.append(" ORDER BY vendor, fuel_product, effective_from DESC");
+        return jdbc.query(sql.toString(), this::postedPrice, args.toArray());
+    }
+
+    @Override public Optional<FuelPostedPrice> findOpenPostedPrice(String site, String vendor, String product) {
+        return one("""
+            SELECT * FROM fleet_logistics.fuel_posted_prices
+            WHERE site_code=? AND vendor=? AND fuel_product=? AND effective_to IS NULL
+            """, this::postedPrice, site, vendor.toUpperCase(), product.toUpperCase());
+    }
+
     /* -------------------------------------------------------------------------- transactions */
 
     @Override public FuelTransaction saveTransaction(FuelTransaction t) {
+        // The update list is deliberately short: a fuel transaction is an immutable record of an
+        // event, and only its workflow state, its comments and its evidence links may change after
+        // capture. `pump_evidence_id` joins that list for the same reason `receipt_evidence_id` is on
+        // it - an image can legitimately be attached after the fact, within the policy's grace window.
         int updated = jdbc.update("""
-            UPDATE fleet_logistics.fuel_transactions SET status=?,lifecycle_status=?,comments=?,receipt_evidence_id=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?
-            """, t.status().name(), t.lifecycle().name(), t.comments(), t.receiptEvidenceId(), t.metadata().lastModifiedBy(), ts(t.metadata().lastModifiedAt()), t.metadata().sourceChannel().name(), t.metadata().auditCorrelationId(), t.id(), t.metadata().version());
+            UPDATE fleet_logistics.fuel_transactions SET status=?,lifecycle_status=?,comments=?,receipt_evidence_id=?,pump_evidence_id=?,last_modified_by=?,last_modified_at=?,source_channel=?,audit_correlation_id=?,version=version+1 WHERE id=? AND version=?
+            """, t.status().name(), t.lifecycle().name(), t.comments(), t.receiptEvidenceId(), t.pumpEvidenceId(), t.metadata().lastModifiedBy(), ts(t.metadata().lastModifiedAt()), t.metadata().sourceChannel().name(), t.metadata().auditCorrelationId(), t.id(), t.metadata().version());
         if (updated == 0 && findTransaction(t.id()).isEmpty()) {
             jdbc.update("""
-                INSERT INTO fleet_logistics.fuel_transactions (id,site_code,provider_transaction_id,source_system,vehicle_id,driver_id,trip_id,occurred_at,vendor_reference,station_reference,fuel_product,quantity,quantity_unit,unit_price,total_cost,currency,masked_card_reference,odometer_reading,receipt_evidence_id,comments,status,lifecycle_status,ingestion_timestamp,idempotency_key,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
-                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-                """, t.id(),t.siteCode().value(),t.providerTransactionId(),t.sourceSystem(),t.vehicleId(),t.driverId(),t.tripId(),ts(t.occurredAt()),t.vendorReference(),t.stationReference(),t.fuelProduct(),t.quantity(),t.quantityUnit(),t.unitPrice(),t.totalCost(),t.currency().getCurrencyCode(),t.maskedCardReference(),t.odometerReading(),t.receiptEvidenceId(),t.comments(),t.status().name(),t.lifecycle().name(),ts(t.ingestionTimestamp()),t.idempotencyKey(),t.metadata().createdBy(),ts(t.metadata().createdAt()),t.metadata().lastModifiedBy(),ts(t.metadata().lastModifiedAt()),t.metadata().sourceChannel().name(),t.metadata().auditCorrelationId(),t.metadata().version());
+                INSERT INTO fleet_logistics.fuel_transactions (id,site_code,provider_transaction_id,source_system,vehicle_id,driver_id,trip_id,occurred_at,vendor_reference,station_reference,fuel_product,quantity,quantity_unit,unit_price,total_cost,currency,masked_card_reference,odometer_reading,receipt_evidence_id,pump_evidence_id,comments,status,lifecycle_status,ingestion_timestamp,idempotency_key,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """, t.id(),t.siteCode().value(),t.providerTransactionId(),t.sourceSystem(),t.vehicleId(),t.driverId(),t.tripId(),ts(t.occurredAt()),t.vendorReference(),t.stationReference(),t.fuelProduct(),t.quantity(),t.quantityUnit(),t.unitPrice(),t.totalCost(),t.currency().getCurrencyCode(),t.maskedCardReference(),t.odometerReading(),t.receiptEvidenceId(),t.pumpEvidenceId(),t.comments(),t.status().name(),t.lifecycle().name(),ts(t.ingestionTimestamp()),t.idempotencyKey(),t.metadata().createdBy(),ts(t.metadata().createdAt()),t.metadata().lastModifiedBy(),ts(t.metadata().lastModifiedAt()),t.metadata().sourceChannel().name(),t.metadata().auditCorrelationId(),t.metadata().version());
         } else if (updated == 0) throw new org.springframework.dao.OptimisticLockingFailureException("FuelTransaction version conflict");
         return findTransaction(t.id()).orElseThrow();
     }
@@ -565,7 +641,8 @@ public class JdbcFuelRepository implements FuelRepository {
     private FuelCard card(ResultSet r,int n)throws SQLException{return new FuelCard(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("masked_reference"),r.getString("provider"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),FuelCard.Status.valueOf(r.getString("status")),r.getObject("issued_on",LocalDate.class),r.getObject("expires_on",LocalDate.class),r.getBigDecimal("daily_limit"),r.getBigDecimal("monthly_limit"),r.getBigDecimal("per_transaction_limit"),r.getString("suspension_reason"),r.getString("notes"),metadata(r));}
 
     private FuelPolicy policy(ResultSet r,int n)throws SQLException{return new FuelPolicy(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("policy_name"),instant(r,"effective_from"),instant(r,"effective_to"),r.getInt("policy_version"),r.getBigDecimal("max_per_transaction"),r.getBigDecimal("daily_limit"),r.getBigDecimal("monthly_limit"),r.getBigDecimal("tank_capacity"),r.getBigDecimal("min_consumption"),r.getBigDecimal("max_consumption"),r.getLong("odometer_jump_tolerance"),r.getBoolean("receipt_required"),r.getInt("receipt_grace_hours"),r.getBigDecimal("materiality_amount"),r.getInt("anomaly_sla_hours"),r.getBigDecimal("cost_variance_tolerance"),r.getInt("repeated_pattern_window_hours"),r.getInt("repeated_pattern_threshold"),csv(r.getString("allowed_fuel_products")),csv(r.getString("approved_vendors")),FuelPolicy.Status.valueOf(r.getString("status")),metadata(r));}
-    private FuelTransaction transaction(ResultSet r,int n)throws SQLException{return new FuelTransaction(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("provider_transaction_id"),r.getString("source_system"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),instant(r,"occurred_at"),r.getString("vendor_reference"),r.getString("station_reference"),r.getString("fuel_product"),r.getBigDecimal("quantity"),r.getString("quantity_unit"),r.getBigDecimal("unit_price"),r.getBigDecimal("total_cost"),Currency.getInstance(r.getString("currency")),r.getString("masked_card_reference"),r.getLong("odometer_reading"),uuid(r,"receipt_evidence_id"),r.getString("comments"),FuelTransaction.Status.valueOf(r.getString("status")),FuelTransaction.Lifecycle.valueOf(r.getString("lifecycle_status")),instant(r,"ingestion_timestamp"),r.getString("idempotency_key"),metadata(r));}
+    private FuelTransaction transaction(ResultSet r,int n)throws SQLException{return new FuelTransaction(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("provider_transaction_id"),r.getString("source_system"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),instant(r,"occurred_at"),r.getString("vendor_reference"),r.getString("station_reference"),r.getString("fuel_product"),r.getBigDecimal("quantity"),r.getString("quantity_unit"),r.getBigDecimal("unit_price"),r.getBigDecimal("total_cost"),Currency.getInstance(r.getString("currency")),r.getString("masked_card_reference"),r.getLong("odometer_reading"),uuid(r,"receipt_evidence_id"),uuid(r,"pump_evidence_id"),r.getString("comments"),FuelTransaction.Status.valueOf(r.getString("status")),FuelTransaction.Lifecycle.valueOf(r.getString("lifecycle_status")),instant(r,"ingestion_timestamp"),r.getString("idempotency_key"),metadata(r));}
+    private FuelPostedPrice postedPrice(ResultSet r,int n)throws SQLException{return new FuelPostedPrice(uuid(r,"id"),SiteCode.of(r.getString("site_code")),r.getString("vendor"),r.getString("fuel_product"),r.getBigDecimal("unit_price"),r.getString("currency"),instant(r,"effective_from"),instant(r,"effective_to"),FuelPostedPrice.Source.valueOf(r.getString("source")),r.getString("notes"),metadata(r));}
     private DriverLogbook logbook(ResultSet r,int n)throws SQLException{return new DriverLogbook(uuid(r,"id"),r.getString("logbook_number"),SiteCode.of(r.getString("site_code")),uuid(r,"driver_id"),uuid(r,"vehicle_id"),uuid(r,"trip_id"),r.getObject("journey_date",LocalDate.class),instant(r,"start_time"),instant(r,"end_time"),r.getString("origin"),r.getString("destination"),r.getString("route_notes"),DriverLogbook.UseClassification.valueOf(r.getString("use_classification")),r.getString("purpose"),r.getString("passenger_load_notes"),r.getLong("start_odometer"),(Long)r.getObject("end_odometer"),r.getBoolean("declaration_accepted"),uuid(r,"evidence_id"),DriverLogbook.Status.valueOf(r.getString("status")),r.getString("review_comment"),r.getString("transition_reason"),instant(r,"submitted_at"),instant(r,"approved_at"),metadata(r));}
     private FuelAnomalyCase anomaly(ResultSet r,int n)throws SQLException{return new FuelAnomalyCase(uuid(r,"id"),r.getString("anomaly_number"),SiteCode.of(r.getString("site_code")),uuid(r,"transaction_id"),uuid(r,"logbook_id"),uuid(r,"vehicle_id"),uuid(r,"driver_id"),uuid(r,"trip_id"),FuelAnomalyCase.Type.valueOf(r.getString("anomaly_type")),FuelAnomalyCase.Severity.valueOf(r.getString("severity")),r.getBoolean("material"),FuelAnomalyCase.Status.valueOf(r.getString("status")),r.getString("assignee"),instant(r,"sla_due_at"),r.getString("explanation"),uuid(r,"evidence_id"),r.getString("manager_decision")==null?null:FuelAnomalyCase.Decision.valueOf(r.getString("manager_decision")),r.getString("closure_reason"),r.getInt("escalation_level"),readList(r.getString("detected_rules")),metadata(r));}
 
