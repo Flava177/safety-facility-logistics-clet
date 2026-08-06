@@ -53,6 +53,14 @@ public enum FleetErrorCode {
     FLEET_INTEGRATION_NOT_CONFIGURED("The required integration is not configured for this environment.", false),
     FLEET_IDEMPOTENCY_KEY_REQUIRED("An Idempotency-Key header is required for this request.", false),
     FLEET_IDEMPOTENCY_KEY_CONFLICT("This Idempotency-Key was already used with a different request payload.", false),
+    /**
+     * An upload that failed a check in {@code UploadedFileScanner}. The generic message here is a
+     * fallback only - the exception carries the specific reason, because "which check refused this,
+     * and what do I do now" is the whole value of the answer.
+     */
+    FLEET_UPLOAD_REJECTED("This file cannot be uploaded. Only PDF, JPG or JPEG files are accepted.", false),
+    /** The evidence record exists but its bytes do not - metadata registered before the file store. */
+    FLEET_EVIDENCE_CONTENT_MISSING("No file is stored against this evidence record.", false),
 
     // --- S168 fuel -------------------------------------------------------------------------
     /**

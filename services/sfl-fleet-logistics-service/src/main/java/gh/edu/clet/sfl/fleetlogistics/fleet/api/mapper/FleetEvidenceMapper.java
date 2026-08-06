@@ -12,11 +12,18 @@ import org.springframework.stereotype.Component;
 @Component
 public class FleetEvidenceMapper {
 
-    public EvidenceResponse toResponse(EvidenceReference evidence) {
+    /**
+     * Maps one record, given whether its bytes are held.
+     *
+     * <p>The flag is passed in rather than looked up here: a mapper that queries is a mapper that
+     * turns a page of twenty rows into twenty round trips, and the caller can answer for a whole page
+     * in one.
+     */
+    public EvidenceResponse toResponse(EvidenceReference evidence, boolean hasContent) {
         return new EvidenceResponse(evidence.id(), evidence.siteCode().value(), evidence.relatedRecordType(),
                 evidence.relatedRecordId(), evidence.evidenceType(), evidence.fileName(), evidence.contentType(),
                 evidence.storageReference(), evidence.sha256Hash(), evidence.retentionClass(),
-                evidence.retentionExpiresAt(), evidence.legalHold(), evidence.metadata().createdBy(),
+                evidence.retentionExpiresAt(), evidence.legalHold(), hasContent, evidence.metadata().createdBy(),
                 evidence.metadata().createdAt(), evidence.metadata().lastModifiedBy(),
                 evidence.metadata().lastModifiedAt(), evidence.metadata().version(),
                 evidence.metadata().sourceChannel().name(), evidence.metadata().auditCorrelationId());

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { VehicleResponse } from 'modules/fleet/api/dto';
 import {
   COMPLIANCE_DOCUMENT_TYPES,
@@ -35,6 +36,10 @@ import {
 import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 import FormSummary from 'shared/components/FormSummary';
+import Button from 'shared/components/Button';
+import EvidenceFileField from 'shared/components/EvidenceFileField';
+import { ACCEPTED_FILE_DESCRIPTION, evidenceFilesApi } from 'shared/evidence/evidenceFilesApi';
+import { FleetApiError } from 'shared/errors/FleetApiError';
 
 interface BaseDialogProps {
   open: boolean;
@@ -82,7 +87,7 @@ export const RegisterVehicleDialog = ({
         required('Registration number'),
         maxLength('Registration number', 40),
       ),
-      vin: maxLength('VIN', 40),
+      vin: maxLength('Chassis number', 40),
       make: compose(required('Make'), maxLength('Make', 80)),
       model: compose(required('Model'), maxLength('Model', 80)),
       manufactureYear: compose(
@@ -241,15 +246,23 @@ export const RegisterVehicleDialog = ({
         <summary className="cursor-pointer text-theme-sm font-medium text-gray-800 select-none">
           More details
           <span className="ml-1 font-normal text-gray-500">
-            - VIN, capacity, opening odometer, acquisition, emergency use
+            - chassis number, capacity, opening odometer, acquisition, emergency use
           </span>
         </summary>
         <div className={`mt-4 ${twoColumn}`}>
+          {/*
+            Labelled for the person filling it in, not for the column behind it.
+
+            The field is stored as `vin` and always accepted either - `VehicleIdentificationNumber`
+            says so in as many words - but "VIN" is the North American term and the number stamped on
+            a vehicle here is called its chassis number. An operator holding a registration document
+            that says "chassis" should not have to guess that the two are the same field.
+          */}
           <TextInput
-            label="VIN"
+            label="Chassis number"
             value={form.values.vin}
             onChange={(value) => form.setValue('vin', value)}
-            {...form.fieldProps('vin')}
+            {...form.fieldProps('vin', 'The VIN or chassis number stamped on the vehicle. Optional.')}
           />
           <NumberInput
             label="Capacity"
@@ -356,14 +369,39 @@ export const ChangeVehicleLifecycleDialog = ({
 
 interface ComplianceDialogProps extends BaseDialogProps {
   vehicleId: string;
+  /** The vehicle's own site. Evidence is filed against a site, and it is not the operator's choice. */
+  siteCode: string;
 }
 
+/**
+ * Register a compliance document by uploading it.
+ *
+ * <h2>The document is now the point</h2>
+ *
+ * <p>This form used to record that a certificate existed: a type, a reference number, two dates and
+ * an optional pointer at evidence somebody was expected to have registered elsewhere. Nothing made
+ * anyone attach the certificate, and in practice nobody did - so "the fleet's roadworthiness
+ * position" was a table of numbers typed from documents nobody could produce. A compliance register
+ * that cannot show the certificate is an honour system with extra steps.
+ *
+ * <p>The file is therefore required, uploaded before the document is registered, and the id it
+ * returns is what the record points at. Two calls rather than one, in this order deliberately: if the
+ * upload is refused the operator is told why while still holding the form, and no compliance record
+ * exists claiming a document that was never accepted. The reverse order would leave exactly that.
+ *
+ * <p>Evidence already filed against the vehicle is still selectable, because one PDF genuinely can
+ * cover two records - a single insurance certificate listing several vehicles is the ordinary case.
+ */
 export const RegisterComplianceDocumentDialog = ({
   open,
   onClose,
   onSaved,
   vehicleId,
+  siteCode,
 }: ComplianceDialogProps) => {
+  const [file, setFile] = useState<File | null>(null);
+  const [useExisting, setUseExisting] = useState(false);
+
   const form = useFleetForm({
     initialValues: {
       documentType: '' as ComplianceDocumentType | '',
@@ -385,22 +423,48 @@ export const RegisterComplianceDocumentDialog = ({
       expiresOn: required('Expires on'),
       retentionClass: required('Retention class'),
     },
-    crossFieldValidate: (values) =>
-      values.issuedOn && values.expiresOn && values.expiresOn <= values.issuedOn
-        ? { expiresOn: 'Expiry must be after the issue date.' }
-        : {},
+    crossFieldValidate: (values) => {
+      const errors: Record<string, string> = {};
+      if (values.issuedOn && values.expiresOn && values.expiresOn <= values.issuedOn) {
+        errors.expiresOn = 'Expiry must be after the issue date.';
+      }
+      if (useExisting && !values.evidenceId.trim()) {
+        errors.evidenceId = 'Choose the evidence this document is filed under.';
+      }
+      return errors;
+    },
     onSubmit: async (values) => {
+      if (!useExisting && !file) {
+        throw FleetApiError.validation('Attach the document itself before registering it.');
+      }
+      const evidenceId = useExisting
+        ? values.evidenceId.trim()
+        : (
+            await evidenceFilesApi.upload({
+              siteCode,
+              relatedRecordType: 'Vehicle',
+              relatedRecordId: vehicleId,
+              // The document type doubles as the evidence type, so a vehicle's evidence list reads
+              // "ROADWORTHINESS_CERTIFICATE" rather than a generic "COMPLIANCE_DOCUMENT" repeated
+              // five times - which is the difference between a list and a useful one.
+              evidenceType: values.documentType as ComplianceDocumentType,
+              retentionClass: values.retentionClass,
+              file: file as File,
+            })
+          ).id;
+
       await vehiclesApi.registerComplianceDocument(vehicleId, {
         documentType: values.documentType as ComplianceDocumentType,
         documentReference: values.documentReference.trim(),
         issuingAuthority: values.issuingAuthority.trim(),
         issuedOn: values.issuedOn,
         expiresOn: values.expiresOn,
-        evidenceId: values.evidenceId.trim() || null,
+        evidenceId,
         retentionClass: values.retentionClass,
       });
       onSaved();
       onClose();
+      setFile(null);
       form.reset();
     },
   });
@@ -471,16 +535,49 @@ export const RegisterComplianceDocumentDialog = ({
           onChange={(value) => form.setValue('expiresOn', value)}
           {...form.fieldProps('expiresOn')}
         />
-        <EvidenceSelect
-          label="Evidence"
-          search={searchEvidenceChoices}
-          relatedRecordType="Vehicle"
-          relatedRecordId={vehicleId}
-          value={form.values.evidenceId}
-          onChange={(value) => form.setValue('evidenceId', value)}
-          {...form.fieldProps('evidenceId', 'Optional. The certificate or permit itself.')}
-        />
       </div>
+
+      {useExisting ? (
+        <div>
+          <EvidenceSelect
+            label="Evidence"
+            required
+            search={searchEvidenceChoices}
+            relatedRecordType="Vehicle"
+            relatedRecordId={vehicleId}
+            value={form.values.evidenceId}
+            onChange={(value) => form.setValue('evidenceId', value)}
+            {...form.fieldProps(
+              'evidenceId',
+              'A document already filed against this vehicle - a multi-vehicle certificate, for example.',
+            )}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-1.5"
+            onClick={() => {
+              setUseExisting(false);
+              form.setValue('evidenceId', '');
+            }}
+          >
+            Upload a new document instead
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <EvidenceFileField
+            label="The document"
+            required
+            value={file}
+            onChange={setFile}
+            helperText={`Scan or photograph of the certificate itself. ${ACCEPTED_FILE_DESCRIPTION}. Checked for malicious content before it is stored.`}
+          />
+          <Button size="sm" variant="ghost" className="mt-1.5" onClick={() => setUseExisting(true)}>
+            Use a document already filed against this vehicle
+          </Button>
+        </div>
+      )}
 
       {isMandatory && (
         <Alert variant="info">

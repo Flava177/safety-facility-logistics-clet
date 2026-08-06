@@ -85,6 +85,19 @@ export class FleetApiError extends Error {
   }
 
   /**
+   * A refusal decided in the browser, before any request was made.
+   *
+   * <p>Status 0 because nothing was sent. It exists so a check the client can make cheaply - a file
+   * far over the size limit, say - surfaces through exactly the same error path as the service's own
+   * refusal, and every form renders it the same way without knowing which end said no.
+   *
+   * <p>It never *replaces* a server-side check. Anything refused here is refused there too.
+   */
+  static validation(message: string): FleetApiError {
+    return new FleetApiError({ status: 0, code: 'FLEET_CLIENT_VALIDATION', message });
+  }
+
+  /**
    * A failure that did not arrive in the SFL envelope.
    *
    * <p>Spring's default error body (`{ timestamp, status, error, message, path }`) is the common

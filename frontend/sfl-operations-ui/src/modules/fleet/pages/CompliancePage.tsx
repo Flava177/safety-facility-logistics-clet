@@ -29,6 +29,8 @@ import Tabs from 'shared/components/Tabs';
 import { formatDate, formatDaysRemaining, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { EvidenceFileActions } from 'shared/components/EvidenceFileField';
+import { useNotifier } from 'shared/components/Notifier';
 
 /**
  * How many documents the search asks for.
@@ -80,6 +82,7 @@ const expiryClass = (daysUntilExpiry: number): string => {
  */
 const CompliancePage = () => {
   const navigate = useNavigate();
+  const { notifyError } = useNotifier();
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState<TabKey>('expiring');
   const [documentType, setDocumentType] = useState<ComplianceDocumentType | ''>('');
@@ -201,8 +204,28 @@ const CompliancePage = () => {
         width: 130,
         cell: (row) => <StatusChip value={row.document.status} />,
       },
+      {
+        key: 'file',
+        header: 'File',
+        width: 150,
+        cell: (row) =>
+          row.document.evidenceId ? (
+            // Stops the row's own click handler from navigating to the vehicle when the intent was
+            // to open the certificate.
+            <div onClick={(event) => event.stopPropagation()} role="presentation">
+              <EvidenceFileActions
+                evidenceId={row.document.evidenceId}
+                fileName={`${row.document.documentReference}`}
+                compact
+                onError={notifyError}
+              />
+            </div>
+          ) : (
+            <span className="text-theme-xs text-gray-500">Not attached</span>
+          ),
+      },
     ],
-    [],
+    [notifyError],
   );
 
   const drilldownColumns = useMemo<Column<DashboardDrilldownRow>[]>(

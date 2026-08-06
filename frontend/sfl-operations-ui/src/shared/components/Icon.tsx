@@ -19,6 +19,7 @@ export type IconName =
   | 'workflow'
   | 'shield-check'
   | 'document'
+  | 'camera'
   | 'cloud'
   | 'refresh'
   | 'plus'
@@ -140,6 +141,13 @@ const glyphs: Record<IconName, ReactElement> = {
       <path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z" />
       <path d="M14 3v5h5" />
       <path d="M8.5 13h7M8.5 16.5h5" />
+    </>
+  ),
+  /** Take a photograph, as opposed to `upload`, which chooses one already taken. */
+  camera: (
+    <>
+      <path d="M3 8.5A2 2 0 0 1 5 6.5h2.2l1.3-2h7l1.3 2H19a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+      <circle cx="12" cy="12.5" r="3.2" />
     </>
   ),
   cloud: (

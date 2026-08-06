@@ -56,7 +56,7 @@ export const buildQueryString = (params?: QueryParams): string => {
 /**
  * Which SFL service a call is addressed to. Three platforms, three values.
  *
- * - `fleet` - FTLMP: the fleet, fuel, dispatch and AVAMP asset modules.
+ * - `fleet` - FTLMP: the fleet, fuel, dispatch and asset-visibility modules.
  * - `safetySecurity` - SSEMP: S174 emergency notification today, S160–S163 as they are built.
  * - `facilities` - IFIMP: S152, S153 and S159.
  *
@@ -281,6 +281,77 @@ export async function downloadFile(
   window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0);
 
   return fileName;
+}
+
+/** A fetched file held in memory, plus the object URL a preview renders from. */
+export interface FetchedBlob {
+  blob: Blob;
+  /** Must be revoked by the caller when the preview closes, or the bytes never leave memory. */
+  objectUrl: string;
+  contentType: string;
+  fileName: string;
+}
+
+/**
+ * Fetches a file for display rather than for saving.
+ *
+ * <p>A preview cannot be `<img src="/api/...">` for the same reason a download cannot be a plain
+ * link: the services authorise from the `X-SFL-*` headers and a bearer token, and an image request
+ * the browser makes on its own carries neither. It would arrive anonymous and be refused - which,
+ * for an `<img>`, shows as a broken-image icon and no explanation anywhere.
+ *
+ * <p>So the bytes are fetched like any other call and turned into an object URL. That has a second
+ * benefit worth having: an object URL is scoped to this document and dies with it, so a preview
+ * cannot be deep-linked, shared or left behind in a browser history the way a real URL to evidence
+ * could be.
+ *
+ * <p>The caller owns the returned URL and must revoke it. Not revoking leaks the whole file for the
+ * life of the tab, which for a page of ten-megabyte scans is quickly noticeable.
+ */
+export async function fetchBlob(
+  path: string,
+  query?: QueryParams,
+  fallbackFileName = 'file',
+  accept = '*/*',
+  service: SflService = 'fleet',
+): Promise<FetchedBlob> {
+  const url = `${serviceOrigins[service]}${path}${buildQueryString(query)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET', headers: buildHeaders({ accept }, false) });
+  } catch {
+    throw unreachable(service);
+  }
+
+  if (!response.ok) {
+    // The failure path is JSON even though the success path is not, because the exception handler
+    // runs before any bytes are written.
+    const text = await response.text();
+    const correlationId = response.headers.get(HEADER_CORRELATION_ID);
+    try {
+      const envelope = JSON.parse(text) as ApiResponseEnvelope<unknown>;
+      if (isApiErrorEnvelope(envelope.error)) {
+        throw FleetApiError.fromEnvelope(response.status, envelope.error, envelope.data);
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, envelope, correlationId);
+    } catch (cause) {
+      if (cause instanceof FleetApiError) {
+        throw cause;
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, null, correlationId);
+    }
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename=("?)([^";]+)\1/i.exec(disposition);
+  const blob = await response.blob();
+  return {
+    blob,
+    objectUrl: URL.createObjectURL(blob),
+    contentType: response.headers.get('Content-Type')?.split(';')[0]?.trim() || blob.type,
+    fileName: match?.[2]?.trim() || fallbackFileName,
+  };
 }
 
 export const apiClient = {
