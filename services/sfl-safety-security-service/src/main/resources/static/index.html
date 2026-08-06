@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Safety, Security & Emergency service - SFL Operations dashboard</title>
+  <!--
+    Why a service with no user interface has a landing page.
+
+    Opening http://localhost:8092 produced Spring's Whitelabel Error Page - "there was an unexpected
+    error (type=Not Found, status=404)". Nothing was wrong: SSEMP is an API, and ADR 0006 puts every
+    screen in one dashboard served by sfl-fleet-logistics-service. But a 404 stack-trace page is
+    indistinguishable from a broken service to somebody who has just started the stack and is
+    checking each port came up, and it sent exactly that person looking for a fault that did not
+    exist.
+
+    Modelled on the IFIMP page next door, with one deliberate difference: no meta refresh. That page
+    redirects because it *was* a real interface and its URLs are in runbooks. This one never was, so
+    bouncing somebody who typed the port to a different port would hide the thing they were trying to
+    confirm - that this service is up.
+
+    Static rather than a controller: it cannot collide with a request mapping and needs no code.
+  -->
+  <style>
+    :root { color-scheme: light dark; }
+    body {
+      margin: 0; min-height: 100vh; display: grid; place-items: center; padding: 2rem;
+      font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif;
+      background: #f8fafc; color: #1e293b;
+    }
+    main { max-width: 34rem; }
+    p.eyebrow {
+      margin: 0 0 .5rem; font-size: .75rem; font-weight: 600; letter-spacing: .08em;
+      text-transform: uppercase; color: #64748b;
+    }
+    h1 { margin: 0 0 1rem; font-size: 1.5rem; line-height: 1.3; }
+    a.cta {
+      display: inline-block; margin-top: 1.25rem; padding: .6rem 1.1rem; border-radius: .5rem;
+      background: #0f172a; color: #fff; text-decoration: none; font-weight: 600;
+    }
+    a.cta:hover { background: #1e293b; }
+    ul { margin: 1.25rem 0 0; padding-left: 1.1rem; }
+    p.small, li { font-size: .8125rem; color: #64748b; }
+    code { background: #e2e8f0; border-radius: .25rem; padding: .1rem .3rem; font-size: .9em; }
+    @media (prefers-color-scheme: dark) {
+      body { background: #0f172a; color: #e2e8f0; }
+      p.eyebrow, p.small, li { color: #94a3b8; }
+      a.cta { background: #e2e8f0; color: #0f172a; }
+      a.cta:hover { background: #cbd5e1; }
+      code { background: #1e293b; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <p class="eyebrow">CLET · SFL Phase 1 · SSEMP</p>
+    <h1>Safety, Security &amp; Emergency service is running</h1>
+    <p>
+      This service answers the API on port 8092 - S174 emergency mass notification today, with
+      S160 to S163 as they are built. It does not serve screens, and never has.
+    </p>
+    <p>
+      The emergency screens - activations, audiences, templates, drills and break-glass - are in the
+      one SFL Operations dashboard, which calls this service from the browser.
+    </p>
+    <a class="cta" href="http://localhost:8093/ui/safetysecurity/emergency">Open the dashboard</a>
+    <ul>
+      <li>API reference: <a href="/swagger-ui.html">Swagger UI</a> · <a href="/v3/api-docs">OpenAPI document</a></li>
+      <li>Health: <a href="/actuator/health">/actuator/health</a></li>
+    </ul>
+    <p class="small">
+      One dashboard for all three platforms is <code>docs/adr/0006</code>. If the link above loads
+      nothing, the dashboard is not running: start <code>sfl-fleet-logistics-service</code> after
+      <code>npm run build</code> in <code>frontend/sfl-operations-ui</code>, or run
+      <code>npm run dev</code> and open <code>http://localhost:5005/safetysecurity/emergency</code>.
+    </p>
+  </main>
+</body>
+</html>

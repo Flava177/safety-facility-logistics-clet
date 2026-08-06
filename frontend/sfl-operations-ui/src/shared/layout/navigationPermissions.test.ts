@@ -201,3 +201,26 @@ describe('the fail-open contract', () => {
     expect(labels).toContain('Fuel policies');
   });
 });
+
+/**
+ * The order of the two fleet operations entries.
+ *
+ * <p>Pinned because it was asked for explicitly and then reported as not done - the source was
+ * correct and a cached bundle was showing the old order, which is exactly the situation where an
+ * assertion is worth more than a screenshot. Order is a product decision here: the workflow queue is
+ * what a supervisor opens first, so it sits above the trip register.
+ */
+describe('fleet navigation order', () => {
+  it('puts the workflow queue above trips and assignments', () => {
+    // A fleet manager holds both, so both appear and their relative order is observable.
+    holding(['FLEET_DASHBOARD_READ', 'FLEET_WORKFLOW_READ', 'FLEET_TRIP_READ']);
+    const labels = labelsFor(['S166']);
+
+    const workflow = labels.indexOf('Workflow queue');
+    const trips = labels.indexOf('Trips & assignments');
+
+    expect(workflow).toBeGreaterThanOrEqual(0);
+    expect(trips).toBeGreaterThanOrEqual(0);
+    expect(workflow).toBeLessThan(trips);
+  });
+});

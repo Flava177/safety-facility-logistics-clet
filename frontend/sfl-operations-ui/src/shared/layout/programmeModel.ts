@@ -21,7 +21,7 @@
  * sends - because that is what IAM will carry as a claim.
  */
 
-export type ProgrammeCode = 'IFIMP' | 'SSEMP' | 'FTLMP' | 'AVAMP';
+export type ProgrammeCode = 'IFIMP' | 'SSEMP' | 'FTLMP';
 
 export interface Programme {
   code: ProgrammeCode;
@@ -45,12 +45,7 @@ export const programmes: Record<ProgrammeCode, Programme> = {
   FTLMP: {
     code: 'FTLMP',
     label: 'Fleet, Transport & Logistics',
-    scope: 'Fleet and vehicles, fuel and driver logbooks, courier and dispatch',
-  },
-  AVAMP: {
-    code: 'AVAMP',
-    label: 'Asset & Device Visibility',
-    scope: 'Asset and device reference across every programme',
+    scope: 'Fleet and vehicles, fuel and driver logbooks, courier and dispatch, asset and device visibility',
   },
 };
 
@@ -169,10 +164,18 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   // A centre manager receives consignments and books the rooms they are for.
   CENTRE_MANAGER: ['FTLMP', 'IFIMP'],
 
-  // SFL.AVAMP - the device reference layer, plus the technical roles that maintain the feeds
-  // carrying device data into every programme.
-  INTEGRATION_ENGINEER: ['AVAMP', 'IFIMP', 'SSEMP', 'FTLMP'],
-  SERVICE_INTEGRATION: ['AVAMP', 'IFIMP', 'SSEMP', 'FTLMP'],
+  /*
+    The technical roles that maintain the feeds carrying device and asset data into every programme.
+
+    They used to carry a fourth code, AVAMP, for the asset and device reference layer. That was a
+    programme with no deployable of its own - its two entities were folded into the fleet service on
+    5 August, into the `asset_visibility` schema it still owns - and no screens, so entitlement to it
+    granted nothing and appeared nowhere. A programme the shell can neither show nor explain is a
+    concept with a maintenance cost and no reader; asset visibility is now what FTLMP's scope says it
+    is, which is where the code already lived.
+  */
+  INTEGRATION_ENGINEER: ['IFIMP', 'SSEMP', 'FTLMP'],
+  SERVICE_INTEGRATION: ['IFIMP', 'SSEMP', 'FTLMP'],
 };
 
 /**

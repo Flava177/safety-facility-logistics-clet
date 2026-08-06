@@ -26,7 +26,7 @@ export interface NavItem {
   label: string;
   to: string;
   icon: IconName;
-  /** Matches child routes too - `/fleet/vehicles/42` still highlights "Vehicle register". */
+  /** Matches child routes too - `/fleetvehicle/fleet/vehicles/42` still highlights "Vehicle register". */
   matchPrefix?: string;
   description?: string;
   /**
@@ -82,46 +82,59 @@ export interface NavSection {
  * so it lives on the space detail screen and on the dashboard drilldown rather than as a third list
  * to cross-reference by hand.
  */
+/**
+ * The routes that exist outside any platform's screens.
+ *
+ * <p>Sign-in has no sidebar, no actor and no system guard, but it still has to live at an address -
+ * and that address is under `/fleetvehicle` because FTLMP is the deployable that serves the bundle.
+ * Kept as a constant rather than the literal it used to be: the route moved once, and the guard that
+ * redirects to it was the one place that had to be found by hand when it did.
+ */
+export const authPaths = {
+  login: '/fleetvehicle/login',
+};
+
 export const facilitiesPaths = {
   dashboard: '/facilities',
-  sites: '/facilities/sites',
-  siteDetail: (siteId: string) => `/facilities/sites/${siteId}`,
+  sites: '/facilities/estate/sites',
+  siteDetail: (siteId: string) => `/facilities/estate/sites/${siteId}`,
   /*
     Buildings have a detail route and no register. A building is only ever reached from the site that
     owns it - nobody searches an estate for a building - and a fourth register would be a sidebar
     entry whose whole content is "choose a site first".
   */
-  buildingDetail: (buildingId: string) => `/facilities/buildings/${buildingId}`,
-  spaces: '/facilities/spaces',
-  spaceDetail: (roomId: string) => `/facilities/spaces/${roomId}`,
-  assets: '/facilities/assets',
-  assetDetail: (assetId: string) => `/facilities/assets/${assetId}`,
-  zones: '/facilities/zones',
-  devices: '/facilities/devices',
-  assessments: '/facilities/assessments',
-  assessmentDetail: (assessmentId: string) => `/facilities/assessments/${assessmentId}`,
-  checklists: '/facilities/checklists',
-  checklistDetail: (checklistId: string) => `/facilities/checklists/${checklistId}`,
-  audit: '/facilities/audit',
-  configuration: '/facilities/configuration',
+  buildingDetail: (buildingId: string) => `/facilities/estate/buildings/${buildingId}`,
+  spaces: '/facilities/estate/spaces',
+  spaceDetail: (roomId: string) => `/facilities/estate/spaces/${roomId}`,
+  assets: '/facilities/estate/assets',
+  assetDetail: (assetId: string) => `/facilities/estate/assets/${assetId}`,
+  zones: '/facilities/estate/zones',
+  devices: '/facilities/estate/devices',
+  assessments: '/facilities/estate/assessments',
+  assessmentDetail: (assessmentId: string) => `/facilities/estate/assessments/${assessmentId}`,
+  checklists: '/facilities/estate/checklists',
+  checklistDetail: (checklistId: string) => `/facilities/estate/checklists/${checklistId}`,
+  audit: '/facilities/estate/audit',
+  configuration: '/facilities/estate/configuration',
 
-  // S153 CMMS. Same route base as S152 because it is the same service and the same programme; the
-  // system code differs, which is what the route guard reads.
-  faults: '/facilities/faults',
-  faultDetail: (faultId: string) => `/facilities/faults/${faultId}`,
-  workOrders: '/facilities/work-orders',
-  workOrderDetail: (workOrderId: string) => `/facilities/work-orders/${workOrderId}`,
+  // S153 CMMS, under /facilities/maintenance. It shares a service and a programme with S152 and now
+  // says so *and* stays distinguishable: the two used to share one flat level, so nothing in a URL
+  // told you whether a screen was estate registry or maintenance - and the route guard reads a system
+  // code the reader cannot see.
+  faults: '/facilities/maintenance/faults',
+  faultDetail: (faultId: string) => `/facilities/maintenance/faults/${faultId}`,
+  workOrders: '/facilities/maintenance/work-orders',
+  workOrderDetail: (workOrderId: string) => `/facilities/maintenance/work-orders/${workOrderId}`,
   schedules: '/facilities/maintenance/schedules',
   scheduleDetail: (scheduleId: string) => `/facilities/maintenance/schedules/${scheduleId}`,
   vendors: '/facilities/maintenance/vendors',
-  evidenceDetail: (evidenceId: string) => `/facilities/maintenance-evidence/${evidenceId}`,
+  evidenceDetail: (evidenceId: string) => `/facilities/maintenance/evidence/${evidenceId}`,
 };
 
 /**
  * S159 room and resource booking routes.
  *
- * Under `/bookings` rather than `/facilities/bookings`, which is the odd one out among the three
- * IFIMP systems and is deliberate. S152 and S153 are read by the people who run the estate; the
+ * Under `/facilities/bookings`, a sibling of `estate` and `maintenance`. S152 and S153 are read by the people who run the estate; the
  * booking diary is read by everybody who ever needs a room, and most of them do not think of
  * themselves as visiting facilities at all. A path a lecturer can be told over the phone is worth
  * more than a URL that mirrors the service topology.
@@ -131,31 +144,31 @@ export const facilitiesPaths = {
  * all of which somebody will want to link to.
  */
 export const bookingPaths = {
-  diary: '/bookings',
+  diary: '/facilities/bookings',
   /*
     Static siblings of `:bookingId`. React Router ranks a static segment above a dynamic one, so
-    `/bookings/availability` never resolves as a booking whose id is the word "availability" - and
+    `/facilities/bookings/availability` never resolves as a booking whose id is the word "availability" - and
     ids are UUIDs regardless. Keep new static children out of the UUID shape and this stays true.
   */
-  availability: '/bookings/availability',
-  resources: '/bookings/resources',
-  setupTasks: '/bookings/turnaround',
-  bookingDetail: (bookingId: string) => `/bookings/${bookingId}`,
+  availability: '/facilities/bookings/availability',
+  resources: '/facilities/bookings/resources',
+  setupTasks: '/facilities/bookings/turnaround',
+  bookingDetail: (bookingId: string) => `/facilities/bookings/${bookingId}`,
 };
 
 export const fleetPaths = {
-  dashboard: '/fleet',
-  vehicles: '/fleet/vehicles',
-  vehicleDetail: (vehicleId: string) => `/fleet/vehicles/${vehicleId}`,
-  drivers: '/fleet/drivers',
-  driverDetail: (driverId: string) => `/fleet/drivers/${driverId}`,
-  trips: '/fleet/trips',
-  tripDetail: (tripId: string) => `/fleet/trips/${tripId}`,
-  workflow: '/fleet/workflow',
-  workflowDetail: (itemId: string) => `/fleet/workflow/${itemId}`,
-  compliance: '/fleet/compliance',
-  governance: '/fleet/governance',
-  integrations: '/fleet/integrations',
+  dashboard: '/fleetvehicle/fleet',
+  vehicles: '/fleetvehicle/fleet/vehicles',
+  vehicleDetail: (vehicleId: string) => `/fleetvehicle/fleet/vehicles/${vehicleId}`,
+  drivers: '/fleetvehicle/fleet/drivers',
+  driverDetail: (driverId: string) => `/fleetvehicle/fleet/drivers/${driverId}`,
+  trips: '/fleetvehicle/fleet/trips',
+  tripDetail: (tripId: string) => `/fleetvehicle/fleet/trips/${tripId}`,
+  workflow: '/fleetvehicle/fleet/workflow',
+  workflowDetail: (itemId: string) => `/fleetvehicle/fleet/workflow/${itemId}`,
+  compliance: '/fleetvehicle/fleet/compliance',
+  governance: '/fleetvehicle/fleet/governance',
+  integrations: '/fleetvehicle/fleet/integrations',
 };
 
 /**
@@ -166,19 +179,19 @@ export const fleetPaths = {
  * operator links to and comes back to.
  */
 export const fuelPaths = {
-  dashboard: '/fuel',
-  transactions: '/fuel/transactions',
-  transactionDetail: (transactionId: string) => `/fuel/transactions/${transactionId}`,
-  logbooks: '/fuel/logbooks',
-  logbookDetail: (logbookId: string) => `/fuel/logbooks/${logbookId}`,
-  reconciliation: '/fuel/reconciliation',
-  anomalies: '/fuel/anomalies',
-  anomalyDetail: (anomalyId: string) => `/fuel/anomalies/${anomalyId}`,
-  cards: '/fuel/cards',
-  imports: '/fuel/imports',
-  policies: '/fuel/policies',
-  policyDetail: (policyId: string) => `/fuel/policies/${policyId}`,
-  integrations: '/fuel/integrations',
+  dashboard: '/fleetvehicle/fuel',
+  transactions: '/fleetvehicle/fuel/transactions',
+  transactionDetail: (transactionId: string) => `/fleetvehicle/fuel/transactions/${transactionId}`,
+  logbooks: '/fleetvehicle/fuel/logbooks',
+  logbookDetail: (logbookId: string) => `/fleetvehicle/fuel/logbooks/${logbookId}`,
+  reconciliation: '/fleetvehicle/fuel/reconciliation',
+  anomalies: '/fleetvehicle/fuel/anomalies',
+  anomalyDetail: (anomalyId: string) => `/fleetvehicle/fuel/anomalies/${anomalyId}`,
+  cards: '/fleetvehicle/fuel/cards',
+  imports: '/fleetvehicle/fuel/imports',
+  policies: '/fleetvehicle/fuel/policies',
+  policyDetail: (policyId: string) => `/fleetvehicle/fuel/policies/${policyId}`,
+  integrations: '/fleetvehicle/fuel/integrations',
 };
 
 /**
@@ -189,16 +202,16 @@ export const fuelPaths = {
  * than as three more sidebar entries an operator would have to cross-reference by hand.
  */
 export const dispatchPaths = {
-  dashboard: '/dispatch',
-  items: '/dispatch/items',
-  itemDetail: (itemId: string) => `/dispatch/items/${itemId}`,
-  manifests: '/dispatch/manifests',
-  manifestDetail: (manifestId: string) => `/dispatch/manifests/${manifestId}`,
-  inbound: '/dispatch/inbound',
-  exceptions: '/dispatch/exceptions',
-  exceptionDetail: (caseId: string) => `/dispatch/exceptions/${caseId}`,
-  scans: '/dispatch/scans',
-  integrations: '/dispatch/integrations',
+  dashboard: '/fleetvehicle/dispatch',
+  items: '/fleetvehicle/dispatch/items',
+  itemDetail: (itemId: string) => `/fleetvehicle/dispatch/items/${itemId}`,
+  manifests: '/fleetvehicle/dispatch/manifests',
+  manifestDetail: (manifestId: string) => `/fleetvehicle/dispatch/manifests/${manifestId}`,
+  inbound: '/fleetvehicle/dispatch/inbound',
+  exceptions: '/fleetvehicle/dispatch/exceptions',
+  exceptionDetail: (caseId: string) => `/fleetvehicle/dispatch/exceptions/${caseId}`,
+  scans: '/fleetvehicle/dispatch/scans',
+  integrations: '/fleetvehicle/dispatch/integrations',
 };
 
 /**
@@ -213,15 +226,15 @@ export const dispatchPaths = {
  * has a detail route, because `GET /templates/{id}` is the only detail endpoint this service has.
  */
 export const emergencyPaths = {
-  dashboard: '/emergency',
-  activations: '/emergency/activations',
-  activationDetail: (activationId: string) => `/emergency/activations/${activationId}`,
-  breakGlass: '/emergency/break-glass',
-  templates: '/emergency/templates',
-  templateDetail: (templateId: string) => `/emergency/templates/${templateId}`,
-  audiences: '/emergency/audiences',
-  drills: '/emergency/drills',
-  integrations: '/emergency/integrations',
+  dashboard: '/safetysecurity/emergency',
+  activations: '/safetysecurity/emergency/activations',
+  activationDetail: (activationId: string) => `/safetysecurity/emergency/activations/${activationId}`,
+  breakGlass: '/safetysecurity/emergency/break-glass',
+  templates: '/safetysecurity/emergency/templates',
+  templateDetail: (templateId: string) => `/safetysecurity/emergency/templates/${templateId}`,
+  audiences: '/safetysecurity/emergency/audiences',
+  drills: '/safetysecurity/emergency/drills',
+  integrations: '/safetysecurity/emergency/integrations',
 };
 
 /**
@@ -415,7 +428,7 @@ export const navSections: NavSection[] = [
         label: 'Booking diary',
         to: bookingPaths.diary,
         icon: 'calendar',
-        // Not `matchPrefix`: the diary is the index of `/bookings`, and a prefix match would keep it
+        // Not `matchPrefix`: the diary is the index of `/facilities/bookings`, and a prefix match would keep it
         // highlighted while the operator is on turnaround or the resource register.
         description: 'What is booked, and what the estate thinks of it',
         // Enforced by BookingApplicationService.search. A requester holds this and sees only their own.

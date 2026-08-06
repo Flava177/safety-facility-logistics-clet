@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { allSystems, programmesFor, systems, systemsFor } from './programmeModel';
+import { allProgrammes, allSystems, programmesFor, systems, systemsFor } from './programmeModel';
 
 /**
  * Who sees what.
@@ -98,7 +98,11 @@ describe('programme entitlement', () => {
   describe('the rules the model turns on', () => {
     it('gives a cross-programme role everything', () => {
       expect(systemsFor(['AUDITOR'])).toEqual(allSystems);
-      expect(programmesFor(['SFL_ADMIN'])).toHaveLength(4);
+      // Three, not four: AVAMP was retired as a programme. It had no deployable of its own - its
+      // entities live in the fleet service's `asset_visibility` schema - and no screens, so
+      // entitlement to it granted nothing the shell could show.
+      expect(programmesFor(['SFL_ADMIN'])).toEqual(allProgrammes);
+      expect(allProgrammes).toHaveLength(3);
     });
 
     it('grants an unrecognised role nothing', () => {

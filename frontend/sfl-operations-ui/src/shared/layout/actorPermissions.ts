@@ -58,7 +58,7 @@ interface Source {
 // to answer from a fourth on 8092's behalf; it now answers from the SSEMP service itself, so the
 // path is unchanged and only the origin moved.
 const SOURCES: Source[] = [
-  // FTLMP - fleet, fuel, dispatch and AVAMP assets. Four matrices, one deployable, one answer.
+  // FTLMP - fleet, fuel, dispatch and asset visibility. Four matrices, one deployable, one answer.
   { path: '/api/v1/fleet/actor/permissions' },
   // SSEMP - S174's matrix today, joined by S160-S163 as they are built.
   { path: '/api/v1/emergency/actor/permissions', service: 'safetySecurity' },
