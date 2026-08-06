@@ -22,6 +22,7 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
+import { canManageAudiences } from 'modules/emergency/api/workflow';
 
 /**
  * Who receives a broadcast: audience groups and the zones a broadcast can be narrowed to.
@@ -208,12 +209,17 @@ const EmergencyAudiencesPage = () => {
         ]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setCreatingAudience(true)}>
-              Create audience group
-            </Button>
-            <Button variant="outline" startIcon="plus" onClick={() => setCreatingZone(true)}>
-              Create zone
-            </Button>
+            {/* Both write to the audience register, so both sit behind the one grant. */}
+            {canManageAudiences() && (
+              <>
+                <Button variant="primary" startIcon="plus" onClick={() => setCreatingAudience(true)}>
+                  Create audience group
+                </Button>
+                <Button variant="outline" startIcon="plus" onClick={() => setCreatingZone(true)}>
+                  Create zone
+                </Button>
+              </>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>

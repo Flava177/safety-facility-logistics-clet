@@ -25,6 +25,7 @@ import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
+import { canManageScenarios, canManageTemplates } from 'modules/emergency/api/workflow';
 
 /**
  * What gets sent: notification templates and the scenarios that cite them.
@@ -244,12 +245,17 @@ const EmergencyTemplatesPage = () => {
         ]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setCreatingTemplate(true)}>
-              Create template
-            </Button>
-            <Button variant="outline" startIcon="plus" onClick={() => setCreatingScenario(true)}>
-              Create scenario
-            </Button>
+            {/* A template and a scenario are separately granted - one is wording, one is a plan. */}
+            {canManageTemplates() && (
+              <Button variant="primary" startIcon="plus" onClick={() => setCreatingTemplate(true)}>
+                Create template
+              </Button>
+            )}
+            {canManageScenarios() && (
+              <Button variant="outline" startIcon="plus" onClick={() => setCreatingScenario(true)}>
+                Create scenario
+              </Button>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>

@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.fleetlogistics.assets.domain.policy.AssetVisibilityPermissionMatrix;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.policy.DispatchPermissionMatrix;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.FleetPermissionMatrix;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.policy.FuelPermissionMatrix;
@@ -17,7 +18,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * What the calling actor is permitted to do, across the three systems this service carries.
+ * What the calling actor is permitted to do, across every system this service carries.
  *
  * <p>The dashboard needs this to stop offering screens the actor cannot read. It could not derive the
  * answer itself: there are 103 permissions across 26 roles, and transcribing that into TypeScript
@@ -57,8 +58,23 @@ public class ActorPermissionsController {
 
         EnumSet<SflPermission> granted = EnumSet.noneOf(SflPermission.class);
         granted.addAll(FleetPermissionMatrix.permissionsFor(roles));
+        /*
+          Asset visibility was missing from this union, and the failure mode is worth recording
+          because it is silent in both directions.
+
+          The dashboard's fail-open is per *set*, not per service: once any source answers, `granted`
+          is non-null and anything absent from it reads as **denied**. So omitting a matrix here does
+          not leave its permissions unknown - it denies them. ASSET_REFERENCE_READ and
+          ASSET_REFERENCE_MANAGE were therefore refused to every actor who held them, with no error
+          anywhere, and the comment on the dashboard side said "four matrices, one deployable, one
+          answer" while three were being asked.
+
+          Nothing broke yet only because the asset register has no screens. It would have broken on
+          the day it got one, which is the worst time to find this.
+        */
+        granted.addAll(AssetVisibilityPermissionMatrix.permissionsFor(roles));
         // Fuel and dispatch expose only a predicate, so they are asked one permission at a time. 103
-        // in-memory set lookups per call, which is cheaper than keeping a fourth copy of the mapping.
+        // in-memory set lookups per call, which is cheaper than keeping another copy of the mapping.
         Arrays.stream(SflPermission.values())
                 .filter(permission -> FuelPermissionMatrix.grants(roles, permission)
                         || DispatchPermissionMatrix.grants(roles, permission))

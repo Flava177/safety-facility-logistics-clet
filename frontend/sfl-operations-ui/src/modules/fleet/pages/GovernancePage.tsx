@@ -31,7 +31,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
-import { canRequestEvidenceExport } from '../api/access';
+import { canReadAudit, canRequestEvidenceExport, canVerifyAuditChain } from '../api/access';
 import { evidenceStorageReference, sha256Hex } from 'shared/evidence/fileEvidence';
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
@@ -224,11 +224,19 @@ const GovernancePage = () => {
       />
 
       <SectionCard flush>
+        {/*
+          Two of these three tabs are separately granted, and offering them to everyone is how a
+          fleet manager ended up reading `FLEET_UNAUTHORIZED_SCOPE` with a correlation id. Replaying
+          the hash chain is an auditor's, compliance officer's or administrator's act; reading the
+          audit trail is narrower than reading evidence. A tab nobody may open is not shown.
+        */}
         <Tabs
           items={[
             { value: 'evidence', label: 'Evidence' },
-            { value: 'audit', label: 'Audit records', count: audit.data?.length },
-            { value: 'integrity', label: 'Chain integrity' },
+            ...(canReadAudit()
+              ? [{ value: 'audit', label: 'Audit records', count: audit.data?.length }]
+              : []),
+            ...(canVerifyAuditChain() ? [{ value: 'integrity', label: 'Chain integrity' }] : []),
           ]}
           value={tab}
           onChange={(value) => setTab(value as TabKey)}
@@ -249,7 +257,7 @@ const GovernancePage = () => {
                     value={recordType}
                     onChange={setRecordType}
                     placeholder="Trip"
-                    helperText="As it was registered - for example Trip or VehicleInspection."
+                    helperText="As it was registered - for example Trip or Vehicle inspection."
                   />
                   <TextInput
                     label="Related record ID"

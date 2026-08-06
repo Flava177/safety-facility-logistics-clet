@@ -1,3 +1,4 @@
+import { permits } from 'shared/layout/actorPermissions';
 import type { Tone } from 'shared/components/StatusChip';
 import type { NotificationActivation } from './dto';
 import type { ActivationStatus } from './enums';
@@ -207,3 +208,56 @@ const activationTones: Record<ActivationStatus, Tone> = {
 };
 
 export const activationTone = (status: ActivationStatus): Tone => activationTones[status];
+
+/* --------------------------------------------------------------------- permission-gated controls */
+
+/**
+ * What this actor may do in S174, as opposed to what the activation's state allows.
+ *
+ * <h2>Two different questions, and they must look different</h2>
+ *
+ * <p>Everything above answers "does the record's state permit this" - and the right response to a no
+ * is a **disabled** control with {@link whyUnavailable} beside it, because the state will change.
+ * These answer "may this person, ever", and the right response to a no is to **hide** the control:
+ * an audience manager will never hold break-glass, and a permanently greyed button is a question
+ * they cannot answer.
+ *
+ * <h2>Why they were missing</h2>
+ *
+ * <p>The emergency screens gated on state alone, so every role that could open a page was offered
+ * every control on it - compose an activation, manage audiences, edit templates, start a drill. The
+ * service refused each one, which is the service working and the screen having wasted the operator's
+ * time to get there. The same gap existed across fleet, fuel and dispatch; this is the S174 half.
+ *
+ * <p>Never the enforcement point. `permits` fails open when the services could not be asked, so a
+ * failed lookup shows the control rather than hiding the application.
+ */
+export const canCreateActivations = (): boolean => permits('EMERGENCY_ACTIVATION_CREATE');
+export const canApproveActivations = (): boolean => permits('EMERGENCY_ACTIVATION_APPROVE');
+export const canSendActivations = (): boolean => permits('EMERGENCY_ACTIVATION_SEND');
+
+/**
+ * Send an all-clear.
+ *
+ * <p>Separate from sending the activation itself, and deliberately so: standing an emergency down is
+ * a different decision from declaring one, and the matrix grants them apart.
+ */
+export const canSendAllClear = (): boolean => permits('EMERGENCY_ALL_CLEAR_SEND');
+
+/**
+ * Break glass - send without prior approval.
+ *
+ * <p>The most consequential grant in S174 and the narrowest. A control for it must never be shown to
+ * somebody who does not hold it.
+ */
+export const canBreakGlass = (): boolean => permits('EMERGENCY_BREAK_GLASS_SEND');
+
+export const canManageAudiences = (): boolean => permits('EMERGENCY_AUDIENCE_MANAGE');
+export const canManageTemplates = (): boolean => permits('EMERGENCY_TEMPLATE_MANAGE');
+
+/** Scenarios and drills: a drill is a scenario exercised, so both sit behind the scenario grant. */
+export const canManageScenarios = (): boolean => permits('EMERGENCY_SCENARIO_MANAGE');
+
+export const canApproveAfterAction = (): boolean => permits('EMERGENCY_AFTER_ACTION_APPROVE');
+export const canExportEmergencyEvidence = (): boolean => permits('EMERGENCY_EVIDENCE_EXPORT');
+export const canReplayEmergencyIntegration = (): boolean => permits('EMERGENCY_INTEGRATION_REPLAY');

@@ -50,6 +50,7 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canCreateManifests } from 'modules/fleet/api/access';
 
 type DialogKey =
   | 'addItem'
@@ -488,7 +489,8 @@ const ManifestDetailPage = () => {
 
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
-                {manifestActionAllowed(record, 'addItem') && (
+                {/* State allows it; the grant decides whether this person is offered it. */}
+                {manifestActionAllowed(record, 'addItem') && canCreateManifests() && (
                   <Button variant="primary" startIcon="plus" onClick={() => setDialog('addItem')}>
                     Add item
                   </Button>

@@ -9,7 +9,7 @@ import {
 } from 'modules/emergency/api/enums';
 import type { ChannelType, Priority } from 'modules/emergency/api/enums';
 import { activationsApi } from 'modules/emergency/api/emergencyApi';
-import { afterActionOutstanding, breakGlassEligible } from 'modules/emergency/api/workflow';
+import { afterActionOutstanding, breakGlassEligible, canBreakGlass } from 'modules/emergency/api/workflow';
 import {
   ActivationStatusChip,
   CheckboxGroup,
@@ -342,15 +342,26 @@ const BreakGlassPage = () => {
             </ConsequencePanel>
 
             <div className="flex flex-wrap items-center gap-3">
-              <Button
-                variant="danger"
-                size="md"
-                startIcon="zap"
-                disabled={!ready}
-                onClick={() => setConfirming(true)}
-              >
-                Break glass and send
-              </Button>
+              {/*
+                Hidden, not disabled, and this is the one control where that matters most.
+
+                Break-glass sends to a whole site on one person's authority with no approval step -
+                the narrowest grant in S174. Everything else on this page is a state check answered
+                by `ready`, which correctly *disables* with a reason because the operator can fix it.
+                Not holding EMERGENCY_BREAK_GLASS_SEND is not fixable, and a greyed "Break glass and
+                send" sitting in front of somebody who may never press it is an invitation to try.
+              */}
+              {canBreakGlass() && (
+                <Button
+                  variant="danger"
+                  size="md"
+                  startIcon="zap"
+                  disabled={!ready}
+                  onClick={() => setConfirming(true)}
+                >
+                  Break glass and send
+                </Button>
+              )}
               {!ready && (
                 <span className="flex items-center gap-1.5 text-theme-sm text-gray-600">
                   <Icon name="info" size={14} className="shrink-0 text-teal-700" />

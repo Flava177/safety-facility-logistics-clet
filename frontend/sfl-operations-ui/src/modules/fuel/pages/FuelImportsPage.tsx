@@ -20,6 +20,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canImportFuel } from 'modules/fleet/api/access';
 
 /** `''` means every row, and is what the service reads as no filter. */
 const ROW_FILTERS: { value: FuelImportRow['status'] | ''; label: string }[] = [
@@ -210,9 +211,12 @@ const FuelImportsPage = () => {
         subtitle="Bulk capture, with an accepted or rejected outcome for every row."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'CSV imports' }]}
         actions={
-          <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
-            Import a CSV
-          </Button>
+          // FUEL_TRANSACTION_IMPORT, which only the integration engineer and the fuel officer hold.
+          canImportFuel() ? (
+            <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
+              Import a CSV
+            </Button>
+          ) : undefined
         }
       />
 

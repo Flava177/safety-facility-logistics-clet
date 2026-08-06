@@ -23,6 +23,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
+import { canCreateLogbooks, canReviewLogbooks } from 'modules/fleet/api/access';
 
 /** One sentence per transition. "Transition applied" tells an operator nothing. */
 const CONFIRMATIONS: Record<LogbookTransition, string> = {
@@ -160,8 +161,16 @@ const DriverLogbookDetailPage = () => {
 
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
-                {TRANSITION_ORDER.filter((transition) =>
-                  logbookTransitionAllowed(record, transition),
+                {TRANSITION_ORDER.filter(
+                  (transition) =>
+                    logbookTransitionAllowed(record, transition) &&
+                    /*
+                      State says the record could take this step; the grant says whether this person
+                      is the one who takes it. Submitting is the driver's own act
+                      (FUEL_LOGBOOK_CREATE); reviewing, returning and approving belong to the
+                      reviewer, and collapsing the two would let a driver approve their own journey.
+                    */
+                    (transition === 'submit' ? canCreateLogbooks() : canReviewLogbooks()),
                 ).map((transition) => {
                   const blockedSubmit = transition === 'submit' && submissionBlockers.length > 0;
                   return transition === 'review' ? (

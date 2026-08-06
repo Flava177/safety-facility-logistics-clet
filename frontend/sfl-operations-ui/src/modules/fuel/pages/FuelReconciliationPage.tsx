@@ -23,6 +23,7 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canRunReconciliation } from 'modules/fleet/api/access';
 
 /** What a reconciliation run can be asked to cover. */
 const SCOPES = ['RECEIVED', 'EXCEPTION'] as const;
@@ -318,15 +319,23 @@ const FuelReconciliationPage = () => {
         subtitle="Judge transactions against the policy that was in force when they occurred."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Reconciliation' }]}
         actions={
-          <Button
-            variant="primary"
-            startIcon="scale"
-            loading={running}
-            disabled={runnable === 0 || activePolicies.length === 0}
-            onClick={runAll}
-          >
-            {runnable === 0 ? 'Nothing to run' : `Reconcile ${runnable}`}
-          </Button>
+          /*
+            Hidden for a reader, disabled for a shortfall - the two are different answers and must
+            look different. Someone without FUEL_RECONCILIATION_RUN never sees the control; someone
+            who holds it sees it greyed with the reason when there is nothing to run or no policy is
+            in force.
+          */
+          canRunReconciliation() ? (
+            <Button
+              variant="primary"
+              startIcon="scale"
+              loading={running}
+              disabled={runnable === 0 || activePolicies.length === 0}
+              onClick={runAll}
+            >
+              {runnable === 0 ? 'Nothing to run' : `Reconcile ${runnable}`}
+            </Button>
+          ) : undefined
         }
       />
 

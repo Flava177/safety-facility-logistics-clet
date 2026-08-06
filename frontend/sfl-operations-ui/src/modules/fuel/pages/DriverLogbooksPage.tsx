@@ -25,6 +25,7 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canCreateLogbooks } from 'modules/fleet/api/access';
 
 /**
  * The driver logbook register.
@@ -142,9 +143,13 @@ const DriverLogbooksPage = () => {
         subtitle="Journey records from draft through review to approval."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Driver logbooks' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
-            Create logbook
-          </Button>
+          // A driver holds this - the logbook is their own journey record. A reporting viewer reads
+          // the register and creates nothing in it.
+          canCreateLogbooks() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
+              Create logbook
+            </Button>
+          ) : undefined
         }
       />
 

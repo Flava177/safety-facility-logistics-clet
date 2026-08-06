@@ -26,6 +26,7 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterInbound } from 'modules/fleet/api/access';
 
 /**
  * The mailroom: inbound registration and acknowledged distribution.
@@ -149,9 +150,12 @@ const InboundMailPage = () => {
         subtitle="Registration, and the acknowledgement that closes each item."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Inbound mail' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
-            Register inbound item
-          </Button>
+          // DISPATCH_INBOUND_REGISTER, which is the mailroom officer's grant.
+          canRegisterInbound() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
+              Register inbound item
+            </Button>
+          ) : undefined
         }
       />
 

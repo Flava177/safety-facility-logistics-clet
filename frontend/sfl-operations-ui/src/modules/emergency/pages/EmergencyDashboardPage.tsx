@@ -6,7 +6,7 @@ import {
   emergencyDashboardApi,
   drillsApi,
 } from 'modules/emergency/api/emergencyApi';
-import { activationLive, awaitingApproval } from 'modules/emergency/api/workflow';
+import { activationLive, awaitingApproval, canBreakGlass } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed, percentOf } from 'modules/emergency/components/emergencyFormat';
 import { DerivedNote } from 'modules/fuel/components/Provenance';
@@ -149,13 +149,17 @@ const EmergencyDashboardPage = () => {
         }
         actions={
           <>
-            <Button
-              variant="danger"
-              startIcon="zap"
-              onClick={() => navigate(emergencyPaths.breakGlass)}
-            >
-              Break glass
-            </Button>
+{/* The break-glass page hides its own send control too; this stops the journey earlier, so
+                nobody is walked to a screen whose one purpose they may not carry out. */}
+            {canBreakGlass() && (
+                          <Button
+                variant="danger"
+                startIcon="zap"
+                onClick={() => navigate(emergencyPaths.breakGlass)}
+              >
+                Break glass
+              </Button>
+            )}
             <Button
               variant="outline"
               startIcon="refresh"

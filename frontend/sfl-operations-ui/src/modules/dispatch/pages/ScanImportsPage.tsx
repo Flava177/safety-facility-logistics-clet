@@ -19,6 +19,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterItems } from 'modules/fleet/api/access';
 
 const ROW_FILTERS = [
   { value: 'ALL', label: 'Every row' },
@@ -140,9 +141,12 @@ const ScanImportsPage = () => {
         subtitle="Scanner batches checked against the manifest, row by row."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Scan imports' }]}
         actions={
-          <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
-            Import a batch
-          </Button>
+          // A scan batch is a bulk custody record; registering items is what it amounts to.
+          canRegisterItems() ? (
+            <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
+              Import a batch
+            </Button>
+          ) : undefined
         }
       />
 

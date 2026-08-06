@@ -30,6 +30,7 @@ import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterItems } from 'modules/fleet/api/access';
 
 /**
  * The courier item register.
@@ -203,9 +204,12 @@ const CourierItemsPage = () => {
             >
               Export CSV
             </Button>
-            <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
-              Register item
-            </Button>
+{/* DISPATCH_ITEM_REGISTER - a mailroom officer's grant, not a reader's. */}
+            {canRegisterItems() && (
+                          <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
+                Register item
+              </Button>
+            )}
           </>
         }
       />

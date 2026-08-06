@@ -64,11 +64,32 @@ export const canManageWorkflow = (): boolean => permits('FLEET_WORKFLOW_MANAGE')
 export const canManageCompliance = (): boolean => permits('FLEET_COMPLIANCE_MANAGE');
 export const canManageServiceRecords = (): boolean => permits('FLEET_SERVICE_RECORD_MANAGE');
 export const canRequestEvidenceExport = (): boolean => permits('FLEET_EVIDENCE_EXPORT_REQUEST');
+
+/** Read the audit trail. Narrower than reading evidence: an auditor, compliance officer or admin. */
+export const canReadAudit = (): boolean => permits('FLEET_AUDIT_READ');
+
+/**
+ * Replay the tamper-evident hash chain from genesis.
+ *
+ * <p>Held by the auditor, the compliance officer and the DTI administrator, and by no operational
+ * role - a fleet manager does not audit their own service. Offering the tab regardless is how one
+ * ended up reading `FLEET_UNAUTHORIZED_SCOPE` and a correlation id, which is the service refusing
+ * correctly and the screen having wasted their time to get there.
+ */
+export const canVerifyAuditChain = (): boolean => permits('FLEET_AUDIT_INTEGRITY_CHECK');
 export const canReplayIntegration = (): boolean => permits('FLEET_INTEGRATION_REPLAY');
 
 // ---- S168 fuel --------------------------------------------------------------------------------
 
 export const canCaptureFuel = (): boolean => permits('FUEL_TRANSACTION_CAPTURE');
+/**
+ * Export the transaction report.
+ *
+ * <p>Separate from reading the register, and the separation is the point: an auditor and a compliance
+ * officer hold it, a reporting viewer does not. Reading figures on screen and walking out with a CSV
+ * of every fill at a site are different acts, and the matrix has always said so.
+ */
+export const canExportFuelReports = (): boolean => permits('FUEL_REPORT_EXPORT');
 export const canVoidFuel = (): boolean => permits('FUEL_TRANSACTION_VOID');
 export const canImportFuel = (): boolean => permits('FUEL_TRANSACTION_IMPORT');
 export const canManageFuelPolicies = (): boolean => permits('FUEL_POLICY_MANAGE');

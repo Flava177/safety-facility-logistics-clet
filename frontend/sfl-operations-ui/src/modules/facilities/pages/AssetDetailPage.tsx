@@ -12,7 +12,7 @@ import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import { changeAssetStatus, getAsset, getSpace } from '../api/facilitiesApi';
-import { changeAssetStatusAction } from '../api/workflow';
+import { canManageAssets, changeAssetStatusAction } from '../api/workflow';
 import AssetStatusDialog from '../dialogs/AssetStatusDialog';
 import {
   formatDate,
@@ -68,14 +68,23 @@ const AssetDetailPage = () => {
                 { label: asset.data.assetCode },
               ]}
               actions={
-                <Button
-                  variant="primary"
-                  disabled={!statusAction.allowed}
-                  title={statusAction.reason}
-                  onClick={() => setChangingStatus(true)}
-                >
-                  Change condition
-                </Button>
+                /*
+                  Hidden for a permission, disabled for a state - the rule S153 paid for, which this
+                  control was collapsing into one. `changeAssetStatusAction` answers false for both
+                  reasons, so `disabled` alone left somebody who may never change an asset's
+                  condition staring at a greyed button with a reason they cannot act on. The grant
+                  decides whether the control exists; the action still decides whether it is live.
+                */
+                canManageAssets() ? (
+                  <Button
+                    variant="primary"
+                    disabled={!statusAction.allowed}
+                    title={statusAction.reason}
+                    onClick={() => setChangingStatus(true)}
+                  >
+                    Change condition
+                  </Button>
+                ) : undefined
               }
             />
 

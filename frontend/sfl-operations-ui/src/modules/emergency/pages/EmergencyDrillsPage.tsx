@@ -20,6 +20,7 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
+import { canManageScenarios } from 'modules/emergency/api/workflow';
 
 /**
  * Notification drills and what they revealed.
@@ -185,9 +186,12 @@ const EmergencyDrillsPage = () => {
         crumbs={[{ label: 'Emergency', to: emergencyPaths.dashboard }, { label: 'Drills' }]}
         actions={
           <>
-            <Button variant="primary" startIcon="target" onClick={() => setStarting(true)}>
-              Start drill
-            </Button>
+            {/* A drill is a scenario exercised, so it follows the scenario grant. */}
+            {canManageScenarios() && (
+              <Button variant="primary" startIcon="target" onClick={() => setStarting(true)}>
+                Start drill
+              </Button>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>

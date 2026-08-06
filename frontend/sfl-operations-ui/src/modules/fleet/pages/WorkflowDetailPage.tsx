@@ -21,6 +21,7 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageWorkflow } from 'modules/fleet/api/access';
 
 type DialogKey =
   | 'assign'
@@ -150,6 +151,13 @@ const WorkflowDetailPage = () => {
               </Alert>
             )}
 
+            {/*
+              The whole card, not each control: assign, start, hold, resume, escalate and cancel are
+              one grant (FLEET_WORKFLOW_MANAGE), and a card of controls nobody may press is worse
+              than no card. What stays inside is the *state* gating - `live(...)` and friends - which
+              disables rather than hides, because that changes.
+            */}
+            {canManageWorkflow() && (
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
                 {live(item.data) && (
@@ -209,6 +217,7 @@ const WorkflowDetailPage = () => {
                 </Button>
               </div>
             </SectionCard>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
               <SectionCard title="Item">

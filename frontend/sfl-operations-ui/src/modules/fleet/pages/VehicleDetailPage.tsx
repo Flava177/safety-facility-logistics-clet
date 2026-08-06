@@ -21,6 +21,7 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatusChip from 'shared/components/StatusChip';
 import Tabs from 'shared/components/Tabs';
+import { EvidenceFileActions } from 'shared/components/EvidenceFileField';
 import { cn } from 'shared/components/cn';
 import {
   formatDate,
@@ -33,6 +34,7 @@ import { VehicleLocationResponse } from 'modules/fleet/api/dto';
 import { RecordStandaloneInspectionDialog } from 'modules/fleet/dialogs/inspectionDialogs';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageCompliance, canManageServiceRecords, canManageVehicles, canRecordInspections } from 'modules/fleet/api/access';
 
 type TabKey = 'overview' | 'compliance' | 'service' | 'trips' | 'movement';
 
@@ -54,7 +56,7 @@ const recordRow =
 const VehicleDetailPage = () => {
   const { vehicleId = '' } = useParams();
   const navigate = useNavigate();
-  const { notifySuccess } = useNotifier();
+  const { notifySuccess, notifyError } = useNotifier();
   const [tab, setTab] = useState<TabKey>('overview');
   const [dialog, setDialog] = useState<
     'edit' | 'lifecycle' | 'compliance' | 'service' | 'odometer' | 'inspection' | null
@@ -193,15 +195,21 @@ const VehicleDetailPage = () => {
             >
               Register
             </Button>
-            <Button variant="outline" startIcon="gauge" onClick={() => setDialog('odometer')}>
-              Correct odometer
-            </Button>
-            <Button variant="outline" startIcon="activity" onClick={() => setDialog('lifecycle')}>
-              Lifecycle
-            </Button>
-            <Button variant="primary" startIcon="edit" onClick={() => setDialog('edit')}>
-              Edit
-            </Button>
+            {/* Odometer, lifecycle and edit all write to the vehicle register - one grant covers
+                the three, and a driver holds none of it. */}
+            {canManageVehicles() && (
+              <>
+                <Button variant="outline" startIcon="gauge" onClick={() => setDialog('odometer')}>
+                  Correct odometer
+                </Button>
+                <Button variant="outline" startIcon="activity" onClick={() => setDialog('lifecycle')}>
+                  Lifecycle
+                </Button>
+                <Button variant="primary" startIcon="edit" onClick={() => setDialog('edit')}>
+                  Edit
+                </Button>
+              </>
+            )}
           </>
         }
         meta={
@@ -229,14 +237,16 @@ const VehicleDetailPage = () => {
               subtitle="Assessed with the same policy the assignment will use"
               actions={
                 <>
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    startIcon="shield-check"
-                    onClick={() => setDialog('inspection')}
-                  >
-                    Record inspection
-                  </Button>
+                  {canRecordInspections() && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      startIcon="shield-check"
+                      onClick={() => setDialog('inspection')}
+                    >
+                      Record inspection
+                    </Button>
+                  )}
                   <Button size="sm" variant="ghost" startIcon="refresh" onClick={readiness.refetch}>
                     Re-assess
                   </Button>
@@ -360,14 +370,16 @@ const VehicleDetailPage = () => {
                 {tab === 'compliance' && (
                   <div className="space-y-4">
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="accent"
-                        startIcon="plus"
-                        onClick={() => setDialog('compliance')}
-                      >
-                        Register document
-                      </Button>
+                      {canManageCompliance() && (
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          startIcon="plus"
+                          onClick={() => setDialog('compliance')}
+                        >
+                          Register document
+                        </Button>
+                      )}
                     </div>
                     <DataState
                       loading={compliance.initialising}
@@ -394,6 +406,20 @@ const VehicleDetailPage = () => {
                                 {document.documentReference} · {document.issuingAuthority} · issued{' '}
                                 {formatDate(document.issuedOn)}
                               </p>
+                              {document.evidenceId ? (
+                                <div className="mt-1.5">
+                                  <EvidenceFileActions
+                                    evidenceId={document.evidenceId}
+                                    fileName={document.documentReference}
+                                    onError={notifyError}
+                                  />
+                                </div>
+                              ) : (
+                                <p className="mt-1.5 text-theme-xs text-warning-600">
+                                  No document attached - the record asserts a certificate nobody can
+                                  produce.
+                                </p>
+                              )}
                             </div>
                             <div className="flex shrink-0 items-center gap-3">
                               <div className="sm:text-right">
@@ -425,14 +451,16 @@ const VehicleDetailPage = () => {
                 {tab === 'service' && (
                   <div className="space-y-4">
                     <div className="flex justify-end">
-                      <Button
-                        size="sm"
-                        variant="accent"
-                        startIcon="plus"
-                        onClick={() => setDialog('service')}
-                      >
-                        Record service
-                      </Button>
+                      {canManageServiceRecords() && (
+                        <Button
+                          size="sm"
+                          variant="accent"
+                          startIcon="plus"
+                          onClick={() => setDialog('service')}
+                        >
+                          Record service
+                        </Button>
+                      )}
                     </div>
                     <DataState
                       loading={service.initialising}
@@ -608,6 +636,7 @@ const VehicleDetailPage = () => {
               <RegisterComplianceDocumentDialog
                 open
                 vehicleId={vehicle.data.id}
+                siteCode={vehicle.data.siteCode}
                 onClose={() => setDialog(null)}
                 onSaved={() => {
                   notifySuccess('Compliance document registered.');

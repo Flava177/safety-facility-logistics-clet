@@ -7,7 +7,12 @@ import {
   ACTIVATION_RULES,
   activationLive,
   afterActionOutstanding,
+  canApproveActivations,
+  canApproveAfterAction,
+  canCreateActivations,
   canRecordAfterAction,
+  canSendActivations,
+  canSendAllClear,
   canTransition,
   whyUnavailable,
 } from 'modules/emergency/api/workflow';
@@ -226,8 +231,17 @@ const ActivationDetailPage = () => {
                 </span>
               }
               actions={
+                /*
+                  Each control needs both answers, and they are different questions.
+
+                  `canTransition` is the activation's state - a no there is temporary, and the record
+                  will reach that state later. The permission is the person - a no there is permanent.
+                  Gating on state alone offered every role every control on the page and let the
+                  service refuse them one at a time; the permission each one carries is the one
+                  ActivationService itself requires, so what is offered and what is accepted agree.
+                */
                 <>
-                  {canTransition(activation, 'submit') && (
+                  {canTransition(activation, 'submit') && canCreateActivations() && (
                     <Button
                       variant="primary"
                       startIcon="workflow"
@@ -244,7 +258,7 @@ const ActivationDetailPage = () => {
                       Submit for approval
                     </Button>
                   )}
-                  {canTransition(activation, 'approve') && (
+                  {canTransition(activation, 'approve') && canApproveActivations() && (
                     <Button
                       variant="primary"
                       startIcon="check-circle"
@@ -261,22 +275,22 @@ const ActivationDetailPage = () => {
                       Approve
                     </Button>
                   )}
-                  {canTransition(activation, 'reject') && (
+                  {canTransition(activation, 'reject') && canApproveActivations() && (
                     <Button variant="outline" startIcon="close" onClick={() => setRejecting(true)}>
                       Reject
                     </Button>
                   )}
-                  {canTransition(activation, 'cancel') && (
+                  {canTransition(activation, 'cancel') && canCreateActivations() && (
                     <Button variant="outline" startIcon="close" onClick={() => setCancelling(true)}>
                       Cancel
                     </Button>
                   )}
-                  {canTransition(activation, 'activate') && (
+                  {canTransition(activation, 'activate') && canSendActivations() && (
                     <Button variant="danger" startIcon="megaphone" onClick={() => setSending(true)}>
                       Send broadcast
                     </Button>
                   )}
-                  {canTransition(activation, 'degradedFallback') && (
+                  {canTransition(activation, 'degradedFallback') && canSendActivations() && (
                     <Button
                       variant="outline"
                       startIcon="alert-circle"
@@ -285,7 +299,7 @@ const ActivationDetailPage = () => {
                       Record degraded fallback
                     </Button>
                   )}
-                  {canTransition(activation, 'allClear') && (
+                  {canTransition(activation, 'allClear') && canSendAllClear() && (
                     <Button
                       variant="primary"
                       startIcon="check-circle"
@@ -294,7 +308,7 @@ const ActivationDetailPage = () => {
                       Send all-clear
                     </Button>
                   )}
-                  {afterActionOutstanding(activation) && canRecordAfterAction(activation) && (
+                  {afterActionOutstanding(activation) && canRecordAfterAction(activation) && canApproveAfterAction() && (
                     <Button
                       variant="accent"
                       startIcon="shield-check"

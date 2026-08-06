@@ -19,6 +19,7 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canCreateManifests } from 'modules/fleet/api/access';
 
 /**
  * The manifest register.
@@ -142,9 +143,12 @@ const ManifestsPage = () => {
         subtitle="Consignments, their seals, custody chain, receipt and return leg."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Manifests' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
-            Create manifest
-          </Button>
+          // DISPATCH_MANIFEST_CREATE. A reporting viewer reads the register and creates nothing.
+          canCreateManifests() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
+              Create manifest
+            </Button>
+          ) : undefined
         }
       />
 

@@ -9,7 +9,7 @@ import {
 } from 'modules/emergency/api/enums';
 import type { ActivationMode, ActivationStatus, Priority } from 'modules/emergency/api/enums';
 import { activationsApi, emergencyReportsApi } from 'modules/emergency/api/emergencyApi';
-import { afterActionOutstanding } from 'modules/emergency/api/workflow';
+import { afterActionOutstanding, canCreateActivations, canExportEmergencyEvidence } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed } from 'modules/emergency/components/emergencyFormat';
 import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
@@ -243,17 +243,22 @@ const ActivationsPage = () => {
         crumbs={[{ label: 'Emergency', to: emergencyPaths.dashboard }, { label: 'Activations' }]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setComposing(true)}>
-              Compose activation
-            </Button>
-            <Button
-              variant="outline"
-              startIcon="download"
-              loading={exporting}
-              onClick={exportReport}
-            >
-              Export CSV
-            </Button>
+            {/* Declaring an emergency and exporting the record of one are separate grants. */}
+            {canCreateActivations() && (
+              <Button variant="primary" startIcon="plus" onClick={() => setComposing(true)}>
+                Compose activation
+              </Button>
+            )}
+            {canExportEmergencyEvidence() && (
+              <Button
+                variant="outline"
+                startIcon="download"
+                loading={exporting}
+                onClick={exportReport}
+              >
+                Export CSV
+              </Button>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>
