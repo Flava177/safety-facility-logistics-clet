@@ -24,7 +24,6 @@ import {
   formatMoney,
   formatQuantity,
 } from 'modules/fuel/components/fuelFormat';
-import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -315,7 +314,6 @@ const FuelDashboardPage = () => {
             value={siteCode}
             onChange={setSiteCode}
             required
-            helperText="Every fuel endpoint is scoped to one site."
           />
         </FilterBar>
       </SectionCard>
@@ -329,14 +327,20 @@ const FuelDashboardPage = () => {
         >
           {data && (
             <div className="space-y-5">
-              {data.stale && (
-                <Alert variant="warning" title="This snapshot may be out of date">
-                  The service marks the fuel dashboard stale when no transaction has changed in the
-                  last fifteen minutes.
-                  {data.sourceUpdatedAt
-                    ? ` The most recent change was ${formatDateTime(data.sourceUpdatedAt)}.`
-                    : ' No transaction has ever been recorded at this site.'}
-                </Alert>
+              {/*
+                Staleness is shown as a quiet note beside the figures rather than a warning banner
+                across the top.
+
+                The banner explained the platform's freshness threshold to somebody who had asked for
+                a fuel summary, and it fires constantly on a site that simply has not refuelled today
+                - so it trained people to scroll past the one place a real warning would appear. What
+                is worth saying is when the figures were last true, which the note below says in a
+                line.
+              */}
+              {data.stale && data.sourceUpdatedAt && (
+                <p className="text-theme-xs text-gray-500">
+                  Figures as at {formatDateTime(data.sourceUpdatedAt)}.
+                </p>
               )}
 
               {/*

@@ -10,7 +10,6 @@ import {
 } from 'modules/dispatch/api/dispatchApi';
 import { exceptionSlaBreached } from 'modules/dispatch/api/workflow';
 import ExceptionMixChart, { ExceptionBar } from 'modules/dispatch/charts/ExceptionMixChart';
-import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -225,7 +224,6 @@ const DispatchDashboardPage = () => {
             value={siteCode}
             onChange={setSiteCode}
             required
-            helperText="Every dispatch endpoint is scoped to one site."
           />
         </FilterBar>
       </SectionCard>
@@ -239,14 +237,11 @@ const DispatchDashboardPage = () => {
         >
           {data && (
             <div className="space-y-5">
-              {data.stale && (
-                <Alert variant="warning" title="This snapshot may be out of date">
-                  The service marks the dispatch dashboard stale when nothing has changed within its
-                  freshness threshold.
-                  {data.sourceUpdatedAt
-                    ? ` The most recent change was ${formatDateTime(data.sourceUpdatedAt)}.`
-                    : ' No dispatch record has been created at this site.'}
-                </Alert>
+              {/* See the fuel dashboard: when the figures were last true, not how staleness works. */}
+              {data.stale && data.sourceUpdatedAt && (
+                <p className="text-theme-xs text-gray-500">
+                  Figures as at {formatDateTime(data.sourceUpdatedAt)}.
+                </p>
               )}
 
               {/*

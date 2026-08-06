@@ -19,7 +19,7 @@ import { TextInput } from './fields';
  *
  * <p>The field is a normal text input that happens to offer suggestions. With no key configured, with
  * Google blocked or unreachable, or with the API disabled, the suggestions simply never arrive and
- * what remains is exactly the field that was there before — including the recent-value list, which
+ * what remains is exactly the field that was there before - including the recent-value list, which
  * keeps working offline because it is stored in the browser.
  *
  * <p>That is a requirement, not politeness. A driver recording fuel at a station with no signal has to
@@ -29,7 +29,7 @@ import { TextInput } from './fields';
  *
  * <h2>What is stored</h2>
  *
- * <p>The formatted description, as a string, because that is what the services accept — `origin` and
+ * <p>The formatted description, as a string, because that is what the services accept - `origin` and
  * `destination` are `VARCHAR(200)`. The `placeId` and coordinates are deliberately *not* kept: there
  * is nowhere to put them without a migration, and inventing a column for data nothing reads yet would
  * be worse than waiting. When route mapping or geofencing arrives (S167 telematics, Phase 2), that is
@@ -65,12 +65,24 @@ const PlaceField = ({
   const listboxId = useId();
   const [suggestions, setSuggestions] = useState<PlaceSuggestion[]>([]);
   const [open, setOpen] = useState(false);
+  /**
+   * Why suggestions are not coming, when they are not.
+   *
+   * <p>Without this the field is indistinguishable from one that is working and finding nothing,
+   * which is precisely how a project with the Places API switched off went unnoticed: the user types,
+   * nothing appears, and there is no way to tell that from an unrecognised street name.
+   */
+  const [unavailable, setUnavailable] = useState<string | null>(null);
   const session = useRef<unknown>(null);
   /** What the user last typed, so a fetch that resolves late cannot overwrite a newer query. */
   const latestQuery = useRef('');
 
   useEffect(() => {
-    if (!placesConfigured() || disabled) {
+    if (disabled) {
+      return undefined;
+    }
+    if (!placesConfigured()) {
+      // Deliberately not surfaced: an unset key is the documented offline posture, not a fault.
       return undefined;
     }
     latestQuery.current = value;
@@ -88,7 +100,8 @@ const PlaceField = ({
         const found = await fetchPlaceSuggestions(asked, session.current);
         // Discard a stale answer rather than flashing the wrong list.
         if (latestQuery.current === asked) {
-          setSuggestions(found);
+          setSuggestions(found.suggestions);
+          setUnavailable(found.unavailable);
         }
       })();
     }, 300);
@@ -120,7 +133,20 @@ const PlaceField = ({
           disabled={disabled}
           // The recent list stays as the datalist. It is the offline answer, and it costs nothing.
           suggestions={recent}
-          helperText={helperText}
+          /*
+            One short, non-technical line, and never the reason.
+
+            It used to read "the Places API is not enabled for this key's Google Cloud project",
+            which is true, useful, and addressed to entirely the wrong person: the driver reading it
+            at a pump cannot enable anything, and naming an internal service in a form field turns a
+            minor degradation into something that looks broken. The diagnosis still exists in full -
+            it goes to the console once, where whoever fixes the key will look.
+          */
+          helperText={
+            unavailable
+              ? 'Suggestions are unavailable right now. Type the place - it will be saved as you enter it.'
+              : helperText
+          }
           onBlur={() => {
             // Delayed so a click on a suggestion lands before the list closes underneath it.
             setTimeout(() => setOpen(false), 150);

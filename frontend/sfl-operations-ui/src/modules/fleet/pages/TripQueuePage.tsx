@@ -80,12 +80,26 @@ const TripQueuePage = () => {
       {
         key: 'tripNumber',
         header: 'Trip',
-        width: 200,
+        width: 150,
+        cell: (row) => <CellStack primary={row.tripNumber} secondary={row.purpose} />,
+      },
+      {
+        /*
+          The route gets a column of its own.
+
+          It was the secondary line under the trip number, sharing 200px with it, so on any realistic
+          place name - "Accra HQ Motor Pool", "Regional Examination Centre" - it truncated to the
+          point of being unreadable, and it was the first thing anyone scanning this register looks
+          for. Origin over destination rather than side by side: two short lines survive a narrow
+          column where one long one does not.
+        */
+        key: 'route',
+        header: 'Route',
+        width: 240,
         cell: (row) => (
-          <CellStack primary={row.tripNumber} secondary={`${row.origin} → ${row.destination}`} />
+          <CellStack primary={row.origin || 'Not set'} secondary={`to ${row.destination || 'not set'}`} />
         ),
       },
-      { key: 'purpose', header: 'Purpose', width: 200, cell: (row) => row.purpose },
       {
         key: 'plannedStart',
         header: 'Planned window',

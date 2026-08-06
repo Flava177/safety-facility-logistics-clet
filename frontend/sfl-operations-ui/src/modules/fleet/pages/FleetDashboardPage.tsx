@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import { DashboardDrilldownRow, TripResponse, WorkflowItemResponse } from 'modules/fleet/api/dto';
-import { OPERATING_MODES, OperatingMode, humanise } from 'modules/fleet/api/enums';
+import { humanise } from 'modules/fleet/api/enums';
 import {
   DRILLDOWN_INDICATORS,
   DrilldownIndicator,
@@ -18,15 +18,12 @@ import DrilldownDrawer from 'modules/fleet/components/DrilldownDrawer';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
-import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -96,8 +93,14 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  */
 const FleetDashboardPage = () => {
   const navigate = useNavigate();
-  const [siteCode, setSiteCode] = useState(defaultSite);
-  const [operatingMode, setOperatingMode] = useState<OperatingMode | ''>('');
+  /*
+    Fixed, not chosen. Every query below passes `siteCode: undefined`, which the services read as
+    "the actor's whole site scope" - so a manager over two sites sees both without asking, and a
+    manager over one sees theirs. The registers behind each panel still filter; a summary should not
+    need configuring before it will answer.
+  */
+  const siteCode = '';
+  const operatingMode = '';
   const [drilldown, setDrilldown] = useState<DrilldownIndicator | null>(null);
 
   const windowStart = useMemo(
@@ -335,24 +338,18 @@ const FleetDashboardPage = () => {
         }
       />
 
-      <SectionCard flush>
-        <FilterBar>
-          <SiteSelect
-            value={siteCode}
-            onChange={setSiteCode}
-            allowEmpty
-            emptyLabel="All sites in scope"
-          />
-          <EnumSelect
-            label="Operating mode"
-            value={operatingMode}
-            options={OPERATING_MODES}
-            onChange={(value) => setOperatingMode(value)}
-            allowEmpty
-          />
-        </FilterBar>
-      </SectionCard>
+      {/*
+        No filter bar.
 
+        A dashboard answers "how is the fleet, right now", and both controls made that a question the
+        reader had to configure before it would answer. Site is left unset, so every figure covers the
+        whole of the actor's own scope - which is what a manager over two sites wants and what a
+        manager over one gets for free. Operating mode filtered a summary by a property most records
+        share, which narrowed the numbers without making them more useful.
+
+        Filtering still exists where it belongs: the registers behind every panel take both, and each
+        panel links through to its register.
+      */}
       <div className="mt-5">
         <DataState
           loading={snapshot.initialising}
@@ -497,25 +494,38 @@ const FleetDashboardPage = () => {
                   }
                   flush
                 >
-                  <DataState
-                    loading={activeTrips.initialising}
-                    error={activeTrips.error}
-                    empty={(activeTrips.data?.content.length ?? 0) === 0}
-                    emptyTitle="No active trips"
-                    emptyHint="Nothing is on the road in this scope right now."
-                    onRetry={activeTrips.refetch}
-                    minHeight={160}
-                  >
-                    <DataTable
-                      rows={activeTrips.data?.content ?? []}
-                      columns={tripColumns}
-                      getRowId={(row) => row.id}
-                      loading={activeTrips.loading}
-                      onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
-                      caption="Trips in progress in the current site scope, with their status."
-                      dense
-                    />
-                  </DataState>
+                  {/*
+                    An empty road is the normal state outside working hours, and this panel used to
+                    spend a third of the dashboard saying so. When nothing is in progress it now
+                    shows the week's movements instead - the same chart the activity panel uses,
+                    over the trips already fetched - so the space answers "what has been happening"
+                    rather than repeating "nothing, right now".
+                  */}
+                  {(activeTrips.data?.content.length ?? 0) === 0 && !activeTrips.initialising ? (
+                    <div className="p-5">
+                      <p className="mb-3 text-theme-sm text-gray-600">
+                        Nothing is on the road at the moment. Movements over the last seven days:
+                      </p>
+                      <ActivityChart points={activity} height={200} />
+                    </div>
+                  ) : (
+                    <DataState
+                      loading={activeTrips.initialising}
+                      error={activeTrips.error}
+                      onRetry={activeTrips.refetch}
+                      minHeight={160}
+                    >
+                      <DataTable
+                        rows={activeTrips.data?.content ?? []}
+                        columns={tripColumns}
+                        getRowId={(row) => row.id}
+                        loading={activeTrips.loading}
+                        onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
+                        caption="Trips in progress in the current site scope, with their status."
+                        dense
+                      />
+                    </DataState>
+                  )}
                 </SectionCard>
 
                 <SectionCard title="Open exceptions" subtitle="What needs attention today">
