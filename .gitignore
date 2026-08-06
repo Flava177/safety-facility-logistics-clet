@@ -464,3 +464,7 @@ docs/
 .claude/
 CLAUDE.md
 AGENTS.md
+
+# The project-local Node the `-Pui` Maven profile downloads (frontend-maven-plugin). Ninety-eight
+# megabytes of platform-specific binaries that the build fetches on demand - a toolchain, not source.
+frontend/sfl-operations-ui/node/

@@ -1,5 +1,8 @@
 # SFL local development environment
 # This affects only the current PowerShell session.
+#
+# `use-sfl-env.sh` is the bash twin, for Git Bash and for scripts/sfl-all-services.sh, which cannot
+# read PowerShell. Change the two together.
 
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 $env:Path = "$env:JAVA_HOME\bin;$env:Path"

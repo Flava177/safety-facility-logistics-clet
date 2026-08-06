@@ -1,8 +1,38 @@
 <component name="ProjectRunConfigurationManager">
-  <configuration default="false" name="SFL all services" type="CompoundRunConfigurationType">
-    <toRun name="IFIMP facilities 8091" type="SpringBootApplicationConfigurationType" />
-    <toRun name="SSEMP safety security 8092" type="SpringBootApplicationConfigurationType" />
-    <toRun name="FTLMP fleet logistics 8093" type="SpringBootApplicationConfigurationType" />
+  <!--
+    The one command: infrastructure, a tested build, then all three services on their own ports.
+
+    A ShConfigurationType rather than a CompoundRunConfigurationType, and that is the whole point of
+    this file. A compound launches several configurations at once and can do nothing before or
+    between them - no build, no tests, no waiting for a database to accept connections. This project
+    had four configurations that had to be run in the right order, and starting the services before
+    the containers kills all three on the first Flyway migration, which reads as a broken build
+    rather than a missed step.
+
+    `SFL infrastructure` is gone because this absorbed it. Everything the services need comes up
+    here, so there is no longer an order to remember.
+
+    The three Spring Boot configurations beside this one are unchanged and are what to use for
+    debugging a single service - breakpoints, hot swap, the usual. This one is for "bring the whole
+    thing up and let me look at it".
+  -->
+  <configuration default="false" name="SFL all services" type="ShConfigurationType">
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/scripts/sfl-all-services.sh" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="false" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="false" />
+    <option name="INTERPRETER_PATH" value="bash" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />
+    <!--
+      A real terminal, not the console view: the script prints progress for several minutes and the
+      run console does not render the carriage returns Maven uses, so the output arrives as a wall.
+      It also means Ctrl+C reaches the trap that stops all three services.
+    -->
+    <option name="EXECUTE_IN_TERMINAL" value="true" />
+    <option name="EXECUTE_SCRIPT_FILE" value="true" />
+    <envs />
     <method v="2" />
   </configuration>
 </component>
