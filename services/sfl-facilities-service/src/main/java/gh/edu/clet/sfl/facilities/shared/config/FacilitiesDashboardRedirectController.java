@@ -26,7 +26,7 @@ class FacilitiesDashboardRedirectController {
     private final String dashboardBaseUrl;
 
     FacilitiesDashboardRedirectController(
-            @Value("${sfl.dashboard.base-url:http://localhost:8093/ui}") String dashboardBaseUrl) {
+            @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8091}/home}") String dashboardBaseUrl) {
         this.dashboardBaseUrl = dashboardBaseUrl.replaceAll("/+$", "");
     }
 

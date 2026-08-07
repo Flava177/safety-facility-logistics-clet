@@ -1,9 +1,9 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import Alert from 'shared/components/Alert';
 import FloatingField from 'shared/components/FloatingField';
-import { SEEDED_PASSWORD, seededAccounts } from 'shared/auth/accounts';
-import { signIn } from 'shared/auth/signIn';
+import { SEEDED_PASSWORD, accountsForServingPlatform } from 'shared/auth/accounts';
+import { signInWithConfiguredProvider } from 'shared/auth/provider';
 import { directorate } from 'shared/layout/navigation';
 
 /**
@@ -34,16 +34,32 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
+  /*
+    Only the accounts that can work on this origin. The full twenty-two appear on the portal,
+    which serves all three platforms; on a single service the rest would be an invitation to a
+    session with no capability and an empty dashboard.
+  */
+  const platformAccounts = useMemo(() => accountsForServingPlatform(), []);
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const result = signIn(email, password);
+    if (!email.trim() || !password) {
+      setError('Enter your email address and password.');
+      return;
+    }
+    /*
+      Through the configured provider rather than the seeded sign-in directly. Which one runs is an
+      environment decision now, and this page is deliberately the same page either way - the only
+      thing it knows is that something either issued a session or gave it a sentence to show.
+    */
+    const result = await signInWithConfiguredProvider(email, password);
     if (!result.ok) {
-      setError(
-        result.reason === 'incomplete'
-          ? 'Enter your email address and password.'
-          : 'Invalid username/email or password.',
-      );
+      /*
+        The provider's own sentence when it has one. "This account has no access to Facilities &
+        Infrastructure" is the answer somebody needs; replacing it with "invalid username or
+        password" would send them to reset a password that was never wrong.
+      */
+      setError(result.message ?? 'Invalid username/email or password.');
       setPassword('');
       return;
     }
@@ -165,7 +181,9 @@ const LoginPage = () => {
               aria-expanded={accountsOpen}
               className="text-theme-sm font-medium text-teal-600 hover:underline"
             >
-              {accountsOpen ? 'Hide accounts' : `Show the ${seededAccounts.length} seeded accounts`}
+              {accountsOpen
+                ? 'Hide accounts'
+                : `Show the ${platformAccounts.length} account${platformAccounts.length === 1 ? '' : 's'} for this service`}
             </button>
 
             {accountsOpen && (
@@ -176,7 +194,7 @@ const LoginPage = () => {
                   Choose one to fill the form.
                 </p>
                 <ul className="custom-scrollbar mt-3 max-h-64 space-y-1 overflow-y-auto pr-1 text-left">
-                  {seededAccounts.map((account) => (
+                  {platformAccounts.map((account) => (
                     <li key={account.email}>
                       <button
                         type="button"

@@ -19,6 +19,15 @@ Remove-Item Env:SFL_TEST_DB_URL -ErrorAction SilentlyContinue
 $env:SFL_FACILITIES_DB_URL = "jdbc:postgresql://localhost:5441/sfl_facilities_service"
 $env:SFL_FACILITIES_TEST_DB_URL = "jdbc:postgresql://localhost:55441/sfl_facilities_service_e2e"
 
+# The migration suite needs a database of its own. FacilitiesMigrationIntegrationTest proves
+# V1..V23 apply to an EMPTY schema, and the e2e database above is never empty - one variable
+# cannot serve both, and pointing the suite at the shared one failed every otherwise-green build.
+# The suite empties this database itself before Flyway runs; the _migration_test suffix is what
+# permits that, so renaming it makes the emptying refuse rather than destroy something else.
+# Create it once:
+#   docker exec sfl-facilities-e2e-postgres psql -U sfl -d postgres -c "CREATE DATABASE sfl_facilities_migration_test OWNER sfl;"
+$env:SFL_FACILITIES_MIGRATION_TEST_DB_URL = "jdbc:postgresql://localhost:55441/sfl_facilities_migration_test"
+
 $env:SFL_SAFETY_SECURITY_DB_URL = "jdbc:postgresql://localhost:5442/sfl_safety_security_service"
 $env:SFL_SAFETY_SECURITY_TEST_DB_URL = "jdbc:postgresql://localhost:55442/sfl_safety_security_service_e2e"
 

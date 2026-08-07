@@ -39,7 +39,7 @@ class EmergencyDashboardRedirectController {
     private final String dashboardBaseUrl;
 
     EmergencyDashboardRedirectController(
-            @Value("${sfl.dashboard.base-url:http://localhost:8093/ui}") String dashboardBaseUrl) {
+            @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8092}/home}") String dashboardBaseUrl) {
         this.dashboardBaseUrl = dashboardBaseUrl.replaceAll("/+$", "");
     }
 

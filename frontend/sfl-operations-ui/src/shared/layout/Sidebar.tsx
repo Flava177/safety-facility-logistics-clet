@@ -5,6 +5,7 @@ import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
 import { SidebarToggle } from './TopBar';
 import { entitledSections } from './navigation';
+import { permissionFailure } from './actorPermissions';
 import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
 
@@ -115,13 +116,31 @@ const Sidebar = () => {
             </div>
           ))}
 
+          {/*
+            An empty rail has two causes and they are not the same conversation. "Your roles grant
+            nothing" is about the account; "the service did not answer" is about the deployment. The
+            second used to be indistinguishable from the first, so an operator whose service was
+            simply not running was told their roles were short - and went looking for an
+            administrator instead of for the process.
+          */}
           {sections.length === 0 && (
             <div className={cn('px-3 py-4', !expanded && 'lg:hidden')}>
-              <p className="text-theme-sm font-medium text-gray-800">No programme assigned</p>
-              <p className="mt-1 text-theme-xs text-gray-600">
-                Your roles do not grant access to any SFL programme, so there is nothing to show
-                here. Ask for the role that covers the work you need to do.
-              </p>
+              {permissionFailure() ? (
+                <>
+                  <p className="text-theme-sm font-medium text-gray-800">
+                    Permissions unavailable
+                  </p>
+                  <p className="mt-1 text-theme-xs text-gray-600">{permissionFailure()}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-theme-sm font-medium text-gray-800">No programme assigned</p>
+                  <p className="mt-1 text-theme-xs text-gray-600">
+                    Your roles do not grant access to any SFL programme, so there is nothing to show
+                    here. Ask for the role that covers the work you need to do.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </nav>

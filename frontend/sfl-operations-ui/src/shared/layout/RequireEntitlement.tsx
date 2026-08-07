@@ -1,7 +1,9 @@
 import { ReactNode } from 'react';
+import { useLocation } from 'react-router';
 import { Link } from 'react-router';
 import Icon from 'shared/components/Icon';
 import {
+  ProgrammeCode,
   SystemCode,
   actorProgrammes,
   actorSystems,
@@ -10,7 +12,8 @@ import {
   programmes,
   systems,
 } from './programmes';
-import { landingPath } from './navigation';
+import { capabilityRefusedFor, landingPath } from './navigation';
+import { servesPlatform, servingPlatformName } from 'shared/platform';
 
 /**
  * Refuses a route the actor is not entitled to, at whichever grain fails.
@@ -39,8 +42,37 @@ const RequireEntitlement = ({
 }) => {
   const target = systems[system];
   const programme = programmes[target.programme];
+  const { pathname } = useLocation();
+
+  /*
+    Not served here, before entitlement is considered.
+
+    The sidebar no longer offers another platform's screens on this origin, but a typed address, a
+    bookmark or a link in an old email still reaches them - and the screen would then load and call a
+    service on another port for its data. That is where "Could not reach the Fleet & Logistics
+    service at http://localhost:8093" came from on a dashboard somebody had opened to look at
+    facilities: a true message about a screen that was never this origin's to serve.
+
+    Separate from the entitlement refusal below because it is a different fact about a different
+    thing. Entitlement is about the person; this is about the address. An operator entitled to fleet
+    who reaches it here is not being refused - they are in the wrong place, and the sentence should
+    say so rather than implying their roles are short.
+  */
+  if (!servesPlatform(target.programme)) {
+    return <NotServedHere programme={target.programme} />;
+  }
 
   if (entitledTo(target.programme) && entitledToSystem(system)) {
+    /*
+      Entitled to the system, but this particular screen is not this actor's work.
+
+      The sidebar stops offering it; a typed address does not, and without this the operator would
+      reach a register they cannot act on and meet a wall of 403s instead of a sentence. Checked
+      after entitlement so the coarser, more useful refusal above wins when both apply.
+    */
+    if (capabilityRefusedFor(pathname)) {
+      return <NotYourWork />;
+    }
     return <>{children}</>;
   }
 
@@ -80,6 +112,76 @@ const RequireEntitlement = ({
             : 'none of its systems'}
         . If you need it, ask for the role that carries it rather than a link to this page - the
         service would refuse the request regardless.
+      </p>
+      {home && (
+        <Link
+          to={home}
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-brand-800 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-700"
+        >
+          <Icon name="dashboard" size={17} />
+          Back to your dashboard
+        </Link>
+      )}
+    </div>
+  );
+};
+
+/**
+ * What a screen belonging to another platform shows on this origin.
+ *
+ * Deliberately not phrased as a refusal. Nothing is being withheld from the operator: this service
+ * serves one platform and the screen belongs to another, so the honest answer names both and points
+ * at the portal, which serves all three.
+ */
+const NotServedHere = ({ programme }: { programme: ProgrammeCode }) => {
+  const target = programmes[programme];
+  const home = landingPath();
+
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+        <Icon name="lock" size={26} />
+      </span>
+      <p className="text-title-sm font-bold text-gray-900">
+        {target.label} is not served here
+      </p>
+      <p className="mt-2 max-w-lg text-theme-sm text-gray-600">
+        This is the {servingPlatformName()} service, and it serves only its own screens. {target.label}{' '}
+        runs on its own service, and the unified portal serves all of them together. Your roles are
+        not the reason you are seeing this.
+      </p>
+      {home && (
+        <Link
+          to={home}
+          className="mt-5 inline-flex h-11 items-center gap-2 rounded-lg bg-brand-800 px-4 text-theme-sm font-medium text-white transition-colors hover:bg-brand-700"
+        >
+          <Icon name="dashboard" size={17} />
+          Back to your dashboard
+        </Link>
+      )}
+    </div>
+  );
+};
+
+/**
+ * A screen inside the actor's own systems that is nonetheless not their job.
+ *
+ * Distinct from both other refusals: the programme is theirs and the system is theirs, so saying
+ * either is "not part of your work" would be false. What they lack is the doing of this particular
+ * thing - a technician at the work-order register, a driver at the vehicle register.
+ */
+const NotYourWork = () => {
+  const home = landingPath();
+  return (
+    <div className="flex min-h-[60vh] flex-col items-center justify-center text-center">
+      <span className="mb-4 flex h-14 w-14 items-center justify-center rounded-lg bg-gray-100 text-gray-600">
+        <Icon name="lock" size={26} />
+      </span>
+      <p className="text-title-sm font-bold text-gray-900">This screen is not part of your work</p>
+      <p className="mt-2 max-w-lg text-theme-sm text-gray-600">
+        You can reach the system it belongs to, but nothing on this screen is yours to do. The
+        service would refuse the actions on it regardless, so this is the same answer arriving
+        sooner. If you need it, ask for the role that carries the work rather than a link.
       </p>
       {home && (
         <Link

@@ -29,11 +29,11 @@ class EmergencyWebConfiguration {
     WebMvcConfigurer emergencyCorsConfigurer(
             // Where the SFL Operations dashboard is served. Only the fleet service packages the
             // bundle, so this is a cross-origin address in development rather than a local path.
-            @Value("${sfl.dashboard.base-url:http://localhost:8093/ui}") String dashboardBaseUrl,
+            @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8092}/home}") String dashboardBaseUrl,
             // 5005 is the SFL Operations dashboards in development (npm run dev). The bundled build is
             // served by the fleet service on 8093, which is already allowed, so only the dev origin is
             // additional here.
-            @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8092,http://localhost:8093,"
+            @Value("${sfl.cors.allowed-origins:http://localhost:8090,http://localhost:8091,http://localhost:8092,http://localhost:8093,"
                     + "http://localhost:5005,http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::strip)

@@ -86,58 +86,23 @@ export const facilitiesApiBaseUrl = readOptionalEnv(
   'http://localhost:8091',
 );
 
-/**
- * The development actor's roles, when `VITE_SFL_ROLES` is not set.
- *
- * One header serves both services and each reads only the roles its own matrix knows - an
- * unrecognised name grants nothing rather than failing the request, so the two sets can sit in one
- * list. The four emergency roles are what it takes to exercise S174 end to end: the coordinator
- * composes and sends, the command role approves and records after-action approval, the auditor
- * exports, and the integration engineer replays a dead letter.
- *
- * **In production these are different people**, and the S174 screens are built on that: the approve
- * button does not appear for an actor who cannot use it. A single actor holding all of them is a
- * local-development convenience, not the design.
- *
- * This list is also what `shared/layout/programmes.ts` derives programme entitlement from, so
- * dropping the two SSEMP roles here is all it takes to see the dashboard as a fleet operator does -
- * the emergency section disappears from the sidebar and its routes are refused.
- *
- * Two earlier entries were **not real roles**: `FLEET_DISPATCHER` and `FLEET_AUDITOR` are not in
- * `SflRole`, so every service silently dropped them and they granted nothing. Replaced with the
- * real `DISPATCH_CONTROLLER` and `FLEET_REPORTING_VIEWER`. Kept in step with `.env.production`;
- * `.env` is git-ignored, so an older local one must be corrected by hand.
- */
-const defaultRoles = [
-  // SFL.IFIMP - S152. The manager runs the estate, the supervisor overrides a readiness lock, and
-  // the technician assesses readiness in the field. A centre manager is what it takes to declare
-  // examination mode: the facilities matrix deliberately withholds that from FACILITIES_MANAGER,
-  // so without it the operating-mode control cannot be exercised locally at all.
-  'FACILITIES_MANAGER',
-  'IFIMP_MAINTENANCE_SUPERVISOR',
-  'IFIMP_TECHNICIAN',
-  'CENTRE_MANAGER',
-  // SFL.FTLMP
-  'FLEET_MANAGER',
-  'DISPATCH_CONTROLLER',
-  'FLEET_REPORTING_VIEWER',
-  // SFL.SSEMP
-  'EMERGENCY_COORDINATOR',
-  'COMMAND_ROLE',
-  // Cross-programme oversight and integration
-  'AUDITOR',
-  'INTEGRATION_ENGINEER',
-].join(',');
+/*
+  `defaultRoles` used to live here: a seven-role actor the bundle fell back to when `VITE_SFL_ROLES`
+  was unset. It has been removed rather than emptied, because the fallback itself was the problem -
+  an unauthenticated browser inherited a fleet manager's entitlement from a constant in the source,
+  and the sidebar it produced looked exactly like a signed-in one. The dev server on 5005 gets its
+  roles from `.env`; everything else gets them from the session.
+*/
 
 /**
  * Where the realm lives, and which client the dashboard signs in as.
  *
- * Both mirror `deploy/keycloak/sfl-realm.json` and the `SFL_IAM_ISSUER` the services read, so the
+ * Both mirror `deploy/idp/sfl-realm.json` and the `SFL_IAM_ISSUER` the services read, so the
  * dashboard and the resource servers are talking about the same realm by construction rather than by
  * two people remembering to edit two files.
  */
-export const keycloakIssuer = readEnv('VITE_SFL_IAM_ISSUER', 'http://localhost:8080/realms/sfl');
-export const keycloakClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operations-ui');
+export const iamIssuer = readEnv('VITE_SFL_IAM_ISSUER', 'http://localhost:8080/realms/sfl');
+export const iamClientId = readEnv('VITE_SFL_IAM_CLIENT_ID', 'sfl-operations-ui');
 
 
 /**
@@ -171,13 +136,31 @@ const sessionActor = (): SflActorConfig | null => {
   };
 };
 
-export const sflActor: SflActorConfig = sessionActor() ?? {
-  user: actorOverride?.user || readEnv('VITE_SFL_USER', 'fleet.operator'),
-  displayName: actorOverride?.displayName || readEnv('VITE_SFL_DISPLAY_NAME', 'Fleet Operator'),
-  roles: actorOverride?.roles || readEnv('VITE_SFL_ROLES', defaultRoles),
-  sites: actorOverride?.sites || readEnv('VITE_SFL_SITES', 'CLET-HQ'),
+/**
+ * Who this browser is acting as.
+ *
+ * <h2>A session, or nobody</h2>
+ *
+ * <p>The build-time fallback below is a **development** convenience and nothing more. It predates
+ * sign-in, and while it stood in production builds it meant an unauthenticated browser still had an
+ * actor - a fleet operator holding seven roles from a constant in the source - so the dashboard rendered a
+ * fleet manager's console for somebody who had not signed in. The services would refuse the calls,
+ * but the screens were there and the roles came from a file rather than from a person.
+ *
+ * <p>So it applies only where a developer needs it: the Vite dev server on 5005, where `.env`
+ * supplies the values. Production builds no longer carry them (`.env.production`), and without a
+ * session the actor holds no roles and no sites - entitled to nothing, offered nothing, and sent to
+ * sign-in by `RequireSession` before any of that is visible.
+ */
+const developmentFallbackActor = (): SflActorConfig => ({
+  user: actorOverride?.user || readEnv('VITE_SFL_USER', ''),
+  displayName: actorOverride?.displayName || readEnv('VITE_SFL_DISPLAY_NAME', ''),
+  roles: actorOverride?.roles || readEnv('VITE_SFL_ROLES', ''),
+  sites: actorOverride?.sites || readEnv('VITE_SFL_SITES', ''),
   sourceChannel: 'WEB',
-};
+});
+
+export const sflActor: SflActorConfig = sessionActor() ?? developmentFallbackActor();
 
 /**
  * Development fallback switch.

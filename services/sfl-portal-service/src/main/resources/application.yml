@@ -1,0 +1,11 @@
+# The portal owns an address and nothing else - no datasource, no broker, no security chain.
+spring:
+  application:
+    name: sfl-portal-service
+
+server:
+  port: ${SFL_PORTAL_PORT:8090}
+
+logging:
+  level:
+    root: INFO

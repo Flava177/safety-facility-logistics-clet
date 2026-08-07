@@ -1,4 +1,4 @@
-import { keycloakClientId, keycloakIssuer } from 'shared/api/config';
+import { iamClientId, iamIssuer } from 'shared/api/config';
 import { SflSession, clearSession, readSession, sessionFromTokens, writeSession } from './session';
 
 /**
@@ -6,7 +6,7 @@ import { SflSession, clearSession, readSession, sessionFromTokens, writeSession 
  *
  * <h2>Why the password grant rather than a redirect</h2>
  *
- * `sfl-operations-ui` is declared in `deploy/keycloak/sfl-realm.json` as a public client with
+ * `sfl-operations-ui` is declared in `deploy/idp/sfl-realm.json` as a public client with
  * `directAccessGrantsEnabled: true`, so the dashboard can exchange an email and password for a token
  * directly. That is what makes an in-app login form possible at all.
  *
@@ -39,7 +39,7 @@ export type SignInFailure =
 
 export type SignInResult = { ok: true; session: SflSession } | ({ ok: false } & SignInFailure);
 
-const tokenEndpoint = (): string => `${keycloakIssuer.replace(/\/$/, '')}/protocol/openid-connect/token`;
+const tokenEndpoint = (): string => `${iamIssuer.replace(/\/$/, '')}/protocol/openid-connect/token`;
 
 const form = (fields: Record<string, string>): string =>
   Object.entries(fields)
@@ -69,7 +69,7 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: form({
         grant_type: 'password',
-        client_id: keycloakClientId,
+        client_id: iamClientId,
         username: email.trim(),
         password,
         scope: 'openid profile email',
@@ -83,7 +83,7 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
       ok: false,
       reason: 'unreachable',
       message:
-        `Could not reach the identity provider at ${keycloakIssuer}. ` +
+        `Could not reach the identity provider at ${iamIssuer}. ` +
         'Start Keycloak, or run the service with SFL_SECURITY_ENABLED=false for header-based local development.',
     };
   } finally {
@@ -111,7 +111,7 @@ export const signIn = async (email: string, password: string): Promise<SignInRes
         ok: false,
         reason: 'disabled',
         message:
-          `The realm refused this client (${keycloakClientId}). ` +
+          `The realm refused this client (${iamClientId}). ` +
           'Check that the client exists and has direct access grants enabled.',
       };
     }
@@ -149,10 +149,10 @@ export const signOut = async (): Promise<void> => {
     return;
   }
   try {
-    await fetch(`${keycloakIssuer.replace(/\/$/, '')}/protocol/openid-connect/logout`, {
+    await fetch(`${iamIssuer.replace(/\/$/, '')}/protocol/openid-connect/logout`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: form({ client_id: keycloakClientId, refresh_token: session.refreshToken }),
+      body: form({ client_id: iamClientId, refresh_token: session.refreshToken }),
     });
   } catch {
     // Best effort. The token expires on its own, and this browser has already forgotten it.

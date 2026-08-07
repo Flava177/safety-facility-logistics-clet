@@ -5,6 +5,7 @@ declare const __BUILD_STAMP__: string;
 
 interface ImportMetaEnv {
   readonly VITE_BASENAME?: string;
+  readonly VITE_AUTH_PROVIDER?: string;
   readonly VITE_APP_PORT?: string;
   readonly VITE_FLEET_API_BASE_URL?: string;
   readonly VITE_SAFETY_SECURITY_API_BASE_URL?: string;

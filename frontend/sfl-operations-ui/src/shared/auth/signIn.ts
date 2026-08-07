@@ -1,4 +1,10 @@
-import { SEEDED_PASSWORD, SeededAccount, findAccount } from './accounts';
+import {
+  SEEDED_PASSWORD,
+  SeededAccount,
+  accountIsForeignToPlatform,
+  findAccount,
+} from './accounts';
+import { servingPlatformName } from 'shared/platform';
 import { SflSession, clearSession, writeSession } from './session';
 
 /**
@@ -23,13 +29,14 @@ import { SflSession, clearSession, writeSession } from './session';
  * <h2>Why there is no token</h2>
  *
  * See `accounts.ts`. This is a development sign-in against services running with
- * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the headers claim. `keycloak.ts` is the
+ * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the headers claim. `oidc.ts` is the
  * path that issues a real token, and both write the same session shape so nothing downstream cares
  * which one was used.
  */
 
 export type SignInFailure =
   | { reason: 'unknown-account'; message: string }
+  | { reason: 'wrong-platform'; message: string }
   | { reason: 'wrong-password'; message: string }
   | { reason: 'incomplete'; message: string };
 
@@ -63,6 +70,22 @@ export const signIn = (email: string, password: string): SignInResult => {
       ok: false,
       reason: 'unknown-account',
       message: `No account for ${email.trim()}. Pick one from the list below.`,
+    };
+  }
+
+  /*
+    Refused before the password is even checked, because the password is not what is wrong.
+
+    A driver signing in on the facilities service used to succeed and land on an empty dashboard,
+    which reads as a broken deployment rather than as an account in the wrong place. Saying so here
+    costs nothing: this account list is public on the page below, so nothing is disclosed by naming
+    the mismatch, and the alternative is an operator filing a bug against the wrong system.
+  */
+  if (accountIsForeignToPlatform(account)) {
+    return {
+      ok: false,
+      reason: 'wrong-platform',
+      message: `This account has no access to ${servingPlatformName()}. Sign in on the service that carries its work, or use the unified portal.`,
     };
   }
 

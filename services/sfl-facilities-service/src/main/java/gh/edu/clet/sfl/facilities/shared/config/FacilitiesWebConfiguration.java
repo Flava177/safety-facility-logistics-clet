@@ -42,9 +42,9 @@ class FacilitiesWebConfiguration {
     @Bean
     WebMvcConfigurer facilitiesCorsConfigurer(
             // Where the SFL Operations dashboard is served. This service does not package the bundle.
-            @Value("${sfl.dashboard.base-url:http://localhost:8093/ui}") String dashboardBaseUrl,
+            @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8091}/home}") String dashboardBaseUrl,
             @Value("${sfl.cors.allowed-origins:"
-                    + "http://localhost:8091,http://localhost:8092,http://localhost:8093,"
+                    + "http://localhost:8090,http://localhost:8091,http://localhost:8092,http://localhost:8093,"
                     + "http://localhost:5005,http://localhost:5173,http://localhost:3000}")
             String allowedOrigins) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
@@ -75,8 +75,15 @@ class FacilitiesWebConfiguration {
             public void addViewControllers(ViewControllerRegistry registry) {
                 // Retired by ADR 0006 once S152 shipped. `/index.html` stays as a notice page and
                 // refreshes to the same place, so the target is configured in exactly one spot.
+                //
+                // "/" is deliberately not mapped here. SflDashboardAutoConfiguration redirects it to
+                // this service's own /home/, and two view controllers on one path is a startup
+                // failure rather than last-one-wins. /home/ is the dashboard's own entry: it reads
+                // the signed-in account and lands on the screens that account is entitled to, which
+                // is a better root than a hard redirect into the facilities module.
                 String target = dashboardBaseUrl.replaceAll("/+$", "") + "/facilities";
-                registry.addViewController("/").setViewName("redirect:" + target);
+                registry.addViewController("/facilities").setViewName("redirect:" + target);
+                registry.addViewController("/facilities/").setViewName("redirect:" + target);
             }
         };
     }

@@ -25,8 +25,9 @@ import org.springframework.test.context.DynamicPropertySource;
  * a PL/pgSQL loop. None of that is exercised by a unit test, and a migration that fails on first
  * deploy is the worst place to find out.
  *
- * <p>The database comes from {@link FacilitiesPostgresSupport}, which prefers an external one and
- * falls back to Testcontainers. This class used to be gated on
+ * <p>The database comes from {@link FacilitiesPostgresSupport#migrationDatasource}, which is this
+ * suite's own - {@code SFL_FACILITIES_MIGRATION_TEST_DB_URL}, emptied before Flyway runs - and not
+ * the long-lived one the other suites share. It falls back to Testcontainers. This class used to be gated on
  * {@code @Testcontainers(disabledWithoutDocker = true)}, and on Windows that predicate asks a question
  * with the wrong answer: the <em>Java</em> Docker client cannot reach the named pipe even while the
  * daemon is running and {@code docker ps} works. All twelve of these tests were therefore skipped on
@@ -46,7 +47,7 @@ class FacilitiesMigrationIntegrationTest {
 
     @DynamicPropertySource
     static void datasource(DynamicPropertyRegistry registry) {
-        FacilitiesPostgresSupport.datasource(registry);
+        FacilitiesPostgresSupport.migrationDatasource(registry);
     }
 
     @Autowired
@@ -65,11 +66,17 @@ class FacilitiesMigrationIntegrationTest {
      * that has moved, six tests in, saying nothing whatever about the migrations. That happened twice
      * in one afternoon and cost twenty minutes each time working out that the tests were fine.
      *
-     * <p>Checked rather than cleaned. Automatically dropping the schema would make a mistyped
-     * {@code SFL_FACILITIES_TEST_DB_URL} destroy whichever database it pointed at - including
-     * {@code sfl_facilities_service_e2e}, which is shared with the hand-driven verification runs. A
-     * precondition that explains itself is worth more here than a convenience that can take real data
-     * with it.
+     * <p><strong>Now a backstop rather than the only defence.</strong> The schema is emptied for us
+     * in {@link FacilitiesPostgresSupport#migrationDatasource}, before Flyway runs. This check earns
+     * its place anyway: that emptying happens only for a database named {@code *_migration_test} and
+     * only when {@code SFL_FACILITIES_MIGRATION_TEST_DB_URL} is set and reachable, so if either is
+     * wrong the suite silently falls back to the shared database - and this is what notices, and says
+     * so, instead of failing six tests in on a duplicate key.
+     *
+     * <p>Refusing rather than cleaning was the right call while one variable served every suite: a
+     * mistyped {@code SFL_FACILITIES_TEST_DB_URL} would have destroyed whichever database it named,
+     * including {@code sfl_facilities_service_e2e}. What makes cleaning safe now is that a second
+     * variable exists for no other purpose and the name of the database is itself the permission.
      *
      * <p>{@code @BeforeAll}, not {@code @BeforeEach}, and that distinction is the whole point: this
      * suite inserts as it goes, so a per-test version of this check passes for the first test and
@@ -82,14 +89,19 @@ class FacilitiesMigrationIntegrationTest {
                 "select count(*) from facilities.sites", Integer.class);
         assertThat(existingSites)
                 .withFailMessage("""
-                        This database has been used before (%d site rows). The migration suite proves \
-                        V1..V23 apply to an empty schema, so it must start from one - it is not the \
-                        suite that is failing.
+                        This database has been used before (%d site rows), which means this run fell \
+                        back to the shared database. The migration suite proves V1..V23 apply to an \
+                        empty schema, so it must start from one - it is not the suite that is failing.
 
-                        Recreate it:
-                          docker exec sfl-facilities-e2e-postgres psql -U sfl -d sfl_facilities_service_e2e \\
-                            -c "DROP DATABASE IF EXISTS sfl_facilities_migration_test;" \\
+                        This suite has its own database and empties it itself. Either \
+                        SFL_FACILITIES_MIGRATION_TEST_DB_URL is unset, or it names a database that \
+                        does not exist yet. Both env scripts set it; create the database with:
+
+                          docker exec sfl-facilities-e2e-postgres psql -U sfl -d postgres \\
                             -c "CREATE DATABASE sfl_facilities_migration_test OWNER sfl;"
+
+                        The name must end in _migration_test - that suffix is what permits the \
+                        emptying, so a database called anything else is refused rather than dropped.
                         """, existingSites)
                 .isZero();
     }

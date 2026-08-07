@@ -67,7 +67,7 @@ export const LEGACY_ROUTES: LegacyRouteRedirectProps[] = [
   { from: '/fleet', to: '/fleetvehicle/fleet' },
   { from: '/fuel', to: '/fleetvehicle/fuel' },
   { from: '/dispatch', to: '/fleetvehicle/dispatch' },
-  { from: '/login', to: '/fleetvehicle/login' },
+  { from: '/fleetvehicle/login', to: '/login' },
   // SSEMP: the module was named for the one system it had; the platform has four more coming.
   { from: '/emergency', to: '/safetysecurity/emergency' },
   // IFIMP: booking was the odd one out, top-level while its sibling S152 screens were not.

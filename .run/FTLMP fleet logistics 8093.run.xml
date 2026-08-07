@@ -1,7 +1,16 @@
 <component name="ProjectRunConfigurationManager">
+  <!--
+    Java 17, named rather than inherited. The machine default is Zulu 11 and other projects need it
+    to stay that way, so the JDK is chosen here instead of being taken from whatever the IDE happens
+    to have as its default. Spring Boot 4.1 does not run on 11 and says so as a class-version error
+    hundreds of classes into the boot sequence, not at launch. `.idea/misc.xml` holds the same answer
+    for the project as a whole but is not in the repository; this file is.
+  -->
   <configuration default="false" name="FTLMP fleet logistics 8093" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <module name="sfl-fleet-logistics-service" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication" />
+    <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
       <env name="SFL_PORT" value="8093" />
       <env name="SFL_FLEET_LOGISTICS_DB_URL" value="jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_service" />

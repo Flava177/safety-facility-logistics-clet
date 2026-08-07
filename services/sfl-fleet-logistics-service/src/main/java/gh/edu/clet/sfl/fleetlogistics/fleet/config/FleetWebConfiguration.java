@@ -1,53 +1,40 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.config;
 
-import java.io.IOException;
 import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.Resource;
 import org.springframework.web.servlet.config.annotation.CorsRegistry;
-import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
 import org.springframework.web.servlet.config.annotation.ViewControllerRegistry;
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
-import org.springframework.web.servlet.resource.PathResourceResolver;
 
 /**
- * Web wiring for the fleet dashboards: CORS, the retired per-service pages, and the operations UI.
+ * Web wiring for the fleet service: CORS, and the retired per-service pages.
  *
- * <p>{@code /fleet}, {@code /fuel} and {@code /dispatch} used to serve pages of their own. ADR 0006
- * retired them: two interfaces over one service drift, and these had, so each now redirects to the
- * dashboard route that replaced it. The redirect is registered only when the bundle is present -
- * sending somebody to a route that is not being served would replace a working page with a bare 404 -
- * and without it the request falls through to a notice page that says where the screens went and how
- * to build them.
+ * <p>This service used to package and serve the SFL Operations dashboards at {@code /ui}. It no
+ * longer does. There is still exactly one bundle (ADR 0006 stands) but {@code sfl-portal-service}
+ * owns it now, because hosting it here meant facilities and safety-security users reached their own
+ * screens through a URL with fleet's name in it - one platform appearing to own the other two. Fleet
+ * is an API again.
  *
- * <p>The SFL Operations dashboards is built with a {@code /ui/} base and copied into {@code static/ui} by the
- * service build, so a single {@code spring-boot:run} serves the API, Swagger and the dashboard from one
- * origin.
- *
- * <p>Serving a single-page app takes two pieces. Both {@code /ui} and {@code /ui/} are forwarded to
- * {@code index.html} explicitly, because a request for the directory itself leaves an empty path
- * inside the resource handler and Spring rejects that before any resolver runs. Everything deeper is
- * handled by the resolver below, which serves a real asset when there is one and otherwise falls back
- * to the shell so a refresh on {@code /ui/fleet/vehicles} resolves instead of 404ing.
- *
- * <p>When the bundle has not been built the {@code /ui} routes are not registered at all, so the
- * service still starts and the API is unaffected. {@link FleetUiStartupReporter} says so on the
- * dashboard rather than leaving a silent 404.
+ * <p>{@code /fleet}, {@code /fuel} and {@code /dispatch} still redirect, now to the portal. They are
+ * absolute redirects because the portal is a different origin, and they are kept because bookmarks
+ * outlive refactors.
  */
 @Configuration(proxyBeanMethods = false)
 class FleetWebConfiguration {
 
     @Bean
     WebMvcConfigurer fleetCorsConfigurer(
-            @Value("${sfl.cors.allowed-origins:http://localhost:8091,http://localhost:8092,http://localhost:8093,"
-                    + "http://localhost:5005,http://localhost:5173,http://localhost:3000}") String allowedOrigins) {
+            @Value("${sfl.cors.allowed-origins:http://localhost:8090,"
+                    + "http://localhost:8091,http://localhost:8092,http://localhost:8093,"
+                    + "http://localhost:5005,http://localhost:5173,http://localhost:3000}") String allowedOrigins,
+            @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8093}/home}") String dashboardBaseUrl) {
         String[] origins = Arrays.stream(allowedOrigins.split(","))
                 .map(String::strip)
                 .filter(origin -> !origin.isBlank())
                 .toArray(String[]::new);
-        boolean uiBundled = FleetUiBundle.isPresent();
+        String dashboard = dashboardBaseUrl.replaceAll("/+$", "");
 
         return new WebMvcConfigurer() {
             @Override
@@ -65,68 +52,26 @@ class FleetWebConfiguration {
 
             @Override
             public void addViewControllers(ViewControllerRegistry registry) {
-                // Retired by ADR 0006. Both spellings of each, because a bookmark may carry either.
-                retire(registry, "/fleet", "/ui/fleet", uiBundled);
-                retire(registry, "/fuel", "/ui/fuel", uiBundled);
-                retire(registry, "/dispatch", "/ui/dispatch", uiBundled);
-
-                if (uiBundled) {
-                    // Landing on the service root opens the operations dashboards.
-                    registry.addRedirectViewController("/", "/ui/");
-                    // Both spellings, because "/ui/" alone reaches the resource handler with an
-                    // empty path and Spring answers 404 before the fallback resolver is consulted.
-                    registry.addViewController("/ui").setViewName("forward:/ui/index.html");
-                    registry.addViewController("/ui/").setViewName("forward:/ui/index.html");
-                }
-            }
-
-            @Override
-            public void addResourceHandlers(ResourceHandlerRegistry registry) {
-                if (!uiBundled) {
-                    return;
-                }
-                registry.addResourceHandler("/ui/**")
-                        .addResourceLocations(FleetUiBundle.LOCATION)
-                        .resourceChain(true)
-                        .addResolver(new PathResourceResolver() {
-                            @Override
-                            protected Resource getResource(String resourcePath, Resource location)
-                                    throws IOException {
-                                Resource requested = location.createRelative(resourcePath);
-                                if (requested.exists() && requested.isReadable()) {
-                                    return requested;
-                                }
-                                if (looksLikeAsset(resourcePath)) {
-                                    // A missing file stays a 404. Returning the shell here would hand
-                                    // the browser HTML where it asked for JavaScript, and the real
-                                    // failure would surface as a syntax error instead.
-                                    return null;
-                                }
-                                Resource index = location.createRelative("index.html");
-                                return index.exists() && index.isReadable() ? index : null;
-                            }
-                        });
+                // Retired by ADR 0006, rehomed by the portal split. Both spellings of each, because
+                // a bookmark may carry either.
+                retire(registry, "/fleet", dashboard + "/fleet");
+                retire(registry, "/fuel", dashboard + "/fuel");
+                retire(registry, "/dispatch", dashboard + "/dispatch");
+                // No mapping for "/" here: SflDashboardAutoConfiguration already redirects it to
+                // this service's own /home/, and two view controllers on the same path is a startup
+                // failure, not a last-one-wins.
             }
         };
     }
 
     /**
-     * Points a retired route at the dashboard route that replaced it.
+     * Points a retired route at the portal route that replaced it.
      *
-     * <p>A redirect rather than a forward, so the address bar ends up on the route that is really
-     * being served and a refresh does not land back here. When the bundle is absent there is nothing
-     * to redirect to, so the request falls through to the directory's notice page instead - which
-     * explains the move and says how to build the dashboard.
+     * <p>A redirect rather than a forward, so the address bar ends up on the origin that is really
+     * serving the page and a refresh does not land back here.
      */
-    private static void retire(ViewControllerRegistry registry, String from, String to, boolean uiBundled) {
-        String view = uiBundled ? "redirect:" + to : "forward:" + from + "/index.html";
-        registry.addViewController(from).setViewName(view);
-        registry.addViewController(from + "/").setViewName(view);
-    }
-
-    /** A request for a file (it has an extension in its last segment) rather than a client route. */
-    private static boolean looksLikeAsset(String resourcePath) {
-        int lastSlash = resourcePath.lastIndexOf('/');
-        return resourcePath.indexOf('.', lastSlash + 1) >= 0;
+    private static void retire(ViewControllerRegistry registry, String from, String to) {
+        registry.addViewController(from).setViewName("redirect:" + to);
+        registry.addViewController(from + "/").setViewName("redirect:" + to);
     }
 }

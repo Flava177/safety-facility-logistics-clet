@@ -122,9 +122,9 @@ reset_test_databases() {
 
 # ------------------------------------------------------------------------------ build and test
 
-# The dashboard is served from inside the fleet jar, copied from `dist` when the jar is built - so a
-# front-end change is invisible on 8093 until this runs. `-Pui` builds it first; without the profile
-# the copy silently reuses whatever `dist` happens to hold.
+# The dashboard is served from inside the portal jar, copied from `dist` when the jar is built - so a
+# front-end change is invisible on the portal until this runs. `-Pui` builds it first; without the
+# profile the copy silently reuses whatever `dist` happens to hold.
 if [ "$SKIP_BUILD" -eq 0 ]; then
   if [ "$SKIP_TESTS" -eq 0 ]; then
     step "Build and test - all modules, dashboard included"
@@ -173,29 +173,39 @@ launch() { # module, port, label
 }
 
 step "Services"
+# The portal opens the browser once it is ready; the three platform services do not, or one start
+# would produce four tabs. It is a static file server, so it is up long before the others.
+export SFL_PORTAL_OPEN_BROWSER=true
+launch sfl-portal-service          8090 PORTAL
 launch sfl-facilities-service      8091 IFIMP
 launch sfl-safety-security-service 8092 SSEMP
 launch sfl-fleet-logistics-service 8093 FTLMP
 
 # Facilities takes about a minute - long enough to conclude the wrong thing and go looking for a
-# fault - so the summary waits for all three rather than printing while two are still booting.
-step "Waiting for all three to report ready"
-for entry in "8091:IFIMP facilities" "8092:SSEMP safety & security" "8093:FTLMP fleet & vehicle"; do
+# fault - so the summary waits for all four rather than printing while some are still booting.
+step "Waiting for all four to report ready"
+for entry in "8090:SFL portal" "8091:IFIMP facilities" "8092:SSEMP safety & security" "8093:FTLMP fleet & vehicle"; do
   wait_for_port "${entry%%:*}" "${entry#*:}"
 done
 
 cat <<BANNER
 
   ---------------------------------------------------------------------
-   SFL is up.  Three services, three ports.
+   SFL is up.  One portal, three services.
+
+     Unified portal          http://localhost:8090/home
 
      IFIMP facilities        http://localhost:8091/swagger-ui.html
+                             http://localhost:8091/home
      SSEMP safety & security http://localhost:8092/swagger-ui.html
+                             http://localhost:8092/home
      FTLMP fleet & vehicle   http://localhost:8093/swagger-ui.html
+                             http://localhost:8093/home
 
-     Dashboard               http://localhost:8093/ui
+   Every service serves the dashboard on its own port, so any one of these is a
+   complete way in. The account you sign in with decides what you land on.
 
-   Ctrl+C stops all three. The containers keep running.
+   Ctrl+C stops all four. The containers keep running.
   ---------------------------------------------------------------------
 
 BANNER

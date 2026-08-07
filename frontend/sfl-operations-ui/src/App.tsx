@@ -163,11 +163,14 @@ const App = () => {
         <Routes>
           {/*
             Outside the shell on purpose: the sign-in page has no sidebar, no top bar and no actor to
-            build them from, and it is the one route that must render when nothing else can. It sits
-            under /fleetvehicle because that is the deployable serving the bundle; the path changed,
-            the standing-alone did not.
+            build them from, and it is the one route that must render when nothing else can.
+
+            It used to sit under /fleetvehicle, which was true when one deployable served the bundle
+            and became a lie when four did: the safety-security service sent people to
+            /home/fleetvehicle/login to sign in to safety-security. The path names no platform now,
+            because sign-in belongs to none of them. LEGACY_ROUTES keeps the old address working.
           */}
-          <Route path="fleetvehicle/login" element={<LoginPage />} />
+          <Route path="login" element={<LoginPage />} />
 
           {/*
             The pre-platform URLs, kept working.

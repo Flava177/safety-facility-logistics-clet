@@ -15,8 +15,8 @@
  *
  * <h2>The real path already exists beside it</h2>
  *
- * `deploy/keycloak/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
- * password, and `keycloak.ts` exchanges them for a genuine token. When a service runs with security
+ * `deploy/idp/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
+ * password, and `oidc.ts` exchanges them for a genuine token. When a service runs with security
  * on, that is the path - and `session.ts` stores either kind identically, so nothing downstream cares
  * which one signed you in. The roles below and the roles in the realm are the same roles.
  *
@@ -26,6 +26,9 @@
  * services already know; if one were wrong the account would sign in and then be refused everything,
  * which is why `accounts.test.ts` checks each against `roleProgrammes`/`roleSystems`.
  */
+
+import { programmesFor } from 'shared/layout/programmeModel';
+import { servingPlatform } from 'shared/platform';
 
 export interface SeededAccount {
   email: string;
@@ -232,3 +235,27 @@ export const findAccount = (email: string): SeededAccount | undefined => {
   const wanted = email.trim().toLowerCase();
   return seededAccounts.find((account) => account.email.toLowerCase() === wanted);
 };
+
+/**
+ * The accounts that can actually work on the origin serving this bundle.
+ *
+ * <p>The sign-in page used to list all twenty-two on every service, which reads as an invitation and
+ * is not one: signing into the facilities service as a driver produced a session with no facilities
+ * capability and an empty dashboard, and nothing on the page had said that would happen. On the
+ * portal the full list is right, because the portal serves all three platforms.
+ *
+ * <p>Programme entitlement rather than permissions, deliberately. Permissions are resolved from the
+ * service after a session exists; this decision has to be made before one does. The two agree at this
+ * grain - a role entitled to no programme on this platform holds no permission on it either.
+ */
+export const accountsForServingPlatform = (): SeededAccount[] => {
+  const platform = servingPlatform();
+  if (platform === 'ALL' || platform === 'UNKNOWN') {
+    return seededAccounts;
+  }
+  return seededAccounts.filter((account) => programmesFor(account.roles).includes(platform));
+};
+
+/** `true` when this account has no business on the origin serving the bundle. */
+export const accountIsForeignToPlatform = (account: SeededAccount): boolean =>
+  !accountsForServingPlatform().some((candidate) => candidate.email === account.email);
