@@ -72,7 +72,17 @@ management:
 sfl:
   cors:
     # Origins allowed to call /api/** and /actuator/**. 5005 is the SFL Operations UI dev server.
-    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8092,http://localhost:8093,http://localhost:5005,http://localhost:5173,http://localhost:3000}
+    #
+    # 8090 is the portal, and it is the one that has to be here rather than the one that looks
+    # optional. Every service now serves the same bundle at /home on its own port (ADR 0006
+    # amendment), so on 8091, 8092 and 8093 the dashboard is same-origin and CORS never enters it.
+    # The portal is the only origin that is not: it serves the bundle and then asks all three
+    # services for the actor's permissions across origins. Facilities and safety-security were
+    # given 8090 when the portal was introduced; this list was not, so the fleet call was refused
+    # by the browser, permission resolution failed, and the dashboard fail-closed to an empty
+    # sidebar and a banner - for a fleet officer, whose only programme lives behind this service,
+    # that was the whole portal.
+    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8090,http://localhost:8091,http://localhost:8092,http://localhost:8093,http://localhost:5005,http://localhost:5173,http://localhost:3000}
   service-boundary:
     schema: fleet_logistics,asset_visibility
     owns: "Fleet, Transport, Assets & Logistics Management Platform (SFL.FTLMP) - S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom / Courier and Dispatch Tracking, and the AVAMP-Lite asset and device reference layer"
