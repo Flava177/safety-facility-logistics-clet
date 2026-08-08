@@ -66,6 +66,74 @@ ok "JAVA_HOME $JAVA_HOME (Java $JAVA_VERSION)"
 command -v docker >/dev/null 2>&1 || die "Docker is not on PATH. Start Docker Desktop and try again."
 docker info >/dev/null 2>&1 || die "Docker is not responding. Start Docker Desktop and try again."
 
+# ------------------------------------------------------------- a previous run, still running
+
+# Reclaims the four services this script started last time, before anything tries to overwrite them.
+#
+# ## Why this is not optional
+#
+# On Windows a running service holds its own jar open, so `spring-boot:repackage` cannot rename the
+# jar it has just built and the reactor dies with:
+#
+#     Unable to rename '...sfl-facilities-service-0.1.0-SNAPSHOT.jar'
+#                  to '...sfl-facilities-service-0.1.0-SNAPSHOT.jar.original'
+#
+# which is a message about a file operation that says nothing whatever about the cause. It reads as a
+# corrupt target directory, and the obvious response - delete `target` and build again - fixes it for
+# exactly as long as it takes the next run to hold the jar open again. The build is also *green* at
+# that point: every test has passed, and the failure lands at packaging, so the first thing anyone
+# does is re-read a test report that has nothing wrong with it.
+#
+# Ports 8090-8093 would clash immediately afterwards in any case, so a leftover run is fatal whether
+# or not this invocation builds - which is why the check sits here rather than beside the build.
+#
+# ## What it will and will not stop
+#
+# Only processes started the way `launch` starts them: `java -jar <root>/services/sfl-*-service/
+# target/*.jar`. An IntelliJ debug session runs the same service from a classpath rather than a jar
+# and therefore does not match, deliberately - stopping somebody's breakpoints to save a rebuild
+# would be a poor trade, and the three Spring Boot run configurations exist precisely so one service
+# can be debugged while the rest are left alone. If a debugged service is holding port 8091, this
+# script will still fail on the port, and that is the right outcome: the developer knows why.
+previous_run_pids() {
+  if command -v powershell.exe >/dev/null 2>&1; then
+    # `-replace "\\", "/"` so a command line written with either separator matches one pattern.
+    powershell.exe -NoProfile -NonInteractive -Command '
+      Get-CimInstance Win32_Process -Filter "Name=''java.exe''" |
+        Where-Object { ($_.CommandLine -replace "\\", "/") -match "services/sfl-[a-z-]+-service/target/[^ ]*\.jar" } |
+        ForEach-Object { $_.ProcessId }' 2>/dev/null | tr -d '\r'
+  else
+    pgrep -f 'java .*-jar .*services/sfl-[a-z-]*-service/target/.*\.jar' 2>/dev/null
+  fi
+}
+
+stop_pid() {
+  if command -v powershell.exe >/dev/null 2>&1; then
+    powershell.exe -NoProfile -NonInteractive \
+      -Command "Stop-Process -Id $1 -Force -ErrorAction SilentlyContinue" >/dev/null 2>&1
+  else
+    kill "$1" 2>/dev/null
+  fi
+}
+
+leftovers="$(previous_run_pids | tr -d ' ' | grep -E '^[0-9]+$' || true)"
+if [ -n "$leftovers" ]; then
+  step "A previous run is still up - stopping it first"
+  for pid in $leftovers; do
+    stop_pid "$pid"
+    ok "stopped $pid"
+  done
+  # Waited for rather than assumed: Stop-Process returns before the handle on the jar is released,
+  # and building into that window reproduces the exact failure this block exists to prevent.
+  waited=0
+  while [ -n "$(previous_run_pids | tr -d ' ' | grep -E '^[0-9]+$' || true)" ]; do
+    sleep 1
+    waited=$((waited + 1))
+    [ "$waited" -ge 20 ] && die "A previous service would not stop. Close it and try again."
+  done
+  ok "previous run cleared"
+fi
+
 # ------------------------------------------------------------------------------- infrastructure
 
 step "Infrastructure - PostgreSQL and RabbitMQ"
