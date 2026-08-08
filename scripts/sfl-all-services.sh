@@ -95,43 +95,64 @@ docker info >/dev/null 2>&1 || die "Docker is not responding. Start Docker Deskt
 # would be a poor trade, and the three Spring Boot run configurations exist precisely so one service
 # can be debugged while the rest are left alone. If a debugged service is holding port 8091, this
 # script will still fail on the port, and that is the right outcome: the developer knows why.
-previous_run_pids() {
-  if command -v powershell.exe >/dev/null 2>&1; then
-    # `-replace "\\", "/"` so a command line written with either separator matches one pattern.
-    powershell.exe -NoProfile -NonInteractive -Command '
-      Get-CimInstance Win32_Process -Filter "Name=''java.exe''" |
-        Where-Object { ($_.CommandLine -replace "\\", "/") -match "services/sfl-[a-z-]+-service/target/[^ ]*\.jar" } |
-        ForEach-Object { $_.ProcessId }' 2>/dev/null | tr -d '\r'
+# ## Found by port, not by command line
+#
+# The first version of this asked WMI for java processes and matched their command lines. It never
+# worked, and it failed *silently* - `-Filter "Name='java.exe'"` cannot survive being embedded in a
+# shell string (bash eats the inner quotes and the WQL becomes invalid), and PowerShell's stdin mode
+# executes line by line, so a multi-line `foreach` does not run as a loop at all. Both failures
+# return nothing, which is indistinguishable from "nothing is running" - so the guard reported a
+# clean start while four services held the jars, and the build failed exactly as before.
+#
+# A listening port is the same fact with none of that machinery: `netstat -ano` prints the owning
+# PID, and the ports are the thing that actually has to be free. One `awk` and no quoting.
+#
+# It stops whatever holds them, including a debug session, and names each one first. Distinguishing
+# a debugged service from a jar-launched one needs the command line again, which is the road this
+# came off; and someone running the launcher is asking for these four ports either way, so the
+# honest behaviour is to take them and say so rather than to guess at intent.
+port_pid() { # port -> the PID listening on it, or empty
+  if command -v netstat >/dev/null 2>&1; then
+    netstat -ano 2>/dev/null | awk -v p=":$1\$" '/LISTENING/ && $2 ~ p {print $NF; exit}'
   else
-    pgrep -f 'java .*-jar .*services/sfl-[a-z-]*-service/target/.*\.jar' 2>/dev/null
+    lsof -ti "tcp:$1" -sTCP:LISTEN 2>/dev/null | head -1
   fi
 }
 
 stop_pid() {
-  if command -v powershell.exe >/dev/null 2>&1; then
-    powershell.exe -NoProfile -NonInteractive \
-      -Command "Stop-Process -Id $1 -Force -ErrorAction SilentlyContinue" >/dev/null 2>&1
+  if command -v taskkill >/dev/null 2>&1; then
+    taskkill //F //PID "$1" >/dev/null 2>&1
   else
-    kill "$1" 2>/dev/null
+    kill -9 "$1" 2>/dev/null
   fi
 }
 
-leftovers="$(previous_run_pids | tr -d ' ' | grep -E '^[0-9]+$' || true)"
-if [ -n "$leftovers" ]; then
-  step "A previous run is still up - stopping it first"
-  for pid in $leftovers; do
-    stop_pid "$pid"
-    ok "stopped $pid"
+held=""
+for port in 8090 8091 8092 8093; do
+  pid="$(port_pid "$port")"
+  [ -n "$pid" ] && held="$held $port:$pid"
+done
+
+if [ -n "$held" ]; then
+  step "Something is already on the service ports - stopping it first"
+  for entry in $held; do
+    warn "port ${entry%%:*} held by PID ${entry#*:}"
+    stop_pid "${entry#*:}"
   done
-  # Waited for rather than assumed: Stop-Process returns before the handle on the jar is released,
+  # Waited for rather than assumed: the kill returns before Windows releases the handle on the jar,
   # and building into that window reproduces the exact failure this block exists to prevent.
   waited=0
-  while [ -n "$(previous_run_pids | tr -d ' ' | grep -E '^[0-9]+$' || true)" ]; do
+  while :; do
+    still=""
+    for port in 8090 8091 8092 8093; do
+      [ -n "$(port_pid "$port")" ] && still="yes"
+    done
+    [ -z "$still" ] && break
     sleep 1
     waited=$((waited + 1))
     [ "$waited" -ge 20 ] && die "A previous service would not stop. Close it and try again."
   done
-  ok "previous run cleared"
+  ok "service ports are free"
 fi
 
 # ------------------------------------------------------------------------------- infrastructure
