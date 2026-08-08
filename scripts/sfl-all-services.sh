@@ -161,6 +161,49 @@ if [ "$SKIP_TESTS" -eq 0 ]; then
   for entry in "55441:facilities e2e db" "55442:safety-security e2e db" "55443:fleet e2e db"; do
     wait_for_port "${entry%%:*}" "${entry#*:}"
   done
+
+  # ## Two runs at once destroy each other, silently and confusingly
+  #
+  # The `_e2e` databases are one set, on fixed ports, shared by everything on this machine. Nothing
+  # about a second run announces itself - it simply starts by dropping the databases the first one is
+  # using. What follows are two failures that look like product defects and are neither:
+  #
+  #   * `DROP DATABASE ... WITH (FORCE)` terminates the other run's connections mid-transaction, and
+  #     its next test fails with `JpaSystemException: Unable to rollback against JDBC Connection` -
+  #     a message about a connection, in a test about authorisation, that masks the exception the
+  #     test was correctly about to receive.
+  #   * Two JVMs appending to one hash-chained audit table interleave, and
+  #     `FleetAuditChainPostgresTest` reports `Previous-hash link does not match the preceding
+  #     record` at sequence 1. Tamper detection working exactly as designed, on tampering that was
+  #     really just two writers.
+  #
+  # Both were observed. Neither points at its cause, and the second is alarming enough to send
+  # somebody looking for a corrupted audit trail. Refusing here costs one line of output instead.
+  #
+  # It refuses rather than waits: the other run owns those databases until it finishes, and quietly
+  # blocking for an unknown number of minutes is worse than saying so. Any connection at all counts,
+  # because a run that has exited leaves none - the services this script launches use the
+  # development databases on 5441-5443, never these.
+  step "Checking nothing else is using the test databases"
+  e2e_connections() { # container, database
+    docker exec "$1" psql -U sfl -d postgres -tAc \
+      "SELECT count(*) FROM pg_stat_activity WHERE datname = '$2';" 2>/dev/null | tr -d '[:space:]'
+  }
+  busy=0
+  for entry in \
+    "sfl-facilities-e2e-postgres:sfl_facilities_service_e2e" \
+    "sfl-facilities-e2e-postgres:sfl_facilities_migration_test" \
+    "sfl-safety-security-e2e-postgres:sfl_safety_security_service_e2e" \
+    "sfl-fleet-vehicle-e2e-postgres:sfl__fleet_vehicle_service_e2e"; do
+    count="$(e2e_connections "${entry%%:*}" "${entry#*:}")"
+    if [ -n "$count" ] && [ "$count" != "0" ]; then
+      warn "${entry#*:} has $count open connection(s)"
+      busy=1
+    fi
+  done
+  [ "$busy" -eq 0 ] \
+    || die "Another test run is using the e2e databases. Wait for it to finish, or stop it - starting now would drop the databases out from under it and fail both runs."
+  ok "test databases are free"
 fi
 
 # The end-to-end databases are recreated before every test run.
