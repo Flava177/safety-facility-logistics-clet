@@ -5,7 +5,7 @@ import {
   DriverSelect,
   TripSelect,
   VehicleSelect,
-} from 'modules/fuel/components/FleetReferenceSelect';
+} from 'modules/fleet/components/FleetReferenceSelect';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';

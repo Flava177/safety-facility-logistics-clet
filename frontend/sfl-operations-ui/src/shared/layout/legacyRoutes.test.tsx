@@ -109,10 +109,25 @@ describe('legacy dashboard routes', () => {
     }
   });
 
-  it('sends every entry to one of the three platforms', () => {
+  it('sends every entry to a platform, or to the one address that has no platform', () => {
     const platforms = ['/fleetvehicle/', '/facilities/', '/safetysecurity/'];
+    /*
+      Sign-in is the exception, and it is the only one.
+
+      Every service now serves the same bundle at /home, so the sign-in page is the same page on
+      every origin and lives at /login rather than under a platform prefix. A platform-prefixed
+      login would be three addresses for one screen, and `/fleetvehicle/login -> /login` is the
+      redirect that unpicks the old arrangement - so the entry this rule trips over is the entry
+      that fixed it.
+
+      Named rather than loosened: anything else that stops starting with a platform prefix is a
+      mistake, and a rule relaxed to "or anything absolute" would not notice.
+    */
+    const withoutPlatform = ['/login'];
     for (const route of LEGACY_ROUTES) {
-      expect(platforms.some((p) => route.to.startsWith(p)), route.to).toBe(true);
+      const reachesAPlatform =
+        platforms.some((p) => route.to.startsWith(p)) || withoutPlatform.includes(route.to);
+      expect(reachesAPlatform, route.to).toBe(true);
     }
   });
 });

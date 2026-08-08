@@ -32,12 +32,12 @@ spring:
   servlet:
     multipart:
       # The first line of defence for evidence uploads, and the only one that acts before the bytes
-      # are in the heap. `UploadedFileScanner` enforces 10 MB on the content itself; these are set
+      # are in the heap. `UploadedFileScanner` enforces 5 MB on the content itself; these are set
       # slightly above it so an oversized file is refused by the scanner with an explanation rather
       # than by the container with a bare 500. The request ceiling has the headroom for the multipart
       # envelope and the handful of form fields that travel with the file.
-      max-file-size: 11MB
-      max-request-size: 12MB
+      max-file-size: 6MB
+      max-request-size: 7MB
       # Spool to disk past 1 MB instead of holding whole photographs in memory: a dozen drivers
       # uploading pump images at once is the normal case, not the peak.
       file-size-threshold: 1MB

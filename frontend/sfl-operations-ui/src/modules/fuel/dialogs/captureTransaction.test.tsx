@@ -1,4 +1,5 @@
 import { render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { NotifierProvider } from 'shared/components/Notifier';
 
@@ -67,18 +68,46 @@ describe('CaptureTransactionDialog', () => {
     fuelPricesApi.postedPrices.mockResolvedValue([]);
   });
 
-  it('asks for the trip, not for a driver, and calls the time what it is', async () => {
+  it('asks for the trip, and asks nothing it can already answer', async () => {
     renderDialog();
 
     await waitFor(() => expect(tripsApi.search).toHaveBeenCalled());
 
     expect(screen.getByRole('combobox', { name: /trip/i })).toBeInTheDocument();
-    expect(screen.getByLabelText(/time fuel purchased/i)).toBeInTheDocument();
-    // Renamed from "Occurred at", which described when a row was written rather than when fuel was
-    // bought - and the receipt shows the second.
-    expect(screen.queryByLabelText(/occurred at/i)).not.toBeInTheDocument();
     // A signed-in driver is not asked who they are.
     expect(screen.queryByRole('combobox', { name: /^driver$/i })).not.toBeInTheDocument();
+    // Nor which site: the register this opens from is already filtered to one, and it is passed in.
+    expect(screen.queryByRole('combobox', { name: /site code/i })).not.toBeInTheDocument();
+    // Nor when. The receipt photograph carries the printed time, and a driver retyping it at the
+    // pump only created a second version of the same fact for the two to disagree over. Capture
+    // time is sent instead; see `occurredAt` in the submit handler.
+    expect(screen.queryByLabelText(/time fuel purchased/i)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/occurred at/i)).not.toBeInTheDocument();
+  });
+
+  it('prefills the vehicle from the chosen trip and leaves it on screen', async () => {
+    // The register has to hold the trip's vehicle for the select to be able to show it.
+    vehiclesApi.search.mockResolvedValue({
+      content: [{ id: trip.vehicleId, registrationNumber: 'GT 1234-24', make: 'Toyota', model: 'Hilux' }],
+      page: 0,
+      size: 25,
+      totalElements: 1,
+      totalPages: 1,
+    });
+    renderDialog();
+    await waitFor(() => expect(tripsApi.search).toHaveBeenCalled());
+
+    // `Select` is a custom ARIA combobox - a trigger that opens a listbox - so it is driven by
+    // clicking rather than by `selectOptions`, which only applies to a native element.
+    await userEvent.click(screen.getByRole('combobox', { name: /trip/i }));
+    await userEvent.click(await screen.findByRole('option', { name: new RegExp(trip.tripNumber) }));
+
+    // The field used to be replaced by a sentence saying the trip had supplied it, so the driver
+    // could not see which vehicle was on their claim without abandoning the trip.
+    const vehicle = await screen.findByRole('combobox', { name: /vehicle/i });
+    expect(vehicle).toBeInTheDocument();
+    expect(vehicle).toHaveTextContent('GT 1234-24');
+    expect(screen.getByText(new RegExp(`From ${trip.tripNumber}`))).toBeInTheDocument();
   });
 
   it('offers the approved providers as a list and the station as a place', async () => {

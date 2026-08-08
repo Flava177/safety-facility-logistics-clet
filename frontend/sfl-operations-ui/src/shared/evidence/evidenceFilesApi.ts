@@ -28,10 +28,37 @@ export const ACCEPTED_FILE_TYPES = ['application/pdf', 'image/jpeg'] as const;
 /** The `accept` attribute for a file input. Extensions included: iOS ignores bare MIME types. */
 export const ACCEPTED_FILE_ACCEPT = '.pdf,.jpg,.jpeg,application/pdf,image/jpeg';
 
-/** Mirrors `UploadedFileScanner.MAX_BYTES`. Kept in step by the test, not by hope. */
-export const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
+/**
+ * Mirrors `UploadedFileScanner.MAX_BYTES`. Kept in step by the test, not by hope.
+ *
+ * One number for every upload in the dashboard, not one per form. A limit that differs between the
+ * evidence dialog and the CSV import is a limit nobody can state, and the operator finds out which
+ * is which by having a file refused.
+ */
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
-export const ACCEPTED_FILE_DESCRIPTION = 'PDF, JPG or JPEG, up to 10 MB';
+/** The cap in whole megabytes, so no message restates the number and gets it wrong. */
+export const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);
+
+export const ACCEPTED_FILE_DESCRIPTION = `PDF, JPG or JPEG, up to ${MAX_UPLOAD_MB} MB`;
+
+/**
+ * Refuses a file that is empty or over the cap, whatever its type.
+ *
+ * <p>Split out of {@link rejectionReason} because the size rule is app-wide and the type rule is
+ * not: a CSV import and a dispatch scan batch take neither PDFs nor JPEGs, and before this they
+ * took files of any size at all. The bytes still have to survive the service's own check; this only
+ * moves the refusal to the moment the file is picked.
+ */
+export const sizeRejectionReason = (file: File): string | null => {
+  if (file.size === 0) {
+    return 'That file is empty.';
+  }
+  if (file.size > MAX_UPLOAD_BYTES) {
+    return `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${MAX_UPLOAD_MB} MB.`;
+  }
+  return null;
+};
 
 /**
  * The retention classes the fleet service actually defines.
@@ -88,11 +115,9 @@ export interface UploadEvidenceRequest {
  * bytes that decide. Here the two are treated as a hint; the service settles it.
  */
 export const rejectionReason = (file: File): string | null => {
-  if (file.size === 0) {
-    return 'That file is empty.';
-  }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is 10 MB.`;
+  const oversize = sizeRejectionReason(file);
+  if (oversize) {
+    return oversize;
   }
   const extension = file.name.split('.').pop()?.toLowerCase() ?? '';
   const extensionOk = ['pdf', 'jpg', 'jpeg'].includes(extension);

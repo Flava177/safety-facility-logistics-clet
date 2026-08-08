@@ -356,17 +356,35 @@ class EmergencyMandatoryScenariosEndToEndTest extends EmergencyPostgresSupport {
     }
 
     // 18
+    /**
+     * Proves the chain detects a changed row - and puts the row back whatever happens.
+     *
+     * <p><strong>The restore has to be in a {@code finally}, and it was not.</strong> This test
+     * edits a row of a database every other test in the module shares, and the only copy of the
+     * value it overwrote is a local variable. A run that stopped between the two updates - a
+     * cancelled build, a killed JVM, or simply the middle assertion failing - left {@code actor}
+     * set to 'tampered' and took the original away with it. The chain then failed to verify on
+     * every subsequent run, at the *first* assertion, before this test had touched anything: a
+     * green suite turned permanently red by a test that had passed, and the only way back was to
+     * drop the database.
+     *
+     * <p>That happened. It cost a build failure that read as a broken audit chain and was a broken
+     * test, and the two look identical from the surefire output.
+     */
     @Test void audit_chain_integrity_holds_and_tampering_is_detected() {
         Fixture f = newFixture();
         activeRoutine(f);
         assertThat(audit.verifyChain().intact()).isTrue();
-        // Tamper one row, prove detection, then restore so the shared chain stays intact for other tests.
+
         Long seq = jdbc.queryForObject("SELECT MAX(sequence_no) FROM emergency_notification.audit_events", Long.class);
         String original = jdbc.queryForObject("SELECT actor FROM emergency_notification.audit_events WHERE sequence_no=?",
                 String.class, seq);
-        jdbc.update("UPDATE emergency_notification.audit_events SET actor='tampered' WHERE sequence_no=?", seq);
-        assertThat(audit.verifyChain().intact()).isFalse();
-        jdbc.update("UPDATE emergency_notification.audit_events SET actor=? WHERE sequence_no=?", original, seq);
+        try {
+            jdbc.update("UPDATE emergency_notification.audit_events SET actor='tampered' WHERE sequence_no=?", seq);
+            assertThat(audit.verifyChain().intact()).isFalse();
+        } finally {
+            jdbc.update("UPDATE emergency_notification.audit_events SET actor=? WHERE sequence_no=?", original, seq);
+        }
         assertThat(audit.verifyChain().intact()).isTrue();
     }
 

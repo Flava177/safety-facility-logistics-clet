@@ -3,6 +3,7 @@ import flatpickr from 'flatpickr';
 import type { Instance } from 'flatpickr/dist/types/instance';
 import Icon from './Icon';
 import { FieldShell } from './fields';
+import { attachYearSelect, type YearSelect } from './flatpickrYearSelect';
 import { cn } from './cn';
 
 /**
@@ -13,6 +14,14 @@ import { cn } from './cn';
  * shows a human date ("14 Mar 2026"); form state keeps the wire-friendly string it always did
  * (`YYYY-MM-DD`, or `YYYY-MM-DDTHH:mm` for date-times), so validation and request mapping are
  * unchanged.
+ *
+ * <h2>Month and year are both dropdowns</h2>
+ *
+ * Every date field in the dashboard is this component, so the header it draws is the only date
+ * header there is - and it used to be a static month label between two arrows, with the year as a
+ * number input that looked like a pair of steppers. Reaching a year meant clicking towards it.
+ * `monthSelectorType: 'dropdown'` fixes the month; {@link attachYearSelect} supplies the year, which
+ * flatpickr has no option for.
  */
 
 const DATE_FORMAT = 'Y-m-d';
@@ -73,6 +82,11 @@ const Picker = ({
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
   const instanceRef = useRef<Instance | null>(null);
+  const yearSelectRef = useRef<YearSelect | null>(null);
+  // Read inside `onReady`, which runs during construction and so cannot close over the props of a
+  // later render. A ref keeps the bounds current without rebuilding the calendar when they change.
+  const boundsRef = useRef({ minDate, maxDate });
+  boundsRef.current = { minDate, maxDate };
   // Held in a ref so changing the handler never tears down and rebuilds the calendar.
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
@@ -93,17 +107,22 @@ const Picker = ({
       altFormat: withTime ? 'd M Y  H:i' : 'd M Y',
       altInputClass: controlClasses,
       allowInput: false,
-      monthSelectorType: 'static',
+      monthSelectorType: 'dropdown',
       onChange: (_dates: Date[], dateString: string) => {
         onChangeRef.current(dateString);
         // Selecting from the calendar is a completed field interaction. Mark it as touched
         // immediately so stale "required" errors clear on the first click, not after a second pass.
         onBlurRef.current?.();
       },
+      onReady: (_dates: Date[], _dateString: string, self: Instance) => {
+        yearSelectRef.current = attachYearSelect(self, boundsRef.current);
+      },
     }) as Instance;
 
     instanceRef.current = instance;
     return () => {
+      yearSelectRef.current?.destroy();
+      yearSelectRef.current = null;
       instance.destroy();
       instanceRef.current = null;
     };
@@ -124,7 +143,10 @@ const Picker = ({
 
   useEffect(() => {
     setBound(instanceRef.current, 'minDate', minDate);
-  }, [minDate]);
+    // The offered years follow the bound. A "next due" field whose floor moves to the service date
+    // must stop offering the years before it, in the dropdown as well as in the grid.
+    yearSelectRef.current?.refresh({ minDate, maxDate });
+  }, [minDate, maxDate]);
 
   useEffect(() => {
     setBound(instanceRef.current, 'maxDate', maxDate);

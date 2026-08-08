@@ -209,6 +209,19 @@ public class FleetEvidenceApplicationService {
                 accessPolicy.requireSiteScopeFilter(actor));
     }
 
+    /**
+     * Records that somebody looked at this evidence, and returns it.
+     *
+     * <p>Writable rather than {@code readOnly}, and transactional at all, because of the audit entry.
+     * {@link gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.audit.JpaAuditAdapter#record} is
+     * declared {@code MANDATORY} on purpose - it must join the caller's transaction so that an audit
+     * row can never outlive a rolled-back operation - and this method had no transaction at all, so
+     * every call failed with {@code IllegalTransactionStateException} before it wrote anything. The
+     * fix belongs here and not on the adapter: making the adapter {@code REQUIRES_NEW} would let
+     * audit writes survive the rollback of the operation they describe, everywhere, to spare this
+     * one method an annotation.
+     */
+    @Transactional
     public EvidenceReference recordAccess(UUID evidenceId, ActorContext actor,
             gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel sourceChannel) {
         EvidenceReference evidence = findById(evidenceId, actor);

@@ -2,11 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
-import Select from 'shared/components/Select';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { SelectInput } from 'shared/components/fields';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { Space } from '../api/dto';
@@ -56,6 +56,51 @@ const SpaceRegisterPage = () => {
     apply();
     setPage(0);
   };
+
+  const resetFilters = () =>
+    changeFilter(() => {
+      setSiteCode(defaultSite);
+      setSpaceType('');
+      setReadiness('');
+    });
+
+  /*
+    The site is a chip only when it has been moved off the actor's default. It is always set and it
+    is already named in the app bar, so a permanent "Site: CLET-HQ" would be the one chip that never
+    says anything - and a row where most chips are noise is a row nobody reads.
+  */
+  const activeFilters: ActiveFilter[] = [
+    ...(siteCode !== defaultSite
+      ? [
+          {
+            key: 'siteCode',
+            label: 'Site',
+            value: siteCode === '' ? 'All sites' : siteCode,
+            onClear: () => changeFilter(() => setSiteCode(defaultSite)),
+          },
+        ]
+      : []),
+    ...(spaceType
+      ? [
+          {
+            key: 'spaceType',
+            label: 'Type',
+            value: humaniseCode(spaceType),
+            onClear: () => changeFilter(() => setSpaceType('')),
+          },
+        ]
+      : []),
+    ...(readiness
+      ? [
+          {
+            key: 'readiness',
+            label: 'Readiness',
+            value: humaniseCode(readiness),
+            onClear: () => changeFilter(() => setReadiness('')),
+          },
+        ]
+      : []),
+  ];
 
   const columns: Column<Space>[] = [
     {
@@ -135,28 +180,31 @@ const SpaceRegisterPage = () => {
         subtitle="Rooms, halls and courtrooms, with the readiness of each"
       />
 
-      <FilterBar>
-        <SiteSelect value={siteCode} onChange={(v) => changeFilter(() => setSiteCode(v))} allowEmpty emptyLabel="All sites" />
-        <Select
+      <FilterBar active={activeFilters} onReset={resetFilters}>
+        <SiteSelect
+          value={siteCode}
+          onChange={(v) => changeFilter(() => setSiteCode(v))}
+          allowEmpty
+          emptyLabel="All sites"
+        />
+        <SelectInput
+          label="Space type"
           value={spaceType}
           onChange={(v) => changeFilter(() => setSpaceType(v))}
-          placeholder="Any space type"
-          options={[
-            { value: '', label: 'Any space type' },
-            ...spaceTypes.map((type) => ({ value: type, label: humaniseCode(type) })),
-          ]}
+          allowEmpty
+          emptyLabel="Any space type"
+          options={spaceTypes.map((type) => ({ value: type, label: humaniseCode(type) }))}
         />
-        <Select
+        <SelectInput
+          label="Readiness"
           value={readiness}
           onChange={(v) => changeFilter(() => setReadiness(v))}
-          placeholder="Any readiness"
-          options={[
-            { value: '', label: 'Any readiness' },
-            ...readinessStatuses.map((status) => ({
-              value: status,
-              label: humaniseCode(status),
-            })),
-          ]}
+          allowEmpty
+          emptyLabel="Any readiness"
+          options={readinessStatuses.map((status) => ({
+            value: status,
+            label: humaniseCode(status),
+          }))}
         />
       </FilterBar>
 

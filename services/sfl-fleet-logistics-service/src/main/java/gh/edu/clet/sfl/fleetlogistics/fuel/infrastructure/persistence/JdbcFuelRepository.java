@@ -138,10 +138,35 @@ public class JdbcFuelRepository implements FuelRepository {
 
     /* ------------------------------------------------------------------------------ policies */
 
+    /**
+     * Inserts a policy, or writes over the one already carrying this id.
+     *
+     * <p>Insert-only until policies became editable, which meant an edit died on the primary key
+     * rather than on any rule. The upsert leaves {@code id} and the creation stamp alone - who
+     * created a policy does not change because somebody later revised its limits - and lets the
+     * database own the version bump, which is what {@code RecordMetadata} says it is for.
+     */
     @Override public FuelPolicy savePolicy(FuelPolicy p) {
         jdbc.update("""
             INSERT INTO fleet_logistics.fuel_policies (id,site_code,policy_name,effective_from,effective_to,policy_version,max_per_transaction,daily_limit,monthly_limit,tank_capacity,min_consumption,max_consumption,odometer_jump_tolerance,receipt_required,receipt_grace_hours,materiality_amount,anomaly_sla_hours,cost_variance_tolerance,repeated_pattern_window_hours,repeated_pattern_threshold,allowed_fuel_products,approved_vendors,status,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
             VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+            ON CONFLICT (id) DO UPDATE SET
+                policy_name=EXCLUDED.policy_name, effective_from=EXCLUDED.effective_from,
+                effective_to=EXCLUDED.effective_to, policy_version=EXCLUDED.policy_version,
+                max_per_transaction=EXCLUDED.max_per_transaction, daily_limit=EXCLUDED.daily_limit,
+                monthly_limit=EXCLUDED.monthly_limit, tank_capacity=EXCLUDED.tank_capacity,
+                min_consumption=EXCLUDED.min_consumption, max_consumption=EXCLUDED.max_consumption,
+                odometer_jump_tolerance=EXCLUDED.odometer_jump_tolerance,
+                receipt_required=EXCLUDED.receipt_required, receipt_grace_hours=EXCLUDED.receipt_grace_hours,
+                materiality_amount=EXCLUDED.materiality_amount, anomaly_sla_hours=EXCLUDED.anomaly_sla_hours,
+                cost_variance_tolerance=EXCLUDED.cost_variance_tolerance,
+                repeated_pattern_window_hours=EXCLUDED.repeated_pattern_window_hours,
+                repeated_pattern_threshold=EXCLUDED.repeated_pattern_threshold,
+                allowed_fuel_products=EXCLUDED.allowed_fuel_products,
+                approved_vendors=EXCLUDED.approved_vendors, status=EXCLUDED.status,
+                last_modified_by=EXCLUDED.last_modified_by, last_modified_at=EXCLUDED.last_modified_at,
+                source_channel=EXCLUDED.source_channel, audit_correlation_id=EXCLUDED.audit_correlation_id,
+                version=fleet_logistics.fuel_policies.version+1
             """, p.id(), p.siteCode().value(), p.name(), ts(p.effectiveFrom()), ts(p.effectiveTo()), p.policyVersion(), p.maxPerTransaction(), p.dailyLimit(), p.monthlyLimit(), p.tankCapacity(), p.minConsumption(), p.maxConsumption(), p.odometerJumpTolerance(), p.receiptRequired(), p.receiptGraceHours(), p.materialityAmount(), p.anomalySlaHours(), p.costVarianceTolerance(), p.repeatedPatternWindowHours(), p.repeatedPatternThreshold(), String.join(",",p.allowedFuelProducts()), String.join(",",p.approvedVendors()), p.status().name(), p.metadata().createdBy(), ts(p.metadata().createdAt()), p.metadata().lastModifiedBy(), ts(p.metadata().lastModifiedAt()), p.metadata().sourceChannel().name(), p.metadata().auditCorrelationId(), p.metadata().version());
         return p;
     }

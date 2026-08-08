@@ -4,7 +4,7 @@ import { FuelTransaction } from 'modules/fuel/api/dto';
 import { FUEL_TRANSACTION_STATUSES, FuelTransactionStatus } from 'modules/fuel/api/enums';
 import { fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import { CaptureTransactionDialog } from 'modules/fuel/dialogs/transactionDialogs';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { formatMoney, formatQuantity, shortId } from 'modules/fuel/components/fuelFormat';
 import Button from 'shared/components/Button';
@@ -237,7 +237,6 @@ const FuelTransactionsPage = () => {
             onChange={setVehicleId}
             allowEmpty
             emptyLabel="Any vehicle"
-            helperText=" "
           />
           <DriverSelect
             siteCode={siteCode}
@@ -245,7 +244,6 @@ const FuelTransactionsPage = () => {
             onChange={setDriverId}
             allowEmpty
             emptyLabel="Any driver"
-            helperText=" "
           />
           <DateTimeField label="From" value={from} onChange={setFrom} />
           <DateTimeField label="To" value={to} onChange={setTo} />

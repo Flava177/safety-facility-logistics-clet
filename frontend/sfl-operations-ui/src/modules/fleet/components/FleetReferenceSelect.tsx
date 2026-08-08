@@ -128,16 +128,24 @@ export const TripSelect = ({
     [trips.data],
   );
 
+  // Optional by default, because a fuel transaction genuinely may not belong to a trip. Callers
+  // that need one - evidence has to hang off a real record - pass `allowEmpty={false}`, and the
+  // hint follows, so the field never reads "optional" while the form refuses a blank.
+  const optional = rest.allowEmpty ?? true;
+
   return (
     <SelectInput
       {...rest}
       label={label}
       options={options}
-      allowEmpty
+      allowEmpty={optional}
       emptyLabel={rest.emptyLabel ?? 'No trip'}
       disabled={rest.disabled || trips.loading}
       helperText={
-        helperText ?? 'Optional. Linking a trip enables the trip-match and logbook rules.'
+        helperText ??
+        (optional
+          ? 'Optional. Linking a trip enables the trip-match and logbook rules.'
+          : emptyHint(siteCode, trips.loading, options.length, 'trips'))
       }
     />
   );

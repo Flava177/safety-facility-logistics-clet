@@ -7,6 +7,7 @@ import {
   CaptureTransactionRequest,
   CreateLogbookRequest,
   CreatePolicyRequest,
+  UpdatePolicyRequest,
   DriverLogbook,
   FuelCard,
   FuelCardTransitionRequest,
@@ -79,6 +80,23 @@ export const fuelPoliciesApi = {
    * period. The conflicting policies come back in the error's `details.conflictingPolicies`.
    */
   create: (body: CreatePolicyRequest) => apiClient.post<FuelPolicy>(`${BASE}/policies`, body),
+
+  /**
+   * Revises a policy. Same overlap refusal as `create`, checked against everything except itself.
+   *
+   * The site is not in the body: a policy does not move between sites.
+   */
+  update: (policyId: string, body: UpdatePolicyRequest) =>
+    apiClient.put<FuelPolicy>(`${BASE}/policies/${policyId}`, body),
+
+  /**
+   * Withdraws a policy and returns it archived.
+   *
+   * Not a removal, and the name says so. Every reconciliation run cites the policy that judged it,
+   * so the row has to survive; archived means it applies to nothing new.
+   */
+  withdraw: (policyId: string, reason: string) =>
+    apiClient.delete<FuelPolicy>(`${BASE}/policies/${policyId}`, { query: { reason } }),
 };
 
 /** Fuel card register. The wire payload is masked only - no full payment-card number is accepted. */

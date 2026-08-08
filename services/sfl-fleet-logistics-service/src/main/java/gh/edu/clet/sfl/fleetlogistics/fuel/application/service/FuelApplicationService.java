@@ -98,14 +98,112 @@ public class FuelApplicationService {
      * of an effective-dated policy, so the overlap is refused here, inside the same transaction that
      * writes the record.
      */
+    /**
+     * The fields of {@link CreatePolicy}, against a policy that already exists.
+     *
+     * <p>Deliberately the whole set rather than a patch of changed fields: a partial update of a
+     * rule set means the caller and the service have to agree on what "absent" means for a limit
+     * that is legitimately null, and getting that wrong silently removes a ceiling.
+     */
+    public record UpdatePolicy(UUID policyId,String name,Instant effectiveFrom,Instant effectiveTo,int policyVersion,
+            BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,
+            BigDecimal minConsumption,BigDecimal maxConsumption,long odometerJumpTolerance,boolean receiptRequired,
+            int receiptGraceHours,BigDecimal materialityAmount,int anomalySlaHours,BigDecimal costVarianceTolerance,
+            int repeatedPatternWindowHours,int repeatedPatternThreshold,Set<String> allowedFuelProducts,
+            Set<String> approvedVendors,ActorContext actor,SourceChannel channel){
+        public UpdatePolicy {
+            costVarianceTolerance = costVarianceTolerance == null ? FuelPolicy.DEFAULT_COST_VARIANCE_TOLERANCE : costVarianceTolerance;
+            repeatedPatternWindowHours = repeatedPatternWindowHours < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_WINDOW_HOURS : repeatedPatternWindowHours;
+            repeatedPatternThreshold = repeatedPatternThreshold < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_THRESHOLD : repeatedPatternThreshold;
+        }
+    }
+
     @Transactional public FuelPolicy createPolicy(CreatePolicy c){
         access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,c.siteCode(),"FuelPolicy",null);
         requireNoOverlap(SiteCode.of(c.siteCode()).value(),c.effectiveFrom(),c.effectiveTo());
         return persistPolicy(c);
     }
 
+    /**
+     * Revises a policy in place.
+     *
+     * <h2>Why this edits rather than superseding</h2>
+     *
+     * <p>Reconciliation stamps every run with the policy id <em>and</em> the {@code policyVersion} it
+     * applied, so a past judgement stays readable as the rules that produced it whatever the record
+     * says now. That is what makes editing safe: the history is not derived from the current row.
+     * The alternative - forcing a new policy for every correction - fills the register with versions
+     * that differ by a typo in a name, and the period-overlap rule then refuses most of them.
+     *
+     * <p>{@code policyVersion} is the operator's own numbering and is theirs to bump when a revision
+     * is material. The overlap check runs again, excluding this policy, because widening a period is
+     * exactly how an edit collides with a neighbour.
+     */
+    @Transactional public FuelPolicy updatePolicy(UpdatePolicy c){
+        var existing=policyRecord(c.policyId());
+        access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,existing.siteCode().value(),"FuelPolicy",existing.id().toString());
+        requireNoOverlapExcluding(existing.siteCode().value(),c.effectiveFrom(),c.effectiveTo(),existing.id());
+        Instant now=clock.instant();
+        var revised=new FuelPolicy(existing.id(),existing.siteCode(),c.name(),c.effectiveFrom(),c.effectiveTo(),
+                c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),
+                c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),
+                c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.costVarianceTolerance(),
+                c.repeatedPatternWindowHours(),c.repeatedPatternThreshold(),c.allowedFuelProducts(),
+                c.approvedVendors(),existing.status(),
+                existing.metadata().modifiedBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));
+        var saved=repository.savePolicy(revised);
+        audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.UPDATE,"FuelPolicy",saved.id().toString(),existing,saved);
+        return saved;
+    }
+
+    /**
+     * Withdraws a policy, which is what deleting one has to mean here.
+     *
+     * <p>A policy is cited by every reconciliation run it judged. Removing the row would leave those
+     * runs pointing at nothing - the audit trail would still say a transaction was judged under
+     * policy X and there would be no X to read - so a fuel register that can be tidied into
+     * incoherence is worse than one that cannot be tidied at all.
+     *
+     * <p>{@code ARCHIVED} is the answer already in the model: {@link FuelPolicy#appliesAt} requires
+     * {@code ACTIVE}, so an archived policy stops applying to anything new the moment it is written,
+     * while staying readable for everything it has already decided. It also frees the period, so the
+     * replacement can cover the same dates without tripping the overlap rule.
+     */
+    @Transactional public FuelPolicy withdrawPolicy(UUID id,String reason,ActorContext actor,SourceChannel channel){
+        var existing=policyRecord(id);
+        access.require(actor,SflPermission.FUEL_POLICY_MANAGE,existing.siteCode().value(),"FuelPolicy",existing.id().toString());
+        if(existing.status()==FuelPolicy.Status.ARCHIVED)return existing;
+        Instant now=clock.instant();
+        var withdrawn=new FuelPolicy(existing.id(),existing.siteCode(),existing.name(),existing.effectiveFrom(),
+                existing.effectiveTo(),existing.policyVersion(),existing.maxPerTransaction(),existing.dailyLimit(),
+                existing.monthlyLimit(),existing.tankCapacity(),existing.minConsumption(),existing.maxConsumption(),
+                existing.odometerJumpTolerance(),existing.receiptRequired(),existing.receiptGraceHours(),
+                existing.materialityAmount(),existing.anomalySlaHours(),existing.costVarianceTolerance(),
+                existing.repeatedPatternWindowHours(),existing.repeatedPatternThreshold(),
+                existing.allowedFuelProducts(),existing.approvedVendors(),FuelPolicy.Status.ARCHIVED,
+                existing.metadata().modifiedBy(actor.actorId(),now,channel,actor.correlationId()));
+        var saved=repository.savePolicy(withdrawn);
+        Map<String,Object> after=new LinkedHashMap<>();
+        after.put("policy",saved);
+        // The reason is the point of the record: an archived policy with no explanation tells a
+        // reviewer that somebody withdrew it and nothing about why.
+        after.put("reason",reason);
+        // STATE_TRANSITION rather than a delete action: the status moved ACTIVE -> ARCHIVED, which is
+        // exactly what happened and exactly what the enum already has a name for.
+        audit.record(actor,channel,saved.siteCode(),AuditAction.STATE_TRANSITION,"FuelPolicy",saved.id().toString(),existing,after);
+        return saved;
+    }
+
+    private FuelPolicy policyRecord(UUID id){
+        return repository.findPolicy(id).orElseThrow(()->RecordNotFoundException.of("FuelPolicy",id));
+    }
+
     private void requireNoOverlap(String site,Instant from,Instant to){
-        var clashes=repository.findOverlappingActivePolicies(site,from,to,null);
+        requireNoOverlapExcluding(site,from,to,null);
+    }
+
+    private void requireNoOverlapExcluding(String site,Instant from,Instant to,UUID excluding){
+        var clashes=repository.findOverlappingActivePolicies(site,from,to,excluding);
         if(clashes.isEmpty())return;
         throw FuelPolicyPeriodOverlapException.of(site,from,to,clashes.stream()
                 .map(p->new FuelPolicyPeriodOverlapException.Conflict(p.id(),p.name(),p.policyVersion(),p.effectiveFrom(),p.effectiveTo()))

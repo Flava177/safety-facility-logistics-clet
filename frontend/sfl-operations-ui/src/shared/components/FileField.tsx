@@ -1,4 +1,5 @@
-import { useId, useRef } from 'react';
+import { useId, useRef, useState } from 'react';
+import { MAX_UPLOAD_MB, sizeRejectionReason } from 'shared/evidence/evidenceFilesApi';
 import Button from './Button';
 import Icon from './Icon';
 import { FieldShell } from './fields';
@@ -32,6 +33,18 @@ interface FileFieldProps {
  * real input is visually hidden and a button drives it - but it stays in the accessible tree with
  * the field's own id, so a screen reader announces "Choose a file" against the right label rather
  * than a decorative button with no relationship to it.
+ *
+ * <h2>The size cap lives here, not in each caller</h2>
+ *
+ * Every upload in the dashboard passes through this component, so this is the one place a limit can
+ * be applied without six forms having to remember it. It was applied in exactly one of them: the
+ * evidence field checked the cap and the CSV import, the dispatch scan batch and the facilities
+ * attachment took a file of any size and found out from the container, which answers an oversized
+ * multipart with a bare failure and no field to attach it to.
+ *
+ * The refusal is a courtesy, not the boundary - `UploadedFileScanner` enforces the same number on
+ * the bytes it actually received. It exists so somebody on a phone connection learns at the moment
+ * they pick the file rather than after uploading it.
  */
 const FileField = ({
   label,
@@ -46,13 +59,42 @@ const FileField = ({
 }: FileFieldProps) => {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
+  const [refusal, setRefusal] = useState<string | null>(null);
+
+  /** Clears the DOM input as well as state, so re-picking the same file fires `change` again. */
+  const clearInput = () => {
+    if (inputRef.current) {
+      inputRef.current.value = '';
+    }
+  };
+
+  const choose = (chosen: File | null) => {
+    const reason = chosen ? sizeRejectionReason(chosen) : null;
+    setRefusal(reason);
+    if (reason) {
+      // The refused file is not handed to the form at all. Reporting it while leaving it selected
+      // would let a submit go ahead with a file the service is certain to reject.
+      clearInput();
+      onChange(null);
+      return;
+    }
+    onChange(chosen);
+  };
+
+  const showError = error || Boolean(refusal);
 
   return (
-    <FieldShell id={id} label={label} required={required} error={error} helperText={helperText}>
+    <FieldShell
+      id={id}
+      label={label}
+      required={required}
+      error={showError}
+      helperText={refusal ?? helperText ?? `Up to ${MAX_UPLOAD_MB} MB.`}
+    >
       <div
         className={cn(
           'flex min-h-10 flex-wrap items-center gap-3 rounded-md border bg-white px-3 py-2',
-          error ? 'border-error-800' : 'border-gray-500',
+          showError ? 'border-error-800' : 'border-gray-500',
           disabled && 'border-gray-300 bg-gray-50',
         )}
       >
@@ -62,10 +104,10 @@ const FileField = ({
           type="file"
           accept={accept}
           disabled={disabled}
-          aria-invalid={error || undefined}
-          aria-describedby={helperText ? `${id}-help` : undefined}
+          aria-invalid={showError || undefined}
+          aria-describedby={`${id}-help`}
           onBlur={onBlur}
-          onChange={(event) => onChange(event.target.files?.[0] ?? null)}
+          onChange={(event) => choose(event.target.files?.[0] ?? null)}
           className="sr-only"
         />
         <Button
@@ -98,10 +140,8 @@ const FileField = ({
             onClick={() => {
               // The DOM input keeps its own value, so clearing state alone would let the same file
               // fail to re-fire `change` when picked again.
-              if (inputRef.current) {
-                inputRef.current.value = '';
-              }
-              onChange(null);
+              clearInput();
+              choose(null);
             }}
             className="ml-auto flex h-6 w-6 shrink-0 items-center justify-center rounded text-gray-600 transition-colors hover:bg-gray-100 hover:text-gray-900"
           >

@@ -405,7 +405,17 @@ export const navSections: NavSection[] = [
         description: 'Reported problems, triage and SLA',
         // Enforced by FacilityFaultService. A requester holds this and sees only their own.
         permission: 'FACILITIES_FAULT_READ',
-        capability: 'FACILITIES_FAULT_TRIAGE',
+        /*
+          Triage *or* report, and the second one was missing.
+
+          Gating on triage alone hid this screen from `IFIMP_TECHNICIAN`, which holds
+          FACILITIES_FAULT_REPORT and not FACILITIES_FAULT_TRIAGE - so a technician could raise a
+          fault and had nowhere in the dashboard to raise it. FACILITIES_FAULT_REPORT was, before
+          this, a capability no navigation item asked for at all: three roles hold it and none of
+          them was offered a fault screen. Reporting one is doing something here, which is the test
+          this list is supposed to apply.
+        */
+        capability: ['FACILITIES_FAULT_TRIAGE', 'FACILITIES_FAULT_REPORT'],
       },
       {
         label: 'Work orders',

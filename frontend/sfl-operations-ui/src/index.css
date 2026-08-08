@@ -373,12 +373,21 @@
   padding: 0;
 }
 
+/*
+ * The month and year dropdowns are styled together because they are one control to the reader: the
+ * header says "March 2026" and either half of it opens. The year select is ours - flatpickr has no
+ * option for one and draws a number input with steppers instead, which nobody reads as typeable.
+ * See `flatpickrYearSelect.ts`.
+ */
 .flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month .flatpickr-yearDropdown-years,
 .flatpickr-current-month input.cur-year {
-  @apply rounded-md border-0 bg-transparent p-1 text-theme-sm font-semibold text-gray-900;
+  @apply cursor-pointer rounded-md border-0 bg-transparent p-1 text-theme-sm font-semibold text-gray-900;
+  appearance: none;
 }
 
-.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+.flatpickr-current-month .flatpickr-yearDropdown-years:hover {
   @apply bg-gray-100;
 }
 

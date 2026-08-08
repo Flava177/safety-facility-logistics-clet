@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
+import { FieldLabelSpacer } from './fields';
 import { cn } from './cn';
 
 export interface FacetOption {
@@ -109,6 +110,12 @@ const FacetFilter = ({
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
+      {/*
+        The button carries its own name, so it needs no label - but it shares a row with fields that
+        have one, and that row aligns on the control. Reserving the label's height is what keeps this
+        level with them; see `FieldLabelSpacer`.
+      */}
+      <FieldLabelSpacer />
       <button
         type="button"
         disabled={disabled}

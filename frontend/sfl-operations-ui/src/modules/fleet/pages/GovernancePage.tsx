@@ -10,6 +10,11 @@ import {
   humanise,
 } from 'modules/fleet/api/enums';
 import { auditApi, evidenceApi } from 'modules/fleet/api/fleetApi';
+import {
+  DriverSelect,
+  TripSelect,
+  VehicleSelect,
+} from 'modules/fleet/components/FleetReferenceSelect';
 
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -35,6 +40,26 @@ import { canReadAudit, canRequestEvidenceExport, canVerifyAuditChain } from '../
 import { evidenceStorageReference, sha256Hex } from 'shared/evidence/fileEvidence';
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
+
+/**
+ * The records this dialog can file evidence against, and the only ones it offers.
+ *
+ * PascalCase because the store matches `relatedRecordType` exactly and every backend path files
+ * under the entity name - `Trip`, not `TRIP`. The list is short because it is the list of registers
+ * the dashboard can *resolve an identifier out of*: offering a type with no register behind it would
+ * put the operator straight back to typing a UUID, which is the thing being fixed.
+ *
+ * Evidence for an inspection or a compliance certificate is filed by those screens' own dialogs,
+ * under the vehicle it belongs to - so nothing that was reachable stops being reachable.
+ */
+const EVIDENCE_RECORD_TYPES = ['Vehicle', 'Driver', 'Trip'] as const;
+type EvidenceRecordType = (typeof EVIDENCE_RECORD_TYPES)[number];
+
+const EVIDENCE_RECORD_TYPE_LABELS: Record<EvidenceRecordType, string> = {
+  Vehicle: 'Vehicle',
+  Driver: 'Driver',
+  Trip: 'Trip',
+};
 
 /** Audit records carry an optional id, so the row key falls back to position as it always did. */
 interface AuditRow {
@@ -488,6 +513,52 @@ const GovernancePage = () => {
   );
 };
 
+/**
+ * The identifier field, bound to whichever register the chosen record type names.
+ *
+ * One component rather than three inline ternaries so the three pickers cannot drift apart in
+ * label, required-ness or error wiring. Each is scoped to the site the evidence is being filed
+ * under, which is also the scope the actor is allowed to read - so an identifier that appears here
+ * is one this operator could have opened anyway.
+ */
+const RelatedRecordSelect = ({
+  recordType,
+  siteCode,
+  value,
+  onChange,
+  error,
+  helperText,
+  onBlur,
+}: {
+  recordType: EvidenceRecordType;
+  siteCode: string;
+  value: string;
+  onChange: (value: string) => void;
+  error: boolean;
+  helperText: string | undefined;
+  onBlur: () => void;
+}) => {
+  const shared = {
+    label: `Related ${EVIDENCE_RECORD_TYPE_LABELS[recordType].toLowerCase()}`,
+    required: true,
+    siteCode,
+    value,
+    onChange,
+    error,
+    helperText,
+    onBlur,
+  };
+
+  if (recordType === 'Driver') {
+    return <DriverSelect {...shared} />;
+  }
+  if (recordType === 'Trip') {
+    // Unlike the fuel forms, a trip is not optional here - the evidence has to hang off something.
+    return <TripSelect {...shared} allowEmpty={false} />;
+  }
+  return <VehicleSelect {...shared} />;
+};
+
 /* Register evidence - POST /api/v1/fleet/evidence */
 const RegisterEvidenceDialog = ({
   open,
@@ -505,7 +576,7 @@ const RegisterEvidenceDialog = ({
       // path files under PascalCase entity names - Trip, Vehicle, ComplianceDocument. Evidence
       // registered under the old default was invisible to every picker that searches for 'Vehicle',
       // which is precisely the lookup this dialog exists to feed.
-      relatedRecordType: 'Vehicle',
+      relatedRecordType: 'Vehicle' as EvidenceRecordType,
       relatedRecordId: '',
       evidenceType: 'COMPLIANCE_DOCUMENT',
       evidenceFile: null as File | null,
@@ -567,7 +638,13 @@ const RegisterEvidenceDialog = ({
         <SiteSelect
           required
           value={form.values.siteCode}
-          onChange={(value) => form.setValue('siteCode', value)}
+          onChange={(value) => {
+            form.setValue('siteCode', value);
+            // The registers below are scoped to the site, so a record picked at the old one is not
+            // on offer at the new one - and leaving it selected would submit an identifier the
+            // operator can no longer see.
+            form.setValue('relatedRecordId', '');
+          }}
           {...form.fieldProps('siteCode')}
         />
         <EnumSelect
@@ -583,19 +660,32 @@ const RegisterEvidenceDialog = ({
           }
           {...form.fieldProps('retentionClass')}
         />
-        <TextInput
+        {/*
+          The record type chooses which register the identifier is picked from, which is the whole
+          reason it is a list and not free text now. `relatedRecordType` is a plain string on the
+          wire and the service will store whatever it is sent - so nothing but this control stopped
+          an operator filing evidence against a record type nothing queries, under an identifier no
+          record has. Both fields were free text, and the id is a UUID that appears on no paperwork:
+          any value at all was accepted and only failed later, when a picker searching for real
+          evidence found none.
+        */}
+        <EnumSelect
           label="Related record type"
           required
           value={form.values.relatedRecordType}
-          onChange={(value) => form.setValue('relatedRecordType', value)}
-          {...form.fieldProps(
-            'relatedRecordType',
-            'For example Trip, VehicleInspection or ComplianceDocument.',
-          )}
+          options={EVIDENCE_RECORD_TYPES}
+          onChange={(value) => {
+            form.setValue('relatedRecordType', (value || 'Vehicle') as EvidenceRecordType);
+            // The old identifier belongs to the old register. Keeping it would leave a Vehicle id
+            // sitting in a field now offering drivers, and it would submit.
+            form.setValue('relatedRecordId', '');
+          }}
+          renderOptionLabel={(option) => EVIDENCE_RECORD_TYPE_LABELS[option]}
+          {...form.fieldProps('relatedRecordType')}
         />
-        <TextInput
-          label="Related record ID"
-          required
+        <RelatedRecordSelect
+          recordType={form.values.relatedRecordType}
+          siteCode={form.values.siteCode}
           value={form.values.relatedRecordId}
           onChange={(value) => form.setValue('relatedRecordId', value)}
           {...form.fieldProps('relatedRecordId')}
@@ -621,10 +711,6 @@ const RegisterEvidenceDialog = ({
           />
         </div>
       </div>
-      <Alert variant="info">
-        The evidence file stays wherever your document store will later keep it. For this Release 1
-        demo, Fleet records the tamper-evident reference, retention class and hash chain entry.
-      </Alert>
     </FormDialog>
   );
 };

@@ -79,13 +79,23 @@ public final class UploadedFileScanner {
     }
 
     /**
-     * Ten megabytes.
+     * Five megabytes, and the single number every upload path in the platform is measured against.
      *
      * <p>A phone photograph of a pump display is one to four; a scanned roadworthiness certificate is
      * under two. The cap is here because the bytes go into a database column, so an unbounded upload
      * is an unbounded row - and because it bounds the cost of every check below.
+     *
+     * <p>It was ten. Five still clears the largest thing anyone legitimately sends, and halving it
+     * halves the worst case for the row, the heap and the scan. Anything that changes here has to
+     * change in three other places, all named in {@code MAX_BYTES_MB}'s callers: the container's
+     * multipart ceiling in {@code application.yml}, which must stay above it so an oversized file is
+     * refused here with an explanation rather than by Tomcat with a bare 500, and the dashboard's
+     * own courtesy check in {@code evidenceFilesApi.ts}, which is asserted against this value.
      */
-    public static final long MAX_BYTES = 10L * 1024 * 1024;
+    public static final long MAX_BYTES = 5L * 1024 * 1024;
+
+    /** The limit in whole megabytes, so no message has to restate the number and get it wrong. */
+    public static final long MAX_BYTES_MB = MAX_BYTES / (1024 * 1024);
 
     /** The wording the API and the dashboard both use for the accepted set. */
     public static final String ACCEPTED_DESCRIPTION = "PDF, JPG or JPEG";
@@ -120,7 +130,7 @@ public final class UploadedFileScanner {
             throw refuse("The file is empty.", Map.of("fileName", safeName(originalFileName)));
         }
         if (content.length > MAX_BYTES) {
-            throw refuse("The file is larger than the 10 MB limit.", Map.of(
+            throw refuse("The file is larger than the " + MAX_BYTES_MB + " MB limit.", Map.of(
                     "fileName", safeName(originalFileName),
                     "byteSize", content.length,
                     "maxBytes", MAX_BYTES));

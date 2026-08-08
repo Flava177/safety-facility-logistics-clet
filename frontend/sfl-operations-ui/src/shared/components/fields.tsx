@@ -21,12 +21,17 @@ import { cn } from './cn';
  * Focus is not styled here. The dashboard has one focus treatment, defined once in `index.css` as a
  * 2px teal outline with an offset, so every focusable thing on the page looks focused the same way.
  */
-const controlBase =
+/**
+ * Exported so a bespoke control can be the same height, radius and tone as the shared fields
+ * rather than approximately so. `SearchInput` is the first caller; the alternative was a second
+ * copy of these four lines that would drift the first time either changed.
+ */
+export const controlBase =
   'h-10 w-full rounded-md border bg-white px-3 text-theme-sm text-gray-900 transition-colors ' +
   'placeholder:text-gray-500 ' +
   'disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-500';
 
-const controlTone = (error?: boolean) =>
+export const controlTone = (error?: boolean) =>
   error ? 'border-error-800 hover:border-error-900' : 'border-gray-500 hover:border-gray-700';
 
 interface FieldShellProps {
@@ -38,6 +43,23 @@ interface FieldShellProps {
   className?: string;
   children: ReactNode;
 }
+
+/**
+ * An empty line the exact height of a field label.
+ *
+ * <p>For a control that has no label but has to sit level with ones that do - a facet button in a
+ * filter bar, the Reset beside it. Those rows align on the *control*, so a bare button either gets
+ * the label's height reserved above it or floats above the fields it belongs with.
+ *
+ * <p>Declared next to the real label rather than as a magic height somewhere else: the two have to
+ * agree, and the way to make them agree is to write the same classes once. Hidden from assistive
+ * technology, which has the button's own accessible name and does not need a blank line.
+ */
+export const FieldLabelSpacer = () => (
+  <span aria-hidden="true" className="mb-2 block text-theme-sm font-medium select-none">
+    &nbsp;
+  </span>
+);
 
 /** Label + control + helper line. Exported so a bespoke control can sit in the same rhythm. */
 export const FieldShell = ({

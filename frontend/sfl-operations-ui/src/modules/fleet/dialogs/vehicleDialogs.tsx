@@ -571,7 +571,7 @@ export const RegisterComplianceDocumentDialog = ({
             required
             value={file}
             onChange={setFile}
-            helperText={`Scan or photograph of the certificate itself. ${ACCEPTED_FILE_DESCRIPTION}. Checked for malicious content before it is stored.`}
+            helperText={`Scan or photograph of the certificate itself. ${ACCEPTED_FILE_DESCRIPTION}.`}
           />
           <Button size="sm" variant="ghost" className="mt-1.5" onClick={() => setUseExisting(true)}>
             Use a document already filed against this vehicle

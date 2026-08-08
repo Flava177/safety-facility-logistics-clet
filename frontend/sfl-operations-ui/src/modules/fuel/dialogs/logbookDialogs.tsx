@@ -11,7 +11,7 @@ import {
   DriverSelect,
   TripSelect,
   VehicleSelect,
-} from 'modules/fuel/components/FleetReferenceSelect';
+} from 'modules/fleet/components/FleetReferenceSelect';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';

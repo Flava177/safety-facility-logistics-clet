@@ -2,15 +2,13 @@ import { useEffect, useMemo, useState } from 'react';
 import { FuelTransaction } from 'modules/fuel/api/dto';
 import { CURRENCIES, FUEL_PRODUCTS } from 'modules/fuel/api/enums';
 import { fuelPricesApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { ActiveTripSelect, useDriverTrips } from 'modules/fuel/components/ActiveTripSelect';
 import { formatMoney } from 'modules/fuel/components/fuelFormat';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
-import SiteSelect from 'shared/components/SiteSelect';
 import PlaceField from 'shared/components/PlaceField';
 import EvidenceFileField from 'shared/components/EvidenceFileField';
-import { DateTimeField } from 'shared/components/DateField';
 import { EnumSelect, NumberInput, SelectInput, TextAreaInput, TextInput } from 'shared/components/fields';
 import { evidenceFilesApi } from 'shared/evidence/evidenceFilesApi';
 import { FleetApiError } from 'shared/errors/FleetApiError';
@@ -24,7 +22,6 @@ import {
   maxLength,
   positiveNumber,
   required,
-  validDateTime,
 } from 'shared/validation/validators';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
@@ -132,7 +129,6 @@ export const CaptureTransactionDialog = ({
       tripId: '',
       vehicleId: '',
       driverId: '',
-      occurredAt: '',
       vendorReference: '',
       stationReference: '',
       fuelProduct: 'DIESEL',
@@ -147,7 +143,6 @@ export const CaptureTransactionDialog = ({
       siteCode: required('Site code'),
       vehicleId: required('Vehicle'),
       driverId: required('Driver'),
-      occurredAt: compose(required('Time fuel purchased'), validDateTime('Time fuel purchased')),
       vendorReference: compose(required('Provider'), maxLength('Provider', 160)),
       stationReference: compose(required('Location'), maxLength('Location', 160)),
       fuelProduct: required('Fuel product'),
@@ -230,7 +225,17 @@ export const CaptureTransactionDialog = ({
         vehicleId: values.vehicleId,
         driverId: values.driverId,
         tripId: values.tripId || null,
-        occurredAt: new Date(values.occurredAt).toISOString(),
+        /*
+          The moment of capture, because the form no longer asks for the moment of purchase.
+
+          `occurredAt` is not decoration - it selects the posted price and the policy version the
+          transaction is judged against - so it still has to be a real timestamp. Capture time is
+          the honest one available: the driver fills in this form at the pump, so the two are
+          minutes apart, and the receipt photograph carries the printed time for anyone who needs
+          to settle it exactly. A capture posted materially later than the purchase will resolve
+          against the later price, which is the one behaviour worth knowing about.
+        */
+        occurredAt: new Date().toISOString(),
         vendorReference: values.vendorReference.trim(),
         stationReference: values.stationReference.trim() || null,
         fuelProduct: values.fuelProduct.trim().toUpperCase(),
@@ -350,74 +355,66 @@ export const CaptureTransactionDialog = ({
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <div className={twoColumn}>
-        <SiteSelect
-          required
-          value={form.values.siteCode}
-          onChange={(value) => {
-            // Trip, vehicle, driver, provider and price are all scoped to the site, so a site change
-            // clears them - a reference from the previous site would be refused on submission.
-            form.setValues({
-              siteCode: value,
-              tripId: '',
-              vehicleId: '',
-              driverId: '',
-              vendorReference: '',
-              unitPrice: '',
-            });
-          }}
-          {...form.fieldProps('siteCode')}
-        />
-        <ActiveTripSelect
-          required={driverOnly}
-          siteCode={form.values.siteCode}
-          trips={trips.active}
-          loading={trips.loading}
-          allowNone={!driverOnly}
-          value={form.values.tripId}
-          onChange={(value) => form.setValue('tripId', value)}
-          {...form.fieldProps('tripId')}
-        />
-      </div>
+      {/*
+        No site control. The dialog is opened from a register that is already filtered to one site,
+        and it is handed that site - so asking again was asking the driver to restate something the
+        screen behind them already said, on the form where they have the least patience for it. The
+        value still travels with the request and still scopes the trip, vehicle, provider and price
+        lookups; it is simply not a question any more.
+      */}
+      <ActiveTripSelect
+        required={driverOnly}
+        siteCode={form.values.siteCode}
+        trips={trips.active}
+        loading={trips.loading}
+        allowNone={!driverOnly}
+        value={form.values.tripId}
+        onChange={(value) => form.setValue('tripId', value)}
+        {...form.fieldProps('tripId')}
+      />
 
-      {chosenTrip ? (
-        <Alert variant="info" title="From your trip">
-          Vehicle and driver are taken from {chosenTrip.tripNumber} ({chosenTrip.origin} →{' '}
-          {chosenTrip.destination}). Change the trip if this fuel was for a different journey.
-        </Alert>
-      ) : (
-        <div className={twoColumn}>
-          <VehicleSelect
+      {/*
+        Choosing a trip fills these in; it does not take them away.
+
+        They used to be replaced by a sentence saying the trip had supplied them, which is the one
+        thing a form should not do - the driver picks the journey and the two facts they were about
+        to check vanish, so the only way to see which vehicle is on the claim is to abandon the trip.
+        Prefilled and still on screen is the same saving with none of that: the hint says where the
+        value came from, and it stays editable because a fuel officer recording on someone's behalf
+        is sometimes correcting exactly this.
+      */}
+      <div className={twoColumn}>
+        <VehicleSelect
+          required
+          siteCode={form.values.siteCode}
+          value={form.values.vehicleId}
+          onChange={(value) => form.setValue('vehicleId', value)}
+          {...form.fieldProps(
+            'vehicleId',
+            chosenTrip ? `From ${chosenTrip.tripNumber}. Change it if the fuel was for another vehicle.` : undefined,
+          )}
+        />
+        {/* A driver never sees this: they are signed in, and their trip says who they are. */}
+        {!driverOnly && (
+          <DriverSelect
             required
             siteCode={form.values.siteCode}
-            value={form.values.vehicleId}
-            onChange={(value) => form.setValue('vehicleId', value)}
-            {...form.fieldProps('vehicleId')}
+            value={form.values.driverId}
+            onChange={(value) => form.setValue('driverId', value)}
+            {...form.fieldProps(
+              'driverId',
+              chosenTrip ? `From ${chosenTrip.tripNumber}.` : undefined,
+            )}
           />
-          {/* A driver never sees this: they are signed in, and their trip says who they are. */}
-          {!driverOnly && (
-            <DriverSelect
-              required
-              siteCode={form.values.siteCode}
-              value={form.values.driverId}
-              onChange={(value) => form.setValue('driverId', value)}
-              {...form.fieldProps('driverId')}
-            />
-          )}
-        </div>
-      )}
+        )}
+      </div>
 
       <div className={twoColumn}>
-        <DateTimeField
-          label="Time fuel purchased"
-          required
-          value={form.values.occurredAt}
-          onChange={(value) => form.setValue('occurredAt', value)}
-          {...form.fieldProps(
-            'occurredAt',
-            'The time on the receipt. It selects the price and the policy version this is judged against.',
-          )}
-        />
+        {/*
+          No "time fuel purchased" field. The receipt photograph carries the time, and asking a
+          driver to retype it at the pump bought nothing except a second version of it to disagree
+          with. The moment of capture is recorded instead - see `occurredAt` in the submit handler.
+        */}
         <EnumSelect
           label="Fuel product"
           required

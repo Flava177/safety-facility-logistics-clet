@@ -1,7 +1,10 @@
+import { useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { FuelPolicy } from 'modules/fuel/api/dto';
 import { fuelPoliciesApi } from 'modules/fuel/api/fuelApi';
+import { EditPolicyDialog, WithdrawPolicyDialog } from 'modules/fuel/dialogs/policyDialogs';
 import HistoryTimeline from 'modules/fuel/components/HistoryTimeline';
+import { canManageFuelPolicies } from 'modules/fleet/api/access';
 import { siteOf } from 'modules/fuel/components/fuelFormat';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -31,6 +34,8 @@ const inForce = (policy: FuelPolicy, at = Date.now()): boolean =>
 const FuelPolicyDetailPage = () => {
   const { policyId = '' } = useParams();
   const navigate = useNavigate();
+  const [editing, setEditing] = useState(false);
+  const [withdrawing, setWithdrawing] = useState(false);
 
   const lookup = useApiQuery(
     (signal) => fuelPoliciesApi.findById(policyId, signal),
@@ -55,13 +60,32 @@ const FuelPolicyDetailPage = () => {
           { label: policy?.name ?? '…' },
         ]}
         actions={
-          <Button
-            variant="outline"
-            startIcon="arrow-left"
-            onClick={() => navigate(fuelPaths.policies)}
-          >
-            Register
-          </Button>
+          <>
+            {/*
+              Both gated on the same grant the service checks. Withdraw is hidden rather than
+              disabled once a policy is archived, because it would do nothing - the service returns
+              the record unchanged - and a control that is a no-op reads as one that is broken.
+            */}
+            {policy && canManageFuelPolicies() && (
+              <>
+                <Button variant="outline" startIcon="edit" onClick={() => setEditing(true)}>
+                  Edit
+                </Button>
+                {policy.status !== 'ARCHIVED' && (
+                  <Button variant="outline" startIcon="close" onClick={() => setWithdrawing(true)}>
+                    Withdraw
+                  </Button>
+                )}
+              </>
+            )}
+            <Button
+              variant="outline"
+              startIcon="arrow-left"
+              onClick={() => navigate(fuelPaths.policies)}
+            >
+              Register
+            </Button>
+          </>
         }
         meta={
           policy && (
@@ -250,12 +274,12 @@ const FuelPolicyDetailPage = () => {
                   </DataState>
                 </SectionCard>
 
-                <SectionCard title="Editing">
-                  <Alert variant="info" title="Policies are not editable">
-                    The service exposes create and read only - there is no update or archive
-                    endpoint. Superseding a policy means creating one whose period begins where this
-                    one ends; an overlapping period is refused, so an open-ended policy has to be
-                    given an end date before a successor can be created, which is not possible today.
+                <SectionCard title="Changing this policy">
+                  <Alert variant="info" title="Revisions keep past judgements intact">
+                    Every reconciliation run records the policy version it applied, so editing the
+                    limits here does not change how anything was judged before. Withdrawing moves
+                    the policy to archived rather than deleting it - the runs that cited it still
+                    point at it - and releases its period so a replacement can cover the same dates.
                   </Alert>
                 </SectionCard>
               </div>
@@ -263,6 +287,31 @@ const FuelPolicyDetailPage = () => {
           </div>
         )}
       </DataState>
+
+      {/* Mounted only while open, so a cancelled edit cannot reappear prefilled in the next one. */}
+      {policy && editing && (
+        <EditPolicyDialog
+          open
+          policy={policy}
+          onClose={() => setEditing(false)}
+          onSaved={() => {
+            lookup.refetch();
+            history.refetch();
+          }}
+        />
+      )}
+
+      {policy && withdrawing && (
+        <WithdrawPolicyDialog
+          open
+          policy={policy}
+          onClose={() => setWithdrawing(false)}
+          onSaved={() => {
+            lookup.refetch();
+            history.refetch();
+          }}
+        />
+      )}
     </div>
   );
 };

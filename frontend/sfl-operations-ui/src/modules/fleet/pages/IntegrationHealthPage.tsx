@@ -261,7 +261,12 @@ const IntegrationHealthPage = () => {
               />
             </div>
 
-            {canReplay ? (
+            {/*
+              Nothing stands in for the inbox and replay controls when the role cannot use them.
+              A card explaining the absence was more prominent than the counters the page is for,
+              and it told the reader about permissions rather than about the integration.
+            */}
+            {canReplay && (
               <>
                 <SectionCard title="Inbound messages" subtitle="Newest first" flush>
               <FilterBar
@@ -346,17 +351,6 @@ const IntegrationHealthPage = () => {
               </div>
                 </SectionCard>
               </>
-            ) : (
-              <SectionCard
-                title="Integration inbox and replay"
-                subtitle="Privileged controls are hidden for the current Fleet Manager demo role"
-              >
-                <Alert variant="info">
-                  Your role can view integration health counters. Message inbox search and replay are
-                  restricted to integration support/admin users, so this page no longer calls those
-                  protected endpoints during the manager demo.
-                </Alert>
-              </SectionCard>
             )}
           </div>
         )}

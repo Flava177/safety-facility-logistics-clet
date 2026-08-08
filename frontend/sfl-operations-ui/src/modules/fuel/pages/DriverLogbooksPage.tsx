@@ -9,7 +9,7 @@ import {
 } from 'modules/fuel/api/enums';
 import { driverLogbooksApi } from 'modules/fuel/api/fuelApi';
 import { CreateLogbookDialog } from 'modules/fuel/dialogs/logbookDialogs';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
@@ -186,7 +186,6 @@ const DriverLogbooksPage = () => {
             onChange={setDriverId}
             allowEmpty
             emptyLabel="Any driver"
-            helperText=" "
           />
           <VehicleSelect
             siteCode={siteCode}
@@ -194,7 +193,6 @@ const DriverLogbooksPage = () => {
             onChange={setVehicleId}
             allowEmpty
             emptyLabel="Any vehicle"
-            helperText=" "
           />
           <DateField label="Journey from" value={journeyFrom} onChange={setJourneyFrom} />
           <DateField label="Journey to" value={journeyTo} onChange={setJourneyTo} />

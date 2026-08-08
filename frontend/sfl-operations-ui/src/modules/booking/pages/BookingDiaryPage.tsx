@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import FacetFilter from 'shared/components/FacetFilter';
+import QuickFilters from 'shared/components/QuickFilters';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -73,7 +74,41 @@ const BookingDiaryPage = () => {
       (status.length === 0 || status.includes(booking.status)) &&
       (purpose.length === 0 || purpose.includes(booking.purpose)),
   );
-  const filtered = status.length > 0 || purpose.length > 0 || Boolean(scope);
+  const clearAll = () => {
+    setStatus([]);
+    setPurpose([]);
+    setScope('');
+  };
+
+  /*
+    One chip per selected value rather than one per facet. "Status: 2 selected" is the summary the
+    closed button already gives; what the chip row is for is dropping one of the two without
+    reopening anything, and that needs them named separately.
+  */
+  const activeFilters: ActiveFilter[] = [
+    ...status.map((value) => ({
+      key: `status:${value}`,
+      label: 'Status',
+      value: humaniseCode(value),
+      onClear: () => setStatus(status.filter((entry) => entry !== value)),
+    })),
+    ...purpose.map((value) => ({
+      key: `purpose:${value}`,
+      label: 'Purpose',
+      value: humaniseCode(value),
+      onClear: () => setPurpose(purpose.filter((entry) => entry !== value)),
+    })),
+    ...(scope
+      ? [
+          {
+            key: 'scope',
+            label: 'View',
+            value: scope === 'live' ? 'Holding a space' : 'On readiness hold',
+            onClear: () => setScope(''),
+          },
+        ]
+      : []),
+  ];
 
   /*
     Counts come from what the service returned, so they describe the data in hand rather than the
@@ -171,12 +206,20 @@ const BookingDiaryPage = () => {
       />
 
       <FilterBar
-        onReset={() => {
-          setStatus([]);
-          setPurpose([]);
-          setScope('');
-        }}
-        resetDisabled={!filtered}
+        onReset={clearAll}
+        active={activeFilters}
+        quickFilters={
+          <QuickFilters
+            label="Which bookings"
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: '', label: 'All bookings', count: fetched.length },
+              { value: 'live', label: 'Holding a space' },
+              { value: 'held', label: 'On readiness hold' },
+            ]}
+          />
+        }
       >
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
         <FacetFilter
@@ -198,17 +241,6 @@ const BookingDiaryPage = () => {
             label: humaniseCode(value),
             count: purposeCounts[value] ?? 0,
           }))}
-        />
-        <FacetFilter
-          label="Holding"
-          selected={scope ? [scope] : []}
-          // Single-valued by nature: "holding a space" and "on readiness hold" are different
-          // questions, and selecting both would mean neither.
-          onChange={(next) => setScope(next[next.length - 1] ?? '')}
-          options={[
-            { value: 'live', label: 'Holding a space' },
-            { value: 'held', label: 'On readiness hold' },
-          ]}
         />
       </FilterBar>
 

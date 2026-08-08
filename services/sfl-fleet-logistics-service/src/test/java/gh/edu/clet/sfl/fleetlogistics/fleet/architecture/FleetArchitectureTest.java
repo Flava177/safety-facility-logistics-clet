@@ -1,15 +1,21 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.architecture;
 
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.classes;
+import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.methods;
 import static com.tngtech.archunit.lang.syntax.ArchRuleDefinition.noClasses;
 
+import com.tngtech.archunit.base.DescribedPredicate;
 import com.tngtech.archunit.core.domain.JavaClasses;
+import com.tngtech.archunit.core.domain.JavaMethod;
+import com.tngtech.archunit.core.domain.JavaModifier;
 import com.tngtech.archunit.core.importer.ClassFileImporter;
 import com.tngtech.archunit.core.importer.ImportOption;
 import com.tngtech.archunit.lang.ArchRule;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.springframework.transaction.annotation.Transactional;
 
 /**
  * The dependency rule, enforced.
@@ -134,6 +140,42 @@ class FleetArchitectureTest {
                 .and().areTopLevelClasses()
                 .should().beInterfaces()
                 .because("a port is a contract the application owns and infrastructure implements")
+                .check(fleetClasses);
+    }
+
+    /**
+     * The rule that would have caught two 500s before anyone clicked anything.
+     *
+     * <p>{@code JpaAuditAdapter.record} is declared {@code MANDATORY}, deliberately: an audit row must
+     * commit or roll back with the operation it describes, so it has to join a transaction it did not
+     * start. The consequence is that a public method writing audit with no transaction of its own does
+     * not degrade - it throws {@code IllegalTransactionStateException} before doing any work, and the
+     * caller sees an unexplained server error. That is what {@code recordAccess} on evidence did, and
+     * {@code replay} on the integration inbox did the same thing for the same reason.
+     *
+     * <p>Public methods only. A private or package-private helper that writes audit is called from a
+     * public method that owns the boundary, which is the normal shape here and not worth outlawing;
+     * a public one is an entry point, and an entry point has no caller to inherit a transaction from.
+     */
+    @Test
+    @DisplayName("a public method that writes audit declares a transaction")
+    void public_audit_writers_are_transactional() {
+        DescribedPredicate<JavaMethod> writeAuditPublicly =
+                new DescribedPredicate<>("are public and call AuditPort.record") {
+                    @Override
+                    public boolean test(JavaMethod method) {
+                        return method.getModifiers().contains(JavaModifier.PUBLIC)
+                                && method.getMethodCallsFromSelf().stream()
+                                        .anyMatch(call -> "record".equals(call.getName())
+                                                && call.getTargetOwner().isAssignableTo(AuditPort.class));
+                    }
+                };
+
+        methods()
+                .that(writeAuditPublicly)
+                .should().beAnnotatedWith(Transactional.class)
+                .because("AuditPort.record is MANDATORY, so an entry point that writes audit without a "
+                        + "transaction fails outright rather than skipping the audit entry")
                 .check(fleetClasses);
     }
 

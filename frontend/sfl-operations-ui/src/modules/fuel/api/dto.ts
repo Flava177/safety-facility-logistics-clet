@@ -230,6 +230,15 @@ export interface CreatePolicyRequest {
   approvedVendors: string[];
 }
 
+/**
+ * The same rule set, against a policy that already exists.
+ *
+ * <p>`siteCode` is absent because an edit may not move a policy between sites, and the whole set is
+ * sent rather than only the changed fields: several limits are legitimately null, so a partial
+ * update would make "absent" and "no ceiling" the same message.
+ */
+export type UpdatePolicyRequest = Omit<CreatePolicyRequest, 'siteCode'>;
+
 export interface FuelCard {
   id: string;
   siteCode: SiteCodeValue;

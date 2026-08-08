@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
+import QuickFilters from 'shared/components/QuickFilters';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { SelectInput } from 'shared/components/fields';
@@ -82,6 +83,53 @@ const WorkOrderQueuePage = () => {
 
   const overdueCount = rows.filter((order) => order.overdue).length;
 
+  const resetFilters = () => {
+    setSiteCode(defaultSite);
+    setStatus('');
+    setVendorId('');
+  };
+
+  /*
+    "Outstanding only" is not one of four equal filters - it is the question this screen exists to
+    answer, asked on every visit, and it was costing the same open-read-choose as the vendor list.
+    No counts on the options: `openOnly` goes to the server, so the screen cannot know how many
+    "Everything" holds without asking for it, and a number it had to guess at would be worse than
+    none.
+  */
+  const activeFilters: ActiveFilter[] = [
+    ...(siteCode !== defaultSite
+      ? [
+          {
+            key: 'siteCode',
+            label: 'Site',
+            value: siteCode || 'All sites',
+            onClear: () => setSiteCode(defaultSite),
+          },
+        ]
+      : []),
+    ...(status
+      ? [
+          {
+            key: 'status',
+            label: 'Status',
+            value: humaniseCode(status),
+            onClear: () => setStatus(''),
+          },
+        ]
+      : []),
+    ...(vendorId
+      ? [
+          {
+            key: 'vendorId',
+            label: 'Vendor',
+            value:
+              (vendors.data ?? []).find((vendor) => vendor.id === vendorId)?.name ?? 'Selected',
+            onClear: () => setVendorId(''),
+          },
+        ]
+      : []),
+  ];
+
   const columns: Column<WorkOrder>[] = [
     {
       key: 'workOrderNumber',
@@ -155,7 +203,21 @@ const WorkOrderQueuePage = () => {
         crumbs={[{ label: 'Facilities', to: facilitiesPaths.dashboard }, { label: 'Work orders' }]}
       />
 
-      <FilterBar>
+      <FilterBar
+        active={activeFilters}
+        onReset={resetFilters}
+        quickFilters={
+          <QuickFilters
+            label="Which work orders"
+            value={openOnly ? 'open' : 'all'}
+            onChange={(value) => setOpenOnly(value === 'open')}
+            options={[
+              { value: 'open', label: 'Outstanding' },
+              { value: 'all', label: 'Everything' },
+            ]}
+          />
+        }
+      >
         <SiteSelect value={siteCode} onChange={setSiteCode} />
         <SelectInput
           label="Status"
@@ -175,15 +237,6 @@ const WorkOrderQueuePage = () => {
             value: vendor.id,
             label: vendor.name,
           }))}
-        />
-        <SelectInput
-          label="Show"
-          value={openOnly ? 'open' : 'all'}
-          onChange={(value) => setOpenOnly(value === 'open')}
-          options={[
-            { value: 'open', label: 'Outstanding only' },
-            { value: 'all', label: 'Everything' },
-          ]}
         />
       </FilterBar>
 

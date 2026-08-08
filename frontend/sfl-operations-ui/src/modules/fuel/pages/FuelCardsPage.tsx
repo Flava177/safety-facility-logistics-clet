@@ -3,7 +3,7 @@ import type { FuelCard } from 'modules/fuel/api/dto';
 import { FUEL_CARD_STATUSES, type FuelCardStatus } from 'modules/fuel/api/enums';
 import { fuelCardsApi } from 'modules/fuel/api/fuelApi';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { shortId, siteOf } from 'modules/fuel/components/fuelFormat';
 import { canManageFuelCards } from 'modules/fleet/api/access';
 import { humanise } from 'modules/fleet/api/enums';
