@@ -15,6 +15,7 @@ import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
+import { FieldLabelSpacer } from 'shared/components/fields';
 import StatusChip from 'shared/components/StatusChip';
 import { formatDate, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -189,7 +190,14 @@ const FuelPoliciesPage = () => {
       <SectionCard flush>
         <FilterBar onReset={() => setActiveOnly(false)} resetDisabled={!activeOnly}>
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <div className="flex items-end pb-1">
+          {/*
+            `items-end pb-1` here was compensating for the bar aligning at the bottom - it nudged a
+            label-less button up onto the control line by hand. The bar aligns at the top now, so
+            the reserved label line does the same job without a tuned padding that only held for
+            one field height.
+          */}
+          <div>
+            <FieldLabelSpacer />
             <Button
               variant={activeOnly ? 'primary' : 'outline'}
               startIcon="filter"

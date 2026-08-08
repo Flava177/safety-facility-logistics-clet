@@ -12,7 +12,7 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { EnumSelect, FieldLabelSpacer, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -331,7 +331,12 @@ const IntegrationHealthPage = () => {
               title="Replay by message identifier"
               subtitle="For an identifier that came from a log or an incident note rather than the list above"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {/*
+                Top-aligned, because the field carries a helper line and the button does not: under
+                `items-end` that line pushed the input up and left the two on different rows. The
+                button reserves the label's height instead, which puts it on the control line.
+              */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <TextInput
                   label="Integration message ID"
                   value={replayId}
@@ -339,15 +344,20 @@ const IntegrationHealthPage = () => {
                   className="sm:max-w-[420px] sm:flex-1"
                   helperText="Privileged and idempotent - replaying the same message twice is safe."
                 />
-                <Button
-                  variant="primary"
-                  startIcon="refresh"
-                  loading={replaying === replayId.trim()}
-                  disabled={!replayId.trim()}
-                  onClick={() => void replay(replayId.trim(), () => setReplayId(''))}
-                >
-                  Replay
-                </Button>
+                <div className="shrink-0">
+                  <span className="hidden sm:block">
+                    <FieldLabelSpacer />
+                  </span>
+                  <Button
+                    variant="primary"
+                    startIcon="refresh"
+                    loading={replaying === replayId.trim()}
+                    disabled={!replayId.trim()}
+                    onClick={() => void replay(replayId.trim(), () => setReplayId(''))}
+                  >
+                    Replay
+                  </Button>
+                </div>
               </div>
                 </SectionCard>
               </>
