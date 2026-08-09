@@ -322,6 +322,57 @@ class TripApplicationServiceTest {
         assertThat(events.types()).contains(FleetEventType.TRIP_CANCELLED);
     }
 
+    /**
+     * The driver finishes their own journey, and only their own.
+     *
+     * <p>They hold {@code FLEET_TRIP_CLOSE_OWN} rather than {@code FLEET_TRIP_CLOSE}, so the
+     * permission alone decides nothing - every driver holds it. What decides is the binding, exactly
+     * as it does for acknowledgement, and these three cases are the whole rule: your trip, somebody
+     * else's, and a sign-in bound to no driver at all.
+     */
+    @Test
+    @DisplayName("the assigned driver can complete their own trip")
+    void a_driver_closes_their_own_trip() {
+        Trip inProgress = startedTrip();
+
+        Trip closed = service.close(new CloseTripCommand(inProgress.id(), "Delivered and signed for",
+                UUID.randomUUID(), 42_500L, null, boundDriverActor(), SourceChannel.MOBILE));
+
+        assertThat(closed.status()).isEqualTo(TripStatus.COMPLETED);
+        assertThat(closed.endOdometer()).isEqualTo(42_500L);
+        // The fleet office sees it the moment it is written - closure is a record, not a request.
+        assertThat(events.types()).contains(FleetEventType.TRIP_COMPLETED);
+    }
+
+    @Test
+    @DisplayName("a driver cannot complete a trip assigned to somebody else")
+    void a_driver_cannot_close_another_drivers_trip() {
+        DriverProfileReference other = drivers.save(anotherEligibleDriver());
+        Trip trip = service.create(createCommand(vehicle.id(), other.id(), "idem-other"));
+        // The pre-trip inspection is what clears the readiness blocker; without it `start` refuses
+        // and this would prove nothing about who may close.
+        service.recordInspection(inspectionCommand(trip.id(), List.of(), "idem-insp-other"));
+        service.start(new StartTripCommand(trip.id(), 42_100L, null,
+                FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        assertThatThrownBy(() -> service.close(new CloseTripCommand(trip.id(), "Not mine to finish",
+                UUID.randomUUID(), 42_500L, null, boundDriverActor(), SourceChannel.MOBILE)))
+                .isInstanceOf(FleetAuthorizationException.class);
+    }
+
+    @Test
+    @DisplayName("a driver bound to no profile cannot complete anything")
+    void an_unbound_driver_cannot_close() {
+        Trip inProgress = startedTrip();
+
+        // Fail-closed, as with acknowledgement: "we do not know which driver you are" must not read
+        // as "you may be any of them".
+        assertThatThrownBy(() -> service.close(new CloseTripCommand(inProgress.id(), "Delivered",
+                UUID.randomUUID(), 42_500L, null,
+                FleetTestDoubles.driver("nobody-is-bound-to-this", "ACCRA"), SourceChannel.MOBILE)))
+                .isInstanceOf(FleetAuthorizationException.class);
+    }
+
     @Test
     @DisplayName("closure without evidence is blocked with the SRS wording")
     void closure_requires_evidence() {

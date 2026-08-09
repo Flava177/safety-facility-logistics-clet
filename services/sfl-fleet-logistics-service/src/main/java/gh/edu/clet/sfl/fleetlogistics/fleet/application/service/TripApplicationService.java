@@ -311,12 +311,25 @@ public class TripApplicationService {
      * authentication was switched on. See {@link DriverScopeResolver}.
      */
     private void requireOwnAssignment(Trip trip, ActorContext actor) {
+        requireOwnAssignment(trip, actor, SflPermission.FLEET_TRIP_ACKNOWLEDGE,
+                "Only the driver assigned to this trip can confirm or defer it");
+    }
+
+    /**
+     * Refuses unless the actor is the driver bound to this trip.
+     *
+     * <p>Shared by acknowledgement and by a driver's own closure. The permission and the refusal
+     * wording differ between them - one is about answering for a trip, the other about finishing it -
+     * so both are passed in rather than the message being written twice and drifting.
+     */
+    private void requireOwnAssignment(Trip trip, ActorContext actor, SflPermission permission, String refusal) {
         /*
           Resolved as always-narrowed, deliberately. The permission-driven overload would ask "does this
           actor hold a supervising permission?" - and there is no supervising permission for answering
           on somebody's behalf, because nobody may. Passing FLEET_TRIP_ACKNOWLEDGE there would be worse
           than useless: every driver holds it, so every driver would resolve as a supervisor and be
-          waved through with no binding at all, which is the exact opposite of the rule.
+          waved through with no binding at all, which is the exact opposite of the rule. The same is
+          true of FLEET_TRIP_CLOSE_OWN.
         */
         UUID boundDriverId = driverScopes.resolve(actor, true) instanceof DriverScope.Own own
                 ? own.driverId()
@@ -325,13 +338,13 @@ public class TripApplicationService {
             return;
         }
         Map<String, Object> details = new LinkedHashMap<>();
-        details.put("requiredPermission", SflPermission.FLEET_TRIP_ACKNOWLEDGE.name());
+        details.put("requiredPermission", permission.name());
         details.put("siteCode", trip.siteCode().value());
         details.put("resourceType", RESOURCE_TYPE);
         details.put("resourceId", trip.id().toString());
         details.put("reason", boundDriverId == null
                 ? "Your sign-in is not linked to a driver profile, so you cannot answer for a trip"
-                : "Only the driver assigned to this trip can confirm or defer it");
+                : refusal);
         throw new FleetAuthorizationException(details);
     }
 
@@ -383,12 +396,33 @@ public class TripApplicationService {
         return cancelled;
     }
 
-    /** SRS-SFL-S166-02: close with the required reason, evidence and end odometer. */
+    /**
+     * SRS-SFL-S166-02: close with the required reason, evidence and end odometer.
+     *
+     * <h2>Two ways to be allowed, and they are not the same permission</h2>
+     *
+     * <p>A dispatcher holds {@link SflPermission#FLEET_TRIP_CLOSE} and may close any trip at a site
+     * they are scoped to. A driver holds {@link SflPermission#FLEET_TRIP_CLOSE_OWN} and may close
+     * exactly one: the trip they are assigned to.
+     *
+     * <p>The driver route needs the binding checked as well as the permission, for the reason
+     * {@link #requireOwnAssignment} sets out - every driver holds the permission, so a permission
+     * check on its own would let any of them close anybody's journey. The order matters too: the
+     * supervising permission is tried first, so a dispatcher who is also a driver is not refused for
+     * closing a trip that is not personally theirs.
+     */
     @Transactional
     public Trip close(CloseTripCommand command) {
         Trip existing = requireTrip(command.tripId());
-        accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_CLOSE, existing.siteCode(), RESOURCE_TYPE,
-                existing.id().toString());
+        if (accessPolicy.has(command.actor(), SflPermission.FLEET_TRIP_CLOSE)) {
+            accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_CLOSE, existing.siteCode(), RESOURCE_TYPE,
+                    existing.id().toString());
+        } else {
+            accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_CLOSE_OWN, existing.siteCode(),
+                    RESOURCE_TYPE, existing.id().toString());
+            requireOwnAssignment(existing, command.actor(), SflPermission.FLEET_TRIP_CLOSE_OWN,
+                    "Only the driver assigned to this trip can complete it");
+        }
         requireExpectedVersion(existing, command.expectedVersion());
 
         Instant now = clock.instant();

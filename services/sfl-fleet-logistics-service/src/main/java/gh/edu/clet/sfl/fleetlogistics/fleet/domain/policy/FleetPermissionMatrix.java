@@ -141,6 +141,10 @@ public final class FleetPermissionMatrix {
                 SflPermission.FLEET_DRIVER_READ,
                 SflPermission.FLEET_TRIP_READ,
                 SflPermission.FLEET_TRIP_ACKNOWLEDGE,
+                // Their own trip only - the service checks the binding as well as the permission.
+                // The driver is the one person who knows the journey is over and the only one at the
+                // vehicle to read the closing odometer off it.
+                SflPermission.FLEET_TRIP_CLOSE_OWN,
                 SflPermission.FLEET_INSPECTION_RECORD,
                 SflPermission.FLEET_EVIDENCE_REGISTER));
 
