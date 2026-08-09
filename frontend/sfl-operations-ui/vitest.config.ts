@@ -23,6 +23,23 @@ export default defineConfig({
     restoreMocks: true,
 
     /*
+     * The actor a test runs as, stated here rather than inherited from a file that is not in git.
+     *
+     * With no session, `sflActor` falls back to `VITE_SFL_*`, and `.env` - which supplies them on a
+     * developer machine - is gitignored. So `SiteSelect.defaultSite` was `CLET-HQ` locally and the
+     * empty string on CI, and every form that opens on the default site failed `required('Site')`
+     * there. The submit then did nothing at all, which surfaced as "issue was called 0 times" and
+     * reads exactly like a broken request handler.
+     *
+     * That is a whole class of test passing for a reason not present in the repository. Setting it
+     * here makes the suite depend on committed configuration instead, and a checkout is enough to
+     * reproduce what CI does.
+     */
+    env: {
+      VITE_SFL_SITES: 'CLET-HQ',
+    },
+
+    /*
      * Twenty seconds, against a default of five.
      *
      * These are not long-running tests; they are ordinary ones on a slow machine. A dialog test
