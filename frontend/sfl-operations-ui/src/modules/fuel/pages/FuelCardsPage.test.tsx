@@ -150,20 +150,34 @@ describe('FuelCardsPage', () => {
     await user.type(maskedReference, '****9876');
     // Provider is the shared listbox, not a native select, and it opens through a portal -
     // so the options are queried from the document, not from inside the dialog.
-    await user.click(within(dialog).getByRole('combobox', { name: /^provider/i }));
+    const provider = within(dialog).getByRole('combobox', { name: /^provider/i });
+    await user.click(provider);
     await user.click(await screen.findByRole('option', { name: 'TotalEnergies Ghana' }));
+
+    // Asserted before submitting, because the failure mode otherwise is silent. Provider is
+    // required, so a selection that has not committed leaves the form invalid and the submit does
+    // nothing - which surfaces as "issue was called 0 times" and reads like a broken request
+    // handler rather than a click that landed too early. This turns it into a clear failure on the
+    // line that actually went wrong.
+    await waitFor(() => expect(provider).toHaveTextContent('TotalEnergies Ghana'));
+
     await user.click(within(dialog).getByRole('button', { name: /^issue card$/i }));
 
-    await waitFor(() =>
-      expect(fuelCardsApi.issue).toHaveBeenCalledWith(
-        expect.objectContaining({
-          siteCode: 'CLET-HQ',
-          maskedReference: '****9876',
-          provider: 'TOTALENERGIES GHANA',
-          vehicleId: null,
-          driverId: null,
-        }),
-      ),
+    await waitFor(
+      () =>
+        expect(fuelCardsApi.issue).toHaveBeenCalledWith(
+          expect.objectContaining({
+            siteCode: 'CLET-HQ',
+            maskedReference: '****9876',
+            provider: 'TOTALENERGIES GHANA',
+            vehicleId: null,
+            driverId: null,
+          }),
+        ),
+      // The default second is enough on a developer machine and not always on a loaded CI runner:
+      // this passed locally on every run and failed in CI on the first. The mocked client resolves
+      // immediately, so nothing here is waiting on real work - only on React committing.
+      { timeout: 5000 },
     );
     expect(await screen.findByText('****9876 issued.')).toBeInTheDocument();
   });
