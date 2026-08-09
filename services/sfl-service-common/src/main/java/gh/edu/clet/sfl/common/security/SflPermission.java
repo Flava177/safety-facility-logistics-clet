@@ -100,6 +100,24 @@ public enum SflPermission {
      * one trip, the actor's own, and grants nothing over anybody else's.
      */
     FLEET_TRIP_ACKNOWLEDGE,
+    /**
+     * Close a trip that is assigned to you, and only that one.
+     *
+     * <p>The second write a driver holds in the fleet register, and scoped the same way as
+     * {@link #FLEET_TRIP_ACKNOWLEDGE}: it answers for one trip, the actor's own, and grants nothing
+     * over anybody else's. Deliberately not {@link #FLEET_TRIP_CLOSE}, which closes any trip at a
+     * site and belongs to a dispatcher.
+     *
+     * <p>It exists because the driver is the only person who knows the trip is over and the only one
+     * standing at the vehicle to read the odometer off it. Without this the journey stayed open until
+     * somebody at a desk closed it from a message, and the end odometer - which feeds the fuel
+     * consumption and odometer-jump rules - was second-hand by the time it was recorded.
+     *
+     * <p>Holding it is not enough on its own. {@code TripApplicationService.close} still requires the
+     * actor to be the driver bound to the trip, for the same reason acknowledgement does: every
+     * driver holds this permission, so a permission check alone would wave all of them through.
+     */
+    FLEET_TRIP_CLOSE_OWN,
     FLEET_TRIP_CANCEL,
     FLEET_TRIP_CLOSE,
     FLEET_INSPECTION_RECORD,

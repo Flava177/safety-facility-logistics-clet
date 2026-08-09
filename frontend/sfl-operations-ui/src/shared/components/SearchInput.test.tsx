@@ -19,8 +19,19 @@ import SearchInput from './SearchInput';
  * A short real delay is less clever and it terminates.
  */
 
-/** Short enough not to slow the suite, long enough to span the keystrokes of one word. */
-const DELAY = 60;
+/**
+ * Long enough to span the keystrokes of one word, on a machine with other work to do.
+ *
+ * <p>It was 60ms, which held when this file ran alone and broke once the suite grew: `userEvent`
+ * re-renders React on every keystroke, and with several test files in flight the gap between two of
+ * them can exceed a sixtieth of a second. The debounce then fires mid-word and the assertion sees
+ * two commits, which reads as the per-keystroke bug this test exists to catch - a false report of
+ * the exact defect it is guarding.
+ *
+ * <p>Half a second cannot be crossed by scheduling jitter and costs the suite half a second. The
+ * assertion is unchanged and still fails on a component that commits per keystroke.
+ */
+const DELAY = 500;
 
 describe('SearchInput', () => {
   it('commits once for a word typed without pausing', async () => {

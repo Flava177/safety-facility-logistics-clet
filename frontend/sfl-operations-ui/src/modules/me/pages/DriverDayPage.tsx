@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
@@ -7,6 +8,11 @@ import { defaultSite } from 'shared/components/SiteSelect';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { driverLogbooksApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import type { DriverLogbook, FuelTransaction } from 'modules/fuel/api/dto';
+import { tripsApi } from 'modules/fleet/api/fleetApi';
+import type { TripResponse } from 'modules/fleet/api/dto';
+import { CloseTripDialog } from 'modules/fleet/dialogs/tripDialogs';
+import Button from 'shared/components/Button';
+import { useNotifier } from 'shared/components/Notifier';
 
 /**
  * A driver's day - the eight permissions `FLEET_DRIVER` actually holds, and nothing else.
@@ -40,7 +46,28 @@ import type { DriverLogbook, FuelTransaction } from 'modules/fuel/api/dto';
  */
 const DriverDayPage = () => {
   const navigate = useNavigate();
+  const { notifySuccess } = useNotifier();
   const site = defaultSite;
+  const [completing, setCompleting] = useState<TripResponse | null>(null);
+
+  /*
+    The driver's own trips, narrowed by the service and not by this screen.
+
+    `TripQueryService.search` overrides the `driverId` filter with the actor's own for a driver-only
+    actor, so this genuinely is "my assignments" - the same reason the logbook list can make that
+    claim and the fuel list cannot.
+  */
+  const trips = useApiQuery(
+    (signal) => tripsApi.search({ siteCode: site, size: 25 }, signal),
+    [site],
+  );
+
+  const myTrips = trips.data?.content ?? [];
+  /** What is still on you: assigned, under way, or paused. */
+  const activeTrips = myTrips.filter(
+    (trip) => trip.status === 'ASSIGNED' || trip.status === 'IN_PROGRESS' || trip.status === 'ON_HOLD',
+  );
+  const completedTrips = myTrips.filter((trip) => trip.status === 'COMPLETED');
 
   const logbooks = useApiQuery(
     (signal) => driverLogbooksApi.search({ siteCode: site, size: 25 }, signal),
@@ -71,6 +98,42 @@ const DriverDayPage = () => {
     },
   ];
 
+  const tripColumns = (showAction: boolean): Column<TripResponse>[] => [
+    { key: 'tripNumber', header: 'Trip', cell: (row) => row.tripNumber },
+    { key: 'route', header: 'Route', cell: (row) => `${row.origin} → ${row.destination}` },
+    {
+      key: 'when',
+      header: 'Planned',
+      cell: (row) => row.plannedStart?.slice(0, 16).replace('T', ' ') ?? '-',
+    },
+    { key: 'status', header: 'Status', cell: (row) => <StatusChip value={row.status} /> },
+    ...(showAction
+      ? [
+          {
+            key: 'action',
+            header: 'Finish',
+            align: 'right' as const,
+            cell: (row: TripResponse) => (
+              /*
+                Only once it is under way. A trip still ASSIGNED has not been started, and the
+                service refuses a closure from that state - so offering the button there would be
+                offering a refusal.
+              */
+              row.status === 'IN_PROGRESS' ? (
+                <Button size="sm" variant="primary" onClick={() => setCompleting(row)}>
+                  Complete trip
+                </Button>
+              ) : (
+                <span className="text-theme-xs text-gray-500">
+                  {row.status === 'ASSIGNED' ? 'Not started' : 'On hold'}
+                </span>
+              )
+            ),
+          },
+        ]
+      : []),
+  ];
+
   const transactionColumns: Column<FuelTransaction>[] = [
     { key: 'occurredAt', header: 'When', cell: (row) => row.occurredAt?.slice(0, 16).replace('T', ' ') },
     { key: 'quantity', header: 'Quantity', cell: (row) => `${row.quantity} ${row.quantityUnit}` },
@@ -82,8 +145,41 @@ const DriverDayPage = () => {
     <div className="space-y-8">
       <PageHeader
         title="My driving day"
-        subtitle="The logbooks you have open, and the fuel recorded at this site"
+        subtitle="Your assignments, the logbooks you have open, and the fuel recorded at this site"
       />
+
+      <section className="space-y-3">
+        <h2 className="text-lg font-semibold text-slate-800">Your assignments</h2>
+        <DataState
+          loading={trips.loading}
+          error={trips.error}
+          empty={activeTrips.length === 0}
+          emptyTitle="No trip is waiting on you"
+          emptyHint="Assignments appear here once a dispatcher gives you one."
+          onRetry={trips.refetch}
+        >
+          <DataTable
+            columns={tripColumns(true)}
+            rows={activeTrips}
+            getRowId={(row) => row.id}
+          />
+        </DataState>
+      </section>
+
+      {completedTrips.length > 0 && (
+        <section className="space-y-3">
+          <h2 className="text-lg font-semibold text-slate-800">Completed</h2>
+          {/*
+            Shown to the driver as their own record, and visible to the fleet office in the trip
+            register at the same moment - closing writes the trip, it does not queue anything.
+          */}
+          <DataTable
+            columns={tripColumns(false)}
+            rows={completedTrips}
+            getRowId={(row) => row.id}
+          />
+        </section>
+      )}
 
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-800">Logbooks needing you</h2>
@@ -151,6 +247,25 @@ const DriverDayPage = () => {
           />
         </DataState>
       </section>
+      {completing && (
+        <CloseTripDialog
+          open
+          trip={completing}
+          onClose={() => setCompleting(null)}
+          onSaved={() => {
+            trips.refetch();
+            /*
+              The logbook is the point of completing the trip, not an afterthought: it is the
+              record the fuel anti-fraud rules read. Saying so here, with the journey still in
+              mind, is the difference between a logbook filed now and one reconstructed on Friday.
+            */
+            notifySuccess(
+              'Trip completed.',
+              'File the driver logbook for this journey while the details are fresh.',
+            );
+          }}
+        />
+      )}
     </div>
   );
 };

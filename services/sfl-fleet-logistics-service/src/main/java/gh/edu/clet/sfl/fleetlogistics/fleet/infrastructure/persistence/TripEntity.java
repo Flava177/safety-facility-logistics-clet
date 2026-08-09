@@ -84,6 +84,10 @@ public class TripEntity {
     @Column(name = "closure_evidence_id")
     private UUID closureEvidenceId;
 
+    /** Null for trips closed before the column existed; see V32. */
+    @Column(name = "closed_by")
+    private String closedBy;
+
     @Column(name = "start_odometer")
     private Long startOdometer;
 
@@ -167,14 +171,15 @@ public class TripEntity {
         this.lastModifiedBy = trip.metadata().lastModifiedBy();
         this.lastModifiedAt = trip.metadata().lastModifiedAt();
         this.sourceChannel = trip.metadata().sourceChannel();
+        this.closedBy = trip.closedBy();
         this.auditCorrelationId = trip.metadata().auditCorrelationId();
     }
 
     public Trip toDomain() {
         return new Trip(id, tripNumber, vehicleId, driverId, SiteCode.of(siteCode), purpose, origin, destination,
                 operatingMode, DateTimeRange.of(plannedStart, plannedEnd), actualStart, actualEnd, status,
-                statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer,
-                endOdometer,
+                statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, closedBy,
+                startOdometer, endOdometer,
                 new TripAcknowledgement(
                         acknowledgementState == null ? TripAcknowledgementState.PENDING : acknowledgementState,
                         acknowledgementReason, acknowledgedAt, acknowledgedBy),

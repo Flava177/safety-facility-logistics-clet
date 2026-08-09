@@ -14,7 +14,10 @@ import Alert from 'shared/components/Alert';
 import BlockerList from 'shared/components/BlockerList';
 import Button, { IconButton } from 'shared/components/Button';
 import { DateTimeField } from 'shared/components/DateField';
+import EvidenceFileField from 'shared/components/EvidenceFileField';
+import { FleetApiError } from 'shared/errors/FleetApiError';
 import FormDialog from 'shared/components/FormDialog';
+import { evidenceFilesApi } from 'shared/evidence/evidenceFilesApi';
 import SiteSelect from 'shared/components/SiteSelect';
 import {
   EnumSelect,
@@ -557,6 +560,18 @@ export const CloseTripDialog = ({
   onSaved,
   trip,
 }: BaseProps & { trip: TripResponse }) => {
+  /*
+    The document, or one already filed - because a driver closes their own trip now.
+
+    Closure evidence is mandatory and this asked only for an identifier, offering "register it under
+    Evidence & audit first if the list is empty". A driver has no Evidence & audit screen, so for the
+    person who now finishes most trips that instruction described a step they cannot take, on a field
+    they cannot leave blank. They do hold FLEET_EVIDENCE_REGISTER, so the upload is theirs to make.
+  */
+  const [file, setFile] = useState<File | null>(null);
+  const [useExisting, setUseExisting] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
   const form = useFleetForm({
     initialValues: {
       closureReason: '',
@@ -566,7 +581,8 @@ export const CloseTripDialog = ({
     },
     schema: {
       closureReason: compose(required('Closure reason'), maxLength('Closure reason', 1000)),
-      closureEvidenceId: required('Closure evidence'),
+      // Only when picking one already filed; an upload has no id to require until it has happened.
+      closureEvidenceId: useExisting ? required('Closure evidence') : undefined,
       endOdometer: compose(required('End odometer'), nonNegativeInteger('End odometer')),
     },
     crossFieldValidate: (values) => {
@@ -578,9 +594,35 @@ export const CloseTripDialog = ({
       return message ? { endOdometer: message } : {};
     },
     onSubmit: async (values) => {
+      // Uploaded before the closure, so a refused file cannot leave a trip closed citing evidence
+      // that was never stored. The reverse order would leave exactly that.
+      let evidenceId = values.closureEvidenceId.trim();
+      if (!useExisting && file) {
+        setUploading(true);
+        try {
+          evidenceId = (
+            await evidenceFilesApi.upload({
+              siteCode: String(trip.siteCode),
+              relatedRecordType: 'Trip',
+              relatedRecordId: trip.id,
+              evidenceType: 'TRIP_CLOSURE',
+              retentionClass: 'OPERATIONAL_1_YEAR',
+              file,
+            })
+          ).id;
+        } finally {
+          setUploading(false);
+        }
+      }
+      if (!evidenceId) {
+        throw FleetApiError.validation(
+          'Attach the closure evidence, or choose one already filed against this trip.',
+        );
+      }
+
       await tripsApi.close(trip.id, {
         closureReason: values.closureReason.trim(),
-        closureEvidenceId: values.closureEvidenceId.trim(),
+        closureEvidenceId: evidenceId,
         endOdometer: Number(values.endOdometer),
         expectedVersion: trip.version,
       });
@@ -603,6 +645,13 @@ export const CloseTripDialog = ({
       submitting={form.submitting}
       formError={form.formError}
       summary={
+        // The document goes up before the closure, which on a phone at the roadside is slow enough
+        // that a silent button looks broken. It replaces the summary rather than sitting beside it:
+        // those figures are what the operator checks *before* submitting, and by the time this shows
+        // they have already done so.
+        uploading ? (
+          'Uploading the evidence…'
+        ) : (
         <FormSummary
           items={[
             {
@@ -617,9 +666,13 @@ export const CloseTripDialog = ({
             // The whole point of the line. An odometer reading is unremarkable in isolation; a trip
             // that covered 38,000 km is not, and this is the last place to notice before closure.
             { label: 'Covered', value: distanceCovered, emphasis: true },
-            { label: 'Evidence', value: form.values.closureEvidenceId ? 'Selected' : null },
+            {
+              label: 'Evidence',
+              value: file ? file.name : form.values.closureEvidenceId ? 'Selected' : null,
+            },
           ]}
         />
+        )
       }
       onClose={onClose}
       onSubmit={form.submit}
@@ -641,16 +694,44 @@ export const CloseTripDialog = ({
             : undefined,
         )}
       />
-      <EvidenceSelect
-        label="Closure evidence"
-        required
-        search={searchEvidenceChoices}
-        relatedRecordType="Trip"
-        relatedRecordId={trip.id}
-        value={form.values.closureEvidenceId}
-        onChange={(value) => form.setValue('closureEvidenceId', value)}
-        {...form.fieldProps('closureEvidenceId')}
-      />
+      {useExisting ? (
+        <div>
+          <EvidenceSelect
+            label="Closure evidence"
+            required
+            search={searchEvidenceChoices}
+            relatedRecordType="Trip"
+            relatedRecordId={trip.id}
+            value={form.values.closureEvidenceId}
+            onChange={(value) => form.setValue('closureEvidenceId', value)}
+            {...form.fieldProps('closureEvidenceId')}
+          />
+          <Button
+            size="sm"
+            variant="ghost"
+            className="mt-1.5"
+            onClick={() => {
+              setUseExisting(false);
+              form.setValue('closureEvidenceId', '');
+            }}
+          >
+            Upload a new document instead
+          </Button>
+        </div>
+      ) : (
+        <div>
+          <EvidenceFileField
+            label="Closure evidence"
+            required
+            value={file}
+            onChange={setFile}
+            helperText="The delivery note, signed manifest or photograph that closes this journey."
+          />
+          <Button size="sm" variant="ghost" className="mt-1.5" onClick={() => setUseExisting(true)}>
+            Use a document already filed against this trip
+          </Button>
+        </div>
+      )}
       <TextAreaInput
         label="Closure reason"
         required

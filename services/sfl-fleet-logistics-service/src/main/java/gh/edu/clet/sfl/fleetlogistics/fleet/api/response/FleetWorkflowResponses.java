@@ -41,6 +41,12 @@ public final class FleetWorkflowResponses {
             String cancellationReason,
             String closureReason,
             UUID closureEvidenceId,
+            /**
+             * Who ended the journey. Null while it is open, and for trips closed before this was
+             * recorded. A dashboard compares it with the assigned driver to tell a driver's own
+             * closure from one an officer made on their behalf.
+             */
+            String closedBy,
             Long startOdometer,
             Long endOdometer,
             Long distanceCovered,
