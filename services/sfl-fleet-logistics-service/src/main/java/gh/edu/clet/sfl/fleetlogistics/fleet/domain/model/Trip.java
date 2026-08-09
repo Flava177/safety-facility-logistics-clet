@@ -39,6 +39,15 @@ public record Trip(
         String cancellationReason,
         String closureReason,
         UUID closureEvidenceId,
+        /**
+         * The actor that closed the trip, or null while it is open.
+         *
+         * <p>On the record rather than only in the audit trail, because it is compared: an officer
+         * closing a driver's trip is a legitimate recovery path and a different fact about the end
+         * odometer than the driver closing it at the vehicle, and the two used to look identical.
+         * Null also means "closed before this was recorded" for trips that predate it.
+         */
+        String closedBy,
         Long startOdometer,
         Long endOdometer,
         TripAcknowledgement acknowledgement,
@@ -68,7 +77,7 @@ public record Trip(
             String destination, OperatingMode operatingMode, DateTimeRange plannedPeriod,
             RecordMetadata metadata) {
         return new Trip(id, tripNumber, null, null, siteCode, purpose, origin, destination, operatingMode,
-                plannedPeriod, null, null, TripStatus.PLANNED, null, null, null, null, null, null, null,
+                plannedPeriod, null, null, TripStatus.PLANNED, null, null, null, null, null, null, null, null,
                 TripAcknowledgement.pending(), metadata);
     }
 
@@ -91,8 +100,8 @@ public record Trip(
                 ? acknowledgement
                 : TripAcknowledgement.pending();
         return copy(newVehicleId, newDriverId, plannedPeriod, actualStart, actualEnd, TripStatus.ASSIGNED,
-                statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer,
-                endOdometer, carried, newMetadata);
+                statusBeforeHold, holdReason, cancellationReason, closureReason, closureEvidenceId, closedBy,
+                startOdometer, endOdometer, carried, newMetadata);
     }
 
     /**
@@ -123,8 +132,8 @@ public record Trip(
                     "reason", "A trip with no assigned driver cannot be acknowledged"));
         }
         return copy(vehicleId, driverId, plannedPeriod, actualStart, actualEnd, status, statusBeforeHold,
-                holdReason, cancellationReason, closureReason, closureEvidenceId, startOdometer, endOdometer,
-                answer, newMetadata);
+                holdReason, cancellationReason, closureReason, closureEvidenceId, closedBy, startOdometer,
+                endOdometer, answer, newMetadata);
     }
 
     /**
@@ -201,8 +210,11 @@ public record Trip(
         if (startOdometer != null && endOdometerReading < startOdometer) {
             throw OdometerRegressionException.of(startOdometer, endOdometerReading);
         }
+        // Taken from the stamp rather than passed separately: the actor that modified the record is
+        // by definition the actor that closed it, and two sources for one fact drift.
         return copy(vehicleId, driverId, plannedPeriod, actualStart, completedAt, TripStatus.COMPLETED, null, null,
-                cancellationReason, reason.strip(), evidenceId, startOdometer, endOdometerReading, newMetadata);
+                cancellationReason, reason.strip(), evidenceId, newMetadata.lastModifiedBy(), startOdometer,
+                endOdometerReading, acknowledgement, newMetadata);
     }
 
     /** True while the trip holds its vehicle and driver against the planned period. */
@@ -221,18 +233,18 @@ public record Trip(
             Long newStartOdometer, Long newEndOdometer, RecordMetadata newMetadata) {
         return copy(newVehicleId, newDriverId, newPlannedPeriod, newActualStart, newActualEnd, newStatus,
                 newStatusBeforeHold, newHoldReason, newCancellationReason, newClosureReason, newClosureEvidenceId,
-                newStartOdometer, newEndOdometer, acknowledgement, newMetadata);
+                closedBy, newStartOdometer, newEndOdometer, acknowledgement, newMetadata);
     }
 
     private Trip copy(UUID newVehicleId, UUID newDriverId, DateTimeRange newPlannedPeriod, Instant newActualStart,
             Instant newActualEnd, TripStatus newStatus, TripStatus newStatusBeforeHold, String newHoldReason,
-            String newCancellationReason, String newClosureReason, UUID newClosureEvidenceId,
+            String newCancellationReason, String newClosureReason, UUID newClosureEvidenceId, String newClosedBy,
             Long newStartOdometer, Long newEndOdometer, TripAcknowledgement newAcknowledgement,
             RecordMetadata newMetadata) {
         return new Trip(id, tripNumber, newVehicleId, newDriverId, siteCode, purpose, origin, destination,
                 operatingMode, newPlannedPeriod, newActualStart, newActualEnd, newStatus, newStatusBeforeHold,
-                newHoldReason, newCancellationReason, newClosureReason, newClosureEvidenceId, newStartOdometer,
-                newEndOdometer, newAcknowledgement, newMetadata);
+                newHoldReason, newCancellationReason, newClosureReason, newClosureEvidenceId, newClosedBy,
+                newStartOdometer, newEndOdometer, newAcknowledgement, newMetadata);
     }
 
     private static String requireText(String value, String field, int maxLength) {

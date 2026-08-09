@@ -340,6 +340,10 @@ class TripApplicationServiceTest {
 
         assertThat(closed.status()).isEqualTo(TripStatus.COMPLETED);
         assertThat(closed.endOdometer()).isEqualTo(42_500L);
+        // Named on the record, not only in the audit trail. Matching the driver's own staff
+        // reference is what tells this apart from an officer closing it on their behalf, and the
+        // two used to look identical.
+        assertThat(closed.closedBy()).isEqualTo(driver.staffReference());
         // The fleet office sees it the moment it is written - closure is a record, not a request.
         assertThat(events.types()).contains(FleetEventType.TRIP_COMPLETED);
     }
@@ -382,6 +386,20 @@ class TripApplicationServiceTest {
                 42_500L, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
                 .isInstanceOf(ClosureEvidenceMissingException.class)
                 .hasMessage(FleetErrorCode.FLEET_CLOSURE_EVIDENCE_MISSING.message());
+    }
+
+    @Test
+    @DisplayName("an officer closing on a driver's behalf is recorded as the officer, not the driver")
+    void closing_on_behalf_names_the_officer() {
+        Trip inProgress = startedTrip();
+
+        Trip closed = service.close(new CloseTripCommand(inProgress.id(), "Driver unreachable",
+                EVIDENCE_ID, 42_500L, null, FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB));
+
+        // The recovery path stays open - a trip nobody can close holds its vehicle forever - but it
+        // no longer looks like the driver ended the journey at the vehicle.
+        assertThat(closed.closedBy()).isNotEqualTo(driver.staffReference());
+        assertThat(closed.status()).isEqualTo(TripStatus.COMPLETED);
     }
 
     @Test

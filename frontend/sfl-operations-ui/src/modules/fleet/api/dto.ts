@@ -317,6 +317,14 @@ export interface TripResponse {
   cancellationReason: string | null;
   closureReason: string | null;
   closureEvidenceId: string | null;
+  /**
+   * Who ended the journey. Null while it is open, and for trips closed before it was recorded.
+   *
+   * Compared against the assigned driver so a screen can tell a driver's own closure from one an
+   * officer made on their behalf - the two used to be indistinguishable on the record, and they are
+   * different facts about where the end odometer came from.
+   */
+  closedBy: string | null;
   startOdometer: number | null;
   endOdometer: number | null;
   distanceCovered: number | null;

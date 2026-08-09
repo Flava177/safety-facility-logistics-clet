@@ -347,6 +347,27 @@ const TripDetailPage = () => {
                                 },
                               ]
                             : []),
+                          /*
+                            Who ended the journey, and whether that was the driver.
+
+                            The end odometer is an input to the fuel consumption and odometer-jump
+                            rules, and a reading taken at the vehicle is a different fact from one
+                            relayed by phone and entered at a desk. Both were recorded identically
+                            until `closedBy` existed, so this is the line that tells them apart.
+                            Matched on the staff reference because that is what an actor id is.
+                          */
+                          ...(trip.data.closedBy
+                            ? [
+                                {
+                                  label: 'Closed by',
+                                  value:
+                                    driver.data && driver.data.staffReference === trip.data.closedBy
+                                      ? `${trip.data.closedBy} (the assigned driver)`
+                                      : `${trip.data.closedBy} - on the driver's behalf`,
+                                  span: 2 as const,
+                                },
+                              ]
+                            : []),
                           ...(trip.data.cancellationReason
                             ? [
                                 {
