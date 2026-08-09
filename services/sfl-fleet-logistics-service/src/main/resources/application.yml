@@ -31,13 +31,18 @@ spring:
     locations: classpath:db/migration
   servlet:
     multipart:
-      # The first line of defence for evidence uploads, and the only one that acts before the bytes
-      # are in the heap. `UploadedFileScanner` enforces 5 MB on the content itself; these are set
-      # slightly above it so an oversized file is refused by the scanner with an explanation rather
-      # than by the container with a bare 500. The request ceiling has the headroom for the multipart
-      # envelope and the handful of form fields that travel with the file.
-      max-file-size: 6MB
-      max-request-size: 7MB
+      # The outer bound for every upload, and it must clear the *larger* of the two real limits.
+      #
+      # There are two, because a photograph and a data file are different things: evidence is capped
+      # at 5 MB by `UploadedFileScanner`, a bulk CSV import at 20 MB by `BulkImportPolicy`. Both
+      # refuse with an error code naming the file and the ceiling it broke.
+      #
+      # This sits above the higher of them on purpose. The container answers an oversized multipart
+      # by failing the request before any handler runs - no error code, no field, nothing an operator
+      # can act on - so it is the last resort, not the enforcement. Set it below 20 MB and a
+      # legitimate import fails that way instead of with an explanation.
+      max-file-size: 21MB
+      max-request-size: 22MB
       # Spool to disk past 1 MB instead of holding whole photographs in memory: a dozen drivers
       # uploading pump images at once is the normal case, not the peak.
       file-size-threshold: 1MB

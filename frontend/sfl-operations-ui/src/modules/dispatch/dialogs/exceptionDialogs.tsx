@@ -3,6 +3,7 @@ import { ExceptionAction, dispatchExceptionsApi, scanImportsApi } from 'modules/
 import { SCAN_CSV_HEADERS } from 'modules/dispatch/api/enums';
 import { EXCEPTION_RULES, exceptionClosureBlockers } from 'modules/dispatch/api/workflow';
 import FileField from 'shared/components/FileField';
+import { MAX_IMPORT_BYTES } from 'shared/evidence/evidenceFilesApi';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
@@ -297,10 +298,12 @@ export const ScanImportDialog = ({
         />
       </div>
 
+      {/* A scanner's whole batch answers to the import ceiling, not the evidence one. */}
       <FileField
         label="Scan CSV"
         required
         accept=".csv,text/csv"
+        maxBytes={MAX_IMPORT_BYTES}
         value={form.values.file}
         onChange={(file) => form.setValue('file', file)}
         {...form.fieldProps('file', 'A header row plus at least one scanned row.')}

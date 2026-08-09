@@ -2,6 +2,7 @@ import { ImportResult } from 'modules/fuel/api/dto';
 import { CSV_OPTIONAL_HEADERS, CSV_REQUIRED_HEADERS } from 'modules/fuel/api/enums';
 import { fuelImportsApi } from 'modules/fuel/api/fuelApi';
 import FileField from 'shared/components/FileField';
+import { MAX_IMPORT_BYTES } from 'shared/evidence/evidenceFilesApi';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
@@ -91,10 +92,15 @@ export const CsvImportDialog = ({
         />
       </div>
 
+      {/*
+        A provider's monthly ledger, not a photograph, so it answers to the import ceiling rather
+        than the evidence one - `BulkImportPolicy` on the service enforces the same number.
+      */}
       <FileField
         label="CSV file"
         required
         accept=".csv,text/csv"
+        maxBytes={MAX_IMPORT_BYTES}
         value={form.values.file}
         onChange={(file) => form.setValue('file', file)}
         {...form.fieldProps('file', 'A header row plus at least one data row.')}

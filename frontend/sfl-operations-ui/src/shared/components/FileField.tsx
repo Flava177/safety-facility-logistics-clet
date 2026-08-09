@@ -1,5 +1,5 @@
 import { useId, useRef, useState } from 'react';
-import { MAX_UPLOAD_MB, sizeRejectionReason } from 'shared/evidence/evidenceFilesApi';
+import { MAX_UPLOAD_BYTES, sizeRejectionReason } from 'shared/evidence/evidenceFilesApi';
 import Button from './Button';
 import Icon from './Icon';
 import { FieldShell } from './fields';
@@ -15,6 +15,15 @@ interface FileFieldProps {
   helperText?: string;
   disabled?: boolean;
   onBlur?: () => void;
+  /**
+   * The ceiling for this field, defaulting to the evidence cap.
+   *
+   * <p>A photograph and a data file are different things arriving through the same control. The
+   * default suits the common case - a receipt, a certificate - and a bulk import passes
+   * `MAX_IMPORT_BYTES`. Whatever is passed must match what the service enforces for that endpoint,
+   * or the field promises something the upload will not honour.
+   */
+  maxBytes?: number;
 }
 
 /**
@@ -56,6 +65,7 @@ const FileField = ({
   helperText,
   disabled,
   onBlur,
+  maxBytes = MAX_UPLOAD_BYTES,
 }: FileFieldProps) => {
   const id = useId();
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,7 +79,7 @@ const FileField = ({
   };
 
   const choose = (chosen: File | null) => {
-    const reason = chosen ? sizeRejectionReason(chosen) : null;
+    const reason = chosen ? sizeRejectionReason(chosen, maxBytes) : null;
     setRefusal(reason);
     if (reason) {
       // The refused file is not handed to the form at all. Reporting it while leaving it selected
@@ -89,7 +99,7 @@ const FileField = ({
       label={label}
       required={required}
       error={showError}
-      helperText={refusal ?? helperText ?? `Up to ${MAX_UPLOAD_MB} MB.`}
+      helperText={refusal ?? helperText ?? `Up to ${Math.round(maxBytes / (1024 * 1024))} MB.`}
     >
       <div
         className={cn(

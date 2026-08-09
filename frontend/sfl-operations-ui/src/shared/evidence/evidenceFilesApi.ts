@@ -40,6 +40,18 @@ export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /** The cap in whole megabytes, so no message restates the number and gets it wrong. */
 export const MAX_UPLOAD_MB = MAX_UPLOAD_BYTES / (1024 * 1024);
 
+/**
+ * The ceiling for a bulk data import, which is not the ceiling for a photograph.
+ *
+ * Mirrors `BulkImportPolicy.MAX_BYTES`. The evidence cap above is sized for a phone photograph of a
+ * pump display; a provider's monthly CSV or a scanner's whole batch is a different thing arriving
+ * through the same control, and briefly the two shared a limit that would have refused a real
+ * import for being what it is.
+ */
+export const MAX_IMPORT_BYTES = 20 * 1024 * 1024;
+
+export const MAX_IMPORT_MB = MAX_IMPORT_BYTES / (1024 * 1024);
+
 export const ACCEPTED_FILE_DESCRIPTION = `PDF, JPG or JPEG, up to ${MAX_UPLOAD_MB} MB`;
 
 /**
@@ -50,12 +62,13 @@ export const ACCEPTED_FILE_DESCRIPTION = `PDF, JPG or JPEG, up to ${MAX_UPLOAD_M
  * took files of any size at all. The bytes still have to survive the service's own check; this only
  * moves the refusal to the moment the file is picked.
  */
-export const sizeRejectionReason = (file: File): string | null => {
+export const sizeRejectionReason = (file: File, maxBytes: number = MAX_UPLOAD_BYTES): string | null => {
   if (file.size === 0) {
     return 'That file is empty.';
   }
-  if (file.size > MAX_UPLOAD_BYTES) {
-    return `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${MAX_UPLOAD_MB} MB.`;
+  if (file.size > maxBytes) {
+    const limitMb = Math.round(maxBytes / (1024 * 1024));
+    return `That file is ${(file.size / (1024 * 1024)).toFixed(1)} MB. The limit is ${limitMb} MB.`;
   }
   return null;
 };

@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fuel.application.service;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.BulkImportPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyProcessedException;
@@ -49,6 +50,10 @@ public class FuelImportService {
      */
     public ImportResult importCsv(String site, String source, String fileName, byte[] content, ActorContext actor) {
         access.require(actor, SflPermission.FUEL_TRANSACTION_IMPORT, site, "FuelImportBatch", null);
+        // Before the digest, because hashing an unbounded array to find out it is unbounded is work
+        // done for nothing - and before the batch row exists, so an oversized file leaves no record
+        // claiming an import that never ran.
+        BulkImportPolicy.requireWithinLimit(fileName, content);
         String siteCode = SiteCode.of(site).value();
         String hash = sha256(content);
 
