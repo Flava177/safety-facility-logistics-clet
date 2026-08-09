@@ -23,12 +23,14 @@ jobs:
       # One database per service, matching the schema-per-service boundary. They are separate
       # containers rather than separate schemas in one, so a test cannot accidentally reach across a
       # boundary the architecture forbids and still pass.
+      # Facilities needs *two* databases, and this container creates the first. The migration suite
+      # gets its own, created in a step below - `POSTGRES_DB` only ever makes one.
       facilities-db:
         image: postgres:16-alpine
         env:
           POSTGRES_USER: sfl
           POSTGRES_PASSWORD: sfl
-          POSTGRES_DB: sfl_facilities_migration_test
+          POSTGRES_DB: sfl_facilities_service_e2e
         ports: ['55441:5432']
         options: >-
           --health-cmd "pg_isready -U sfl"
@@ -57,7 +59,12 @@ jobs:
           --health-interval 10s --health-timeout 5s --health-retries 10
 
     env:
-      SFL_FACILITIES_TEST_DB_URL: jdbc:postgresql://localhost:55441/sfl_facilities_migration_test
+      # Two variables, two databases, and they must not be the same one. The e2e suite fills its
+      # database with fixtures; the migration suite proves V1..V23 apply to an *empty* schema and
+      # refuses to run against one holding rows. Pointing both at `sfl_facilities_migration_test`
+      # made the second find the first's twelve sites and fail, correctly, on a real invariant.
+      SFL_FACILITIES_TEST_DB_URL: jdbc:postgresql://localhost:55441/sfl_facilities_service_e2e
+      SFL_FACILITIES_MIGRATION_TEST_DB_URL: jdbc:postgresql://localhost:55441/sfl_facilities_migration_test
       SFL_FLEET_LOGISTICS_TEST_DB_URL: jdbc:postgresql://localhost:55443/sfl__fleet_vehicle_service_e2e
       SFL_SAFETY_SECURITY_TEST_DB_URL: jdbc:postgresql://localhost:55442/sfl_safety_security_service_e2e
       SFL_TEST_DB_USERNAME: sfl
@@ -82,6 +89,15 @@ jobs:
       # @SpringBootApplication class and no security configuration, meaning it could not start at all
       # while four documents described it as a service that boots. A module outside the build is a
       # module nothing can tell you about. Prefer `-pl` listing every module over a shorter list.
+      # `POSTGRES_DB` creates one database per container, and facilities needs two. The suffix is not
+      # cosmetic: the migration suite only empties a database whose name ends in `_migration_test`,
+      # so it can never be pointed at one holding anything worth keeping.
+      - name: Create the facilities migration-test database
+        run: |
+          PGPASSWORD=sfl psql -h localhost -p 55441 -U sfl -d postgres \
+            -c "CREATE DATABASE sfl_facilities_migration_test OWNER sfl;"
+        shell: bash
+
       - name: Build and test
         working-directory: services
         run: ../mvnw -B clean test -pl sfl-service-common,sfl-facilities-service,sfl-safety-security-service,sfl-fleet-logistics-service
@@ -126,9 +142,14 @@ jobs:
         working-directory: frontend/sfl-operations-ui
     steps:
       - uses: actions/checkout@v4
+      # 22, not 20. jsdom loads undici, which calls `webidl.util.markAsUncloneable` - a function that
+      # does not exist before Node 20.19, so every one of the 27 test files died at import with
+      # `TypeError: webidl.util.markAsUncloneable is not a function` and vitest reported unhandled
+      # errors rather than failures. Vite 7 asks for `^20.19.0 || >=22.12.0` for the same reason, and
+      # Node 20 left support in April 2026, so pinning to the 20 line was borrowing trouble twice.
       - uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '22'
           cache: npm
           cache-dependency-path: frontend/sfl-operations-ui/package-lock.json
       - run: npm ci
