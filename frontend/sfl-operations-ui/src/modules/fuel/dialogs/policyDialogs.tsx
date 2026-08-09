@@ -195,6 +195,60 @@ const policySchema = {
   ),
 };
 
+/**
+ * The fields that decide an outcome, and therefore the ones that need a new version when they move.
+ *
+ * <p>Mirrors `FuelPolicy.hasSameRulesAs` on the service, which is the authority - this copy exists
+ * so the operator is told on the field rather than by a refusal. Name and the effective period are
+ * absent from both: renaming a policy does not change how it judges, and the period decides which
+ * policy applies rather than what it does.
+ */
+const RULE_FIELDS = [
+  'maxPerTransaction',
+  'dailyLimit',
+  'monthlyLimit',
+  'tankCapacity',
+  'minConsumption',
+  'maxConsumption',
+  'odometerJumpTolerance',
+  'receiptRequired',
+  'receiptGraceHours',
+  'materialityAmount',
+  'anomalySlaHours',
+  'costVarianceTolerance',
+  'repeatedPatternWindowHours',
+  'repeatedPatternThreshold',
+  'allowedFuelProducts',
+  'approvedVendors',
+] as const satisfies readonly (keyof PolicyValues)[];
+
+/**
+ * Whether any rule field differs, comparing numbers as numbers.
+ *
+ * <p>`'50'` and `'50.00'` are the same ceiling and a string comparison calls them different, which
+ * would demand a version bump for an edit that changed nothing. The service compares with
+ * `BigDecimal.compareTo` for the same reason.
+ */
+const rulesDiffer = (original: PolicyValues, current: PolicyValues): boolean =>
+  RULE_FIELDS.some((field) => {
+    const before = original[field];
+    const after = current[field];
+    if (typeof before === 'boolean' || typeof after === 'boolean') {
+      return before !== after;
+    }
+    const beforeText = String(before).trim();
+    const afterText = String(after).trim();
+    if (beforeText === afterText) {
+      return false;
+    }
+    const beforeNumber = Number(beforeText);
+    const afterNumber = Number(afterText);
+    if (beforeText !== '' && afterText !== '' && !Number.isNaN(beforeNumber) && !Number.isNaN(afterNumber)) {
+      return beforeNumber !== afterNumber;
+    }
+    return true;
+  });
+
 const policyCrossFieldValidate = (values: PolicyValues): Record<string, string> => {
   const errors: Record<string, string> = {};
   // `FuelPolicy` refuses `effectiveTo` that does not strictly follow `effectiveFrom`.
@@ -488,16 +542,34 @@ interface EditPolicyDialogProps {
  * old reconciliation should be able to tell the two apart.
  */
 export const EditPolicyDialog = ({ open, onClose, onSaved, policy }: EditPolicyDialogProps) => {
+  const original = valuesOf(policy);
+
   const form = useFleetForm<PolicyValues>({
-    initialValues: valuesOf(policy),
+    initialValues: original,
     schema: policySchema,
-    crossFieldValidate: policyCrossFieldValidate,
+    crossFieldValidate: (values) => {
+      const errors = policyCrossFieldValidate(values);
+      // The service refuses this with FUEL_POLICY_VERSION_NOT_ADVANCED, and it is right to: a
+      // reconciliation stores the policy id and version and nothing else about the rules, so a
+      // limit changed under the same version makes that pair describe two different rule sets.
+      // Caught here as well so the operator is told while still holding the form, on the field
+      // that fixes it, rather than by a refusal after submitting.
+      if (rulesDiffer(original, values) && values.policyVersion === original.policyVersion) {
+        errors.policyVersion = `Give this a new version - ${
+          Number(original.policyVersion) + 1
+        } - because a limit changed and past reconciliations record version ${original.policyVersion}.`;
+      }
+      return errors;
+    },
     onSubmit: async (values) => {
       const saved = await fuelPoliciesApi.update(policy.id, toRequestBody(values));
       onSaved(saved);
       onClose();
     },
   });
+
+  const versionNeedsBump =
+    rulesDiffer(original, form.values) && form.values.policyVersion === original.policyVersion;
 
   return (
     <FormDialog
@@ -511,10 +583,19 @@ export const EditPolicyDialog = ({ open, onClose, onSaved, policy }: EditPolicyD
       onClose={onClose}
       onSubmit={form.submit}
     >
-      <Alert variant="info" title={`${policy.siteCode} · version ${policy.policyVersion}`}>
-        Widening the period is checked against the other active policies at this site, this one
-        excepted. Transactions reconciled before now keep the version they were judged under.
-      </Alert>
+      {versionNeedsBump ? (
+        <Alert variant="warning" title="This revision needs a new version number">
+          A limit has changed. Every reconciliation records the policy version that judged it and
+          nothing else about the rules, so reusing version {policy.policyVersion} would make that
+          number mean one thing for the runs before this edit and another for the runs after. Set
+          the version to {Number(policy.policyVersion) + 1}.
+        </Alert>
+      ) : (
+        <Alert variant="info" title={`${policy.siteCode} · version ${policy.policyVersion}`}>
+          Widening the period is checked against the other active policies at this site, this one
+          excepted. Transactions reconciled before now keep the version they were judged under.
+        </Alert>
+      )}
 
       <PolicyFields form={form} />
     </FormDialog>

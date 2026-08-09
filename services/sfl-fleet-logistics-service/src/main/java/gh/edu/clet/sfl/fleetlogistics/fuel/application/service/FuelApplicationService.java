@@ -21,6 +21,7 @@ import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelFleetReferencePo
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelOutboxAdminPort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOverlapException;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyVersionNotAdvancedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
@@ -135,9 +136,16 @@ public class FuelApplicationService {
      * The alternative - forcing a new policy for every correction - fills the register with versions
      * that differ by a typo in a name, and the period-overlap rule then refuses most of them.
      *
-     * <p>{@code policyVersion} is the operator's own numbering and is theirs to bump when a revision
-     * is material. The overlap check runs again, excluding this policy, because widening a period is
-     * exactly how an edit collides with a neighbour.
+     * <p>Which is safe only as far as the version keeps its meaning, and that is now enforced rather
+     * than hoped for. A run records the policy id and version and <em>nothing else about the
+     * rules</em>, so changing a limit while reusing the version makes that pair describe two
+     * different rule sets - the first draft of this method allowed exactly that, and the edit form
+     * prefills the current version, so it was the default path rather than an edge case. A revision
+     * that changes an outcome-bearing field must carry a new version; renaming, or correcting a
+     * date, still does not.
+     *
+     * <p>The overlap check runs again, excluding this policy, because widening a period is exactly
+     * how an edit collides with a neighbour.
      */
     @Transactional public FuelPolicy updatePolicy(UpdatePolicy c){
         var existing=policyRecord(c.policyId());
@@ -151,6 +159,12 @@ public class FuelApplicationService {
                 c.repeatedPatternWindowHours(),c.repeatedPatternThreshold(),c.allowedFuelProducts(),
                 c.approvedVendors(),existing.status(),
                 existing.metadata().modifiedBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));
+        // Compared after construction so the record's own normalisation - upper-cased vendor and
+        // product sets, the cost-variance default - is applied to both sides. Comparing the raw
+        // command against a stored record would report "goil" and "GOIL" as a change.
+        if(!revised.hasSameRulesAs(existing)&&revised.policyVersion()==existing.policyVersion()){
+            throw FuelPolicyVersionNotAdvancedException.of(existing.id(),existing.policyVersion());
+        }
         var saved=repository.savePolicy(revised);
         audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.UPDATE,"FuelPolicy",saved.id().toString(),existing,saved);
         return saved;

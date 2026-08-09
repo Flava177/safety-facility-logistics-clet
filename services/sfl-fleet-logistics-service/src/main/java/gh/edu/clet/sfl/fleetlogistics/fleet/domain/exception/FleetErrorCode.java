@@ -75,7 +75,19 @@ public enum FleetErrorCode {
      * batch file hash caught this already; without a mapped code it surfaced as an unhandled 500.
      */
     FUEL_IMPORT_ALREADY_PROCESSED(
-            "This file has already been imported for this site and source system.", false);
+            "This file has already been imported for this site and source system.", false),
+    /**
+     * A revision that changed a limit while reusing the policy version.
+     *
+     * <p>A reconciliation records the policy id and the version that judged it, and nothing else -
+     * the run does not copy the limits it applied. So that pair is the only account of the rules
+     * behind a past decision, and it has to keep identifying one rule set. Editing a limit under the
+     * same version makes "version 1" mean one thing before the edit and another after, with nothing
+     * in the record to tell them apart.
+     */
+    FUEL_POLICY_VERSION_NOT_ADVANCED(
+            "Changing a limit needs a new policy version, because reconciliations already record the "
+                    + "current one against the rules it applied.", false);
 
     private final String message;
     private final boolean srsDefined;

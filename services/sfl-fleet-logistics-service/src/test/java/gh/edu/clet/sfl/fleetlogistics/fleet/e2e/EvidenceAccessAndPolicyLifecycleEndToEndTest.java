@@ -16,6 +16,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceReference;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyVersionNotAdvancedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -125,6 +126,52 @@ class EvidenceAccessAndPolicyLifecycleEndToEndTest extends FleetPostgresSupport 
 
         // And it is the revision the register now returns, not a second row beside the original.
         assertThat(fuel.policy(created.id(), actor).name()).isEqualTo("Revised");
+    }
+
+    @Test
+    @DisplayName("a limit cannot be changed while reusing the version that judged past runs")
+    void editing_a_limit_requires_a_new_policy_version() {
+        String site = "VERSION" + System.nanoTime();
+        ActorContext actor = actorFor(site);
+        Instant now = Instant.now();
+
+        FuelPolicy created = fuel.createPolicy(new FuelApplicationService.CreatePolicy(site, "Original",
+                now.minusSeconds(86400), null, 1, new BigDecimal("50"), null, null, new BigDecimal("80"),
+                null, null, 500, true, 24, new BigDecimal("400"), 8, Set.of("DIESEL"),
+                Set.of("CLET STATION"), actor, SourceChannel.WEB));
+
+        // The ceiling moves from 50 to 65 while the version stays at 1. A reconciliation already
+        // recorded "version 1" against the old ceiling, so allowing this makes that record describe
+        // rules it was not produced by. This is the default path, not an edge case - the edit form
+        // prefills the current version.
+        assertThatThrownBy(() -> fuel.updatePolicy(revision(created, "Original", 1, new BigDecimal("65"), actor)))
+                .isInstanceOf(FuelPolicyVersionNotAdvancedException.class);
+
+        // The same change with a new version is accepted.
+        FuelPolicy revised = fuel.updatePolicy(revision(created, "Original", 2, new BigDecimal("65"), actor));
+        assertThat(revised.policyVersion()).isEqualTo(2);
+        assertThat(revised.maxPerTransaction()).isEqualByComparingTo("65");
+
+        // And a change that decides nothing - a rename - still needs no new version.
+        FuelPolicy renamed = fuel.updatePolicy(revision(revised, "Renamed", 2, new BigDecimal("65"), actor));
+        assertThat(renamed.name()).isEqualTo("Renamed");
+        assertThat(renamed.policyVersion()).isEqualTo(2);
+
+        // Nor does restating a limit at a different scale: 65 and 65.00 are one ceiling.
+        assertThatCode(() -> fuel.updatePolicy(revision(renamed, "Renamed", 2, new BigDecimal("65.00"), actor)))
+                .doesNotThrowAnyException();
+    }
+
+    /** The same policy with one ceiling and one name varied, so each case reads as its own change. */
+    private static FuelApplicationService.UpdatePolicy revision(FuelPolicy policy, String name,
+            int version, BigDecimal maxPerTransaction, ActorContext actor) {
+        return new FuelApplicationService.UpdatePolicy(policy.id(), name, policy.effectiveFrom(),
+                policy.effectiveTo(), version, maxPerTransaction, policy.dailyLimit(), policy.monthlyLimit(),
+                policy.tankCapacity(), policy.minConsumption(), policy.maxConsumption(),
+                policy.odometerJumpTolerance(), policy.receiptRequired(), policy.receiptGraceHours(),
+                policy.materialityAmount(), policy.anomalySlaHours(), policy.costVarianceTolerance(),
+                policy.repeatedPatternWindowHours(), policy.repeatedPatternThreshold(),
+                policy.allowedFuelProducts(), policy.approvedVendors(), actor, SourceChannel.WEB);
     }
 
     @Test

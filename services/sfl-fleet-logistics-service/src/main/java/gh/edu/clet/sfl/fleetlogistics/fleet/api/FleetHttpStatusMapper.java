@@ -39,6 +39,10 @@ final class FleetHttpStatusMapper {
                  FLEET_AUDIT_CHAIN_FAILURE,
                  FLEET_IDEMPOTENCY_KEY_CONFLICT,
                  FUEL_POLICY_PERIOD_OVERLAP,
+                 // A conflict with what the record already is, not a malformed request: the version
+                 // sent is a perfectly good number that happens to be one already in use for a
+                 // different rule set.
+                 FUEL_POLICY_VERSION_NOT_ADVANCED,
                  FUEL_IMPORT_ALREADY_PROCESSED -> HttpStatus.CONFLICT;
 
             case FLEET_MISSING_SITE_SCOPE,
