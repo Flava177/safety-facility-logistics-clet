@@ -29,6 +29,8 @@ import Tabs from 'shared/components/Tabs';
 import { formatDate, formatDaysRemaining, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { EvidenceFileActions } from 'shared/components/EvidenceFileField';
+import { useNotifier } from 'shared/components/Notifier';
 
 /**
  * How many documents the search asks for.
@@ -44,7 +46,7 @@ interface DocumentRow {
    *
    * The search returns documents, and a document carries a `vehicleId` but no registration number.
    * The site's vehicles are fetched **once** and indexed, so a row can name its vehicle without a
-   * request per document. Null when the vehicle is outside the fetched page — the document is still
+   * request per document. Null when the vehicle is outside the fetched page - the document is still
    * shown, because a compliance exposure does not stop mattering because a lookup missed.
    */
   vehicle: VehicleResponse | null;
@@ -69,17 +71,18 @@ const expiryClass = (daysUntilExpiry: number): string => {
 /**
  * Compliance and service exposure across the fleet.
  *
- * Documents come from `GET /vehicles/compliance-documents` — one query, filtered and ordered by the
+ * Documents come from `GET /vehicles/compliance-documents` - one query, filtered and ordered by the
  * service. This screen used to fan out over the first fifty active vehicles in scope and say so on
  * the page: correct for a small fleet and quietly wrong for any other, because a document on the
  * fifty-first vehicle simply was not there.
  *
- * The authoritative expired count is still the dashboard indicator. That is not a hedge — the
+ * The authoritative expired count is still the dashboard indicator. That is not a hedge - the
  * indicator is computed server-side over the whole scope and reconciled against its source, so it
  * remains the number to plan against even now that the list beside it is complete.
  */
 const CompliancePage = () => {
   const navigate = useNavigate();
+  const { notifyError } = useNotifier();
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [tab, setTab] = useState<TabKey>('expiring');
   const [documentType, setDocumentType] = useState<ComplianceDocumentType | ''>('');
@@ -201,8 +204,28 @@ const CompliancePage = () => {
         width: 130,
         cell: (row) => <StatusChip value={row.document.status} />,
       },
+      {
+        key: 'file',
+        header: 'File',
+        width: 150,
+        cell: (row) =>
+          row.document.evidenceId ? (
+            // Stops the row's own click handler from navigating to the vehicle when the intent was
+            // to open the certificate.
+            <div onClick={(event) => event.stopPropagation()} role="presentation">
+              <EvidenceFileActions
+                evidenceId={row.document.evidenceId}
+                fileName={`${row.document.documentReference}`}
+                compact
+                onError={notifyError}
+              />
+            </div>
+          ) : (
+            <span className="text-theme-xs text-gray-500">Not attached</span>
+          ),
+      },
     ],
-    [],
+    [notifyError],
   );
 
   const drilldownColumns = useMemo<Column<DashboardDrilldownRow>[]>(
@@ -273,7 +296,7 @@ const CompliancePage = () => {
         {documents.data?.truncated && (
           <Alert variant="warning">
             The search returned its maximum of {SEARCH_LIMIT} documents, so there are more than are
-            listed here. Narrow it with a document type, a status or an expiry date — the counts
+            listed here. Narrow it with a document type, a status or an expiry date - the counts
             above are computed server-side over the whole scope and stay right either way.
           </Alert>
         )}

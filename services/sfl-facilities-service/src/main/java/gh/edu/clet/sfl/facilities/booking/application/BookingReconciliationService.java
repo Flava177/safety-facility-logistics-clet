@@ -23,7 +23,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The two sweeps that keep the diary honest — SRS-SFL-S159-02, -03.
+ * The two sweeps that keep the diary honest - SRS-SFL-S159-02, -03.
  *
  * <h2>Why readiness reaches bookings by a sweep rather than by a port</h2>
  *
@@ -32,21 +32,21 @@ import org.springframework.transaction.annotation.Transactional;
  * blocked at 09:00 flags its bookings at 09:00.
  *
  * <p>It is the wrong shape here, and the reason is the dependency arrow. Booking depends on the
- * estate and on readiness — it reads a space to decide whether it can be used. A port pointing back
+ * estate and on readiness - it reads a space to decide whether it can be used. A port pointing back
  * would make readiness depend on bookings, which is the same inversion the S152 architecture test
  * exists to prevent, and it would mean assessing a space could fail because a booking three weeks out
  * was in a state nobody assessing the hall was thinking about.
  *
  * <p>So this runs on a timer instead, and the cost is latency rather than correctness: a hall blocked
- * at 09:00 has its bookings flagged by 09:15. Both sweeps are idempotent — {@code withReadinessHold}
+ * at 09:00 has its bookings flagged by 09:15. Both sweeps are idempotent - {@code withReadinessHold}
  * returns the same instance when the reason has not changed, and a booking already {@code NO_SHOW} is
- * not a candidate — so running twice, or on two instances at once, changes nothing.
+ * not a candidate - so running twice, or on two instances at once, changes nothing.
  *
  * <h2>Why the no-show grace is not in the query</h2>
  *
  * It is site-scoped runtime configuration, and a query cannot carry a different threshold per row.
- * {@link #sweepNoShows} therefore asks for every confirmed booking whose start has passed unstarted —
- * a small set, since it drains as fast as it fills — and applies each site's own grace in memory.
+ * {@link #sweepNoShows} therefore asks for every confirmed booking whose start has passed unstarted -
+ * a small set, since it drains as fast as it fills - and applies each site's own grace in memory.
  */
 @Service
 public class BookingReconciliationService {
@@ -86,7 +86,7 @@ public class BookingReconciliationService {
      * Places and clears readiness holds across every live booking from now forward.
      *
      * <p>Clearing matters as much as placing. A hall repaired on Wednesday must release Friday's
-     * examination without anybody remembering to, or the flag becomes noise people learn to ignore —
+     * examination without anybody remembering to, or the flag becomes noise people learn to ignore -
      * which is worse than not having flagged it at all.
      */
     @Transactional

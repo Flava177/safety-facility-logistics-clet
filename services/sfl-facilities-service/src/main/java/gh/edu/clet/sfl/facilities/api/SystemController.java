@@ -20,6 +20,9 @@ public class SystemController {
     @GetMapping("/info")
     public ApiResponse<Map<String, String>> info() {
         return ApiResponse.ok(Map.of(
+                // The platform this origin serves. The dashboard reads it once at boot and shows
+                // only this platform's screens, so a service never offers a screen it cannot back.
+                "platform", "IFIMP",
                 "service", applicationName,
                 "architecture", "sfl-phase-1-microservice",
                 "status", "foundation"));

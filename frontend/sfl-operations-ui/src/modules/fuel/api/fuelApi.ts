@@ -7,6 +7,7 @@ import {
   CaptureTransactionRequest,
   CreateLogbookRequest,
   CreatePolicyRequest,
+  UpdatePolicyRequest,
   DriverLogbook,
   FuelCard,
   FuelCardTransitionRequest,
@@ -18,6 +19,8 @@ import {
   FuelPageResponse,
   FuelImportRow,
   FuelPolicy,
+  FuelPostedPrice,
+  RecordPostedPriceRequest,
   FuelReconciliation,
   FuelTransaction,
   ImportResult,
@@ -77,9 +80,26 @@ export const fuelPoliciesApi = {
    * period. The conflicting policies come back in the error's `details.conflictingPolicies`.
    */
   create: (body: CreatePolicyRequest) => apiClient.post<FuelPolicy>(`${BASE}/policies`, body),
+
+  /**
+   * Revises a policy. Same overlap refusal as `create`, checked against everything except itself.
+   *
+   * The site is not in the body: a policy does not move between sites.
+   */
+  update: (policyId: string, body: UpdatePolicyRequest) =>
+    apiClient.put<FuelPolicy>(`${BASE}/policies/${policyId}`, body),
+
+  /**
+   * Withdraws a policy and returns it archived.
+   *
+   * Not a removal, and the name says so. Every reconciliation run cites the policy that judged it,
+   * so the row has to survive; archived means it applies to nothing new.
+   */
+  withdraw: (policyId: string, reason: string) =>
+    apiClient.delete<FuelPolicy>(`${BASE}/policies/${policyId}`, { query: { reason } }),
 };
 
-/** Fuel card register. The wire payload is masked only — no full payment-card number is accepted. */
+/** Fuel card register. The wire payload is masked only - no full payment-card number is accepted. */
 export const fuelCardsApi = {
   search: (params: CardSearchParams, signal?: AbortSignal) =>
     apiClient.get<FuelPageResponse<FuelCard>>(
@@ -101,6 +121,28 @@ export const fuelCardsApi = {
     apiClient.post<FuelCard>(`${BASE}/cards/${cardId}/${action}`, body, {
       idempotent: false,
     }),
+};
+
+/**
+ * Approved vendors and the prices they post.
+ *
+ * <p>Both reads exist to take two decisions away from whoever is filling in the capture form. The
+ * vendor was free text, so "GOIL", "Goil Tema" and "goil" were three different vendors to the
+ * approved-vendor rule; the price per litre was a number the claimant typed, which is the one number
+ * in a fuel claim they should not be choosing.
+ */
+export const fuelPricesApi = {
+  /** Vendors the site's in-force policy approves. Empty means the policy approves any vendor. */
+  providers: (siteCode: string, signal?: AbortSignal) =>
+    apiClient.get<string[]>(`${BASE}/providers`, { siteCode }, signal),
+
+  postedPrices: (
+    params: { siteCode: string; vendor?: string; fuelProduct?: string; inForceOnly?: boolean },
+    signal?: AbortSignal,
+  ) => apiClient.get<FuelPostedPrice[]>(`${BASE}/posted-prices`, asQuery(params), signal),
+
+  record: (body: RecordPostedPriceRequest) =>
+    apiClient.post<FuelPostedPrice>(`${BASE}/posted-prices`, body, { idempotent: false }),
 };
 
 export const fuelTransactionsApi = {
@@ -151,7 +193,7 @@ export const fuelTransactionsApi = {
     }),
 
   /**
-   * `GET /reports/transactions.csv` — a `text/csv` download of the site's most recent transactions.
+   * `GET /reports/transactions.csv` - a `text/csv` download of the site's most recent transactions.
    *
    * Fetched rather than linked: the endpoint needs `FUEL_REPORT_EXPORT` and the actor comes from the
    * `X-SFL-*` headers, which a browser navigation would not send.
@@ -186,7 +228,7 @@ export const driverLogbooksApi = {
   findById: (logbookId: string, signal?: AbortSignal) =>
     apiClient.get<DriverLogbook>(`${BASE}/logbooks/${logbookId}`, undefined, signal),
 
-  /** The record's transitions, from the audit log — draft through review to approval. */
+  /** The record's transitions, from the audit log - draft through review to approval. */
   history: (logbookId: string, signal?: AbortSignal) =>
     apiClient.get<FuelAuditEvent[]>(`${BASE}/logbooks/${logbookId}/history`, undefined, signal),
 
@@ -201,7 +243,7 @@ export const driverLogbooksApi = {
    * One path serves all six transitions.
    *
    * `comment` is the single free-text field the service takes; which of the domain's fields it
-   * lands in depends on the action — `reviewComment` for return and approve, `transitionReason`
+   * lands in depends on the action - `reviewComment` for return and approve, `transitionReason`
    * for reopen and cancel.
    */
   transition: (logbookId: string, action: LogbookTransition, body: LogbookTransitionRequest) =>
@@ -254,7 +296,7 @@ export const fuelAnomaliesApi = {
 
 export const fuelImportsApi = {
   /**
-   * `POST /imports/csv` — multipart, with the site and source system as query parameters.
+   * `POST /imports/csv` - multipart, with the site and source system as query parameters.
    *
    * A file already imported for this site and source system is refused with 409
    * `FUEL_IMPORT_ALREADY_PROCESSED` **before** any row is captured.
@@ -278,7 +320,7 @@ export const fuelImportsApi = {
   /**
    * One batch header.
    *
-   * The response also carries every row, which is why {@link rows} exists — a file of thousands made
+   * The response also carries every row, which is why {@link rows} exists - a file of thousands made
    * the detail read unusable, and the screen filtered those rows in the browser.
    */
   findById: (batchId: string, signal?: AbortSignal) =>
@@ -300,7 +342,7 @@ export const fuelImportsApi = {
 };
 
 export const fuelIntegrationsApi = {
-  /** Inbound provider webhook health — shared inbox, not filtered to fuel or to a site. */
+  /** Inbound provider webhook health - shared inbox, not filtered to fuel or to a site. */
   inboundHealth: (signal?: AbortSignal) =>
     apiClient.get<IntegrationHealth>(`${BASE}/integrations/health`, undefined, signal),
 
@@ -322,7 +364,7 @@ export const fuelDashboardApi = {
    * Spend and volume by day, aggregated by the service.
    *
    * The spend chart used to bucket a page of transactions in the browser, so it described that page
-   * rather than the site — and quietly under-reported the moment a busy fortnight exceeded one page.
+   * rather than the site - and quietly under-reported the moment a busy fortnight exceeded one page.
    */
   dailyTotals: (siteCode: string, from: string, to: string, signal?: AbortSignal) =>
     apiClient.get<DailyFuelTotals[]>(

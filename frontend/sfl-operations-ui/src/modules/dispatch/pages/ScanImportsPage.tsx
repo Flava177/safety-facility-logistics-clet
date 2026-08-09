@@ -16,9 +16,11 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
+import { FieldLabelSpacer, TextInput } from 'shared/components/fields';
 import { formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterItems } from 'modules/fleet/api/access';
 
 const ROW_FILTERS = [
   { value: 'ALL', label: 'Every row' },
@@ -29,7 +31,7 @@ const ROW_FILTERS = [
 /**
  * Scanner batch import.
  *
- * Unlike the fuel CSV import, a batch here **is** readable afterwards — `GET /scans/imports/{id}`
+ * Unlike the fuel CSV import, a batch here **is** readable afterwards - `GET /scans/imports/{id}`
  * and its `/rows` both exist. What does not exist is a way to *list* batches for a site, so this
  * screen holds the batches uploaded in this browsing session and says so. A batch identifier can be
  * pasted in to reopen one from an earlier session, which is the workaround the missing list forces.
@@ -140,9 +142,12 @@ const ScanImportsPage = () => {
         subtitle="Scanner batches checked against the manifest, row by row."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Scan imports' }]}
         actions={
-          <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
-            Import a batch
-          </Button>
+          // A scan batch is a bulk custody record; registering items is what it amounts to.
+          canRegisterItems() ? (
+            <Button variant="primary" startIcon="upload" onClick={() => setImporting(true)}>
+              Import a batch
+            </Button>
+          ) : undefined
         }
       />
 
@@ -161,31 +166,41 @@ const ScanImportsPage = () => {
               required
               helperText="Scans are checked against this site's manifests."
             />
-            <div className="flex items-end gap-2">
-              <div className="min-w-0 flex-1">
-                <label
-                  htmlFor="batch-lookup"
-                  className="mb-2 block text-theme-sm font-medium text-gray-800"
-                >
-                  Open a batch by identifier
-                </label>
-                <input
-                  id="batch-lookup"
-                  value={lookupId}
-                  onChange={(event) => setLookupId(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === 'Enter') {
-                      openLookup();
-                    }
-                  }}
-                  placeholder="Batch UUID"
-                  className="h-10 w-full rounded-md border border-gray-500 bg-white px-3 text-theme-sm text-gray-900 placeholder:text-gray-500 hover:border-gray-700"
-                />
+            {/*
+              Top-aligned, and the button carries the label's height rather than being pushed down
+              by it. This row was `items-end` against a `SiteSelect` that has a helper line, so the
+              taller neighbour dragged the whole lookup below the site control it sits beside.
+
+              The input is the shared `TextInput` rather than a hand-rolled one for the same reason:
+              a copy of the field's classes drifts from the original the first time either changes,
+              and this copy already had - it carried no focus, error or disabled treatment at all.
+            */}
+            {/*
+              A real form, so Enter still opens the batch. The hand-rolled input did that with an
+              `onKeyDown` handler; a form gets it from the browser and keeps it working for anyone
+              driving the page from the keyboard.
+            */}
+            <form
+              className="flex items-start gap-2"
+              onSubmit={(event) => {
+                event.preventDefault();
+                openLookup();
+              }}
+            >
+              <TextInput
+                label="Open a batch by identifier"
+                className="min-w-0 flex-1"
+                value={lookupId}
+                onChange={setLookupId}
+                placeholder="Batch UUID"
+              />
+              <div className="shrink-0">
+                <FieldLabelSpacer />
+                <Button type="submit" variant="outline" startIcon="search">
+                  Open
+                </Button>
               </div>
-              <Button variant="outline" startIcon="search" onClick={openLookup}>
-                Open
-              </Button>
-            </div>
+            </form>
           </div>
         </SectionCard>
 
@@ -351,20 +366,20 @@ const ScanImportsPage = () => {
               <li className="flex items-start gap-2.5">
                 <Icon name="check-circle" size={15} className="mt-0.5 shrink-0 text-success-700" />
                 <span>
-                  <strong>Matched</strong> — the code belongs to an item the manifest expects.
+                  <strong>Matched</strong> - the code belongs to an item the manifest expects.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Icon name="alert-circle" size={15} className="mt-0.5 shrink-0 text-error-800" />
                 <span>
-                  <strong>Mismatch</strong> — the code belongs to a registered item, but not one this
+                  <strong>Mismatch</strong> - the code belongs to a registered item, but not one this
                   manifest carries. An exception case is raised.
                 </span>
               </li>
               <li className="flex items-start gap-2.5">
                 <Icon name="alert-triangle" size={15} className="mt-0.5 shrink-0 text-warning-700" />
                 <span>
-                  <strong>Unregistered</strong> — the code belongs to no item on the register at all.
+                  <strong>Unregistered</strong> - the code belongs to no item on the register at all.
                   An exception case is raised.
                 </span>
               </li>

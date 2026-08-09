@@ -17,7 +17,7 @@
 
     It writes through the **real APIs with the persona's own headers**, never straight into the
     database. That matters: a row inserted by SQL would carry whatever created_by the script felt
-    like, whereas a row created through the API carries whatever the service decided — which is the
+    like, whereas a row created through the API carries whatever the service decided - which is the
     thing being demonstrated. If the narrowing is broken, seeding this way surfaces it instead of
     hiding it.
 
@@ -28,7 +28,7 @@
     Base URL of sfl-fleet-logistics-service. Default http://localhost:8093.
 
 .PARAMETER Site
-    Site code to seed against. Must already exist — this script does not create estate.
+    Site code to seed against. Must already exist - this script does not create estate.
 
 .EXAMPLE
     ./scripts/dev/seed-personas.ps1 -Site CLET-HQ

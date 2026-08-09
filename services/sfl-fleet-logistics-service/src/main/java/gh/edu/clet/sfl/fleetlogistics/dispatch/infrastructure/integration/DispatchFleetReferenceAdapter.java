@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 /**
  * Read-only S166 reference validation for a dispatch's optional carrying trip/vehicle/driver. Dispatch
  * never writes to Fleet persistence; every reference is validated against the dispatch site through the
- * S166 application ports. All references are optional — chain-of-custody, receipt and return work with
+ * S166 application ports. All references are optional - chain-of-custody, receipt and return work with
  * no trip linked.
  */
 @Component

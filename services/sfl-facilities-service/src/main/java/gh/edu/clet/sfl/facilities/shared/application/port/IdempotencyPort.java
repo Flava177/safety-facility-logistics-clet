@@ -9,7 +9,7 @@ import java.util.UUID;
  *
  * <p>A replay of the same key <em>and</em> the same request payload returns the original result; a
  * replay with a different payload is a client error, not a silent overwrite. That distinction is the
- * whole value of the store — without the fingerprint, a reused key would quietly return the wrong
+ * whole value of the store - without the fingerprint, a reused key would quietly return the wrong
  * record's identifier.
  */
 public interface IdempotencyPort {

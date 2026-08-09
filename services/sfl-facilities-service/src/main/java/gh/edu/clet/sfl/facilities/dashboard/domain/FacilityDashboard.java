@@ -8,8 +8,8 @@ import java.util.UUID;
 /**
  * The S152-05 dashboard read model.
  *
- * <p>Every indicator the requirement names — "facility readiness, open service requests, unavailable
- * rooms, site compliance exceptions and examination readiness risk" — plus the two things it says
+ * <p>Every indicator the requirement names - "facility readiness, open service requests, unavailable
+ * rooms, site compliance exceptions and examination readiness risk" - plus the two things it says
  * about how they must behave:
  *
  * <ul>
@@ -48,7 +48,7 @@ public record FacilityDashboard(
             int availableForExamination) {
     }
 
-    /** Open blockers by severity — the SRS's "blockers by severity" indicator. */
+    /** Open blockers by severity - the SRS's "blockers by severity" indicator. */
     public record BlockerSummary(
             int critical,
             int major,

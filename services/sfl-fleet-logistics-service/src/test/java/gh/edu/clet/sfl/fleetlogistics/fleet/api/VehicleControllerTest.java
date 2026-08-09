@@ -49,7 +49,7 @@ import org.springframework.test.web.servlet.MockMvc;
  * Contract tests for the vehicle endpoints.
  *
  * <p>These are the executable form of the SRS-SFL-S166-01 acceptance criteria and error states: the
- * status code, the {@code ApiResponse}/{@code ApiError} envelope shape and — critically — the exact SRS
+ * status code, the {@code ApiResponse}/{@code ApiError} envelope shape and - critically - the exact SRS
  * error wording are all asserted here.
  */
 @WebMvcTest(controllers = VehicleController.class, excludeAutoConfiguration = {

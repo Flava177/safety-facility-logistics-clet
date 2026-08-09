@@ -21,7 +21,7 @@ import java.util.Set;
  *
  * <h2>Why there is no separate APPROVED state</h2>
  *
- * Approval is an <em>event</em> — recorded as a {@code BookingApproval}, with who and why — not a
+ * Approval is an <em>event</em> - recorded as a {@code BookingApproval}, with who and why - not a
  * state a booking sits in. A booking that has been approved is confirmed; there is nothing further
  * to do to it. Adding {@code APPROVED} between the two would create a state whose only difference
  * from {@code CONFIRMED} is that somebody has not yet pressed a second button, and that button does
@@ -69,7 +69,7 @@ public enum BookingStatus {
      * Whether a booking in this state occupies its space.
      *
      * <p>The definition the conflict check, the availability query and the database exclusion
-     * constraint all depend on. If it changes here it must change in {@code V10}'s constraint too —
+     * constraint all depend on. If it changes here it must change in {@code V10}'s constraint too -
      * they are two expressions of one rule and there is no compiler to catch them drifting apart.
      */
     public boolean holdsTheSpace() {

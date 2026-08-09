@@ -17,7 +17,7 @@ import java.util.UUID;
 /**
  * The S159 request bodies, with Bean Validation on every field the SRS constrains.
  *
- * <p>Validation is here as well as in the domain, and the duplication is deliberate — see
+ * <p>Validation is here as well as in the domain, and the duplication is deliberate - see
  * {@code MaintenanceRequests} for the reasoning. What is <em>not</em> duplicated is anything needing
  * more than one field or a clock: whether the window has already passed, whether it is inside the
  * booking horizon, and whether the space is free are all decisions with context, and putting them in

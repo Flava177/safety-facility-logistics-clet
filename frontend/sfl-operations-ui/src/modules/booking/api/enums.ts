@@ -2,7 +2,7 @@
  * S159 closed sets, transcribed from the service enums.
  *
  * Transcribed rather than fetched, like every other module's enums, because a filter dropdown that
- * waits on a round trip is worse than one that is occasionally a release behind — and the service
+ * waits on a round trip is worse than one that is occasionally a release behind - and the service
  * refuses an unknown value anyway.
  */
 
@@ -76,5 +76,5 @@ export const HOLD_REASON_DESCRIPTIONS: Record<ReadinessHoldReason, string> = {
   SPACE_BLOCKED: 'A critical readiness blocker is open on this space.',
   NOT_EXAMINATION_READY: 'The space is degraded, and this booking is an examination.',
   LOCKED_FOR_EXAMINATION: 'The space is locked for examination use, and this booking is not one.',
-  SPACE_WITHDRAWN: 'The space has left active service — suspended or archived.',
+  SPACE_WITHDRAWN: 'The space has left active service - suspended or archived.',
 };

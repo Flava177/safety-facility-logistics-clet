@@ -29,7 +29,7 @@ import java.util.UUID;
  * injections at every call site to express one transaction.
  *
  * <p>Pagination is expressed as page and size rather than as Spring's {@code Pageable}, which is an
- * infrastructure type the application layer must not import — the ArchUnit boundary test enforces it.
+ * infrastructure type the application layer must not import - the ArchUnit boundary test enforces it.
  */
 public interface FacilitiesRepository {
 

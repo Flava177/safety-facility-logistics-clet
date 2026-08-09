@@ -34,7 +34,7 @@ import {
  * where it stands, what it is doing to the space, what work is booked, and who has touched it.
  *
  * The blocker notice is the point of the whole module. A fault that has taken a hall out of service
- * says so here, in the place somebody is already looking, rather than only on the space — which is
+ * says so here, in the place somebody is already looking, rather than only on the space - which is
  * a screen they would have to know to open.
  */
 const FaultDetailPage = () => {
@@ -154,14 +154,14 @@ const FaultDetailPage = () => {
                   caption={
                     fault.data.triagedAt
                       ? `Confirmed at triage by ${orDash(fault.data.triagedBy)}`
-                      : 'Not yet confirmed — triage sets the SLA'
+                      : 'Not yet confirmed - triage sets the SLA'
                   }
                   tone={fault.data.priority === 'CRITICAL' ? 'critical' : fault.data.priority === 'HIGH' ? 'caution' : 'neutral'}
                   icon="gauge"
                 />
                 <StatCard
                   label="SLA"
-                  value={fault.data.slaDueAt ? (fault.data.overdue ? 'Overdue' : 'On time') : '—'}
+                  value={fault.data.slaDueAt ? (fault.data.overdue ? 'Overdue' : 'On time') : '-'}
                   caption={
                     fault.data.slaDueAt
                       ? `Due ${formatDateTime(fault.data.slaDueAt)}`

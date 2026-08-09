@@ -1,0 +1,30 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    Java 17, named rather than inherited. The machine default is Zulu 11 and other projects need it
+    to stay that way, so the JDK is chosen here instead of being taken from whatever the IDE happens
+    to have as its default. Spring Boot 4.1 does not run on 11 and says so as a class-version error
+    hundreds of classes into the boot sequence, not at launch. `.idea/misc.xml` holds the same answer
+    for the project as a whole but is not in the repository; this file is.
+  -->
+  <configuration default="false" name="IFIMP facilities 8091" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <module name="sfl-facilities-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.facilities.FacilitiesServiceApplication" />
+    <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <envs>
+      <env name="SFL_PORT" value="8091" />
+      <env name="SFL_FACILITIES_DB_URL" value="jdbc:postgresql://localhost:5441/sfl_facilities_service" />
+      <env name="SFL_DB_USERNAME" value="sfl" />
+      <env name="SFL_DB_PASSWORD" value="sfl" />
+      <env name="SFL_SECURITY_ENABLED" value="false" />
+      <env name="SFL_FACILITIES_EVENT_TRANSPORT" value="rabbitmq" />
+      <env name="SFL_RABBITMQ_HOST" value="localhost" />
+      <env name="SFL_RABBITMQ_PORT" value="5672" />
+      <env name="SFL_RABBITMQ_USERNAME" value="sfl" />
+      <env name="SFL_RABBITMQ_PASSWORD" value="sfl" />
+    </envs>
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -13,7 +13,7 @@ import java.util.UUID;
  * references").
  *
  * <p>This is a <em>reference</em>, not a personnel record: HRMS owns the person, and this aggregate
- * holds only what fleet operations must decide on — the staff reference, the licence, medical
+ * holds only what fleet operations must decide on - the staff reference, the licence, medical
  * clearance, site scope and eligibility. Keeping it a reference is what stops SFL becoming a second,
  * diverging copy of the HR system (SRS-SFL-S166-04 HRMS integration).
  */
@@ -60,7 +60,7 @@ public record DriverProfileReference(
     }
 
     /**
-     * Binds — or unbinds, with {@code null} — the identity that signs in as this driver.
+     * Binds - or unbinds, with {@code null} - the identity that signs in as this driver.
      *
      * <p>Separate from {@link #updateDetails} because it is a different act with a different authority:
      * correcting a licence class is fleet administration, while deciding whose sign-in maps to this

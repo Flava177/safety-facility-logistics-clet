@@ -97,7 +97,7 @@ class JpaRuntimeConfigurationAdapter implements RuntimeConfigurationPort {
             configuration.save(existing);
             // Flush before the insert below. A partial unique index enforces "one active value per key
             // per scope", and Hibernate is free to order the INSERT ahead of this UPDATE within the
-            // same flush — which trips the constraint even though the end state is valid. Forcing the
+            // same flush - which trips the constraint even though the end state is valid. Forcing the
             // close to land first is what makes supersede-then-insert legal.
             configuration.flush();
             return existing.version() + 1;

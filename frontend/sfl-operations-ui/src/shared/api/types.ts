@@ -19,7 +19,7 @@ export interface ApiResponseEnvelope<T> {
   error: ApiErrorEnvelope | null;
 }
 
-/** One field-level validation failure — `FieldErrorResponse` on the service side. */
+/** One field-level validation failure - `FieldErrorResponse` on the service side. */
 export interface FieldErrorPayload {
   field: string;
   message: string;
@@ -39,7 +39,7 @@ export interface PageResponse<T> {
   /**
    * Why the server returned less than the caller asked for, when it did.
    *
-   * Set on lists the service narrowed on the caller's behalf — a driver's trip list is their own
+   * Set on lists the service narrowed on the caller's behalf - a driver's trip list is their own
    * trips, not their site's. Absent on every unnarrowed list.
    *
    * Surface it. A narrowing the user cannot see is one they report as missing data, and the reason

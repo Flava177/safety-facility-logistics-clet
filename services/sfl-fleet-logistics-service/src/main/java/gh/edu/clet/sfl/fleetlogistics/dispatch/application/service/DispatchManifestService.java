@@ -28,7 +28,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * S171-02: dispatch manifest lifecycle — create, add items, seal (seal IDs + counts), assign the optional
+ * S171-02: dispatch manifest lifecycle - create, add items, seal (seal IDs + counts), assign the optional
  * S166 carrying trip, dispatch, and gated closure. Closure is blocked while an exception is open or a
  * custody gap is unresolved ({@link DispatchClosurePolicy} + {@link CustodyChainPolicy}).
  */
@@ -224,7 +224,7 @@ public class DispatchManifestService {
     /** A manifest line and the courier item it points at. {@code item} is null if it was purged. */
     public record ManifestLine(DispatchManifestItem line, CourierItem item) {}
 
-    /** The manifest's transition history — draft through seal, dispatch, transit and closure. */
+    /** The manifest's transition history - draft through seal, dispatch, transit and closure. */
     public List<AuditEvent> history(UUID id, ActorContext actor) {
         var manifest = dispatch(id, actor);
         return audit.search(new AuditPort.AuditQuery(List.of(manifest.siteCode().value()), "Dispatch", id.toString(),

@@ -20,7 +20,7 @@ public class FuelImportController {
 
     /**
      * Imports a CSV. A re-uploaded file is refused with {@code FUEL_IMPORT_ALREADY_PROCESSED} before
-     * any row is captured, rather than after — the unique constraint used to fire at the end and
+     * any row is captured, rather than after - the unique constraint used to fire at the end and
      * escape as an unmapped 500.
      */
     @PostMapping(value="/csv",consumes="multipart/form-data")

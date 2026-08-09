@@ -55,13 +55,13 @@ public class TripQueryService {
      * Site scope is the wrong boundary for a driver, and it was the only one applied here.
      *
      * <p>{@link FleetAccessPolicy#requireRecordScope} is documented as "what keeps the limited
-     * driver/mobile user class to their own trips and inspections", and it is unit-tested — but until
+     * driver/mobile user class to their own trips and inspections", and it is unit-tested - but until
      * now no read called it, so a {@code FLEET_DRIVER} holding any trip id read that trip in full:
      * route, purpose, operating mode and the driver it belongs to. Applying it to the collection and
      * not to the record would be decorative, so it is applied here, where the record is returned.
      *
      * <p>The comparison itself is now the {@code principal_subject} binding rather than a staff
-     * reference matched against the token subject — see {@link DriverScopeResolver} for why the old
+     * reference matched against the token subject - see {@link DriverScopeResolver} for why the old
      * form could never be true once authentication was on.
      *
      * <p>A supervising {@code FLEET_TRIP_MANAGE} passes through, which is what keeps an officer or a
@@ -80,7 +80,7 @@ public class TripQueryService {
     /**
      * Refuses a narrowed actor a trip that is not theirs.
      *
-     * <p>An unassigned trip — {@code driverId} null — is refused to a narrowed actor rather than
+     * <p>An unassigned trip - {@code driverId} null - is refused to a narrowed actor rather than
      * allowed. The old {@code requireRecordScope} returned early when the owner reference was blank,
      * which is right for a record that genuinely has no owner but wrong here: an unassigned trip is
      * nobody's, and "nobody's" must not read as "everybody's" for the one role class this narrowing
@@ -112,7 +112,7 @@ public class TripQueryService {
      *
      * <p>This was the unnarrowed read: permission plus site scope and nothing else, so a driver's trip
      * list was every trip at their site. The driver filter is <strong>overridden</strong>, never merged
-     * with the caller's — a narrowed actor who passes {@code ?driverId=<somebody else>} gets their own
+     * with the caller's - a narrowed actor who passes {@code ?driverId=<somebody else>} gets their own
      * trips, not that driver's. Merging (honouring the caller's value when present) is the version of
      * this that looks correct and hands the whole register to anyone who reads the query string.
      *
@@ -177,8 +177,8 @@ public class TripQueryService {
     /**
      * The readiness preview the dashboard shows before an officer commits to an assignment.
      *
-     * <p>Answering the same question the assignment path will ask — with the same policy and the same
-     * inputs — is what stops the preview and the outcome disagreeing.
+     * <p>Answering the same question the assignment path will ask - with the same policy and the same
+     * inputs - is what stops the preview and the outcome disagreeing.
      */
     @Transactional(readOnly = true)
     public ReadinessAssessment previewAssignment(UUID vehicleId, UUID driverId, Instant from, Instant to,

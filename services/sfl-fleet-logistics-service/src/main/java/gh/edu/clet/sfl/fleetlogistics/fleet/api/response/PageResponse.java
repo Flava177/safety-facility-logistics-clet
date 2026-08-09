@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
  * <p>Sorting always carries a deterministic tiebreak so paging cannot skip or repeat a record when
  * several rows share a sort value.
  *
- * <p>{@code scopeNotice} is set when the server narrowed the list beyond what the caller asked for —
+ * <p>{@code scopeNotice} is set when the server narrowed the list beyond what the caller asked for -
  * a driver's trip list is their own trips, not their site's. It is null on every unnarrowed list. The
  * reason travels with the data rather than being reconstructed by the client from the roles it holds:
  * a client that has to infer why a list is short will eventually infer it differently from the server,
@@ -26,7 +26,7 @@ public record PageResponse<T>(
         String sort,
         String scopeNotice) {
 
-    /** An unnarrowed page — the ordinary case, and what every list but trips returns. */
+    /** An unnarrowed page - the ordinary case, and what every list but trips returns. */
     public PageResponse(List<T> content, int page, int size, long totalElements, int totalPages, boolean first,
             boolean last, String sort) {
         this(content, page, size, totalElements, totalPages, first, last, sort, null);

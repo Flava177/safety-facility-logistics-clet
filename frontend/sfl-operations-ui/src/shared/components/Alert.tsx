@@ -7,7 +7,7 @@ export type AlertVariant = 'success' | 'error' | 'warning' | 'info';
 /**
  * Severity is carried by a 3px rule and the icon; the copy stays neutral dark.
  *
- * A tinted panel with tinted text puts two weak-contrast colours on top of each other — the reason
+ * A tinted panel with tinted text puts two weak-contrast colours on top of each other - the reason
  * the previous alerts had to use pale backgrounds and still only just cleared 4.5:1. Here the text
  * is `gray-800` on a near-white tint (about 12:1), and the colour does its work at the edge, where
  * SC 1.4.11's 3:1 for non-text is the bar it has to clear rather than 4.5:1.
@@ -39,7 +39,7 @@ interface AlertProps {
   variant: AlertVariant;
   title?: ReactNode;
   children?: ReactNode;
-  /** Small print under the message — a correlation id, a code. */
+  /** Small print under the message - a correlation id, a code. */
   footnote?: ReactNode;
   action?: ReactNode;
   className?: string;

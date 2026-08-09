@@ -1,69 +1,45 @@
 import { apiClient } from 'shared/api/client';
 import type { SflPermission } from './permissions';
-
-/**
- * What the actor is permitted to do, asked of the services rather than guessed.
- *
- * ## Why this is fetched and not derived
- *
- * Programme and system entitlement are derived from roles in `programmeModel.ts`, because those two
- * mappings are small enough to transcribe and check. Permissions are not: there are **103 permissions
- * across 26 roles**, held in four matrices. Copying that into TypeScript would guarantee the drift the
- * whole idea is meant to prevent — a sidebar that eventually offers a screen the service refuses, or
- * hides one it allows. So each service answers for its own matrices at `/actor/permissions`.
- *
- * ## Why it is resolved before the first render
- *
- * The navigation, the route guard and the landing destination are all synchronous. Making them await a
- * fetch would mean either a context threaded through four call sites or a sidebar that renders wide and
- * then narrows — and the flicker is worse than the wait, because a nav entry that appears and vanishes
- * looks like a bug rather than a permission. `main.tsx` resolves this once, then renders.
- *
- * ## What happens when it cannot be answered
- *
- * **Nothing is narrowed.** A null result — service down, request timed out, response malformed — means
- * this returns `true` for everything, so the dashboard behaves exactly as it did before item-level
- * gating existed. That is the same fail-open choice made for system entitlement and for the same
- * reason: a dashboard that hides screens because a request failed reads as a broken build, and the
- * services refuse anything the actor cannot do regardless. Hiding a nav entry has never been the
- * enforcement point.
- *
- * The emergency service being down is the ordinary case of this, since only the fleet service is
- * usually running. Its permissions simply go unknown and S174 items stay visible.
- *
- * ## Why every service must be listed here
- *
- * The fail-open above is per-*set*, not per-service: as soon as **one** source answers, `granted` is
- * non-null and anything absent from it is treated as denied. So a service missing from `SOURCES`
- * does not go "unknown" — it goes **denied**, and every one of its gated controls silently
- * disappears while the dashboard looks perfectly healthy.
- *
- * That is exactly what happened when S152 arrived: fleet answered, facilities was not asked, and so
- * every facilities permission evaluated false — the dashboard drilldowns stopped navigating and the
- * lock and mode controls vanished, with no error anywhere. **Adding a module means adding its source
- * here.**
- */
+import { ServingPlatform, servingPlatform, servingPlatformName } from 'shared/platform';
 
 /** Long enough for a local service, short enough that a dead one does not hold up the first paint. */
 const TIMEOUT_MS = 2500;
 
 let granted: Set<string> | null = null;
+let failure: string | null = null;
 
 interface Source {
   path: string;
-  service?: 'emergency' | 'facilities';
+  service?: 'safetySecurity' | 'facilities';
 }
 
-const SOURCES: Source[] = [
-  // Fleet, fuel and dispatch — three matrices, one deployable, one answer.
-  { path: '/api/v1/fleet/actor/permissions' },
-  // S174 is its own deployable with its own matrix (ADR 0004), so it answers separately.
-  { path: '/api/v1/emergency/actor/permissions', service: 'emergency' },
-  // S152, S153 and S159 — the IFIMP deployable, one matrix in `shared` answering for all three.
-  { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
-];
+/**
+ * One source per platform. An origin asks for its own and nothing else.
+ *
+ * <p>This used to be a fixed list of three, asked by every origin. That is what made a dashboard
+ * served by facilities call fleet and safety-security for permissions it had no screens for, and it
+ * is half of why starting one service produced "Could not reach the Fleet & Logistics service".
+ */
+const SOURCE_FOR: Record<'IFIMP' | 'SSEMP' | 'FTLMP', Source> = {
+  // FTLMP - fleet, fuel, dispatch and asset visibility. Four matrices, one deployable, one answer.
+  FTLMP: { path: '/api/v1/fleet/actor/permissions' },
+  // SSEMP - S174's matrix today, joined by S160-S163 as they are built.
+  SSEMP: { path: '/api/v1/emergency/actor/permissions', service: 'safetySecurity' },
+  // IFIMP - S152, S153 and S159, one matrix in `shared` answering for all three.
+  IFIMP: { path: '/api/v1/facilities/actor/permissions', service: 'facilities' },
+};
 
-const fetchOne = async (source: Source): Promise<string[]> => {
+const sourcesFor = (platform: ServingPlatform): Source[] => {
+  if (platform === 'ALL') {
+    // The portal is the only origin that aggregates. It is also the only one that can be partly
+    // answered, which is why the caller shows which service did not reply.
+    return Object.values(SOURCE_FOR);
+  }
+  const source = SOURCE_FOR[platform as 'IFIMP' | 'SSEMP' | 'FTLMP'];
+  return source ? [source] : [];
+};
+
+const fetchOne = async (source: Source): Promise<string[] | null> => {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
   try {
@@ -75,8 +51,9 @@ const fetchOne = async (source: Source): Promise<string[]> => {
     );
     return Array.isArray(result) ? result : [];
   } catch {
-    // Deliberately silent. An unavailable service means "unknown", not "denied" — see the docblock.
-    return [];
+    // null distinguishes "did not answer" from "answered with nothing", which the old code could
+    // not tell apart - and that ambiguity is exactly what the fail-open was built on.
+    return null;
   } finally {
     clearTimeout(timer);
   }
@@ -85,22 +62,36 @@ const fetchOne = async (source: Source): Promise<string[]> => {
 /**
  * Resolves the actor's permissions. Never throws, never rejects.
  *
- * Leaves the set null when **every** source failed, which is what makes the fail-open default kick in.
- * A partial answer is still an answer: if fleet replies and emergency does not, the fleet permissions
- * narrow fleet items and the S174 items stay visible because nothing is known about them.
+ * <h2>This fails closed, and the previous version failing open is why nothing worked</h2>
+ *
+ * <p>`permits()` used to return `true` for everything when no source answered. The reasoning was that
+ * a dashboard hiding screens because a request failed reads as a broken build. What it produced was
+ * worse and much harder to see: with no service running, every account saw every screen, including
+ * a driver looking at the whole fleet office. With one service running, everything belonging to the
+ * others silently disappeared. Same cause, opposite symptoms, and neither says "a service is down".
+ *
+ * <p>So: no answer means no permissions, and {@link permissionFailure} carries a sentence naming the
+ * service so the operator is told rather than left to infer. An empty sidebar with an explanation is
+ * a smaller failure than a full one that lies.
  */
 export const loadActorPermissions = async (): Promise<void> => {
-  const results = await Promise.all(SOURCES.map(fetchOne));
-  const merged = results.flat();
-  granted = merged.length > 0 ? new Set(merged) : null;
+  const platform = servingPlatform();
+  const sources = sourcesFor(platform);
+  if (sources.length === 0) {
+    granted = new Set();
+    failure = `Could not determine which platform ${servingPlatformName()} serves, so no screens can be offered.`;
+    return;
+  }
+
+  const results = await Promise.all(sources.map(fetchOne));
+  const answered = results.filter((r): r is string[] => r !== null);
+  granted = new Set(answered.flat());
+  failure =
+    answered.length === sources.length
+      ? null
+      : `${servingPlatformName()} did not answer for your permissions, so nothing is being offered. Check that the service is running.`;
 };
 
-/**
- * Whether a nav item may be offered.
- *
- * An item with no `permission` is always offered — its section's system entitlement is the whole
- * requirement, which is true of most screens.
- */
 /**
  * Whether a control may be offered.
  *
@@ -113,10 +104,45 @@ export const permits = (permission?: SflPermission): boolean => {
     return true;
   }
   if (granted === null) {
-    return true;
+    // Before the load resolves nothing is known, and nothing known means nothing offered.
+    return false;
   }
   return granted.has(permission);
 };
 
+/** The sentence to show the operator when permissions could not be loaded, or `null`. */
+export const permissionFailure = (): string | null => failure;
+
 /** For the account panel, so the actor can see what the dashboard was told. */
 export const resolvedPermissionCount = (): number | null => (granted === null ? null : granted.size);
+
+/**
+ * The permissions whose holder's job *is* reading.
+ *
+ * Capability gating asks "can you do something here", and for most roles that is the right question.
+ * For an auditor it is the wrong one: reading and proving is the whole role, and a sidebar that
+ * offered them nothing because they change nothing would be a worse answer than the read-gated
+ * version it replaced. Holding any of these is itself a capability.
+ */
+const REVIEWER_PERMISSIONS: SflPermission[] = [
+  'AUDIT_READ',
+  'FACILITIES_AUDIT_INTEGRITY_CHECK',
+  'FACILITIES_EVIDENCE_EXPORT',
+  'FLEET_AUDIT_INTEGRITY_CHECK',
+  'FLEET_EVIDENCE_EXPORT_APPROVE',
+  'FLEET_EVIDENCE_EXPORT_REQUEST',
+  'FLEET_REPORT_EXPORT',
+  'FUEL_REPORT_EXPORT',
+  'DISPATCH_REPORT_EXPORT',
+  'EMERGENCY_EVIDENCE_EXPORT',
+  'EMERGENCY_REPORT_EXPORT',
+];
+
+/** Whether the actor holds at least one of these. */
+export const permitsAny = (permissions: SflPermission | SflPermission[]): boolean => {
+  const list = Array.isArray(permissions) ? permissions : [permissions];
+  return list.some((permission) => permits(permission));
+};
+
+/** Whether reading is this actor's job rather than a lesser version of somebody else's. */
+export const actorIsReviewer = (): boolean => permitsAny(REVIEWER_PERMISSIONS);

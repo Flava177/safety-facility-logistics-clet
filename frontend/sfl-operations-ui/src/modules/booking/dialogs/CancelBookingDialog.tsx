@@ -15,7 +15,7 @@ interface CancelBookingDialogProps {
 /**
  * Withdraw a booking.
  *
- * A reason is required whoever cancels and however late — `Booking.cancel` refuses a blank one. The
+ * A reason is required whoever cancels and however late - `Booking.cancel` refuses a blank one. The
  * notice differs by whose booking it is, because the two acts are genuinely different: withdrawing
  * your own is housekeeping, and cancelling somebody else's takes a room out of their diary and they
  * will read what you typed.
@@ -47,7 +47,7 @@ const CancelBookingDialog = ({ booking, onClose, onSubmit }: CancelBookingDialog
     <FormDialog
       open
       title={own ? 'Withdraw your booking' : 'Cancel this booking'}
-      description={`${booking.bookingReference} — ${booking.title}`}
+      description={`${booking.bookingReference} - ${booking.title}`}
       submitLabel={own ? 'Withdraw it' : 'Cancel it'}
       submitting={submitting}
       submitDisabled={missing}

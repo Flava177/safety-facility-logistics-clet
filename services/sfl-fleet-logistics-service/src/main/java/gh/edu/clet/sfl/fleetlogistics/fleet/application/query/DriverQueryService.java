@@ -57,7 +57,7 @@ public class DriverQueryService {
      * Assesses eligibility, optionally for a specific vehicle category and period.
      *
      * <p>Computed on read rather than returned from the stored status, so the answer reflects the
-     * licence and clearance dates as at this moment — a stored status can be a day stale.
+     * licence and clearance dates as at this moment - a stored status can be a day stale.
      */
     @Transactional(readOnly = true)
     public EligibilityAssessment assessEligibility(UUID driverId, VehicleCategory vehicleCategory,

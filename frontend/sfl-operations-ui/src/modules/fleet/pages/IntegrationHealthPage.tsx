@@ -12,7 +12,7 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { EnumSelect, FieldLabelSpacer, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -26,7 +26,7 @@ const SEARCH_LIMIT = 100;
  *
  * The counters come from the health projection; the messages come from `GET /integrations/messages`.
  * That search is why this page changed: replay takes a message identifier, and the only messages the
- * dashboard could see were the handful the health projection happened to carry — so replaying a dead
+ * dashboard could see were the handful the health projection happened to carry - so replaying a dead
  * letter meant knowing its id from somewhere else entirely. Dead-letter replay was a documented
  * capability that could not be reached from here at all.
  *
@@ -34,7 +34,7 @@ const SEARCH_LIMIT = 100;
  * field is a compile error instead of an empty cell.
  *
  * Replay is offered on any message that is not already `PROCESSED`. That mirrors the service, which
- * treats replaying a processed message as a no-op rather than an error — the operation is
+ * treats replaying a processed message as a no-op rather than an error - the operation is
  * idempotent, and the audit entry is written either way.
  */
 const IntegrationHealthPage = () => {
@@ -138,7 +138,7 @@ const IntegrationHealthPage = () => {
         width: 100,
         hideBelowLg: true,
         cell: (row) => (
-          <span className="text-theme-xs text-gray-600">{row.siteCode ?? '—'}</span>
+          <span className="text-theme-xs text-gray-600">{row.siteCode ?? '-'}</span>
         ),
       },
       {
@@ -160,7 +160,7 @@ const IntegrationHealthPage = () => {
         hideBelowLg: true,
         cell: (row) => (
           <span className="font-mono text-theme-xs text-gray-600">
-            {row.correlationId ? row.correlationId.slice(0, 8) : '—'}
+            {row.correlationId ? row.correlationId.slice(0, 8) : '-'}
           </span>
         ),
       },
@@ -261,7 +261,12 @@ const IntegrationHealthPage = () => {
               />
             </div>
 
-            {canReplay ? (
+            {/*
+              Nothing stands in for the inbox and replay controls when the role cannot use them.
+              A card explaining the absence was more prominent than the counters the page is for,
+              and it told the reader about permissions rather than about the integration.
+            */}
+            {canReplay && (
               <>
                 <SectionCard title="Inbound messages" subtitle="Newest first" flush>
               <FilterBar
@@ -326,37 +331,36 @@ const IntegrationHealthPage = () => {
               title="Replay by message identifier"
               subtitle="For an identifier that came from a log or an incident note rather than the list above"
             >
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+              {/*
+                Top-aligned, because the field carries a helper line and the button does not: under
+                `items-end` that line pushed the input up and left the two on different rows. The
+                button reserves the label's height instead, which puts it on the control line.
+              */}
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-start">
                 <TextInput
                   label="Integration message ID"
                   value={replayId}
                   onChange={setReplayId}
                   className="sm:max-w-[420px] sm:flex-1"
-                  helperText="Privileged and idempotent — replaying the same message twice is safe."
+                  helperText="Privileged and idempotent - replaying the same message twice is safe."
                 />
-                <Button
-                  variant="primary"
-                  startIcon="refresh"
-                  loading={replaying === replayId.trim()}
-                  disabled={!replayId.trim()}
-                  onClick={() => void replay(replayId.trim(), () => setReplayId(''))}
-                >
-                  Replay
-                </Button>
+                <div className="shrink-0">
+                  <span className="hidden sm:block">
+                    <FieldLabelSpacer />
+                  </span>
+                  <Button
+                    variant="primary"
+                    startIcon="refresh"
+                    loading={replaying === replayId.trim()}
+                    disabled={!replayId.trim()}
+                    onClick={() => void replay(replayId.trim(), () => setReplayId(''))}
+                  >
+                    Replay
+                  </Button>
+                </div>
               </div>
                 </SectionCard>
               </>
-            ) : (
-              <SectionCard
-                title="Integration inbox and replay"
-                subtitle="Privileged controls are hidden for the current Fleet Manager demo role"
-              >
-                <Alert variant="info">
-                  Your role can view integration health counters. Message inbox search and replay are
-                  restricted to integration support/admin users, so this page no longer calls those
-                  protected endpoints during the manager demo.
-                </Alert>
-              </SectionCard>
             )}
           </div>
         )}

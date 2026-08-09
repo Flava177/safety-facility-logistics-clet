@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.fleetlogistics.fuel.application.service;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.BulkImportPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyProcessedException;
@@ -43,12 +44,16 @@ public class FuelImportService {
      *
      * <p>A rejected row never fails the batch: each goes through the same idempotent capture command
      * as a manual entry and carries its own outcome. The duplicate-file check happens **before** any
-     * row is processed — the unique constraint would have caught it either way, but only after every
+     * row is processed - the unique constraint would have caught it either way, but only after every
      * row had been captured, and the operator would have received an unmapped 500 with no indication
      * that nothing had been duplicated.
      */
     public ImportResult importCsv(String site, String source, String fileName, byte[] content, ActorContext actor) {
         access.require(actor, SflPermission.FUEL_TRANSACTION_IMPORT, site, "FuelImportBatch", null);
+        // Before the digest, because hashing an unbounded array to find out it is unbounded is work
+        // done for nothing - and before the batch row exists, so an oversized file leaves no record
+        // claiming an import that never ran.
+        BulkImportPolicy.requireWithinLimit(fileName, content);
         String siteCode = SiteCode.of(site).value();
         String hash = sha256(content);
 
@@ -97,7 +102,10 @@ public class FuelImportService {
                 required(r, "fuelProduct"), new BigDecimal(required(r, "quantity")), required(r, "quantityUnit"),
                 new BigDecimal(required(r, "unitPrice")), decimal(r.get("totalCost")), required(r, "currency"),
                 r.get("cardReference"), Long.parseLong(required(r, "odometerReading")),
-                uuid(r, "receiptEvidenceId", false), r.get("comments"), key, actor, SourceChannel.IMPORT);
+                // A CSV import carries no pump photograph and never will: the file is a provider's
+                // ledger, not a driver's submission. The PUMP_IMAGE rule only applies to MANUAL
+                // captures for exactly this reason.
+                uuid(r, "receiptEvidenceId", false), null, r.get("comments"), key, actor, SourceChannel.IMPORT);
     }
 
     private static List<String> parse(String line) {

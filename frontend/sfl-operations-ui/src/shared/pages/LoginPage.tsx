@@ -1,9 +1,9 @@
-import { FormEvent, useState } from 'react';
+import { FormEvent, useMemo, useState } from 'react';
 import logo from 'assets/sfl-logo.png';
 import Alert from 'shared/components/Alert';
 import FloatingField from 'shared/components/FloatingField';
-import { SEEDED_PASSWORD, seededAccounts } from 'shared/auth/accounts';
-import { signIn } from 'shared/auth/signIn';
+import { SEEDED_PASSWORD, accountsForServingPlatform } from 'shared/auth/accounts';
+import { signInWithConfiguredProvider } from 'shared/auth/provider';
 import { directorate } from 'shared/layout/navigation';
 
 /**
@@ -14,7 +14,7 @@ import { directorate } from 'shared/layout/navigation';
  * The component this page was specified from is a shadcn block, and it is not used verbatim for two
  * concrete reasons rather than taste.
  *
- * Its classes are shadcn's CSS-variable tokens — `bg-background`, `text-muted-foreground`,
+ * Its classes are shadcn's CSS-variable tokens - `bg-background`, `text-muted-foreground`,
  * `border-input`, `ring-ring`. **This project defines none of them.** Its Tailwind theme is a bespoke
  * scale, so pasting the block would have produced an unstyled form: transparent surfaces, invisible
  * borders, default type. And it ships its own `Button`, `Input`, `Label` and `cn`, all four of which
@@ -22,8 +22,8 @@ import { directorate } from 'shared/layout/navigation';
  *
  * <h2>One error message for a wrong email and a wrong password</h2>
  *
- * An earlier version told them apart — "no account for that address" versus "that password is not
- * right" — on the grounds that this is a development sign-in whose whole account list is printed on
+ * An earlier version told them apart - "no account for that address" versus "that password is not
+ * right" - on the grounds that this is a development sign-in whose whole account list is printed on
  * the page, so there was nothing to protect. The owner asked for the single message, and that is the
  * right default to build in: the moment this page points at real accounts, distinguishing the two
  * turns the form into an account-enumeration oracle. The list below still tells a developer which
@@ -34,22 +34,38 @@ const LoginPage = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
+  /*
+    Only the accounts that can work on this origin. The full twenty-two appear on the portal,
+    which serves all three platforms; on a single service the rest would be an invitation to a
+    session with no capability and an empty dashboard.
+  */
+  const platformAccounts = useMemo(() => accountsForServingPlatform(), []);
 
-  const submit = (event: FormEvent) => {
+  const submit = async (event: FormEvent) => {
     event.preventDefault();
-    const result = signIn(email, password);
+    if (!email.trim() || !password) {
+      setError('Enter your email address and password.');
+      return;
+    }
+    /*
+      Through the configured provider rather than the seeded sign-in directly. Which one runs is an
+      environment decision now, and this page is deliberately the same page either way - the only
+      thing it knows is that something either issued a session or gave it a sentence to show.
+    */
+    const result = await signInWithConfiguredProvider(email, password);
     if (!result.ok) {
-      setError(
-        result.reason === 'incomplete'
-          ? 'Enter your email address and password.'
-          : 'Invalid username/email or password.',
-      );
+      /*
+        The provider's own sentence when it has one. "This account has no access to Facilities &
+        Infrastructure" is the answer somebody needs; replacing it with "invalid username or
+        password" would send them to reset a password that was never wrong.
+      */
+      setError(result.message ?? 'Invalid username/email or password.');
       setPassword('');
       return;
     }
     /*
-      A full navigation rather than a router push. Everything derived from the actor — programme
-      entitlement, system entitlement, the merged permission set, the landing destination — is
+      A full navigation rather than a router push. Everything derived from the actor - programme
+      entitlement, system entitlement, the merged permission set, the landing destination - is
       computed once at module scope, which is what makes the sidebar and route guards synchronous.
       A client-side transition would leave all of it holding the pre-sign-in actor, so the signed-in
       user would land on somebody else's portal.
@@ -140,8 +156,8 @@ const LoginPage = () => {
             <div className="pt-2">
               {/*
                 Blue rather than the platform's `primary`, which is brand navy at #0a1931 and reads
-                as near-black on a white card. `teal-500` is the palette's blue despite the name —
-                the ramp is a sky/blue scale — at #0284c7, which carries 4.6:1 against white for the
+                as near-black on a white card. `teal-500` is the palette's blue despite the name -
+                the ramp is a sky/blue scale - at #0284c7, which carries 4.6:1 against white for the
                 label and holds its meaning as the one thing to press on this page.
               */}
               <button
@@ -156,7 +172,7 @@ const LoginPage = () => {
           {/*
             The account list is on the page deliberately. This is a development sign-in against seeded
             accounts, and hiding the list would mean the only way to use the form is to read the
-            source — while the accounts are in the bundle either way.
+            source - while the accounts are in the bundle either way.
           */}
           <div className="mt-7 border-t border-gray-200 pt-4 text-center">
             <button
@@ -165,7 +181,9 @@ const LoginPage = () => {
               aria-expanded={accountsOpen}
               className="text-theme-sm font-medium text-teal-600 hover:underline"
             >
-              {accountsOpen ? 'Hide accounts' : `Show the ${seededAccounts.length} seeded accounts`}
+              {accountsOpen
+                ? 'Hide accounts'
+                : `Show the ${platformAccounts.length} account${platformAccounts.length === 1 ? '' : 's'} for this service`}
             </button>
 
             {accountsOpen && (
@@ -176,7 +194,7 @@ const LoginPage = () => {
                   Choose one to fill the form.
                 </p>
                 <ul className="custom-scrollbar mt-3 max-h-64 space-y-1 overflow-y-auto pr-1 text-left">
-                  {seededAccounts.map((account) => (
+                  {platformAccounts.map((account) => (
                     <li key={account.email}>
                       <button
                         type="button"

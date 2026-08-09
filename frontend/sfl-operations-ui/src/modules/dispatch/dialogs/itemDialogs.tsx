@@ -29,11 +29,11 @@ interface RegisterItemDialogProps {
 }
 
 /**
- * Register a courier item — `POST /items`, or `POST /inbound` when the direction is fixed.
+ * Register a courier item - `POST /items`, or `POST /inbound` when the direction is fixed.
  *
  * Two things are the service's to decide and are shown rather than asked for. The item number is
  * allocated when left blank, so the field says so instead of demanding one an operator would invent.
- * And `chainOfCustodyRequired` is **derived** by `CourierItem` from the type and sensitivity — the
+ * And `chainOfCustodyRequired` is **derived** by `CourierItem` from the type and sensitivity - the
  * dialog previews what that derivation will produce, because it changes what the item then obliges
  * the handler to do, but it never sends the flag.
  */
@@ -194,7 +194,7 @@ interface MisrouteDialogProps {
   item: CourierItem;
 }
 
-/** Re-route a misdirected item — `POST /items/{id}/misroute`. The reason is mandatory. */
+/** Re-route a misdirected item - `POST /items/{id}/misroute`. The reason is mandatory. */
 export const MisrouteItemDialog = ({ open, onClose, onSaved, item }: MisrouteDialogProps) => {
   const form = useFleetForm({
     initialValues: { reason: '', handler: item.assignedHandler ?? '' },
@@ -253,7 +253,7 @@ interface DistributeDialogProps {
 }
 
 /**
- * Record internal distribution of inbound mail — `POST /inbound/{id}/distribute`.
+ * Record internal distribution of inbound mail - `POST /inbound/{id}/distribute`.
  *
  * The acknowledgement is the point: it names who took the item, and the signature reference is the
  * only evidence that it happened. Legal from received or staged; once distributed the item's inbound

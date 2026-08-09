@@ -12,7 +12,7 @@ import java.util.UUID;
  * One effective-dated configuration value.
  *
  * <p>Superseding writes {@code effective_to} on the old row and inserts a new one, so the history of
- * a threshold is recoverable — NFR 23.8 asks for versioned configuration, and an escalation raised
+ * a threshold is recoverable - NFR 23.8 asks for versioned configuration, and an escalation raised
  * last month can only be reconciled against the value that was active last month.
  */
 @Entity

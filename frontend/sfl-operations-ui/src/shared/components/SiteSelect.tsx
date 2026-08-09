@@ -27,7 +27,7 @@ interface SiteSelectProps {
   onBlur?: () => void;
   disabled?: boolean;
   className?: string;
-  /** Adds an "all sites" choice — use for a filter, never for a request field. */
+  /** Adds an "all sites" choice - use for a filter, never for a request field. */
   allowEmpty?: boolean;
   emptyLabel?: string;
 }
@@ -36,7 +36,7 @@ interface SiteSelectProps {
  * Site scope as a choice rather than free text.
  *
  * Every write carries a site code, and the service refuses one outside the actor's scope with
- * `FLEET_UNAUTHORIZED_SCOPE` — a rule the operator only discovered by typing a neighbouring site
+ * `FLEET_UNAUTHORIZED_SCOPE` - a rule the operator only discovered by typing a neighbouring site
  * and having the submission bounced. The options are the actor's own sites, so the dashboard can no
  * longer offer a site it cannot write to. Its props mirror `TextInput` so it drops into the same
  * grid without any other change.

@@ -5,6 +5,7 @@ import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
 import { SidebarToggle } from './TopBar';
 import { entitledSections } from './navigation';
+import { permissionFailure } from './actorPermissions';
 import { portalLabel } from './programmes';
 import { useSidebar } from './SidebarContext';
 
@@ -21,12 +22,12 @@ const initials = (name: string): string =>
  *
  * Destinations are grouped under quiet section labels rather than separated by rules, so the items
  * read as several short lists instead of one long one. The active item takes a tinted pill and gold
- * text — enough to find at a glance, not so much that it competes with the work surface. Only built
+ * text - enough to find at a glance, not so much that it competes with the work surface. Only built
  * destinations appear; there are no placeholder entries.
  *
  * **Sections are filtered by programme entitlement.** A fleet operator sees fleet, fuel and
  * dispatch; they do not see emergency mass notification, which is SSEMP. A manager or superadmin
- * sees everything. See `programmes.ts` and ADR 0005 — and note that this is a usability control,
+ * sees everything. See `programmes.ts` and ADR 0005 - and note that this is a usability control,
  * never the enforcement point: every service authorises every call on its own.
  */
 const Sidebar = () => {
@@ -59,7 +60,7 @@ const Sidebar = () => {
 
                 They were `text-gray-500` at the same weight as an inactive item, so "Operations" and
                 "Trips & assignments" carried equal visual weight and the sidebar read as one long
-                list. A heading's job is to be scannable and *not* look pressable — so it takes the
+                list. A heading's job is to be scannable and *not* look pressable - so it takes the
                 brand navy, a heavier weight and letter-spacing, none of which any nav item uses.
                 Colour is not doing the work alone: the spacing above and the tracking separate them
                 for anyone who cannot distinguish the hues.
@@ -115,13 +116,31 @@ const Sidebar = () => {
             </div>
           ))}
 
+          {/*
+            An empty rail has two causes and they are not the same conversation. "Your roles grant
+            nothing" is about the account; "the service did not answer" is about the deployment. The
+            second used to be indistinguishable from the first, so an operator whose service was
+            simply not running was told their roles were short - and went looking for an
+            administrator instead of for the process.
+          */}
           {sections.length === 0 && (
             <div className={cn('px-3 py-4', !expanded && 'lg:hidden')}>
-              <p className="text-theme-sm font-medium text-gray-800">No programme assigned</p>
-              <p className="mt-1 text-theme-xs text-gray-600">
-                Your roles do not grant access to any SFL programme, so there is nothing to show
-                here. Ask for the role that covers the work you need to do.
-              </p>
+              {permissionFailure() ? (
+                <>
+                  <p className="text-theme-sm font-medium text-gray-800">
+                    Permissions unavailable
+                  </p>
+                  <p className="mt-1 text-theme-xs text-gray-600">{permissionFailure()}</p>
+                </>
+              ) : (
+                <>
+                  <p className="text-theme-sm font-medium text-gray-800">No programme assigned</p>
+                  <p className="mt-1 text-theme-xs text-gray-600">
+                    Your roles do not grant access to any SFL programme, so there is nothing to show
+                    here. Ask for the role that covers the work you need to do.
+                  </p>
+                </>
+              )}
             </div>
           )}
         </nav>

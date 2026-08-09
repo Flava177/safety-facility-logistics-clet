@@ -68,7 +68,7 @@ class FacilitiesPermissionMatrixTest {
 
         // S153 gave the requester the two permissions reporting a fault actually needs; S159 added the
         // two booking a room needs, because a requester is exactly the person who books a room. Both
-        // reads are narrowed per record to their own — a matrix cannot express "mine", so the set here
+        // reads are narrowed per record to their own - a matrix cannot express "mine", so the set here
         // is the outer bound rather than the whole rule.
         //
         // Exact rather than "contains", deliberately. This is the narrowest role in the module and the
@@ -88,8 +88,8 @@ class FacilitiesPermissionMatrixTest {
      *
      * <p>The maintenance supervisor holds {@code FACILITIES_READINESS_OVERRIDE} and deliberately not
      * this: the two would be redundant, and the redundancy is harmful. A supervisor who needs a blocked
-     * hall used should clear or downgrade the blocker — which leaves a readiness record somebody can
-     * review — rather than book past it and leave the hall still reading BLOCKED to everyone else.
+     * hall used should clear or downgrade the blocker - which leaves a readiness record somebody can
+     * review - rather than book past it and leave the hall still reading BLOCKED to everyone else.
      */
     @Test
     void only_centre_level_roles_may_book_into_a_space_readiness_refuses() {

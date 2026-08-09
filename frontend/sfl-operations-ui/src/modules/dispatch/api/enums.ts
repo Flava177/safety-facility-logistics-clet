@@ -1,7 +1,7 @@
 /**
  * Enumerations mirrored from `gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model`.
  *
- * Values are the wire values — the Java enum constant names, read off the records themselves and
+ * Values are the wire values - the Java enum constant names, read off the records themselves and
  * confirmed against `/v3/api-docs`. Labels are UI-only; the service never sees them.
  */
 
@@ -127,7 +127,7 @@ export type ScanRowOutcome = (typeof SCAN_ROW_OUTCOMES)[number];
  * Item types the domain treats as requiring a chain of custody.
  *
  * `CourierItem` derives `chainOfCustodyRequired` itself, so this list is only used to warn an
- * operator *before* they submit — the record's own flag is what any screen displays.
+ * operator *before* they submit - the record's own flag is what any screen displays.
  */
 export const CUSTODY_REQUIRED_TYPES: ItemType[] = [
   'CONFIDENTIAL_CORRESPONDENCE',

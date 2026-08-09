@@ -65,8 +65,8 @@ const ResolveSetupTaskDialog = ({ task, onClose, onSubmit }: ResolveSetupTaskDia
           onChange={(value) => setOutcome(value as SetupTaskStatus)}
           required
           options={[
-            { value: 'DONE', label: 'Done — the room is ready' },
-            { value: 'SKIPPED', label: 'Skipped — deliberately not done' },
+            { value: 'DONE', label: 'Done - the room is ready' },
+            { value: 'SKIPPED', label: 'Skipped - deliberately not done' },
           ]}
         />
 

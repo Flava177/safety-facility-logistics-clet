@@ -36,7 +36,7 @@ const PROVIDER_STALE_HOURS = 6;
  *
  * Three things the service really exposes, and one it does not. Inbound message health and outbound
  * publication health both have endpoints, and a dead-lettered outbound message can be replayed.
- * What has no endpoint is **per-provider ingest freshness** — so the provider table below is built
+ * What has no endpoint is **per-provider ingest freshness** - so the provider table below is built
  * from the transactions themselves, grouped by `sourceSystem`, and says so.
  *
  * Note that the two health endpoints are not site-scoped: `integrationHealth` requires the
@@ -131,7 +131,7 @@ const FuelIntegrationPage = () => {
         header: 'Site',
         width: 110,
         hideBelowLg: true,
-        cell: (row) => row.siteCode ?? '—',
+        cell: (row) => row.siteCode ?? '-',
       },
       {
         key: 'received',
@@ -310,7 +310,7 @@ const FuelIntegrationPage = () => {
             variant="warning"
             title={`${staleProviders.length} provider feed${staleProviders.length === 1 ? ' has' : 's have'} gone quiet`}
           >
-            {staleProviders.map((provider) => provider.source).join(', ')} — no transaction ingested
+            {staleProviders.map((provider) => provider.source).join(', ')} - no transaction ingested
             in the last {PROVIDER_STALE_HOURS} hours at {siteCode}.
             <DerivedNote>
               A dashboard threshold, not a service one. The fuel service publishes no per-provider
@@ -436,7 +436,7 @@ const FuelIntegrationPage = () => {
           <div className="px-5 pt-2 pb-4">
             <p className="text-theme-xs text-gray-600">
               Checked {formatDateTime(inbound.data?.checkedAt)}. The inbound inbox is shared across
-              the service and is not filtered to fuel or to a site — a message here may belong to
+              the service and is not filtered to fuel or to a site - a message here may belong to
               another module.
             </p>
           </div>

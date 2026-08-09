@@ -10,7 +10,7 @@ import { AnomalyAction, LogbookTransition } from './fuelApi';
  *
  * Transcribed from `DriverLogbook`, `FuelAnomalyCase` and `FuelTransaction` in
  * `gh.edu.clet.sfl.fleetlogistics.fuel.domain.model`. Where the state model document and the code
- * disagree, the code wins — see gap 7 in the frontend gap register.
+ * disagree, the code wins - see gap 7 in the frontend gap register.
  */
 
 export interface TransitionRule {
@@ -76,7 +76,7 @@ export const logbookSubmitTarget = (status: string): string =>
 /**
  * What `DriverLogbook.submit` demands beyond the state guard.
  *
- * `if (!declarationAccepted || endTime == null || endOdometer == null) throw ...` — so a draft
+ * `if (!declarationAccepted || endTime == null || endOdometer == null) throw ...` - so a draft
  * without a completed journey cannot be submitted, and the operator should be told which of the
  * three is missing rather than being handed "completed journey and driver declaration are required".
  */
@@ -151,7 +151,7 @@ export const ANOMALY_RULES: Record<AnomalyAction, TransitionRule> = {
     privileged: true,
   },
   escalate: {
-    // `FuelAnomalyCase.escalate` has no `requireState` guard — it is legal from any status.
+    // `FuelAnomalyCase.escalate` has no `requireState` guard - it is legal from any status.
     from: [],
     label: 'Escalate',
     requiredField: 'reason',
@@ -210,7 +210,7 @@ export const anomalyActionAllowed = (anomaly: FuelAnomalyCase, action: AnomalyAc
 /**
  * The three things `FuelAnomalyCase.close` demands beyond a legal state.
  *
- * `if (explanation == null || decision == null || evidence == null) throw ...` — an explanation and
+ * `if (explanation == null || decision == null || evidence == null) throw ...` - an explanation and
  * a decision must already be on the record, and evidence comes with the closure itself. Showing
  * these before submission is the difference between an operator understanding the gate and an
  * operator seeing "explanation, decision and evidence are required for closure" and guessing.
@@ -240,7 +240,7 @@ export const anomalySlaBreached = (anomaly: FuelAnomalyCase, now = Date.now()): 
 /**
  * `FuelTransaction.withStatus` refuses a record that is `VOIDED` or not `ACTIVE`, so reconciliation
  * is only offered on a live record. The service will also refuse it when no ACTIVE policy covers
- * `occurredAt` — that one cannot be predicted client-side, because policies are effective-dated and
+ * `occurredAt` - that one cannot be predicted client-side, because policies are effective-dated and
  * the dashboard does not re-implement `appliesAt`.
  */
 export const transactionReconcilable = (transaction: FuelTransaction): boolean =>

@@ -25,7 +25,7 @@ import { compose, integerAtLeast, maxLength, required } from 'shared/validation/
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
-/** Every record identifier on this service is optional — blank means the service allocates one. */
+/** Every record identifier on this service is optional - blank means the service allocates one. */
 const codeHint = 'Leave blank and the service allocates one.';
 
 interface TemplateDialogProps {
@@ -36,7 +36,7 @@ interface TemplateDialogProps {
 }
 
 /**
- * Create a notification template — `POST /templates`.
+ * Create a notification template - `POST /templates`.
  *
  * A template must declare at least one channel; the domain refuses one with none. The break-glass
  * flag is the consequential field on this form, and it is the reason the dialog explains rather
@@ -111,7 +111,7 @@ export const CreateTemplateDialog = ({
         required
         value={form.values.title}
         onChange={(value) => form.setValue('title', value)}
-        {...form.fieldProps('title', 'What this template is for — "Building evacuation".')}
+        {...form.fieldProps('title', 'What this template is for - "Building evacuation".')}
       />
 
       <TextAreaInput
@@ -168,7 +168,7 @@ interface ScenarioDialogProps {
 }
 
 /**
- * Create an emergency scenario — `POST /scenarios`.
+ * Create an emergency scenario - `POST /scenarios`.
  *
  * A scenario is the named situation an activation cites, carrying a default template and the
  * priority that drives the acknowledgement SLA. Its break-glass flag is independent of the
@@ -247,7 +247,7 @@ export const CreateScenarioDialog = ({
         required
         value={form.values.name}
         onChange={(value) => form.setValue('name', value)}
-        {...form.fieldProps('name', 'How responders refer to it — "Fire — full evacuation".')}
+        {...form.fieldProps('name', 'How responders refer to it - "Fire - full evacuation".')}
       />
 
       <div className={twoColumn}>
@@ -286,7 +286,7 @@ export const CreateScenarioDialog = ({
       {form.values.breakGlassEligible && (
         <Alert variant="warning" title="Eligibility is decided by either record">
           A break-glass send is allowed when the template <strong>or</strong> the scenario is
-          eligible — not only when both are. Marking this scenario eligible therefore makes every
+          eligible - not only when both are. Marking this scenario eligible therefore makes every
           template usable without approval whenever it is cited, including
           {chosenTemplate && !chosenTemplate.breakGlassEligible
             ? ` "${chosenTemplate.title}", which is not itself eligible.`
@@ -305,7 +305,7 @@ interface AudienceDialogProps {
 }
 
 /**
- * Create an audience group — `POST /audience-groups`.
+ * Create an audience group - `POST /audience-groups`.
  *
  * `recipientCount` is not decoration: it is the number the service fans out to and the denominator
  * every delivery and acknowledgement figure is read against. A group whose count is stale makes an
@@ -377,7 +377,7 @@ export const CreateAudienceDialog = ({
         required
         value={form.values.name}
         onChange={(value) => form.setValue('name', value)}
-        {...form.fieldProps('name', 'As responders would name it — "All staff", "Ward wardens".')}
+        {...form.fieldProps('name', 'As responders would name it - "All staff", "Ward wardens".')}
       />
 
       <div className={twoColumn}>
@@ -403,7 +403,7 @@ export const CreateAudienceDialog = ({
 
       <Alert variant="info" title="Contact detail stays in the directory">
         This record holds a pointer and a size, never a phone number or an address. Keeping the
-        count current is what makes a delivery figure mean anything — a group sized at zero sends to
+        count current is what makes a delivery figure mean anything - a group sized at zero sends to
         nobody and still reports success.
       </Alert>
     </FormDialog>
@@ -418,11 +418,11 @@ interface ZoneDialogProps {
 }
 
 /**
- * Create a recipient zone — `POST /recipient-zones`.
+ * Create a recipient zone - `POST /recipient-zones`.
  *
  * A zone narrows a broadcast to a place. It also carries an integration consequence worth stating:
  * naming zones on an activation is what makes the service record lockdown and CCTV preservation
- * context against them. SFL never actuates that hardware — it records the context (Arch §0E).
+ * context against them. SFL never actuates that hardware - it records the context (Arch §0E).
  */
 export const CreateZoneDialog = ({
   open,
@@ -487,7 +487,7 @@ export const CreateZoneDialog = ({
         required
         value={form.values.name}
         onChange={(value) => form.setValue('name', value)}
-        {...form.fieldProps('name', 'As it is signposted on site — "Block B", "Laboratory wing".')}
+        {...form.fieldProps('name', 'As it is signposted on site - "Block B", "Laboratory wing".')}
       />
 
       <TextInput

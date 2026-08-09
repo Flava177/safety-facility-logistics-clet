@@ -51,7 +51,7 @@ const alignment = {
  *
  * Accessibility notes. The horizontal scroller is focusable and labelled, so a keyboard user can
  * reach columns that are off-screen (SC 2.1.1). A clickable row is a real `<button>` inside the
- * first cell rather than an `onClick` on the `<tr>` — a table row has no role that accepts
+ * first cell rather than an `onClick` on the `<tr>` - a table row has no role that accepts
  * activation, and a div-with-a-handler is invisible to assistive technology.
  */
 function DataTable<T>({

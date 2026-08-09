@@ -11,7 +11,7 @@ import {
   DriverSelect,
   TripSelect,
   VehicleSelect,
-} from 'modules/fuel/components/FleetReferenceSelect';
+} from 'modules/fleet/components/FleetReferenceSelect';
 import { driversApi, tripsApi, vehiclesApi } from 'modules/fleet/api/fleetApi';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
@@ -30,6 +30,9 @@ import {
 import { readSession } from 'shared/auth/session';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { isPersona } from 'shared/layout/personas';
+import { useRecentValues } from 'shared/hooks/useRecentValues';
+import FormSummary from 'shared/components/FormSummary';
+import PlaceField from 'shared/components/PlaceField';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 const REFERENCE_WINDOW = 200;
@@ -74,7 +77,7 @@ interface CreateLogbookDialogProps {
 }
 
 /**
- * Create a draft logbook — `POST /api/v1/fuel/logbooks`.
+ * Create a draft logbook - `POST /api/v1/fuel/logbooks`.
  *
  * The record is always created as `DRAFT`; there is no create-and-submit. That is deliberate on the
  * service side and it shapes this form: the end of the journey (end time, closing odometer,
@@ -83,7 +86,7 @@ interface CreateLogbookDialogProps {
  *
  * The two cross-field rules are the record's own: `endTime` may not precede `startTime`, and
  * `endOdometer` may not be below `startOdometer`. Both are enforced in `DriverLogbook`'s compact
- * constructor, so a violation would be a 400 rather than a field error — checking here turns it
+ * constructor, so a violation would be a 400 rather than a field error - checking here turns it
  * into an inline message on the field that caused it.
  */
 export const CreateLogbookDialog = ({
@@ -97,6 +100,14 @@ export const CreateLogbookDialog = ({
   const session = readSession();
   const driverOnly = isPersona('driver');
   const appliedTripRef = useRef<string | null>(null);
+
+  // Scoped to the site: a manager holding four centres should not be offered one centre's
+  // routes while filing against another.
+  const { values: recentOrigins, remember: rememberOrigin } = useRecentValues('origin', logbook?.siteCode.value ?? defaultSiteCode);
+  const { values: recentDestinations, remember: rememberDestination } = useRecentValues(
+    'destination',
+    logbook?.siteCode.value ?? defaultSiteCode,
+  );
 
   const form = useFleetForm({
     initialValues: {
@@ -180,6 +191,8 @@ export const CreateLogbookDialog = ({
       const saved = editing && logbook
         ? await driverLogbooksApi.update(logbook.id, payload)
         : await driverLogbooksApi.create(payload);
+      rememberOrigin(values.origin);
+      rememberDestination(values.destination);
       onSaved(saved);
       onClose();
     },
@@ -274,6 +287,15 @@ export const CreateLogbookDialog = ({
   const incomplete =
     !form.values.endTime || form.values.endOdometer === '' || !form.values.declarationAccepted;
 
+  const logbookDistance =
+    form.values.startOdometer !== '' && form.values.endOdometer !== ''
+      ? `${Number(form.values.startOdometer).toLocaleString()} → ${Number(
+          form.values.endOdometer,
+        ).toLocaleString()} km`
+      : form.values.startOdometer !== ''
+        ? `from ${Number(form.values.startOdometer).toLocaleString()} km`
+        : null;
+
   return (
     <FormDialog
       open={open}
@@ -287,6 +309,25 @@ export const CreateLogbookDialog = ({
       submitting={form.submitting}
       formError={form.formError}
       maxWidth="lg"
+      summary={
+        <FormSummary
+          items={[
+            {
+              label: 'Journey',
+              value:
+                form.values.origin && form.values.destination
+                  ? `${form.values.origin} → ${form.values.destination}`
+                  : null,
+            },
+            { label: 'Date', value: form.values.journeyDate || null },
+            { label: 'Odometer', value: logbookDistance },
+            // A draft that is missing an end time, a closing reading or the declaration cannot be
+            // submitted for review, and `incomplete` already knows it - saying so here means the
+            // operator learns it before saving rather than from the next screen.
+            { label: 'State', value: incomplete ? 'Draft - not yet complete' : 'Complete' },
+          ]}
+        />
+      }
       onClose={onClose}
       onSubmit={form.submit}
     >
@@ -298,6 +339,21 @@ export const CreateLogbookDialog = ({
             form.setValues({ siteCode: value, driverId: '', vehicleId: '', tripId: '' })
           }
           {...form.fieldProps('siteCode')}
+        />
+        {/*
+          Second field, not eleventh. It was below use classification, which meant an operator had
+          already typed origin, destination, purpose, times and odometer by hand before reaching the
+          control that would have filled all six from the trip. The shortcut has to be offered before
+          the work, not after it.
+        */}
+        <TripSelect
+          siteCode={form.values.siteCode}
+          value={form.values.tripId}
+          onChange={(value) => form.setValue('tripId', value)}
+          {...form.fieldProps(
+            'tripId',
+            'Fills vehicle, route, date, times, purpose and odometer from the assigned trip.',
+          )}
         />
         <DateField
           label="Journey date"
@@ -349,16 +405,18 @@ export const CreateLogbookDialog = ({
           onChange={(value) => form.setValue('endTime', value)}
           {...form.fieldProps('endTime', 'Required before the logbook can be submitted.')}
         />
-        <TextInput
+        <PlaceField
           label="Origin"
           required
+          recent={recentOrigins}
           value={form.values.origin}
           onChange={(value) => form.setValue('origin', value)}
           {...form.fieldProps('origin')}
         />
-        <TextInput
+        <PlaceField
           label="Destination"
           required
+          recent={recentDestinations}
           value={form.values.destination}
           onChange={(value) => form.setValue('destination', value)}
           {...form.fieldProps('destination')}
@@ -387,15 +445,6 @@ export const CreateLogbookDialog = ({
             form.setValue('useClassification', (value || 'OFFICIAL') as LogbookUseClassification)
           }
           {...form.fieldProps('useClassification')}
-        />
-        <TripSelect
-          siteCode={form.values.siteCode}
-          value={form.values.tripId}
-          onChange={(value) => form.setValue('tripId', value)}
-          {...form.fieldProps(
-            'tripId',
-            'Select the assigned trip to fill vehicle, route, date, times, purpose and odometer.',
-          )}
         />
       </div>
 
@@ -496,7 +545,7 @@ export const LogbookTransitionDialog = ({
     reopen: {
       title: 'Reopen this approved logbook',
       submit: 'Reopen',
-      note: 'Privileged — needs FUEL_LOGBOOK_REOPEN. The reason is recorded against the record.',
+      note: 'Privileged - needs FUEL_LOGBOOK_REOPEN. The reason is recorded against the record.',
     },
     cancel: {
       title: 'Cancel this logbook',

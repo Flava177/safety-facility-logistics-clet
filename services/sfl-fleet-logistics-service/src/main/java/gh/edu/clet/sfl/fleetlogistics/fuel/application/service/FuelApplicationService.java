@@ -16,10 +16,12 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FinanceAuditVisibilityPort;
+import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelEvidencePort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelFleetReferencePort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelOutboxAdminPort;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyPeriodOverlapException;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelPolicyVersionNotAdvancedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.DriverLogbook;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelAnomalyCase;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
@@ -28,6 +30,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.DriverScopeResol
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPostedPrice;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelReconciliation;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelTransaction;
 import java.math.BigDecimal;
@@ -55,7 +58,9 @@ public class FuelApplicationService {
     private final NotificationPort notifications; private final FinanceAuditVisibilityPort financeAudit; private final FuelOutboxAdminPort outboxAdmin;
     /** Resolves which driver a signed-in person is. Shared with S166 so both modules agree on the answer. */
     private final DriverScopeResolver driverScopes;
-    public FuelApplicationService(FuelRepository r,FuelFleetReferencePort f,FuelAccessPolicy a,AuditPort audit,IntegrationEventPublisher e,IdempotencyPort i,Clock c,NotificationPort n,FinanceAuditVisibilityPort fa,FuelOutboxAdminPort ox,DriverScopeResolver ds){repository=r;fleet=f;access=a;this.audit=audit;events=e;idempotency=i;clock=c;notifications=n;financeAudit=fa;outboxAdmin=ox;driverScopes=ds;}
+    /** Read-only view of S166 evidence, for the "has this photograph been used before" rule. */
+    private final FuelEvidencePort evidence;
+    public FuelApplicationService(FuelRepository r,FuelFleetReferencePort f,FuelAccessPolicy a,AuditPort audit,IntegrationEventPublisher e,IdempotencyPort i,Clock c,NotificationPort n,FinanceAuditVisibilityPort fa,FuelOutboxAdminPort ox,DriverScopeResolver ds,FuelEvidencePort ev){repository=r;fleet=f;access=a;this.audit=audit;events=e;idempotency=i;clock=c;notifications=n;financeAudit=fa;outboxAdmin=ox;driverScopes=ds;evidence=ev;}
 
     public FuelOutboxAdminPort.OutboxHealth integrationHealth(ActorContext actor){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");return outboxAdmin.health();}
     @Transactional public boolean replayIntegration(UUID messageId,ActorContext actor,SourceChannel channel){access.requirePermission(actor,SflPermission.FUEL_INTEGRATION_REPLAY,"FuelOutbox");boolean requeued=outboxAdmin.replay(messageId);audit.record(actor,channel,SiteCode.of("SYSTEM"),AuditAction.INTEGRATION_REPLAYED,"FuelOutboxMessage",messageId.toString(),null,Map.of("requeued",requeued));return requeued;}
@@ -74,7 +79,12 @@ public class FuelApplicationService {
                     allowedFuelProducts,approvedVendors,actor,channel);
         }
     }
-    public record CaptureFuel(String siteCode,String providerTransactionId,String sourceSystem,UUID vehicleId,UUID driverId,UUID tripId,Instant occurredAt,String vendorReference,String stationReference,String fuelProduct,BigDecimal quantity,String quantityUnit,BigDecimal unitPrice,BigDecimal totalCost,String currency,String cardReference,long odometerReading,UUID receiptEvidenceId,String comments,String idempotencyKey,ActorContext actor,SourceChannel channel){}
+    public record CaptureFuel(String siteCode,String providerTransactionId,String sourceSystem,UUID vehicleId,UUID driverId,UUID tripId,Instant occurredAt,String vendorReference,String stationReference,String fuelProduct,BigDecimal quantity,String quantityUnit,BigDecimal unitPrice,BigDecimal totalCost,String currency,String cardReference,long odometerReading,UUID receiptEvidenceId,UUID pumpEvidenceId,String comments,String idempotencyKey,ActorContext actor,SourceChannel channel){}
+
+    /** Record a forecourt price, closing whatever open price it supersedes. */
+    public record RecordPostedPrice(String siteCode,String vendor,String fuelProduct,BigDecimal unitPrice,
+            String currency,Instant effectiveFrom,FuelPostedPrice.Source source,String notes,ActorContext actor,
+            SourceChannel channel){}
     public record CreateLogbook(String siteCode,UUID driverId,UUID vehicleId,UUID tripId,LocalDate journeyDate,Instant startTime,Instant endTime,String origin,String destination,String routeNotes,DriverLogbook.UseClassification useClassification,String purpose,String passengerLoadNotes,long startOdometer,Long endOdometer,boolean declarationAccepted,UUID evidenceId,ActorContext actor,SourceChannel channel){}
     public record UpdateLogbook(UUID driverId,UUID vehicleId,UUID tripId,LocalDate journeyDate,Instant startTime,Instant endTime,String origin,String destination,String routeNotes,DriverLogbook.UseClassification useClassification,String purpose,String passengerLoadNotes,long startOdometer,Long endOdometer,boolean declarationAccepted,UUID evidenceId,ActorContext actor,SourceChannel channel){}
 
@@ -82,21 +92,132 @@ public class FuelApplicationService {
      * Creates an effective-dated policy, refusing one that overlaps an active policy for the site.
      *
      * <p>The domain model documented "no overlapping active policy for the same scope" as an
-     * invariant and nothing enforced it — not the record, which cannot see its siblings, and not the
+     * invariant and nothing enforced it - not the record, which cannot see its siblings, and not the
      * database. With two active policies covering one instant, {@code findApplicablePolicy} returns
      * whichever row the ordering surfaces, so the rules a transaction is judged against and the
      * policy version stamped on its reconciliation stop being reproducible. That defeats the point
      * of an effective-dated policy, so the overlap is refused here, inside the same transaction that
      * writes the record.
      */
+    /**
+     * The fields of {@link CreatePolicy}, against a policy that already exists.
+     *
+     * <p>Deliberately the whole set rather than a patch of changed fields: a partial update of a
+     * rule set means the caller and the service have to agree on what "absent" means for a limit
+     * that is legitimately null, and getting that wrong silently removes a ceiling.
+     */
+    public record UpdatePolicy(UUID policyId,String name,Instant effectiveFrom,Instant effectiveTo,int policyVersion,
+            BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,
+            BigDecimal minConsumption,BigDecimal maxConsumption,long odometerJumpTolerance,boolean receiptRequired,
+            int receiptGraceHours,BigDecimal materialityAmount,int anomalySlaHours,BigDecimal costVarianceTolerance,
+            int repeatedPatternWindowHours,int repeatedPatternThreshold,Set<String> allowedFuelProducts,
+            Set<String> approvedVendors,ActorContext actor,SourceChannel channel){
+        public UpdatePolicy {
+            costVarianceTolerance = costVarianceTolerance == null ? FuelPolicy.DEFAULT_COST_VARIANCE_TOLERANCE : costVarianceTolerance;
+            repeatedPatternWindowHours = repeatedPatternWindowHours < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_WINDOW_HOURS : repeatedPatternWindowHours;
+            repeatedPatternThreshold = repeatedPatternThreshold < 1 ? FuelPolicy.DEFAULT_REPEATED_PATTERN_THRESHOLD : repeatedPatternThreshold;
+        }
+    }
+
     @Transactional public FuelPolicy createPolicy(CreatePolicy c){
         access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,c.siteCode(),"FuelPolicy",null);
         requireNoOverlap(SiteCode.of(c.siteCode()).value(),c.effectiveFrom(),c.effectiveTo());
         return persistPolicy(c);
     }
 
+    /**
+     * Revises a policy in place.
+     *
+     * <h2>Why this edits rather than superseding</h2>
+     *
+     * <p>Reconciliation stamps every run with the policy id <em>and</em> the {@code policyVersion} it
+     * applied, so a past judgement stays readable as the rules that produced it whatever the record
+     * says now. That is what makes editing safe: the history is not derived from the current row.
+     * The alternative - forcing a new policy for every correction - fills the register with versions
+     * that differ by a typo in a name, and the period-overlap rule then refuses most of them.
+     *
+     * <p>Which is safe only as far as the version keeps its meaning, and that is now enforced rather
+     * than hoped for. A run records the policy id and version and <em>nothing else about the
+     * rules</em>, so changing a limit while reusing the version makes that pair describe two
+     * different rule sets - the first draft of this method allowed exactly that, and the edit form
+     * prefills the current version, so it was the default path rather than an edge case. A revision
+     * that changes an outcome-bearing field must carry a new version; renaming, or correcting a
+     * date, still does not.
+     *
+     * <p>The overlap check runs again, excluding this policy, because widening a period is exactly
+     * how an edit collides with a neighbour.
+     */
+    @Transactional public FuelPolicy updatePolicy(UpdatePolicy c){
+        var existing=policyRecord(c.policyId());
+        access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,existing.siteCode().value(),"FuelPolicy",existing.id().toString());
+        requireNoOverlapExcluding(existing.siteCode().value(),c.effectiveFrom(),c.effectiveTo(),existing.id());
+        Instant now=clock.instant();
+        var revised=new FuelPolicy(existing.id(),existing.siteCode(),c.name(),c.effectiveFrom(),c.effectiveTo(),
+                c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),
+                c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),
+                c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.costVarianceTolerance(),
+                c.repeatedPatternWindowHours(),c.repeatedPatternThreshold(),c.allowedFuelProducts(),
+                c.approvedVendors(),existing.status(),
+                existing.metadata().modifiedBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));
+        // Compared after construction so the record's own normalisation - upper-cased vendor and
+        // product sets, the cost-variance default - is applied to both sides. Comparing the raw
+        // command against a stored record would report "goil" and "GOIL" as a change.
+        if(!revised.hasSameRulesAs(existing)&&revised.policyVersion()==existing.policyVersion()){
+            throw FuelPolicyVersionNotAdvancedException.of(existing.id(),existing.policyVersion());
+        }
+        var saved=repository.savePolicy(revised);
+        audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.UPDATE,"FuelPolicy",saved.id().toString(),existing,saved);
+        return saved;
+    }
+
+    /**
+     * Withdraws a policy, which is what deleting one has to mean here.
+     *
+     * <p>A policy is cited by every reconciliation run it judged. Removing the row would leave those
+     * runs pointing at nothing - the audit trail would still say a transaction was judged under
+     * policy X and there would be no X to read - so a fuel register that can be tidied into
+     * incoherence is worse than one that cannot be tidied at all.
+     *
+     * <p>{@code ARCHIVED} is the answer already in the model: {@link FuelPolicy#appliesAt} requires
+     * {@code ACTIVE}, so an archived policy stops applying to anything new the moment it is written,
+     * while staying readable for everything it has already decided. It also frees the period, so the
+     * replacement can cover the same dates without tripping the overlap rule.
+     */
+    @Transactional public FuelPolicy withdrawPolicy(UUID id,String reason,ActorContext actor,SourceChannel channel){
+        var existing=policyRecord(id);
+        access.require(actor,SflPermission.FUEL_POLICY_MANAGE,existing.siteCode().value(),"FuelPolicy",existing.id().toString());
+        if(existing.status()==FuelPolicy.Status.ARCHIVED)return existing;
+        Instant now=clock.instant();
+        var withdrawn=new FuelPolicy(existing.id(),existing.siteCode(),existing.name(),existing.effectiveFrom(),
+                existing.effectiveTo(),existing.policyVersion(),existing.maxPerTransaction(),existing.dailyLimit(),
+                existing.monthlyLimit(),existing.tankCapacity(),existing.minConsumption(),existing.maxConsumption(),
+                existing.odometerJumpTolerance(),existing.receiptRequired(),existing.receiptGraceHours(),
+                existing.materialityAmount(),existing.anomalySlaHours(),existing.costVarianceTolerance(),
+                existing.repeatedPatternWindowHours(),existing.repeatedPatternThreshold(),
+                existing.allowedFuelProducts(),existing.approvedVendors(),FuelPolicy.Status.ARCHIVED,
+                existing.metadata().modifiedBy(actor.actorId(),now,channel,actor.correlationId()));
+        var saved=repository.savePolicy(withdrawn);
+        Map<String,Object> after=new LinkedHashMap<>();
+        after.put("policy",saved);
+        // The reason is the point of the record: an archived policy with no explanation tells a
+        // reviewer that somebody withdrew it and nothing about why.
+        after.put("reason",reason);
+        // STATE_TRANSITION rather than a delete action: the status moved ACTIVE -> ARCHIVED, which is
+        // exactly what happened and exactly what the enum already has a name for.
+        audit.record(actor,channel,saved.siteCode(),AuditAction.STATE_TRANSITION,"FuelPolicy",saved.id().toString(),existing,after);
+        return saved;
+    }
+
+    private FuelPolicy policyRecord(UUID id){
+        return repository.findPolicy(id).orElseThrow(()->RecordNotFoundException.of("FuelPolicy",id));
+    }
+
     private void requireNoOverlap(String site,Instant from,Instant to){
-        var clashes=repository.findOverlappingActivePolicies(site,from,to,null);
+        requireNoOverlapExcluding(site,from,to,null);
+    }
+
+    private void requireNoOverlapExcluding(String site,Instant from,Instant to,UUID excluding){
+        var clashes=repository.findOverlappingActivePolicies(site,from,to,excluding);
         if(clashes.isEmpty())return;
         throw FuelPolicyPeriodOverlapException.of(site,from,to,clashes.stream()
                 .map(p->new FuelPolicyPeriodOverlapException.Conflict(p.id(),p.name(),p.policyVersion(),p.effectiveFrom(),p.effectiveTo()))
@@ -105,7 +226,7 @@ public class FuelApplicationService {
 
     private FuelPolicy persistPolicy(CreatePolicy c){Instant now=clock.instant();var p=new FuelPolicy(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.name(),c.effectiveFrom(),c.effectiveTo(),c.policyVersion(),c.maxPerTransaction(),c.dailyLimit(),c.monthlyLimit(),c.tankCapacity(),c.minConsumption(),c.maxConsumption(),c.odometerJumpTolerance(),c.receiptRequired(),c.receiptGraceHours(),c.materialityAmount(),c.anomalySlaHours(),c.costVarianceTolerance(),c.repeatedPatternWindowHours(),c.repeatedPatternThreshold(),c.allowedFuelProducts(),c.approvedVendors(),FuelPolicy.Status.ACTIVE,RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.savePolicy(p);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPolicy",saved.id().toString(),null,saved);return saved;}
 
-    @Transactional public FuelTransaction capture(CaptureFuel c){SflPermission capturePermission=c.sourceSystem().equalsIgnoreCase("MANUAL")?SflPermission.FUEL_TRANSACTION_CAPTURE:access.has(c.actor(),SflPermission.FUEL_TRANSACTION_IMPORT)?SflPermission.FUEL_TRANSACTION_IMPORT:SflPermission.FUEL_INTEGRATION_INGEST;access.require(c.actor(),capturePermission,c.siteCode(),"FuelTransaction",null);String fp=idempotency.fingerprint(c);Optional<UUID> replay=idempotency.findExistingResult("capture-fuel",c.idempotencyKey(),fp);if(replay.isPresent())return transaction(replay.get(),c.actor());var duplicate=repository.findProviderTransaction(c.siteCode(),c.sourceSystem(),c.providerTransactionId());if(duplicate.isPresent())return duplicate.get();fleet.resolve(c.vehicleId(),c.driverId(),c.tripId(),SiteCode.of(c.siteCode()).value());Instant now=clock.instant();var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.providerTransactionId(),c.sourceSystem(),c.vehicleId(),c.driverId(),c.tripId(),c.occurredAt(),c.vendorReference(),c.stationReference(),c.fuelProduct(),c.quantity(),c.quantityUnit(),c.unitPrice(),c.totalCost(),Currency.getInstance(c.currency().toUpperCase()),c.cardReference(),c.odometerReading(),c.receiptEvidenceId(),c.comments(),FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,now,c.idempotencyKey(),RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.saveTransaction(tx);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelTransaction",saved.id().toString(),null,saved);events.publish(FleetEventType.FUEL_TRANSACTION_RECEIVED,"FuelTransaction",saved.id().toString(),saved.siteCode(),c.actor(),Map.of("transactionId",saved.id(),"vehicleId",saved.vehicleId(),"driverId",saved.driverId(),"quantity",saved.quantity(),"currency",saved.currency().getCurrencyCode()));idempotency.recordResult("capture-fuel",c.idempotencyKey(),fp,saved.id(),saved.siteCode().value(),c.actor().actorId());return saved;}
+    @Transactional public FuelTransaction capture(CaptureFuel c){SflPermission capturePermission=c.sourceSystem().equalsIgnoreCase("MANUAL")?SflPermission.FUEL_TRANSACTION_CAPTURE:access.has(c.actor(),SflPermission.FUEL_TRANSACTION_IMPORT)?SflPermission.FUEL_TRANSACTION_IMPORT:SflPermission.FUEL_INTEGRATION_INGEST;access.require(c.actor(),capturePermission,c.siteCode(),"FuelTransaction",null);String fp=idempotency.fingerprint(c);Optional<UUID> replay=idempotency.findExistingResult("capture-fuel",c.idempotencyKey(),fp);if(replay.isPresent())return transaction(replay.get(),c.actor());var duplicate=repository.findProviderTransaction(c.siteCode(),c.sourceSystem(),c.providerTransactionId());if(duplicate.isPresent())return duplicate.get();fleet.resolve(c.vehicleId(),c.driverId(),c.tripId(),SiteCode.of(c.siteCode()).value());Instant now=clock.instant();var tx=new FuelTransaction(UUID.randomUUID(),SiteCode.of(c.siteCode()),c.providerTransactionId(),c.sourceSystem(),c.vehicleId(),c.driverId(),c.tripId(),c.occurredAt(),c.vendorReference(),c.stationReference(),c.fuelProduct(),c.quantity(),c.quantityUnit(),c.unitPrice(),c.totalCost(),Currency.getInstance(c.currency().toUpperCase()),c.cardReference(),c.odometerReading(),c.receiptEvidenceId(),c.pumpEvidenceId(),c.comments(),FuelTransaction.Status.RECEIVED,FuelTransaction.Lifecycle.ACTIVE,now,c.idempotencyKey(),RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));var saved=repository.saveTransaction(tx);audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelTransaction",saved.id().toString(),null,saved);events.publish(FleetEventType.FUEL_TRANSACTION_RECEIVED,"FuelTransaction",saved.id().toString(),saved.siteCode(),c.actor(),Map.of("transactionId",saved.id(),"vehicleId",saved.vehicleId(),"driverId",saved.driverId(),"quantity",saved.quantity(),"currency",saved.currency().getCurrencyCode()));idempotency.recordResult("capture-fuel",c.idempotencyKey(),fp,saved.id(),saved.siteCode().value(),c.actor().actorId());return saved;}
 
     @Transactional public FuelTransaction reconcile(UUID id,ActorContext actor,SourceChannel channel){
         var before=transaction(id,actor);
@@ -151,9 +272,13 @@ public class FuelApplicationService {
         check(rules,failures,"ODOMETER_JUMP",before.odometerReading()-snapshot.acceptedOdometer()<=policy.odometerJumpTolerance(),
                 FuelAnomalyCase.Type.ODOMETER_JUMP,Map.of("threshold",policy.odometerJumpTolerance(),
                         "observed",before.odometerReading()-snapshot.acceptedOdometer()));
-        boolean receiptOk=!policy.receiptRequired()||before.receiptEvidenceId()!=null||before.occurredAt().plusSeconds(policy.receiptGraceHours()*3600L).isAfter(clock.instant());
+        boolean withinGrace=before.occurredAt().plusSeconds(policy.receiptGraceHours()*3600L).isAfter(clock.instant());
+        boolean receiptOk=!policy.receiptRequired()||before.receiptEvidenceId()!=null||withinGrace;
         check(rules,failures,"RECEIPT",receiptOk,FuelAnomalyCase.Type.MISSING_RECEIPT,
                 Map.of("receiptRequired",policy.receiptRequired(),"graceHours",policy.receiptGraceHours()));
+        checkPumpImage(rules,failures,before,policy,withinGrace);
+        checkPostedPrice(rules,failures,before,policy);
+        checkEvidenceNotReused(rules,failures,before);
         var previous=repository.findPreviousTransaction(before.siteCode().value(),before.vehicleId(),before.occurredAt());
         BigDecimal consumption=null;
         if(previous.isPresent()){
@@ -252,7 +377,7 @@ public class FuelApplicationService {
      *
      * <p>The per-driver check was missing here while the list had none either, so a driver holding any
      * transaction id read it: vehicle, site, litres, cost, card and vendor. Narrowed on {@code driverId}
-     * — the transaction's own field — rather than on {@code createdBy} as logbooks are, because these
+     * - the transaction's own field - rather than on {@code createdBy} as logbooks are, because these
      * records are written by the provider feed and nobody's {@code createdBy} is a driver.
      */
     public FuelTransaction transaction(UUID id,ActorContext actor){
@@ -265,7 +390,7 @@ public class FuelApplicationService {
     /**
      * Refuses a driver-only actor a fuel record belonging to another driver.
      *
-     * <p>An unbound driver is refused everything rather than allowed everything — the same fail-closed
+     * <p>An unbound driver is refused everything rather than allowed everything - the same fail-closed
      * choice the trip list makes. A record with no driver at all is also refused to them: an
      * unattributed fuel transaction is not theirs, and treating "no owner" as "anyone's" is how the
      * narrowing leaks in exactly the cases worth investigating.
@@ -300,7 +425,7 @@ public class FuelApplicationService {
         if(access.isDriverOnly(actor)){
             var scope=driverScopes.resolve(actor,true);
             // An unbound driver sees nothing. Answered without touching the database, because there is
-            // no driver id that would produce an honest empty page — null would produce every row.
+            // no driver id that would produce an honest empty page - null would produce every row.
             if(!(scope instanceof DriverScope.Own own))return new FuelRepository.FuelPage<FuelTransaction>(List.of(),paging.page(),paging.size(),0L,0,paging.sort());
             effectiveDriver=own.driverId();
         }
@@ -456,6 +581,164 @@ public class FuelApplicationService {
         events.publish(FleetEventType.DRIVER_LOGBOOK_OVERDUE,"DriverLogbook",tripId.toString(),anomaly.siteCode(),
                 actor,Map.of("tripId",tripId,"driverId",driverId,"vehicleId",vehicleId,"anomalyId",anomaly.id()));
         return anomaly;
+    }
+
+    /**
+     * The pump photograph, held to the same standard as the receipt.
+     *
+     * <p>Gated on the same {@code receiptRequired} switch rather than a flag of its own, and only for
+     * manually captured transactions. Both halves matter. A site that does not demand documentary
+     * evidence for fuel should not have half of it demanded anyway; and a provider feed delivers
+     * thousands of transactions that never passed through a driver's hands, so requiring a photograph
+     * of them would raise an anomaly per row and drown the queue on the day the integration is
+     * switched on.
+     */
+    private void checkPumpImage(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,
+            FuelTransaction tx,FuelPolicy policy,boolean withinGrace){
+        boolean captured="MANUAL".equalsIgnoreCase(tx.sourceSystem());
+        boolean required=policy.receiptRequired()&&captured;
+        check(rules,failures,"PUMP_IMAGE",!required||tx.pumpEvidenceId()!=null||withinGrace,
+                FuelAnomalyCase.Type.MISSING_PUMP_IMAGE,
+                Map.of("required",required,"sourceSystem",tx.sourceSystem(),
+                        "graceHours",policy.receiptGraceHours()));
+    }
+
+    /**
+     * The unit price against the price the vendor posted when the fuel was bought.
+     *
+     * <h2>Why this rule is the one that matters</h2>
+     *
+     * <p>COST_VARIANCE, a few lines above, compares a transaction to the previous one for the same
+     * vehicle. That detects a <em>change</em>, which means it fires on a genuine national price rise
+     * and stays perfectly silent on a driver who overstates by a steady twenty per cent every week.
+     * This compares against the forecourt price actually in force, so it does the opposite: price
+     * rises pass once the new price is recorded, and a persistent overstatement fails every time.
+     *
+     * <h2>No reference price is a pass, and says so</h2>
+     *
+     * <p>A site that has not recorded its prices yet gets {@code passed: true} with a
+     * {@code referencePrice} of "none". Not silence - the rule result is written into the
+     * reconciliation record either way, so "this transaction was never actually price-checked" is
+     * visible to anyone reading it rather than indistinguishable from "it passed". Inventing a
+     * comparison against a price nobody recorded would be worse than not checking.
+     */
+    private void checkPostedPrice(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,
+            FuelTransaction tx,FuelPolicy policy){
+        var posted=repository.findPostedPrice(tx.siteCode().value(),tx.vendorReference(),tx.fuelProduct(),
+                tx.occurredAt());
+        if(posted.isEmpty()){
+            check(rules,failures,"POSTED_PRICE",true,FuelAnomalyCase.Type.PRICE_DEVIATION,
+                    Map.of("referencePrice","none","vendor",tx.vendorReference(),"product",tx.fuelProduct(),
+                            "note","No posted price is on file for this vendor and product; the price was not checked."));
+            return;
+        }
+        var reference=posted.get();
+        BigDecimal deviation=reference.deviationFrom(tx.unitPrice());
+        Map<String,Object> details=new LinkedHashMap<>();
+        details.put("referencePrice",reference.unitPrice());
+        details.put("observedPrice",tx.unitPrice());
+        details.put("deviation",deviation);
+        details.put("threshold",policy.costVarianceTolerance());
+        details.put("priceSource",reference.source().name());
+        details.put("effectiveFrom",reference.effectiveFrom().toString());
+        // The overstatement in money, which is the number a manager reviewing the case wants first.
+        details.put("overstatedBy",tx.unitPrice().subtract(reference.unitPrice())
+                .multiply(tx.quantity()).setScale(2,RoundingMode.HALF_UP));
+        check(rules,failures,"POSTED_PRICE",deviation.compareTo(policy.costVarianceTolerance())<=0,
+                FuelAnomalyCase.Type.PRICE_DEVIATION,details);
+    }
+
+    /**
+     * Neither image may have been filed against another transaction.
+     *
+     * <p>Photograph one pump, claim four fills - the cheapest fuel fraud there is, and until the
+     * platform held the bytes there was no way to see it. Now both images are hashed on upload, so
+     * the check is one indexed lookup per image.
+     *
+     * <p>Its limits are worth being honest about: a second photograph of the same receipt has a
+     * different digest and passes this. It catches reuse, not staging. That is why it is one rule
+     * among several rather than the answer on its own.
+     */
+    private void checkEvidenceNotReused(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,
+            FuelTransaction tx){
+        var reused=new ArrayList<Map<String,Object>>();
+        for(var entry:Map.of("receipt",Optional.ofNullable(tx.receiptEvidenceId()),
+                "pump",Optional.ofNullable(tx.pumpEvidenceId())).entrySet()){
+            if(entry.getValue().isEmpty())continue;
+            for(var duplicate:evidence.findDuplicates(entry.getValue().get())){
+                reused.add(Map.of("role",entry.getKey(),"evidenceId",entry.getValue().get().toString(),
+                        "alsoFiledAs",duplicate.id().toString(),"fileName",duplicate.fileName(),
+                        "sha256Hash",duplicate.sha256Hash()));
+            }
+        }
+        check(rules,failures,"EVIDENCE_UNIQUE",reused.isEmpty(),FuelAnomalyCase.Type.EVIDENCE_REUSED,
+                reused.isEmpty()?Map.of():Map.of("duplicates",reused));
+    }
+
+    /* ------------------------------------------------------------------------- posted prices */
+
+    /**
+     * Records the price a vendor is posting, closing the one it replaces.
+     *
+     * <p>The close is what keeps history judgeable. Overwriting the old row would make every
+     * transaction from before the change suddenly measured against a price that did not exist when it
+     * happened, and reconciliation is supposed to be reproducible - run it again in a year and it must
+     * reach the same verdict. So the previous price is closed at the instant the new one begins, and
+     * both remain readable.
+     */
+    @Transactional public FuelPostedPrice recordPostedPrice(RecordPostedPrice c){
+        access.require(c.actor(),SflPermission.FUEL_POLICY_MANAGE,c.siteCode(),"FuelPostedPrice",null);
+        String site=SiteCode.of(c.siteCode()).value();
+        String vendor=c.vendor().strip().toUpperCase();
+        String product=c.fuelProduct().strip().toUpperCase();
+        Instant now=clock.instant();
+        Instant from=c.effectiveFrom()==null?now:c.effectiveFrom();
+
+        var open=repository.findOpenPostedPrice(site,vendor,product);
+        if(open.isPresent()){
+            var previous=open.get();
+            if(!from.isAfter(previous.effectiveFrom())){
+                throw new IllegalArgumentException(
+                        "A price for this vendor and product is already in force from "
+                                + previous.effectiveFrom() + "; the new price must start after it.");
+            }
+            repository.savePostedPrice(previous.supersededAt(from,
+                    previous.metadata().modifiedBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId())));
+        }
+
+        var price=new FuelPostedPrice(UUID.randomUUID(),SiteCode.of(site),vendor,product,c.unitPrice(),
+                c.currency(),from,null,c.source()==null?FuelPostedPrice.Source.ADMINISTERED:c.source(),
+                c.notes(),RecordMetadata.createdBy(c.actor().actorId(),now,c.channel(),c.actor().correlationId()));
+        var saved=repository.savePostedPrice(price);
+        audit.record(c.actor(),c.channel(),saved.siteCode(),AuditAction.CREATE,"FuelPostedPrice",
+                saved.id().toString(),open.orElse(null),saved);
+        return saved;
+    }
+
+    /** Prices on file for a site. Used by the capture form to fill in the price rather than ask for it. */
+    public List<FuelPostedPrice> postedPrices(String site,String vendor,String product,boolean inForceOnly,
+            ActorContext actor){
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelPostedPrice",null);
+        return repository.findPostedPrices(SiteCode.of(site).value(),vendor,product,inForceOnly,clock.instant());
+    }
+
+    /**
+     * The vendors a site's policy approves, at an instant.
+     *
+     * <p>Exists so the capture form can offer a list instead of a text box. The vendor was free text,
+     * which meant "GOIL", "Goil Tema" and "goil filling station" were three vendors as far as the
+     * APPROVED_VENDOR rule was concerned - and since {@code allowsVendor} passes everything when the
+     * approved set is empty, a site that had not configured one was checking nothing at all while
+     * appearing to.
+     *
+     * <p>An empty list is a real answer meaning "this policy approves any vendor", and the caller has
+     * to say so rather than showing an empty dropdown.
+     */
+    public List<String> approvedVendors(String site,ActorContext actor){
+        access.require(actor,SflPermission.FUEL_TRANSACTION_READ,site,"FuelPolicy",null);
+        return repository.findApplicablePolicy(SiteCode.of(site).value(),clock.instant())
+                .map(p->p.approvedVendors().stream().sorted().toList())
+                .orElseGet(List::of);
     }
 
     private void checkPolicyRollingLimits(Map<String,Object> rules,List<FuelAnomalyCase.Type> failures,

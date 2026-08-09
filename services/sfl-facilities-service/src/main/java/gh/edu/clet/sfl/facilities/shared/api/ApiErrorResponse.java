@@ -8,7 +8,7 @@ import java.util.List;
  * The uniform error envelope for every S152 failure.
  *
  * <p>The SRS names error states as prose per requirement; this is what makes them testable. {@code code}
- * is the contract — a client branches on it — while {@code message} is display text that may be
+ * is the contract - a client branches on it - while {@code message} is display text that may be
  * reworded. {@code correlationId} is echoed so a user reporting a failure and an engineer reading logs
  * are looking at the same request.
  *

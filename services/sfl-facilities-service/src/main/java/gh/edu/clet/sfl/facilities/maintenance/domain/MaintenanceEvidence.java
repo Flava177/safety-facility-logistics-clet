@@ -10,7 +10,7 @@ import java.util.UUID;
 import java.util.regex.Pattern;
 
 /**
- * Evidence attached to a work order — by reference, never by value.
+ * Evidence attached to a work order - by reference, never by value.
  *
  * <p>The architecture standard is explicit: <em>store references and hashes, not raw video or large
  * files</em>. So this record holds where the file is, what it hashed to when it was accepted, who
@@ -23,7 +23,7 @@ import java.util.regex.Pattern;
  *
  * <p>{@link #legalHold} sits beside the retention class rather than inside it. A hold is a temporary
  * override that must eventually be lifted, and modelling it as a retention class would lose the
- * original classification the moment the hold was applied — leaving nothing to return to.
+ * original classification the moment the hold was applied - leaving nothing to return to.
  */
 public record MaintenanceEvidence(
         UUID id,

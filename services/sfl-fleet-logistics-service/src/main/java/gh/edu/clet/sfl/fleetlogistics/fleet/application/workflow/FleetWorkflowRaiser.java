@@ -10,8 +10,8 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleInspection;
 /**
  * Raises fleet workflow items in reaction to something the fleet observed.
  *
- * <p>Kept as a narrow interface so the aggregates that detect a problem — an inspection that fails, a
- * document that lapses — do not have to know how the workflow queue is built. It also keeps the
+ * <p>Kept as a narrow interface so the aggregates that detect a problem - an inspection that fails, a
+ * document that lapses - do not have to know how the workflow queue is built. It also keeps the
  * dependency one-way: trips and sweeps depend on this, the workflow service implements it.
  */
 public interface FleetWorkflowRaiser {

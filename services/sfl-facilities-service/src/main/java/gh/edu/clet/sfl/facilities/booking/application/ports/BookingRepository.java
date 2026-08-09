@@ -16,7 +16,7 @@ import java.util.Optional;
 import java.util.UUID;
 
 /**
- * The booking module's outbound persistence port — SRS-SFL-S159-01.
+ * The booking module's outbound persistence port - SRS-SFL-S159-01.
  *
  * <p>One port for the module, for the same reason {@code FacilitiesRepository} is one port for the
  * estate: a booking, its allocations, its approval and its setup tasks are written in a single
@@ -55,7 +55,7 @@ public interface BookingRepository {
      * <em>error message</em>. Without it, sixteen simultaneous requests for one hall behave like
      * this: each inserts its row, each then has to check the constraint against the others' still
      * uncommitted rows, and they end up waiting on each other in a cycle. PostgreSQL detects the
-     * deadlock and aborts an arbitrary victim with {@code SQLSTATE 40P01} — which reaches the caller
+     * deadlock and aborts an arbitrary victim with {@code SQLSTATE 40P01} - which reaches the caller
      * as a 500, not as "that hall is taken". Measured: one success and fifteen server errors.
      *
      * <p>Taking this first makes same-space requests queue, so the second one through reads a diary
@@ -93,7 +93,7 @@ public interface BookingRepository {
      */
     List<Booking> findHoldingBookings(UUID roomId, Instant from, Instant to, UUID excludingBookingId);
 
-    /** Room ids held anywhere in {@code [from, to)} at a site — the availability query's exclusion set. */
+    /** Room ids held anywhere in {@code [from, to)} at a site - the availability query's exclusion set. */
     List<UUID> findHeldRoomIds(String siteCode, Instant from, Instant to);
 
     /** Live bookings on a space from {@code from} forward. The readiness reconciliation's input. */

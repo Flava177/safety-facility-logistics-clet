@@ -25,7 +25,7 @@ import java.util.UUID;
 /**
  * The S159 wire types.
  *
- * <p>Each carries the derived facts a client would otherwise recompute — whether a booking holds its
+ * <p>Each carries the derived facts a client would otherwise recompute - whether a booking holds its
  * space, whether it is on a readiness hold, when the room is actually occupied from. Those are
  * decisions this service has already made, and a client recomputing {@code occupiedFrom} from the
  * buffers is a client that will eventually disagree with the exclusion constraint about whether two

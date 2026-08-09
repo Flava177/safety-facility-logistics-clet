@@ -59,7 +59,7 @@ interface ComplianceDocumentJpaRepository extends JpaRepository<ComplianceDocume
      *
      * <p>Every optional parameter is **cast** in its {@code is null} test, and that cast is load
      * bearing. Hibernate expands a named parameter used twice into two separate JDBC placeholders,
-     * so the one inside {@code is null} stands alone — and Postgres cannot infer a type for a
+     * so the one inside {@code is null} stands alone - and Postgres cannot infer a type for a
      * parameter it only ever sees compared to null. Without the cast this query answers
      * {@code could not determine data type of parameter $7} the moment {@code expiringBefore} is
      * supplied.

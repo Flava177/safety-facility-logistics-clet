@@ -5,7 +5,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.domain.model;
  *
  * <h2>Why this is not a {@link TripStatus}</h2>
  *
- * <p>The obvious implementation is two more statuses — {@code ACKNOWLEDGED} and {@code DEFERRED} —
+ * <p>The obvious implementation is two more statuses - {@code ACKNOWLEDGED} and {@code DEFERRED} -
  * and it is wrong. {@code TripStatus} answers "where is this trip in its lifecycle", and a trip whose
  * driver has confirmed is in exactly the same place as one whose driver has not yet looked: assigned,
  * holding a vehicle against a period, ready to start. Folding the driver's answer into that enum would
@@ -19,8 +19,8 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.domain.model;
  * <h2>Deferral is not refusal</h2>
  *
  * <p>{@link #DEFERRED} records that the driver cannot take the trip as scheduled and says why. It
- * does not release the assignment — the trip stays {@code ASSIGNED} to them and keeps its vehicle
- * booking — because unassigning on a driver's say-so would let a driver silently drop a trip nobody
+ * does not release the assignment - the trip stays {@code ASSIGNED} to them and keeps its vehicle
+ * booking - because unassigning on a driver's say-so would let a driver silently drop a trip nobody
  * is then watching. Reassigning is a dispatcher's decision, and the deferral is the signal that
  * prompts it.
  */

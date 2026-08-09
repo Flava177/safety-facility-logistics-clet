@@ -32,14 +32,14 @@ import org.springframework.transaction.support.TransactionTemplate;
  * `sfl-fleet-logistics-service` was likely to carry both, unchecked:
  *
  * <ul>
- *   <li><strong>D-04</strong> — audit payloads stored as {@code jsonb}. PostgreSQL normalises jsonb by
+ *   <li><strong>D-04</strong> - audit payloads stored as {@code jsonb}. PostgreSQL normalises jsonb by
  *       reordering object keys, so the value read back was never the value hashed.</li>
- *   <li><strong>D-05</strong> — nanosecond timestamps hashed, microsecond timestamps stored.
+ *   <li><strong>D-05</strong> - nanosecond timestamps hashed, microsecond timestamps stored.
  *       PostgreSQL keeps microseconds; the extra precision is lost on the round trip.</li>
  * </ul>
  *
  * <p>Fleet's existing chain-intact assertions are in {@code TripApplicationServiceTest} and
- * {@code VehicleApplicationServiceTest}, which use an in-memory {@code RecordingAuditPort} — and an
+ * {@code VehicleApplicationServiceTest}, which use an in-memory {@code RecordingAuditPort} - and an
  * in-memory double round-trips nothing, so it cannot see either defect. The one end-to-end check,
  * {@code DispatchMandatoryScenariosEndToEndTest}, asserts {@code isNotNull()} rather than
  * {@code intact()}. So the warning had gone unanswered for four build passes: **no test replayed this
@@ -48,7 +48,7 @@ import org.springframework.transaction.support.TransactionTemplate;
  * <p>What running it establishes: fleet does <em>not</em> carry D-04, because
  * {@code AuditRecordEntity.toDomain(ObjectMapper)} re-canonicalises the stored JSON through
  * {@code CanonicalJson} on read, which neutralises jsonb's key reordering. D-05 is settled by the
- * assertion below rather than by reasoning about clock precision, which is the only way to settle it —
+ * assertion below rather than by reasoning about clock precision, which is the only way to settle it -
  * whether the JVM clock hands out nanoseconds is a platform detail, and a chain that verifies on one
  * developer's machine and not another's is exactly the failure this pins down.
  */
@@ -75,7 +75,7 @@ class FleetAuditChainPostgresTest extends FleetPostgresSupport {
     void the_chain_replays_intact_after_a_round_trip() {
         // A payload with keys deliberately out of alphabetical order and of differing lengths. jsonb
         // orders keys by length then bytes, so if the stored form were hashed directly this would be
-        // the shape that breaks it — which is what D-04 was.
+        // the shape that breaks it - which is what D-04 was.
         Map<String, Object> before = new LinkedHashMap<>();
         before.put("zebra", "last alphabetically, shortest but for one");
         before.put("a", 1);
@@ -86,7 +86,7 @@ class FleetAuditChainPostgresTest extends FleetPostgresSupport {
         String resourceId = "AUDIT-CHAIN-" + SEQUENCE.incrementAndGet() + "-" + UUID.randomUUID();
         writeRecords(resourceId, before, after);
 
-        // Replays every record in the table from genesis, not only the ones just written — so this also
+        // Replays every record in the table from genesis, not only the ones just written - so this also
         // asserts that nothing already in the database has drifted.
         var verification = audit.verifyChain();
 
@@ -96,7 +96,7 @@ class FleetAuditChainPostgresTest extends FleetPostgresSupport {
     }
 
     /**
-     * {@code JpaAuditAdapter.record} is {@code @Transactional(MANDATORY)} on purpose — an audit entry
+     * {@code JpaAuditAdapter.record} is {@code @Transactional(MANDATORY)} on purpose - an audit entry
      * commits or rolls back with the state change it describes, so it refuses to run on its own. The
      * test therefore supplies the transaction a real caller would, and commits it before replaying:
      * verifying inside the same transaction would read the chain through the write's own snapshot and

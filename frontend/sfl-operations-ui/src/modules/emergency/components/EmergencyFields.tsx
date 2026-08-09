@@ -43,7 +43,7 @@ interface CheckboxGroupProps {
  * A checkbox list bound to an array field.
  *
  * Channels, audience groups and recipient zones are all "choose any number of these", and all three
- * change what a send does rather than merely describing it — a multi-select that hides its
+ * change what a send does rather than merely describing it - a multi-select that hides its
  * selections behind a summary line is the wrong control for a decision an operator has to be able
  * to check at a glance before pressing send. So every option stays visible, with its consequence
  * beside it.
@@ -121,7 +121,7 @@ export const CheckboxGroup = ({
  * The emergency dialogs use this for the two things the operator most needs to see before pressing
  * send: how many people a selection actually reaches, and what obligation the send creates. It is
  * styled as a statement rather than as a warning, because most of the time it is neither good news
- * nor bad — it is simply what is about to happen.
+ * nor bad - it is simply what is about to happen.
  */
 export const ConsequencePanel = ({
   title,
@@ -158,7 +158,7 @@ export const ConsequenceLine = ({ label, value }: { label: string; value: ReactN
   </div>
 );
 
-/** Channel names as a readable list — "SMS, Email and Push". */
+/** Channel names as a readable list - "SMS, Email and Push". */
 export const listChannels = (channels: string[]): string => {
   const names = channels.map((channel) => humanise(channel));
   if (names.length === 0) {

@@ -1,5 +1,5 @@
 /**
- * The fuel registers' paging helper — now a thin binding over the shared one.
+ * The fuel registers' paging helper - now a thin binding over the shared one.
  *
  * Dispatch and emergency needed the same behaviour once their collections started paging, so the
  * implementation moved to `shared/hooks/useServerPage`. This file stays so the fuel screens keep

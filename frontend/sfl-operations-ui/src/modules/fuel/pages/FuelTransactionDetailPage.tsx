@@ -31,17 +31,19 @@ import KeyValueGrid from 'shared/components/KeyValueGrid';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
+import { EvidenceFileActions } from 'shared/components/EvidenceFileField';
 import StatusChip from 'shared/components/StatusChip';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
+import { canRunReconciliation, canVoidFuel } from 'modules/fleet/api/access';
 
 /**
  * A fuel transaction, its reconciliation outcome and the cases that outcome raised.
  *
  * The reconciliation panel reads the stored run: every rule the policy applied, passed and failed
  * alike, with the policy version it was judged against. That is the whole decision, reproducible.
- * It used to be half a decision — the rule outcomes were written on every run and readable from
+ * It used to be half a decision - the rule outcomes were written on every run and readable from
  * none of it, so the panel could only infer the *failures* from the cases they raised and had to
  * say that the rules which passed were unavailable.
  */
@@ -128,7 +130,7 @@ const FuelTransactionDetailPage = () => {
       refreshAll();
     } catch (error) {
       // A missing policy, a voided record or a refused permission all land here with the service's
-      // own wording — never swallowed, never rewritten.
+      // own wording - never swallowed, never rewritten.
       notifyError(error);
     } finally {
       setReconciling(false);
@@ -161,7 +163,7 @@ const FuelTransactionDetailPage = () => {
         align: 'center',
         hideBelowLg: true,
         cell: (row) =>
-          row.material ? <StatusChip value="HIGH" label="Material" tone="caution" /> : '—',
+          row.material ? <StatusChip value="HIGH" label="Material" tone="caution" /> : '-',
       },
       {
         key: 'status',
@@ -223,23 +225,28 @@ const FuelTransactionDetailPage = () => {
 
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  variant="primary"
-                  startIcon="scale"
-                  loading={reconciling}
-                  disabled={!transactionReconcilable(record)}
-                  onClick={reconcile}
-                >
-                  {transactionReconciled(record) ? 'Reconcile again' : 'Reconcile'}
-                </Button>
-                <Button
-                  variant="danger"
-                  startIcon="close"
-                  disabled={!transactionVoidable(record)}
-                  onClick={() => setVoiding(true)}
-                >
-                  Void
-                </Button>
+                {canRunReconciliation() && (
+                  <Button
+                    variant="primary"
+                    startIcon="scale"
+                    loading={reconciling}
+                    disabled={!transactionReconcilable(record)}
+                    onClick={reconcile}
+                  >
+                    {transactionReconciled(record) ? 'Reconcile again' : 'Reconcile'}
+                  </Button>
+                )}
+                {/* Void is irreversible and separately granted - a reader must not be offered it. */}
+                {canVoidFuel() && (
+                  <Button
+                    variant="danger"
+                    startIcon="close"
+                    disabled={!transactionVoidable(record)}
+                    onClick={() => setVoiding(true)}
+                  >
+                    Void
+                  </Button>
+                )}
                 <Button
                   variant="ghost"
                   startIcon="truck"
@@ -282,7 +289,7 @@ const FuelTransactionDetailPage = () => {
                     items={[
                       { label: 'Site', value: siteOf(record.siteCode) },
                       { label: 'Vendor', value: record.vendorReference },
-                      { label: 'Station', value: record.stationReference ?? '—' },
+                      { label: 'Station', value: record.stationReference ?? '-' },
                       { label: 'Product', value: record.fuelProduct },
                       {
                         label: 'Quantity',
@@ -300,26 +307,75 @@ const FuelTransactionDetailPage = () => {
                         label: 'Odometer reading',
                         value: `${formatNumber(record.odometerReading)} km`,
                       },
-                      { label: 'Occurred at', value: formatDateTime(record.occurredAt) },
+                      { label: 'Fuel purchased at', value: formatDateTime(record.occurredAt) },
                       {
                         label: 'Card reference',
-                        value: record.maskedCardReference ?? '—',
+                        value: record.maskedCardReference ?? '-',
                         masked: Boolean(record.maskedCardReference),
                       },
-                      {
-                        label: 'Receipt evidence',
-                        value: record.receiptEvidenceId ?? 'None held',
-                      },
-                      { label: 'Comments', value: record.comments ?? '—', span: 2 },
+                      { label: 'Comments', value: record.comments ?? '-', span: 2 },
                     ]}
                   />
+                </SectionCard>
+
+                {/*
+                  The receipt and the pump reading, side by side and openable.
+
+                  This is the point of storing both. A reviewer asking "did this driver really buy
+                  GHS 240 of fuel" cannot answer it from the numbers - the numbers are what is in
+                  question - and they cannot answer it from an evidence identifier either. They
+                  answer it by looking at what the attendant wrote and what the pump displayed, and
+                  seeing whether the two agree with each other and with the claim.
+                */}
+                <SectionCard
+                  title="Evidence"
+                  subtitle="What the vendor wrote, and what the pump showed"
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <div>
+                      <p className="mb-1.5 text-theme-sm font-semibold text-gray-800">Receipt</p>
+                      {record.receiptEvidenceId ? (
+                        <EvidenceFileActions
+                          evidenceId={record.receiptEvidenceId}
+                          fileName={`receipt-${record.id.slice(0, 8)}`}
+                          onError={notifyError}
+                        />
+                      ) : (
+                        <p className="text-theme-xs text-gray-500">
+                          None held.{' '}
+                          {record.sourceSystem === 'MANUAL'
+                            ? 'A manual capture without a receipt fails the RECEIPT rule once the grace window closes.'
+                            : 'Provider-fed records rarely carry one.'}
+                        </p>
+                      )}
+                    </div>
+                    <div>
+                      <p className="mb-1.5 text-theme-sm font-semibold text-gray-800">
+                        Pump meter reading
+                      </p>
+                      {record.pumpEvidenceId ? (
+                        <EvidenceFileActions
+                          evidenceId={record.pumpEvidenceId}
+                          fileName={`pump-${record.id.slice(0, 8)}`}
+                          onError={notifyError}
+                        />
+                      ) : (
+                        <p className="text-theme-xs text-gray-500">
+                          None held.{' '}
+                          {record.sourceSystem === 'MANUAL'
+                            ? 'Required on manual captures - see the PUMP_IMAGE rule below.'
+                            : 'Only manual captures carry one.'}
+                        </p>
+                      )}
+                    </div>
+                  </div>
                 </SectionCard>
 
                 <SectionCard
                   title="Reconciliation"
                   subtitle={
                     latestRun
-                      ? `Policy version ${latestRun.policyVersion ?? '—'} · evaluated ${formatDateTime(latestRun.evaluatedAt)}`
+                      ? `Policy version ${latestRun.policyVersion ?? '-'} · evaluated ${formatDateTime(latestRun.evaluatedAt)}`
                       : 'What the policy rules made of this transaction'
                   }
                   actions={
@@ -366,7 +422,7 @@ const FuelTransactionDetailPage = () => {
                           </p>
                         )}
 
-                        {/* Every rule the run evaluated, failures first — the outcome map the
+                        {/* Every rule the run evaluated, failures first - the outcome map the
                             service stores, read in full rather than inferred from the cases. */}
                         <ul className="space-y-2">
                           {[...failedRules, ...passedRules].map((rule) => {
@@ -439,16 +495,16 @@ const FuelTransactionDetailPage = () => {
                       { label: 'Source system', value: record.sourceSystem },
                       {
                         label: 'Provider reference',
-                        value: record.providerTransactionId ?? '—',
+                        value: record.providerTransactionId ?? '-',
                       },
                       {
                         label: 'Ingested at',
                         value: formatDateTime(record.ingestionTimestamp),
                       },
-                      { label: 'Idempotency key', value: record.idempotencyKey ?? '—', span: 2 },
+                      { label: 'Idempotency key', value: record.idempotencyKey ?? '-', span: 2 },
                       {
                         label: 'Correlation ID',
-                        value: record.metadata.auditCorrelationId ?? '—',
+                        value: record.metadata.auditCorrelationId ?? '-',
                         span: 2,
                       },
                     ]}

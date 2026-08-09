@@ -7,7 +7,7 @@ import { cn } from './cn';
  * Form controls for the whole dashboard.
  *
  * Every control is white with a grey hairline, a real label above it, and one line reserved
- * underneath for a hint or an error — so a field never changes height when validation fires and a
+ * underneath for a hint or an error - so a field never changes height when validation fires and a
  * form never jumps under the operator's cursor. Errors recolour the border and the helper line;
  * they never replace the label, because the operator still needs to know which field is wrong.
  */
@@ -16,17 +16,22 @@ import { cn } from './cn';
  * A form control's border is the only thing that says "this is a control", so SC 1.4.11 asks it to
  * reach 3:1 against the surrounding white. Borders/Main/default in the design system is Cloud Grey
  * 600; this uses grey-500 (4.9:1), which clears the bar while staying lighter than the text.
- * Placeholders are grey-500 for the same reason the label is grey-800 — both are read.
+ * Placeholders are grey-500 for the same reason the label is grey-800 - both are read.
  *
  * Focus is not styled here. The dashboard has one focus treatment, defined once in `index.css` as a
  * 2px teal outline with an offset, so every focusable thing on the page looks focused the same way.
  */
-const controlBase =
+/**
+ * Exported so a bespoke control can be the same height, radius and tone as the shared fields
+ * rather than approximately so. `SearchInput` is the first caller; the alternative was a second
+ * copy of these four lines that would drift the first time either changed.
+ */
+export const controlBase =
   'h-10 w-full rounded-md border bg-white px-3 text-theme-sm text-gray-900 transition-colors ' +
   'placeholder:text-gray-500 ' +
   'disabled:cursor-not-allowed disabled:border-gray-300 disabled:bg-gray-50 disabled:text-gray-500';
 
-const controlTone = (error?: boolean) =>
+export const controlTone = (error?: boolean) =>
   error ? 'border-error-800 hover:border-error-900' : 'border-gray-500 hover:border-gray-700';
 
 interface FieldShellProps {
@@ -38,6 +43,23 @@ interface FieldShellProps {
   className?: string;
   children: ReactNode;
 }
+
+/**
+ * An empty line the exact height of a field label.
+ *
+ * <p>For a control that has no label but has to sit level with ones that do - a facet button in a
+ * filter bar, the Reset beside it. Those rows align on the *control*, so a bare button either gets
+ * the label's height reserved above it or floats above the fields it belongs with.
+ *
+ * <p>Declared next to the real label rather than as a magic height somewhere else: the two have to
+ * agree, and the way to make them agree is to write the same classes once. Hidden from assistive
+ * technology, which has the button's own accessible name and does not need a blank line.
+ */
+export const FieldLabelSpacer = () => (
+  <span aria-hidden="true" className="mb-2 block text-theme-sm font-medium select-none">
+    &nbsp;
+  </span>
+);
 
 /** Label + control + helper line. Exported so a bespoke control can sit in the same rhythm. */
 export const FieldShell = ({
@@ -99,6 +121,14 @@ export interface TextInputProps extends CommonProps {
   /** Passed through so a sign-in form can ask for `current-password` and `username`. */
   autoComplete?: string;
   name?: string;
+  /**
+   * Values offered as you type, without constraining what may be entered.
+   *
+   * A native `<datalist>` rather than a combobox on purpose: origin and destination are free text by
+   * contract, so anything that *restricted* the field to previous answers would be wrong the first
+   * time a driver goes somewhere new. This only removes the retyping.
+   */
+  suggestions?: string[];
 }
 
 export const TextInput = ({
@@ -117,8 +147,10 @@ export const TextInput = ({
   type = 'text',
   autoComplete,
   name,
+  suggestions,
 }: TextInputProps) => {
   const id = useId();
+  const listId = suggestions && suggestions.length > 0 ? `${id}-suggestions` : undefined;
   return (
     <FieldShell
       id={id}
@@ -133,6 +165,7 @@ export const TextInput = ({
         type={type}
         name={name}
         autoComplete={autoComplete}
+        list={listId}
         value={value}
         maxLength={maxLength}
         placeholder={placeholder}
@@ -144,6 +177,13 @@ export const TextInput = ({
         onBlur={onBlur}
         className={cn(controlBase, controlTone(error))}
       />
+      {listId && (
+        <datalist id={listId}>
+          {suggestions?.map((suggestion) => (
+            <option key={suggestion} value={suggestion} />
+          ))}
+        </datalist>
+      )}
     </FieldShell>
   );
 };
@@ -154,7 +194,7 @@ export interface NumberInputProps extends CommonProps {
   min?: number;
   max?: number;
   step?: number;
-  /** Rendered inside the control on the right — "km", "L", "%". */
+  /** Rendered inside the control on the right - "km", "L", "%". */
   suffix?: string;
 }
 
@@ -328,7 +368,7 @@ interface EnumSelectProps<T extends string> extends CommonProps {
   value: T | '';
   options: readonly T[];
   onChange: (value: T | '') => void;
-  /** Adds a blank option — use for filters, never for a `@NotNull` request field. */
+  /** Adds a blank option - use for filters, never for a `@NotNull` request field. */
   allowEmpty?: boolean;
   emptyLabel?: string;
   renderOptionLabel?: (option: T) => string;

@@ -14,11 +14,11 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 
 /**
- * Registers the site-scope GUC on the transaction manager — ADR 0007.
+ * Registers the site-scope GUC on the transaction manager - ADR 0007.
  *
  * <p>Enabled by default, and harmless when it is not needed: setting {@code app.site_scopes} on a
  * connection whose role bypasses RLS costs one statement per transaction and changes nothing. That is
- * deliberate — it means the setting is already correct in every environment before any of them adopts
+ * deliberate - it means the setting is already correct in every environment before any of them adopts
  * the {@code sfl_app} role, so switching a database over is a connection-string change rather than a
  * deployment that has to land in lockstep with a migration.
  *
@@ -34,7 +34,7 @@ class FacilitiesRowLevelSecurityConfiguration {
      *
      * <p>Spring Boot discovers every {@code TransactionExecutionListener} bean and hands them to the
      * transaction manager itself. Asking for the manager here in order to call {@code addListener}
-     * looks tidier and is a circular reference — the manager needs the listeners to be built, and the
+     * looks tidier and is a circular reference - the manager needs the listeners to be built, and the
      * listener would need the manager. Recorded because the manual form is the obvious first attempt.
      */
     @Bean

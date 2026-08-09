@@ -11,11 +11,11 @@ import org.springframework.scheduling.annotation.EnableScheduling;
  * because the SRS asks for something to happen that nobody will ask for:
  *
  * <ul>
- *   <li>S153 escalation — SRS-SFL-S153-02 requires it "when the scheduled evaluation runs".</li>
- *   <li>S153 preventive generation — a schedule has to raise its own work.</li>
- *   <li>S159 readiness reconciliation — a hall blocked today must flag the bookings it already
+ *   <li>S153 escalation - SRS-SFL-S153-02 requires it "when the scheduled evaluation runs".</li>
+ *   <li>S153 preventive generation - a schedule has to raise its own work.</li>
+ *   <li>S159 readiness reconciliation - a hall blocked today must flag the bookings it already
  *       has, and clear them again when it is repaired.</li>
- *   <li>S159 no-shows — a booking nobody took up has to release the space by itself, or the hall
+ *   <li>S159 no-shows - a booking nobody took up has to release the space by itself, or the hall
  *       stays held by somebody who never came.</li>
  * </ul>
  *

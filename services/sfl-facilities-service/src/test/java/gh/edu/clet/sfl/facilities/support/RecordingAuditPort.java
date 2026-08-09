@@ -31,7 +31,7 @@ public class RecordingAuditPort implements AuditPort {
         return List.copyOf(events);
     }
 
-    /** Every recorded action, in order — the shape most assertions want. */
+    /** Every recorded action, in order - the shape most assertions want. */
     public List<AuditAction> actions() {
         return events.stream().map(AuditEvent::action).toList();
     }

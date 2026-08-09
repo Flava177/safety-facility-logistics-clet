@@ -11,7 +11,7 @@ import java.util.UUID;
  *
  * <p>SRS-SFL-S153 names parts in the module's purpose. This is deliberately the smallest thing that
  * satisfies it: what was fitted, how many, what it cost and who recorded it. It is <strong>not</strong>
- * a stores system — there is no stock level, no reorder point and no reservation, because CLET has
+ * a stores system - there is no stock level, no reorder point and no reservation, because CLET has
  * no inventory system for this to reconcile against and inventing one here would produce numbers
  * nobody maintains.
  *

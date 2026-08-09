@@ -9,7 +9,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSeverity;
  *
  * <p>This is the join S153 exists to make. A fault is not only a ticket: if it affects a space, it
  * affects whether that space can be used, and until now the two facts lived in different modules
- * with nothing between them — an examination hall could be flooded and still read as READY.
+ * with nothing between them - an examination hall could be flooded and still read as READY.
  *
  * <h2>Why the mapping mirrors the asset one rather than inventing a second</h2>
  *
@@ -21,7 +21,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSeverity;
  * nobody reading the space would be able to say which was right.
  *
  * <p>The threshold is configurable rather than fixed at HIGH, because what counts as "stops the hall
- * being used" is a centre's judgement, not a developer's. It is passed in rather than read here —
+ * being used" is a centre's judgement, not a developer's. It is passed in rather than read here -
  * this class stays a pure function so the rule is testable without a configuration store.
  */
 public final class FaultReadinessPolicy {

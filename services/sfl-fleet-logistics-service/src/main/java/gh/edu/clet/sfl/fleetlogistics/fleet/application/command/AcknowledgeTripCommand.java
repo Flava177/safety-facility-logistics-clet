@@ -13,7 +13,7 @@ import java.util.UUID;
  * other than yes/no is needed, and a string would push the "is this a real answer" check out to
  * whichever caller remembered it.
  *
- * <p>{@code reason} is required when deferring and ignored when confirming — enforced by
+ * <p>{@code reason} is required when deferring and ignored when confirming - enforced by
  * {@code TripAcknowledgement}, not here, so the rule holds for every path into the aggregate.
  */
 public record AcknowledgeTripCommand(

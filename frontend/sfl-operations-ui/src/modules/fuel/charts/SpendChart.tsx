@@ -18,12 +18,12 @@ interface SpendChartProps {
  * Fuel spend and volume by day.
  *
  * Two series on one axis on purpose: spend and volume move together when nothing is wrong, and the
- * day they diverge — the same litres costing noticeably more, or the same money buying less — is
+ * day they diverge - the same litres costing noticeably more, or the same money buying less - is
  * exactly what an operator is looking for. Sharing an axis is what makes that divergence visible;
  * two separate panels would hide it.
  *
  * Both series are bucketed from the transactions the register returned, not from a service
- * time-series endpoint — there isn't one. The panel that hosts this says so.
+ * time-series endpoint - there isn't one. The panel that hosts this says so.
  */
 const SpendChart = ({ points, currencyCode, unit, height = 280 }: SpendChartProps) => (
   <AreaChart

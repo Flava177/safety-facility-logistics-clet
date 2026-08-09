@@ -48,7 +48,7 @@ import org.springframework.boot.test.context.SpringBootTest;
  * Proof for the gaps closed after the S168 dashboard was built.
  *
  * <p>Each test names the gap it covers. They exist because every one of these was a real defect
- * found by driving the running service, not by reading the source — the kind that a compiling build
+ * found by driving the running service, not by reading the source - the kind that a compiling build
  * and a passing unit suite both miss.
  */
 @SpringBootTest(properties={"sfl.security.enabled=false","sfl.fuel.scheduling.enabled=false","sfl.fleet.scheduling.outbox.enabled=false","sfl.fleet.messaging.transport=local"})
@@ -96,7 +96,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
             long reading, String cardReference, Instant occurredAt) {
         return fuel.capture(new FuelApplicationService.CaptureFuel(f.site(),provider,"MANUAL",f.vehicle().id(),
                 f.driver().id(),null,occurredAt,"CLET STATION","PUMP-1","DIESEL",litres,"LITRE",
-                unitPrice,null,"GHS",cardReference,reading,UUID.randomUUID(),null,
+                unitPrice,null,"GHS",cardReference,reading,UUID.randomUUID(),null,null,
                 "tx-"+provider+"-"+f.site(),f.manager(),SourceChannel.WEB));
     }
 
@@ -238,7 +238,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
         assertThat(everyRow.totalElements()).isEqualTo(2);
 
         var rejected = fuel.importRows(result.batchId(),FuelImportRow.Status.REJECTED,page(0,25),f.manager());
-        // The total describes the filter, not the batch — count and page share one predicate.
+        // The total describes the filter, not the batch - count and page share one predicate.
         assertThat(rejected.totalElements()).isEqualTo(1);
         assertThat(rejected.content()).singleElement()
                 .satisfies(row -> assertThat(row.status()).isEqualTo(FuelImportRow.Status.REJECTED));
@@ -254,7 +254,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
      *
      * <p>It was not. {@code FuelAccessPolicy} and {@code DispatchAccessPolicy} build their denial
      * details with {@code Map.of}, which rejects nulls, so both substituted {@code ""} for an absent
-     * id — and the audit writer guarded only {@code == null}, so the empty string reached
+     * id - and the audit writer guarded only {@code == null}, so the empty string reached
      * {@code AuditEvent}, failed its non-blank check, and the record was thrown away with nothing but
      * an ERROR line to show for it. The 403 was returned correctly throughout, so nothing looked
      * wrong from outside.
@@ -265,7 +265,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
      *
      * <p>Asserted through {@link AuditPort} against real Postgres rather than with a mock, because the
      * constraint that broke lives in the domain constructor and the substitution lives in the JDBC
-     * adapter — a double that stood in for either would have kept passing.
+     * adapter - a double that stood in for either would have kept passing.
      */
     @Test void a_denial_with_no_resource_id_is_still_audited() {
         Fixture f = newFixture(false);
@@ -443,7 +443,7 @@ class FuelGapClosureEndToEndTest extends FleetPostgresSupport {
     /**
      * Gap 10: the audit search that returned 500 on every call, and the fuel history built on it.
      *
-     * <p>The filter combinations are exercised deliberately — the previous JPQL failed whatever was
+     * <p>The filter combinations are exercised deliberately - the previous JPQL failed whatever was
      * supplied, because a bare {@code ? IS NULL} test left PostgreSQL unable to infer a type.
      */
     @Test void audit_search_runs_and_fuel_records_expose_their_history() {

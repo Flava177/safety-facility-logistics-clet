@@ -22,7 +22,7 @@ import org.springframework.stereotype.Component;
 /**
  * Produces the {@link ActorContext} every S152 command and query is authorised against.
  *
- * <p>Two sources, one interface — the swap the workplan requires:
+ * <p>Two sources, one interface - the swap the workplan requires:
  * <ul>
  *   <li><strong>Production:</strong> the OIDC/JWT resource-server principal, using standard claims
  *       ({@code sub}, {@code name}) plus realm roles and the site-scope claim. No provider-specific

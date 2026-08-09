@@ -33,7 +33,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * Room and resource bookings — SRS-SFL-S159-01, -02.
+ * Room and resource bookings - SRS-SFL-S159-01, -02.
  *
  * <p>{@code Idempotency-Key} is honoured on the one state-<em>creating</em> POST and nowhere else.
  * Every other operation is a PATCH guarded by the record's version and its state machine, so a repeat
@@ -41,7 +41,7 @@ import org.springframework.web.bind.annotation.RestController;
  * behind it.
  *
  * <p>A request that loses a race for a space comes back {@code 409} with
- * {@code BOOKING_CONFLICT} — the same code as one that simply asked after somebody else. From the
+ * {@code BOOKING_CONFLICT} - the same code as one that simply asked after somebody else. From the
  * requester's side those are the same event.
  */
 @RestController
@@ -173,7 +173,7 @@ public class BookingController {
 
     @GetMapping("/{bookingId}/approvals")
     @Operation(summary = "The approval decisions taken on a booking",
-            description = "Empty for a booking that needed none, which is what says so — there is no "
+            description = "Empty for a booking that needed none, which is what says so - there is no "
                     + "separate flag to fall out of step.")
     public ApiResponse<List<BookingResponses.ApprovalResponse>> approvals(@PathVariable UUID bookingId,
             HttpServletRequest http) {

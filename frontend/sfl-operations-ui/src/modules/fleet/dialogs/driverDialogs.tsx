@@ -32,11 +32,11 @@ interface BaseProps {
  */
 const lapsedHint = (value: string, subject: string): string | undefined =>
   value && value < todayIsoDate()
-    ? `This date has passed — the driver will be registered as ineligible until the ${subject} is renewed.`
+    ? `This date has passed - the driver will be registered as ineligible until the ${subject} is renewed.`
     : undefined;
 
 /* ---------------------------------------------------------------------------------------------
- * Register a driver — POST /api/v1/fleet/drivers
+ * Register a driver - POST /api/v1/fleet/drivers
  * ------------------------------------------------------------------------------------------- */
 
 export const RegisterDriverDialog = ({
@@ -167,7 +167,7 @@ export const RegisterDriverDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Bind a driver to the sign-in they use — PATCH /api/v1/fleet/drivers/{id}/principal
+ * Bind a driver to the sign-in they use - PATCH /api/v1/fleet/drivers/{id}/principal
  * ------------------------------------------------------------------------------------------- */
 
 export const BindDriverPrincipalDialog = ({
@@ -221,7 +221,7 @@ export const BindDriverPrincipalDialog = ({
 };
 
 /* ---------------------------------------------------------------------------------------------
- * Update a driver — PATCH /api/v1/fleet/drivers/{id}
+ * Update a driver - PATCH /api/v1/fleet/drivers/{id}
  * ------------------------------------------------------------------------------------------- */
 
 export const UpdateDriverDialog = ({
@@ -284,7 +284,7 @@ export const UpdateDriverDialog = ({
     >
       {driver.licenceNumberMasked && (
         <Alert variant="warning">
-          The licence number is masked for your role. Submitting will overwrite the stored value —
+          The licence number is masked for your role. Submitting will overwrite the stored value -
           only fill this in if you hold the real number.
         </Alert>
       )}

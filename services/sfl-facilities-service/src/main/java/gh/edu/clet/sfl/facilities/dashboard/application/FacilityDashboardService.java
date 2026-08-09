@@ -34,8 +34,8 @@ import org.springframework.transaction.annotation.Transactional;
  * The S152-05 dashboard.
  *
  * <p>Computed from the source tables on request rather than served from a snapshot. That is the
- * decision the requirement's own wording pushes towards — "dashboard counts must reconcile to source
- * workflow/read-model records" — and at Phase 1 volumes a live read is both cheaper to reason about
+ * decision the requirement's own wording pushes towards - "dashboard counts must reconcile to source
+ * workflow/read-model records" - and at Phase 1 volumes a live read is both cheaper to reason about
  * and impossible to serve stale by accident. Snapshots exist (V8) for go-live reporting, which is a
  * different job: proving what the numbers were on a date after the estate has moved on.
  *
@@ -227,7 +227,7 @@ public class FacilityDashboardService {
     }
 
     /**
-     * Examination readiness risk — the indicator SRS-SFL-S152-05 names by that phrase.
+     * Examination readiness risk - the indicator SRS-SFL-S152-05 names by that phrase.
      *
      * <p>A space qualifies when it is examination-capable and something stands between it and being
      * used: a non-READY status, an open critical blocker, or open maintenance against its location.

@@ -12,7 +12,7 @@ import { actorRoles } from './programmes';
  * `FLEET_DRIVER` holds eight permissions and **every one of them is also held by `FLEET_MANAGER`**.
  * So no permission distinguishes a driver from a manager, and gating "My driving day" on
  * `FUEL_LOGBOOK_CREATE` would put it in front of the fleet office as their landing page. The thing
- * that makes somebody a driver is not what they can do — it is what they *cannot*.
+ * that makes somebody a driver is not what they can do - it is what they *cannot*.
  *
  * ## The rule, and where it comes from
  *
@@ -20,16 +20,16 @@ import { actorRoles } from './programmes';
  * programme**. That is not invented here: it is the rule the services already enforce, transcribed
  * so the two cannot disagree.
  *
- * - `FuelAccessPolicy.isDriverOnly` — `FLEET_DRIVER` present, and none of `FLEET_MANAGER`,
+ * - `FuelAccessPolicy.isDriverOnly` - `FLEET_DRIVER` present, and none of `FLEET_MANAGER`,
  *   `FLEET_LOGISTICS_OFFICER`, `SFL_ADMIN`.
- * - `FacilityFaultService.requesterFilter` and `BookingApplicationService.requesterFilter` —
+ * - `FacilityFaultService.requesterFilter` and `BookingApplicationService.requesterFilter` -
  *   narrows only when `IFIMP_REQUESTER` is the actor's *only* facilities role, on the stated
  *   grounds that "a manager who also happens to hold the requester role is a manager; treating the
  *   union of roles as its narrowest member would make adding a role to somebody take capability
  *   away".
  *
  * The same sentence is the whole design of this file. A supervisor who is also on the driver rota
- * gets the fleet office, not a driver's day — and the service would return them the estate-wide data
+ * gets the fleet office, not a driver's day - and the service would return them the estate-wide data
  * anyway, so a personal portal would be lying about what it was showing.
  *
  * ## What this is not
@@ -86,7 +86,7 @@ const predicates: Record<PersonaCode, () => boolean> = {
 
   /**
    * Both in-house and contract technicians, because S153 narrows both by assignment and the queue is
-   * the same question — "what is mine today". A supervisor is excluded: they run the queue.
+   * the same question - "what is mine today". A supervisor is excluded: they run the queue.
    */
   technician: () =>
     (has('IFIMP_TECHNICIAN') || has('VENDOR_TECHNICIAN'))
@@ -98,7 +98,7 @@ const predicates: Record<PersonaCode, () => boolean> = {
 
   /**
    * Auditor and compliance, who are cross-programme by design (`crossProgrammeRoles`) and therefore
-   * see every module — which is exactly why one consolidated assurance view beats four per-module
+   * see every module - which is exactly why one consolidated assurance view beats four per-module
    * ones. Not excluded by admin roles: an administrator who is also an auditor still audits.
    */
   assurance: () => has('AUDITOR') || has('COMPLIANCE_OFFICER'),

@@ -26,12 +26,13 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterInbound } from 'modules/fleet/api/access';
 
 /**
  * The mailroom: inbound registration and acknowledged distribution.
  *
  * The same courier item register underneath, with direction fixed to inbound by the endpoint. What
- * makes it a distinct screen is the one thing inbound mail is *for* — getting the item to its
+ * makes it a distinct screen is the one thing inbound mail is *for* - getting the item to its
  * recipient and recording that they took it. Distribution is offered directly from the row, because
  * an operator working through the morning's post should not have to open each item to acknowledge
  * it.
@@ -149,9 +150,12 @@ const InboundMailPage = () => {
         subtitle="Registration, and the acknowledgement that closes each item."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Inbound mail' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
-            Register inbound item
-          </Button>
+          // DISPATCH_INBOUND_REGISTER, which is the mailroom officer's grant.
+          canRegisterInbound() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
+              Register inbound item
+            </Button>
+          ) : undefined
         }
       />
 

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  *
  * <p>SRS-SFL-S153-02 is explicit: <em>"Escalation rules must be evaluated using the runtime
  * configuration active at the time of evaluation."</em> That sentence rules out the obvious
- * implementation — read the values once at startup into a bean — because a rule changed at nine
+ * implementation - read the values once at startup into a bean - because a rule changed at nine
  * o'clock would then not apply until the service restarted, and nobody would be able to say from the
  * outside whether it had.
  *
@@ -24,7 +24,7 @@ import org.springframework.stereotype.Component;
  * <h2>Why the keys are namespaced and defaulted</h2>
  *
  * Every key is {@code maintenance.*} and every read carries a fallback. A site that has configured
- * nothing gets {@link SlaPolicy#defaults()}, which means S153 works on a fresh database — the
+ * nothing gets {@link SlaPolicy#defaults()}, which means S153 works on a fresh database - the
  * alternative is a service that starts, accepts a fault, and then cannot compute its deadline
  * because somebody has not run a seed script.
  */
@@ -85,8 +85,8 @@ public class MaintenanceConfiguration {
     /**
      * The priority at or above which a fault blocks the space it is in.
      *
-     * <p>Defaults to {@link FaultPriority#HIGH}. A medium fault — a flickering light, a sticking door
-     * — should not take an examination hall out of service, and a site that disagrees can say so.
+     * <p>Defaults to {@link FaultPriority#HIGH}. A medium fault - a flickering light, a sticking door
+     * - should not take an examination hall out of service, and a site that disagrees can say so.
      */
     public FaultPriority blockerThreshold(String siteCode) {
         return priority(KEY_BLOCKER_THRESHOLD, siteCode, FaultPriority.HIGH);

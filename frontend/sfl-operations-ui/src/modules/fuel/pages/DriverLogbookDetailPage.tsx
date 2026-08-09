@@ -23,6 +23,7 @@ import StatusChip from 'shared/components/StatusChip';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths, fuelPaths } from 'shared/layout/navigation';
+import { canCreateLogbooks, canReviewLogbooks } from 'modules/fleet/api/access';
 
 /** One sentence per transition. "Transition applied" tells an operator nothing. */
 const CONFIRMATIONS: Record<LogbookTransition, string> = {
@@ -34,7 +35,7 @@ const CONFIRMATIONS: Record<LogbookTransition, string> = {
   cancel: 'Logbook cancelled.',
 };
 
-/** The order the buttons appear in — forward moves first, then the privileged exits. */
+/** The order the buttons appear in - forward moves first, then the privileged exits. */
 const TRANSITION_ORDER: LogbookTransition[] = [
   'submit',
   'review',
@@ -48,7 +49,7 @@ const TRANSITION_ORDER: LogbookTransition[] = [
  * A driver logbook, its journey detail and every transition legal from where it stands.
  *
  * Which buttons appear is decided by the record's own `requireState` guards, transcribed in
- * `workflow.ts` — so the dashboard offers approve only from under review, cancel only from draft,
+ * `workflow.ts` - so the dashboard offers approve only from under review, cancel only from draft,
  * submitted or returned, and reopen only from approved. The service still decides; this just stops
  * the dashboard offering an action that can only be refused.
  */
@@ -79,8 +80,8 @@ const DriverLogbookDetailPage = () => {
   const record = logbook.data;
 
   /**
-   * `review` is the one transition with nothing to fill in — the service takes no comment for it and
-   * the domain asks for nothing — so it runs from the button rather than through a dialog that
+   * `review` is the one transition with nothing to fill in - the service takes no comment for it and
+   * the domain asks for nothing - so it runs from the button rather than through a dialog that
    * would have a single "Confirm" in it.
    */
   const startReview = async () => {
@@ -90,7 +91,7 @@ const DriverLogbookDetailPage = () => {
       notifySuccess(CONFIRMATIONS.review);
       refreshAll();
     } catch (error) {
-      // Shown with the service's own wording — a refused transition is never silent.
+      // Shown with the service's own wording - a refused transition is never silent.
       notifyError(error);
     } finally {
       setWorking(false);
@@ -160,8 +161,16 @@ const DriverLogbookDetailPage = () => {
 
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
-                {TRANSITION_ORDER.filter((transition) =>
-                  logbookTransitionAllowed(record, transition),
+                {TRANSITION_ORDER.filter(
+                  (transition) =>
+                    logbookTransitionAllowed(record, transition) &&
+                    /*
+                      State says the record could take this step; the grant says whether this person
+                      is the one who takes it. Submitting is the driver's own act
+                      (FUEL_LOGBOOK_CREATE); reviewing, returning and approving belong to the
+                      reviewer, and collapsing the two would let a driver approve their own journey.
+                    */
+                    (transition === 'submit' ? canCreateLogbooks() : canReviewLogbooks()),
                 ).map((transition) => {
                   const blockedSubmit = transition === 'submit' && submissionBlockers.length > 0;
                   return transition === 'review' ? (
@@ -269,19 +278,19 @@ const DriverLogbookDetailPage = () => {
                         label: 'Closing odometer',
                         value:
                           record.endOdometer === null || record.endOdometer === undefined
-                            ? '—'
+                            ? '-'
                             : `${formatNumber(record.endOdometer)} km`,
                       },
                       { label: 'Origin', value: record.origin },
                       { label: 'Destination', value: record.destination },
                       { label: 'Purpose', value: record.purpose, span: 2 },
-                      { label: 'Route notes', value: record.routeNotes ?? '—', span: 2 },
+                      { label: 'Route notes', value: record.routeNotes ?? '-', span: 2 },
                       {
                         label: 'Passenger and load notes',
-                        value: record.passengerLoadNotes ?? '—',
+                        value: record.passengerLoadNotes ?? '-',
                         span: 2,
                       },
-                      { label: 'Evidence reference', value: record.evidenceId ?? '—', span: 2 },
+                      { label: 'Evidence reference', value: record.evidenceId ?? '-', span: 2 },
                     ]}
                   />
                 </SectionCard>
@@ -292,10 +301,10 @@ const DriverLogbookDetailPage = () => {
                     items={[
                       { label: 'Submitted at', value: formatDateTime(record.submittedAt) },
                       { label: 'Approved at', value: formatDateTime(record.approvedAt) },
-                      { label: 'Review comment', value: record.reviewComment ?? '—', span: 2 },
+                      { label: 'Review comment', value: record.reviewComment ?? '-', span: 2 },
                       {
                         label: 'Last transition reason',
-                        value: record.transitionReason ?? '—',
+                        value: record.transitionReason ?? '-',
                         span: 2,
                       },
                     ]}

@@ -4,7 +4,7 @@ import { toneColors } from 'shared/charts/palette';
 export interface ExceptionBar {
   label: string;
   value: number;
-  /** Stops work rather than merely warranting a look — drawn in the blocked tone. */
+  /** Stops work rather than merely warranting a look - drawn in the blocked tone. */
   critical?: boolean;
 }
 

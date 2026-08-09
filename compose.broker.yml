@@ -1,0 +1,39 @@
+# A development broker. Not the deployment topology.
+#
+# Cluster 9 does not own a message broker and should not acquire one. The enterprise integration
+# layer (S217 in the CLET system mapping) is a DTI-owned Kafka serving all 246 systems, and most of
+# SFL's integration edges leave the cluster anyway - fuel reconciliation to Finance (S138), HSE
+# claims to Insurance (S151_ins), courier to the Question-Paper Vault (S068), and IR-10's mandatory
+# audit stream from all four platforms to S204. A private broker would need bridging to the
+# enterprise one for every one of those.
+#
+# S217 is Phase 2. This file exists so the cross-service sagas can be proved working before it
+# arrives, using the AMQP adapter the services already carry. It is RabbitMQ rather than Kafka for
+# exactly one reason: `AmqpFleetEventTransport` is already written and tested, and a Kafka adapter
+# built now would be discarded when DTI's schema registry, topic ownership and auth conventions are
+# known. Nothing here should outlive that conversation.
+#
+#   docker compose -f compose.broker.yml up -d
+#   http://localhost:15672  (sfl / sfl)
+#
+# To tear it down completely, including the queues and anything undelivered:
+#   docker compose -f compose.broker.yml down -v
+
+services:
+  sfl-broker:
+    image: rabbitmq:3.13-management
+    container_name: sfl-broker
+    restart: unless-stopped
+    environment:
+      RABBITMQ_DEFAULT_USER: sfl
+      RABBITMQ_DEFAULT_PASS: sfl
+    ports:
+      # 5672 is AMQP for the services; 15672 is the management UI, which is the point of the
+      # `-management` image - being able to see a message arrive is most of what this proves.
+      - "5672:5672"
+      - "15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "check_running"]
+      interval: 10s
+      timeout: 5s
+      retries: 12

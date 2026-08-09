@@ -80,7 +80,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
  *
  * <p>These exercise what unit tests cannot: the Flyway schema, the partial unique indexes, the gist
  * exclusion constraints, the append-only triggers, the hash-chained audit log and the transactional
- * outbox — all working together through the real application services.
+ * outbox - all working together through the real application services.
  *
  * <p>Traces: SRS-SFL-S166-01 through -05 acceptance criteria.
  */
@@ -160,7 +160,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 1 — Register a vehicle and verify audit/outbox creation (SRS-SFL-S166-01 AC1)
+    // Scenario 1 - Register a vehicle and verify audit/outbox creation (SRS-SFL-S166-01 AC1)
     // =====================================================================================
 
     @Test
@@ -191,7 +191,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 2 — Reject a duplicate active registration in the same site (S166-01 AC2)
+    // Scenario 2 - Reject a duplicate active registration in the same site (S166-01 AC2)
     // =====================================================================================
 
     @Test
@@ -212,7 +212,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 3 — Deny cross-site access (S166-01 AC3)
+    // Scenario 3 - Deny cross-site access (S166-01 AC3)
     // =====================================================================================
 
     @Test
@@ -228,7 +228,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 4 — Add compliance documents and calculate readiness (S166-01/-05)
+    // Scenario 4 - Add compliance documents and calculate readiness (S166-01/-05)
     // =====================================================================================
 
     @Test
@@ -250,7 +250,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 5 — Expired compliance blocks assignment (S166-02)
+    // Scenario 5 - Expired compliance blocks assignment (S166-02)
     // =====================================================================================
 
     @Test
@@ -276,7 +276,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 6 — Ineligible driver blocks assignment (S166-02/-05)
+    // Scenario 6 - Ineligible driver blocks assignment (S166-02/-05)
     // =====================================================================================
 
     @Test
@@ -296,7 +296,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 7 — Prevent overlapping vehicle and driver assignments (S166-02)
+    // Scenario 7 - Prevent overlapping vehicle and driver assignments (S166-02)
     // =====================================================================================
 
     /**
@@ -304,7 +304,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
      *
      * <p>{@link gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetAccessPolicy#requireRecordScope}
      * is documented as "what keeps the limited driver/mobile user class to their own trips and
-     * inspections", and it was unit-tested — but no read ever called it, and its single production
+     * inspections", and it was unit-tested - but no read ever called it, and its single production
      * call site passed {@code null} as the owner reference, which the policy returns on immediately.
      * The rule was therefore enforced nowhere, and a {@code FLEET_DRIVER} holding any trip id read
      * that trip in full.
@@ -326,7 +326,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
         Trip theirTrip = createTrip(vehicle, theirs, site, start.plus(Duration.ofHours(4)),
                 start.plus(Duration.ofHours(7)));
 
-        // The driver signs in as their staff reference — the equivalence fuel already relies on when
+        // The driver signs in as their staff reference - the equivalence fuel already relies on when
         // it refuses a driver a logbook opened for somebody else.
         ActorContext driver = actor(mine.staffReference(), Set.of(SflRole.FLEET_DRIVER), site, false);
 
@@ -369,7 +369,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 8 — Pre-trip inspection with a critical failure blocks readiness (S166-01/-02)
+    // Scenario 8 - Pre-trip inspection with a critical failure blocks readiness (S166-01/-02)
     // =====================================================================================
 
     @Test
@@ -405,7 +405,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 9 — Complete a valid assignment with required closure evidence (S166-02 AC2)
+    // Scenario 9 - Complete a valid assignment with required closure evidence (S166-02 AC2)
     // =====================================================================================
 
     @Test
@@ -444,7 +444,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 10 — Escalate an overdue workflow using runtime SLA configuration (S166-02 AC3)
+    // Scenario 10 - Escalate an overdue workflow using runtime SLA configuration (S166-02 AC3)
     // =====================================================================================
 
     @Test
@@ -490,7 +490,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 11 — Process a signed telematics message exactly once (S166-04 AC1)
+    // Scenario 11 - Process a signed telematics message exactly once (S166-04 AC1)
     // =====================================================================================
 
     @Test
@@ -528,7 +528,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 12 — Reject an unsigned or schema-invalid message without side effects (S166-04 AC2)
+    // Scenario 12 - Reject an unsigned or schema-invalid message without side effects (S166-04 AC2)
     // =====================================================================================
 
     @Test
@@ -570,7 +570,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 13 — Retry and surface a failed outbound integration (S166-04 AC3)
+    // Scenario 13 - Retry and surface a failed outbound integration (S166-04 AC3)
     // =====================================================================================
 
     @Test
@@ -622,7 +622,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 14 — Detect audit-chain tampering (S166-03 AC3)
+    // Scenario 14 - Detect audit-chain tampering (S166-03 AC3)
     // =====================================================================================
 
     @Test
@@ -669,7 +669,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 15 — Reconcile dashboard counts with underlying records (S166-05)
+    // Scenario 15 - Reconcile dashboard counts with underlying records (S166-05)
     // =====================================================================================
 
     @Test
@@ -702,7 +702,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     // =====================================================================================
-    // Scenario 16 — Display stale dashboard data explicitly (S166-05 AC2)
+    // Scenario 16 - Display stale dashboard data explicitly (S166-05 AC2)
     // =====================================================================================
 
     @Test
@@ -723,7 +723,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
 
         assertThat(stale.stale()).isTrue();
         // The flag is the signal; the sentence is not. Staleness was also pushed into `warnings`, which
-        // put a permanent amber banner on every environment whose data does not change hourly — so the
+        // put a permanent amber banner on every environment whose data does not change hourly - so the
         // dashboard showed a warning nobody read, on every screen, including on the day it mattered.
         // Asserted absent rather than merely dropped, so the sentence cannot quietly return.
         assertThat(stale.warnings())

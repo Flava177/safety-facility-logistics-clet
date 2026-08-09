@@ -27,7 +27,7 @@ public interface JpaPreventiveScheduleRepository extends JpaRepository<Preventiv
      *
      * <p>Narrowed by date here and re-checked in the aggregate. This query cannot express
      * "not already generated for this cycle" cleanly across null last-generated dates, and the
-     * aggregate is where that rule belongs anyway — the query is an index-friendly first cut, not
+     * aggregate is where that rule belongs anyway - the query is an index-friendly first cut, not
      * the decision.
      */
     @Query(value = """

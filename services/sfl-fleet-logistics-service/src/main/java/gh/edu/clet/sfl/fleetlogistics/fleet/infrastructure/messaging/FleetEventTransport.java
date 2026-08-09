@@ -11,7 +11,7 @@ public interface FleetEventTransport {
 
     /**
      * Delivers one message. Throwing marks the attempt failed so the drainer can retry with backoff and
-     * eventually dead-letter — implementations must never swallow a delivery failure.
+     * eventually dead-letter - implementations must never swallow a delivery failure.
      */
     void send(OutboxMessageEntity message);
 

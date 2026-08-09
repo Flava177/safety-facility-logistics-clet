@@ -23,7 +23,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The fuel-card register — SRS-SFL-S168fuel-04.
+ * The fuel-card register - SRS-SFL-S168fuel-04.
  *
  * <p>Only the masked reference the provider already sends is accepted or returned. A full card number
  * is payment data, this platform has no business holding one, and the C9 mapping puts the card platform

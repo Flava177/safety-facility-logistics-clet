@@ -74,8 +74,8 @@ public class SlaEvaluationService {
     /**
      * Escalates one item, logging and continuing if it fails.
      *
-     * <p>A single item that cannot be escalated — because somebody closed it in the same instant, for
-     * example — must not stop the sweep from handling the others.
+     * <p>A single item that cannot be escalated - because somebody closed it in the same instant, for
+     * example - must not stop the sweep from handling the others.
      */
     private FleetWorkflowItem escalateSafely(FleetWorkflowItem item, ActorContext actor) {
         try {

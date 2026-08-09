@@ -9,7 +9,7 @@ import {
 } from 'modules/emergency/api/enums';
 import type { ActivationMode, ActivationStatus, Priority } from 'modules/emergency/api/enums';
 import { activationsApi, emergencyReportsApi } from 'modules/emergency/api/emergencyApi';
-import { afterActionOutstanding } from 'modules/emergency/api/workflow';
+import { afterActionOutstanding, canCreateActivations, canExportEmergencyEvidence } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed } from 'modules/emergency/components/emergencyFormat';
 import { useSiteRecords } from 'modules/emergency/components/useSiteRecords';
@@ -44,12 +44,12 @@ const QUEUE_VIEWS = [
  *
  * `GET /activations` takes a site and a status and nothing else. Mode, priority, incident reference
  * and the four queue views are applied here over the returned window, and every one of those
- * controls says so — a filter that silently searches only what happened to be loaded is how an
+ * controls says so - a filter that silently searches only what happened to be loaded is how an
  * operator concludes a broadcast was never sent.
  *
  * The status filter offers the whole enum, not only the statuses this dashboard can produce.
  * `ACTIVATING`, `PARTIALLY_DELIVERED`, `ESCALATED`, `FAILED`, `CANCELLED` and `REOPENED` are set by
- * provider callbacks, by the scheduled sweep, or by nothing at all — but a stored record can hold
+ * provider callbacks, by the scheduled sweep, or by nothing at all - but a stored record can hold
  * them, and a filter that cannot find such a record is worse than one that returns nothing.
  */
 const ActivationsPage = () => {
@@ -72,7 +72,7 @@ const ActivationsPage = () => {
    * Each view is a set of server-side predicates, not a pass over what came back.
    *
    * That was gap 2. The service knows what "open", "live", "awaiting approval" and "after-action
-   * due" mean now — `NotificationActivation.open()` and `.active()` are expressed as SQL rather
+   * due" mean now - `NotificationActivation.open()` and `.active()` are expressed as SQL rather
    * than re-implemented here over a window.
    */
   const viewParams =
@@ -115,7 +115,7 @@ const ActivationsPage = () => {
    * The four header counts, each its own site-wide query.
    *
    * Counted by the service, not from the page on screen. "After-action due" in particular is the
-   * outstanding break-glass sends at the **site** — reading it off a page of twenty-five would
+   * outstanding break-glass sends at the **site** - reading it off a page of twenty-five would
    * have quietly under-reported the one number an auditor asks about.
    */
   const counts = useApiQuery(
@@ -243,17 +243,22 @@ const ActivationsPage = () => {
         crumbs={[{ label: 'Emergency', to: emergencyPaths.dashboard }, { label: 'Activations' }]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setComposing(true)}>
-              Compose activation
-            </Button>
-            <Button
-              variant="outline"
-              startIcon="download"
-              loading={exporting}
-              onClick={exportReport}
-            >
-              Export CSV
-            </Button>
+            {/* Declaring an emergency and exporting the record of one are separate grants. */}
+            {canCreateActivations() && (
+              <Button variant="primary" startIcon="plus" onClick={() => setComposing(true)}>
+                Compose activation
+              </Button>
+            )}
+            {canExportEmergencyEvidence() && (
+              <Button
+                variant="outline"
+                startIcon="download"
+                loading={exporting}
+                onClick={exportReport}
+              >
+                Export CSV
+              </Button>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={query.refetch}>
               Refresh
             </Button>

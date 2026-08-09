@@ -24,6 +24,15 @@ public final class FleetEvidenceResponses {
             EvidenceRetentionClass retentionClass,
             Instant retentionExpiresAt,
             boolean legalHold,
+            /**
+             * Whether the platform holds the file, not just the note that one exists.
+             *
+             * <p>The dashboard needs this to decide between a preview button and an explanation.
+             * Everything registered before the file store is metadata pointing at a document store
+             * Release 1 never had, and offering "download" for those produces a 404 that looks like a
+             * fault rather than the history it is.
+             */
+            boolean hasContent,
             String createdBy,
             Instant createdAt,
             String lastModifiedBy,

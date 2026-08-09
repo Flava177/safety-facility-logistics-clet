@@ -18,9 +18,11 @@ import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
@@ -37,6 +39,28 @@ public class FuelPolicyController {
      * the site already covers part of the same period.
      */
     @PostMapping public ResponseEntity<ApiResponse<FuelPolicy>> create(@Valid @RequestBody PolicyRequest r,HttpServletRequest h){var p=service.createPolicy(new FuelApplicationService.CreatePolicy(r.siteCode(),r.name(),r.effectiveFrom(),r.effectiveTo(),r.policyVersion(),r.maxPerTransaction(),r.dailyLimit(),r.monthlyLimit(),r.tankCapacity(),r.minConsumption(),r.maxConsumption(),r.odometerJumpTolerance(),r.receiptRequired(),r.receiptGraceHours(),r.materialityAmount(),r.anomalySlaHours(),r.costVarianceTolerance(),r.repeatedPatternWindowHours(),r.repeatedPatternThreshold(),r.allowedFuelProducts(),r.approvedVendors(),actors.resolve(h),actors.resolveSourceChannel(h)));return ResponseEntity.created(URI.create("/api/v1/fuel/policies/"+p.id())).body(ApiResponse.ok(p));}
+
+    /**
+     * Revises a policy. The site is not in the body: a policy does not move between sites, and
+     * accepting one here would offer a way to make it look as though it had.
+     */
+    @PutMapping("/{id}") public ApiResponse<FuelPolicy> update(@PathVariable UUID id,@Valid @RequestBody PolicyUpdateRequest r,HttpServletRequest h){
+        return ApiResponse.ok(service.updatePolicy(new FuelApplicationService.UpdatePolicy(id,r.name(),r.effectiveFrom(),r.effectiveTo(),r.policyVersion(),r.maxPerTransaction(),r.dailyLimit(),r.monthlyLimit(),r.tankCapacity(),r.minConsumption(),r.maxConsumption(),r.odometerJumpTolerance(),r.receiptRequired(),r.receiptGraceHours(),r.materialityAmount(),r.anomalySlaHours(),r.costVarianceTolerance(),r.repeatedPatternWindowHours(),r.repeatedPatternThreshold(),r.allowedFuelProducts(),r.approvedVendors(),actors.resolve(h),actors.resolveSourceChannel(h))));
+    }
+
+    /**
+     * Withdraws a policy.
+     *
+     * <p>{@code DELETE} because that is the verb the operation answers to, and it returns the
+     * archived record rather than {@code 204} because the record still exists - every reconciliation
+     * run that cited this policy still points at it, so removing the row would strand them. Archived
+     * means "applies to nothing new", not "gone"; the response says so by carrying the policy back
+     * with its new status.
+     */
+    @DeleteMapping("/{id}") public ApiResponse<FuelPolicy> withdraw(@PathVariable UUID id,
+            @RequestParam(required=false) String reason,HttpServletRequest h){
+        return ApiResponse.ok(service.withdrawPolicy(id,reason,actors.resolve(h),actors.resolveSourceChannel(h)));
+    }
 
     /**
      * Paged policy register.
@@ -64,6 +88,9 @@ public class FuelPolicyController {
     @GetMapping("/{id}/history") public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id,HttpServletRequest h){
         return ApiResponse.ok(service.history("FuelPolicy",id,actors.resolve(h)));
     }
+
+    /** {@link PolicyRequest} without the site, which an edit may not change. */
+    public record PolicyUpdateRequest(@NotBlank String name,@NotNull Instant effectiveFrom,Instant effectiveTo,@Positive int policyVersion,@NotNull @Positive BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,@PositiveOrZero long odometerJumpTolerance,boolean receiptRequired,@PositiveOrZero int receiptGraceHours,@NotNull @PositiveOrZero BigDecimal materialityAmount,@Positive int anomalySlaHours,@PositiveOrZero BigDecimal costVarianceTolerance,@PositiveOrZero int repeatedPatternWindowHours,@PositiveOrZero int repeatedPatternThreshold,Set<String> allowedFuelProducts,Set<String> approvedVendors){}
 
     public record PolicyRequest(@NotBlank String siteCode,@NotBlank String name,@NotNull Instant effectiveFrom,Instant effectiveTo,@Positive int policyVersion,@NotNull @Positive BigDecimal maxPerTransaction,BigDecimal dailyLimit,BigDecimal monthlyLimit,BigDecimal tankCapacity,BigDecimal minConsumption,BigDecimal maxConsumption,@PositiveOrZero long odometerJumpTolerance,boolean receiptRequired,@PositiveOrZero int receiptGraceHours,@NotNull @PositiveOrZero BigDecimal materialityAmount,@Positive int anomalySlaHours,@PositiveOrZero BigDecimal costVarianceTolerance,@PositiveOrZero int repeatedPatternWindowHours,@PositiveOrZero int repeatedPatternThreshold,Set<String> allowedFuelProducts,Set<String> approvedVendors){}
 }

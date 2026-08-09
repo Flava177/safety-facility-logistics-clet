@@ -26,7 +26,7 @@ import java.util.UUID;
  * A readiness checklist and its items.
  *
  * <p>The one place in S152 that uses a JPA association rather than an id reference: a checklist's
- * items are a true composition — they have no life without it, are always loaded with it and are
+ * items are a true composition - they have no life without it, are always loaded with it and are
  * replaced wholesale when it changes. {@code orphanRemoval} is what makes "replace the items" a
  * single save rather than a delete-then-insert the caller has to remember.
  */

@@ -105,7 +105,7 @@ public class FleetIntegrationApplicationService {
      * Searches the inbound inbox.
      *
      * <p>Closes gap 8. Replay needs a message identifier, and the health projection only ever
-     * carried a handful of recent messages — so dead-letter replay was a documented capability that
+     * carried a handful of recent messages - so dead-letter replay was a documented capability that
      * could not be reached from the dashboard at all.
      */
     public List<IntegrationInboxMessage> searchMessages(String sourceSystem, IntegrationMessageStatus status,
@@ -114,6 +114,18 @@ public class FleetIntegrationApplicationService {
         return inbox.search(sourceSystem, status, eventType, limit);
     }
 
+    /**
+     * Replays one inbound message, and records that it was replayed.
+     *
+     * <p>Transactional for the audit entry, and it was not. {@code JpaAuditAdapter.record} is
+     * {@code MANDATORY} by design - an audit row must never outlive a rolled-back operation - so a
+     * method that writes audit outside a transaction fails with
+     * {@code IllegalTransactionStateException} before it does anything else. This is the same defect
+     * that made evidence access return a 500; it was found by looking for the rest of them rather
+     * than by waiting for a second report. The save below is a second reason: the read, the audit
+     * and the write belong to one unit of work.
+     */
+    @Transactional
     public IntegrationInboxMessage replay(ReplayIntegrationMessage command) {
         IntegrationInboxMessage message = inbox.findById(command.messageId())
                 .orElseThrow(() -> RecordNotFoundException.of(RESOURCE_TYPE, command.messageId()));

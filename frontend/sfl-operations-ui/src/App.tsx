@@ -9,6 +9,7 @@ import type { SystemCode } from 'shared/layout/programmes';
 import { landingPath } from 'shared/layout/navigation';
 import NotFoundPage from 'shared/pages/NotFoundPage';
 import ScrollToTop from 'shared/layout/ScrollToTop';
+import LegacyRouteRedirect, { LEGACY_ROUTES } from 'shared/layout/LegacyRouteRedirect';
 
 const LoginPage = lazy(() => import('shared/pages/LoginPage'));
 const DriverDayPage = lazy(() => import('modules/me/pages/DriverDayPage'));
@@ -135,7 +136,7 @@ const PageFallback = () => (
 /**
  * A system's routes, refused when the actor is not entitled to it.
  *
- * The wrapper sits on the parent route so every child inherits it — there is no way to add a screen
+ * The wrapper sits on the parent route so every child inherits it - there is no way to add a screen
  * under `fleet` or `emergency` and forget the check.
  *
  * It takes the **system**, not the programme, because the system is the more specific fact and the
@@ -151,7 +152,7 @@ const SystemRoutes = ({ system }: { system: SystemCode }) => (
 
 const App = () => {
   // Where this actor lands, which is their first entitled destination rather than the fleet
-  // dashboard — that is only the right answer for a fleet user.
+  // dashboard - that is only the right answer for a fleet user.
   const home = landingPath();
 
   return (
@@ -162,17 +163,47 @@ const App = () => {
         <Routes>
           {/*
             Outside the shell on purpose: the sign-in page has no sidebar, no top bar and no actor to
-            build them from. It is also the one route that must render when nothing else can.
+            build them from, and it is the one route that must render when nothing else can.
+
+            It used to sit under /fleetvehicle, which was true when one deployable served the bundle
+            and became a lie when four did: the safety-security service sent people to
+            /home/fleetvehicle/login to sign in to safety-security. The path names no platform now,
+            because sign-in belongs to none of them. LEGACY_ROUTES keeps the old address working.
           */}
           <Route path="login" element={<LoginPage />} />
+
+          {/*
+            The pre-platform URLs, kept working.
+
+            Declared before the shell so they redirect without needing a session first: an
+            unauthenticated visitor arriving on a bookmarked /fleet/trips lands on the new path and is
+            then bounced to sign-in by RequireSession, which returns them there afterwards. Sending
+            them through the guard first would lose the destination.
+
+            This is a shim with a lifetime - see LegacyRouteRedirect for when to delete it.
+          */}
+          {LEGACY_ROUTES.map((route) => (
+            <Route
+              key={route.from}
+              path={`${route.from.slice(1)}/*`}
+              element={<LegacyRouteRedirect {...route} />}
+            />
+          ))}
+          {LEGACY_ROUTES.map((route) => (
+            <Route
+              key={`${route.from}-exact`}
+              path={route.from.slice(1)}
+              element={<LegacyRouteRedirect {...route} />}
+            />
+          ))}
           <Route element={<RequireSession><AppShell /></RequireSession>}>
             <Route
               index
               element={home ? <Navigate to={home} replace /> : <NoProgrammePage />}
             />
             {/*
-              Personal landings. Outside the SystemRoutes guards on purpose: these cross systems — a
-              driver's day is an S166 assignment and an S168 logbook — and every one of them is
+              Personal landings. Outside the SystemRoutes guards on purpose: these cross systems - a
+              driver's day is an S166 assignment and an S168 logbook - and every one of them is
               already gated in the sidebar by persona plus permission, with the services enforcing
               per record underneath. A system guard here would have to pick one system arbitrarily
               and would refuse the other half of the page.
@@ -187,6 +218,15 @@ const App = () => {
             </Route>
             <Route path="facilities" element={<SystemRoutes system="S152" />}>
               <Route index element={<FacilitiesDashboardPage />} />
+              {/*
+                S152's registers under `estate`, a sibling of `maintenance` and `bookings`.
+
+                They shared one flat level with S153 before, so a URL could not tell an estate
+                register from a maintenance queue - `/facilities/spaces` and `/facilities/faults`
+                looked like peers and answered to different systems and different guards. The three
+                IFIMP systems now each own a segment, which is the shape FTLMP already had.
+              */}
+              <Route path="estate">
               <Route path="sites">
                 <Route index element={<SiteRegisterPage />} />
                 <Route path=":siteId" element={<SiteDetailPage />} />
@@ -217,29 +257,33 @@ const App = () => {
               </Route>
               <Route path="audit" element={<FacilitiesAuditPage />} />
               <Route path="configuration" element={<FacilitiesConfigurationPage />} />
+              </Route>
             </Route>
             {/*
-              S153 shares the /facilities base with S152 — same service, same programme — but is
+              S153 shares the /facilities base with S152 - same service, same programme - but is
               guarded on its own system code, so a role entitled to one and not the other lands on
-              the no-entitlement page rather than an empty screen. Evidence sits outside the
-              /maintenance prefix because an auditor reaching a piece of evidence has no interest in
-              the planning register it came from.
+              the no-entitlement page rather than an empty screen. All of it now sits under
+              `maintenance`, evidence included: it used to hang off `/facilities/maintenance-evidence`,
+              a fourth spelling of the same idea that existed only because there was nowhere else to
+              put it.
             */}
             <Route path="facilities" element={<SystemRoutes system="S153" />}>
-              <Route path="faults">
-                <Route index element={<FaultRegisterPage />} />
-                <Route path=":faultId" element={<FaultDetailPage />} />
+              <Route path="maintenance">
+                <Route path="faults">
+                  <Route index element={<FaultRegisterPage />} />
+                  <Route path=":faultId" element={<FaultDetailPage />} />
+                </Route>
+                <Route path="work-orders">
+                  <Route index element={<WorkOrderQueuePage />} />
+                  <Route path=":workOrderId" element={<WorkOrderDetailPage />} />
+                </Route>
+                <Route path="schedules">
+                  <Route index element={<PreventiveSchedulesPage />} />
+                  <Route path=":scheduleId" element={<ScheduleDetailPage />} />
+                </Route>
+                <Route path="vendors" element={<MaintenanceVendorsPage />} />
+                <Route path="evidence/:evidenceId" element={<EvidenceDetailPage />} />
               </Route>
-              <Route path="work-orders">
-                <Route index element={<WorkOrderQueuePage />} />
-                <Route path=":workOrderId" element={<WorkOrderDetailPage />} />
-              </Route>
-              <Route path="maintenance/schedules">
-                <Route index element={<PreventiveSchedulesPage />} />
-                <Route path=":scheduleId" element={<ScheduleDetailPage />} />
-              </Route>
-              <Route path="maintenance/vendors" element={<MaintenanceVendorsPage />} />
-              <Route path="maintenance-evidence/:evidenceId" element={<EvidenceDetailPage />} />
             </Route>
             {/*
               S159 sits at /bookings rather than under /facilities, and that is the one IFIMP system
@@ -249,80 +293,102 @@ const App = () => {
 
               The three static children are declared before `:bookingId`. React Router ranks static
               segments above dynamic ones regardless of order, so this is for the reader rather than
-              the router — but a new static child that looks like a UUID would break that, and having
+              the router - but a new static child that looks like a UUID would break that, and having
               them together is what makes it obvious.
             */}
-            <Route path="bookings" element={<SystemRoutes system="S159" />}>
-              <Route index element={<BookingDiaryPage />} />
-              <Route path="availability" element={<AvailabilitySearchPage />} />
-              <Route path="resources" element={<BookableResourcesPage />} />
-              <Route path="turnaround" element={<SetupTaskQueuePage />} />
-              <Route path=":bookingId" element={<BookingDetailPage />} />
+            {/*
+              Bookings sits under /facilities because it is an IFIMP screen - S159 books the
+              spaces S152 registers. It was top-level while the route names followed systems;
+              now that they follow platforms, a booking under anything else would be the odd
+              one out among the three.
+            */}
+            <Route path="facilities">
+              <Route path="bookings" element={<SystemRoutes system="S159" />}>
+                <Route index element={<BookingDiaryPage />} />
+                <Route path="availability" element={<AvailabilitySearchPage />} />
+                <Route path="resources" element={<BookableResourcesPage />} />
+                <Route path="turnaround" element={<SetupTaskQueuePage />} />
+                <Route path=":bookingId" element={<BookingDetailPage />} />
+              </Route>
             </Route>
-            <Route path="fleet" element={<SystemRoutes system="S166" />}>
-              <Route index element={<FleetDashboardPage />} />
-              <Route path="vehicles">
-                <Route index element={<VehicleRegisterPage />} />
-                <Route path=":vehicleId" element={<VehicleDetailPage />} />
+            {/*
+              One parent for FTLMP - fleet, fuel and dispatch are three systems in one
+              deployable, and the URL now says so. Each keeps its own SystemRoutes guard, so
+              entitlement is unchanged; only the address moved.
+            */}
+            <Route path="fleetvehicle">
+              <Route path="fleet" element={<SystemRoutes system="S166" />}>
+                <Route index element={<FleetDashboardPage />} />
+                <Route path="vehicles">
+                  <Route index element={<VehicleRegisterPage />} />
+                  <Route path=":vehicleId" element={<VehicleDetailPage />} />
+                </Route>
+                <Route path="drivers">
+                  <Route index element={<DriverRegisterPage />} />
+                  <Route path=":driverId" element={<DriverDetailPage />} />
+                </Route>
+                <Route path="trips">
+                  <Route index element={<TripQueuePage />} />
+                  <Route path=":tripId" element={<TripDetailPage />} />
+                </Route>
+                <Route path="workflow">
+                  <Route index element={<WorkflowQueuePage />} />
+                  <Route path=":itemId" element={<WorkflowDetailPage />} />
+                </Route>
+                <Route path="compliance" element={<CompliancePage />} />
+                <Route path="governance" element={<GovernancePage />} />
+                <Route path="integrations" element={<IntegrationHealthPage />} />
               </Route>
-              <Route path="drivers">
-                <Route index element={<DriverRegisterPage />} />
-                <Route path=":driverId" element={<DriverDetailPage />} />
+              <Route path="fuel" element={<SystemRoutes system="S168" />}>
+                <Route index element={<FuelDashboardPage />} />
+                <Route path="transactions">
+                  <Route index element={<FuelTransactionsPage />} />
+                  <Route path=":transactionId" element={<FuelTransactionDetailPage />} />
+                </Route>
+                <Route path="logbooks">
+                  <Route index element={<DriverLogbooksPage />} />
+                  <Route path=":logbookId" element={<DriverLogbookDetailPage />} />
+                </Route>
+                <Route path="reconciliation" element={<FuelReconciliationPage />} />
+                <Route path="anomalies">
+                  <Route index element={<FuelAnomaliesPage />} />
+                  <Route path=":anomalyId" element={<FuelAnomalyDetailPage />} />
+                </Route>
+                <Route path="cards" element={<FuelCardsPage />} />
+                <Route path="imports" element={<FuelImportsPage />} />
+                <Route path="policies">
+                  <Route index element={<FuelPoliciesPage />} />
+                  <Route path=":policyId" element={<FuelPolicyDetailPage />} />
+                </Route>
+                <Route path="integrations" element={<FuelIntegrationPage />} />
               </Route>
-              <Route path="trips">
-                <Route index element={<TripQueuePage />} />
-                <Route path=":tripId" element={<TripDetailPage />} />
+              <Route path="dispatch" element={<SystemRoutes system="S171" />}>
+                <Route index element={<DispatchDashboardPage />} />
+                <Route path="items">
+                  <Route index element={<CourierItemsPage />} />
+                  <Route path=":itemId" element={<CourierItemDetailPage />} />
+                </Route>
+                <Route path="manifests">
+                  <Route index element={<ManifestsPage />} />
+                  <Route path=":manifestId" element={<ManifestDetailPage />} />
+                </Route>
+                <Route path="inbound" element={<InboundMailPage />} />
+                <Route path="exceptions">
+                  <Route index element={<DispatchExceptionsPage />} />
+                  <Route path=":caseId" element={<DispatchExceptionDetailPage />} />
+                </Route>
+                <Route path="scans" element={<ScanImportsPage />} />
+                <Route path="integrations" element={<DispatchIntegrationPage />} />
               </Route>
-              <Route path="workflow">
-                <Route index element={<WorkflowQueuePage />} />
-                <Route path=":itemId" element={<WorkflowDetailPage />} />
-              </Route>
-              <Route path="compliance" element={<CompliancePage />} />
-              <Route path="governance" element={<GovernancePage />} />
-              <Route path="integrations" element={<IntegrationHealthPage />} />
             </Route>
-            <Route path="fuel" element={<SystemRoutes system="S168" />}>
-              <Route index element={<FuelDashboardPage />} />
-              <Route path="transactions">
-                <Route index element={<FuelTransactionsPage />} />
-                <Route path=":transactionId" element={<FuelTransactionDetailPage />} />
-              </Route>
-              <Route path="logbooks">
-                <Route index element={<DriverLogbooksPage />} />
-                <Route path=":logbookId" element={<DriverLogbookDetailPage />} />
-              </Route>
-              <Route path="reconciliation" element={<FuelReconciliationPage />} />
-              <Route path="anomalies">
-                <Route index element={<FuelAnomaliesPage />} />
-                <Route path=":anomalyId" element={<FuelAnomalyDetailPage />} />
-              </Route>
-              <Route path="cards" element={<FuelCardsPage />} />
-              <Route path="imports" element={<FuelImportsPage />} />
-              <Route path="policies">
-                <Route index element={<FuelPoliciesPage />} />
-                <Route path=":policyId" element={<FuelPolicyDetailPage />} />
-              </Route>
-              <Route path="integrations" element={<FuelIntegrationPage />} />
-            </Route>
-            <Route path="dispatch" element={<SystemRoutes system="S171" />}>
-              <Route index element={<DispatchDashboardPage />} />
-              <Route path="items">
-                <Route index element={<CourierItemsPage />} />
-                <Route path=":itemId" element={<CourierItemDetailPage />} />
-              </Route>
-              <Route path="manifests">
-                <Route index element={<ManifestsPage />} />
-                <Route path=":manifestId" element={<ManifestDetailPage />} />
-              </Route>
-              <Route path="inbound" element={<InboundMailPage />} />
-              <Route path="exceptions">
-                <Route index element={<DispatchExceptionsPage />} />
-                <Route path=":caseId" element={<DispatchExceptionDetailPage />} />
-              </Route>
-              <Route path="scans" element={<ScanImportsPage />} />
-              <Route path="integrations" element={<DispatchIntegrationPage />} />
-            </Route>
-            <Route path="emergency" element={<SystemRoutes system="S174" />}>
+            {/*
+              S174 under `emergency`, so SSEMP's remaining systems - S160 to S163 - have somewhere to
+              land that is not a collision. The service is named for the platform; the segment is
+              named for the system, which is the same split FTLMP and IFIMP now use.
+            */}
+            <Route path="safetysecurity" element={<SystemRoutes system="S174" />}>
+              <Route index element={<Navigate to="emergency" replace />} />
+              <Route path="emergency">
               <Route index element={<EmergencyDashboardPage />} />
               <Route path="activations">
                 <Route index element={<ActivationsPage />} />
@@ -336,6 +402,7 @@ const App = () => {
               <Route path="audiences" element={<EmergencyAudiencesPage />} />
               <Route path="drills" element={<EmergencyDrillsPage />} />
               <Route path="integrations" element={<EmergencyIntegrationPage />} />
+              </Route>
             </Route>
             <Route path="*" element={<NotFoundPage />} />
           </Route>

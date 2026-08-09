@@ -12,7 +12,7 @@ interface AuditChainStateRepository extends JpaRepository<AuditChainStateEntity,
      * Claims the chain head for writing.
      *
      * <p>{@code PESSIMISTIC_WRITE} is what serialises appends. It is one row, held for the duration of
-     * one command's transaction — brief, and the only way the sequence number and the previous-hash
+     * one command's transaction - brief, and the only way the sequence number and the previous-hash
      * link stay consistent under concurrency. Without it two writers both read sequence <em>n</em>:
      * one fails on the unique constraint and the other commits a record whose predecessor never
      * existed, which replays later as tampering that never happened.

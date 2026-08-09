@@ -9,7 +9,7 @@ package gh.edu.clet.sfl.facilities.shared.domain.model;
  *
  * <p>What the mode actually changes in S152:
  * <ul>
- *   <li>{@link #EXAMINATION} makes readiness locks meaningful — a locked space refuses attribute and
+ *   <li>{@link #EXAMINATION} makes readiness locks meaningful - a locked space refuses attribute and
  *       readiness changes without an override permission.</li>
  *   <li>The dashboard reports examination-readiness risk separately from routine readiness, because a
  *       space that is fine for a meeting may not be fine for an examination.</li>

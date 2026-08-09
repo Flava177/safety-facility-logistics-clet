@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Objects;
 
 /**
- * The tamper-evident audit hash chain required by SRS-SFL-S152-03 — "Audit records shall be
+ * The tamper-evident audit hash chain required by SRS-SFL-S152-03 - "Audit records shall be
  * append-only and tamper-evident using a hash-chain or equivalent control".
  *
  * <p>{@code hash = SHA-256(previousHash ‖ canonical(record))}. The canonical form is a fixed field

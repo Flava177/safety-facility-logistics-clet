@@ -18,8 +18,8 @@ import tools.jackson.core.type.TypeReference;
 import tools.jackson.databind.ObjectMapper;
 
 /**
- * Persistence image of an audit record. The table is append-only in the database as well as in code —
- * a trigger rejects UPDATE and DELETE — so this entity is only ever inserted.
+ * Persistence image of an audit record. The table is append-only in the database as well as in code -
+ * a trigger rejects UPDATE and DELETE - so this entity is only ever inserted.
  */
 @Entity
 @Table(name = "fleet_audit_records", schema = "fleet_logistics")

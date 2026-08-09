@@ -10,7 +10,7 @@ import { courierItemsApi } from 'modules/dispatch/api/dispatchApi';
 import type { CourierItem } from 'modules/dispatch/api/dto';
 
 /**
- * The mailroom officer's day — S171, Derived from the Fleet / Logistics Officer class.
+ * The mailroom officer's day - S171, Derived from the Fleet / Logistics Officer class.
  *
  * The derivation is direct: the mapping's S171 entry is titled "Mailroom / Courier & Despatch
  * Tracking" and names inbound mail explicitly, and the Transportation & Logistics Unit that owns it
@@ -19,8 +19,8 @@ import type { CourierItem } from 'modules/dispatch/api/dto';
  * ## What the seven permissions allow, and what they do not
  *
  * Registering and distributing inbound mail is the whole of it. There is no
- * `DISPATCH_MANIFEST_CREATE` here — sealing and despatching a consignment is the controller's act,
- * not the mailroom's — so this screen does not offer it. Before the nav item carried a permission a
+ * `DISPATCH_MANIFEST_CREATE` here - sealing and despatching a consignment is the controller's act,
+ * not the mailroom's - so this screen does not offer it. Before the nav item carried a permission a
  * mailroom officer was offered the dispatch dashboard as their landing page and met a 403 on
  * arrival; that is the mistake this page exists to stop repeating.
  *
@@ -55,7 +55,7 @@ const MailroomPage = () => {
     <div className="space-y-8">
       <PageHeader
         title="Mailroom"
-        subtitle={'Inbound items at ' + site + ' — register what arrives, distribute what is due'}
+        subtitle={'Inbound items at ' + site + ' - register what arrives, distribute what is due'}
       />
 
       <section className="space-y-3">

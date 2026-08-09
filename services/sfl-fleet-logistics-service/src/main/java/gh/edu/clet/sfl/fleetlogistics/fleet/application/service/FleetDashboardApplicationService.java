@@ -131,7 +131,7 @@ public class FleetDashboardApplicationService {
         // It is already on the snapshot as `stale`, and the dashboard renders that beside the
         // generated-at timestamp as a chip. Adding a sentence saying the same thing put a permanent
         // amber banner across the top of the dashboard on every environment where data does not
-        // change often — which is every environment before go-live — and a banner that is always
+        // change often - which is every environment before go-live - and a banner that is always
         // there is a banner nobody reads, including on the day it matters.
         //
         // `FleetErrorCode.FLEET_DASHBOARD_DATA_STALE` is untouched: that is the error path, for a

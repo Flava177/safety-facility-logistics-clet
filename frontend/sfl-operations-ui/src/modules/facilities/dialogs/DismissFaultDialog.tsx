@@ -24,7 +24,7 @@ interface DismissFaultDialogProps {
  * **cancelled** means the reporter withdrew it. A register that collapsed all three into "closed"
  * would leave a reviewer unable to tell a judgement from an administrative tidy-up.
  *
- * All three are terminal — a dismissed fault cannot be reopened, and the same problem is reported
+ * All three are terminal - a dismissed fault cannot be reopened, and the same problem is reported
  * again as a new fault with its own number. Reopening would leave an audit trail claiming one report
  * was made when two were.
  *
@@ -83,7 +83,7 @@ const DismissFaultDialog = ({ fault, onClose, onSubmit }: DismissFaultDialogProp
     <FormDialog
       open
       title="Dismiss fault"
-      description={`${fault.faultNumber} — ${fault.title}`}
+      description={`${fault.faultNumber} - ${fault.title}`}
       submitLabel="Dismiss"
       submitting={submitting}
       submitDisabled={invalid}
@@ -118,7 +118,7 @@ const DismissFaultDialog = ({ fault, onClose, onSubmit }: DismissFaultDialogProp
               .filter((candidate) => candidate.id !== fault.id)
               .map((candidate) => ({
                 value: candidate.id,
-                label: `${candidate.faultNumber} — ${candidate.title}`,
+                label: `${candidate.faultNumber} - ${candidate.title}`,
               }))}
             helperText={
               touched && missingDuplicate

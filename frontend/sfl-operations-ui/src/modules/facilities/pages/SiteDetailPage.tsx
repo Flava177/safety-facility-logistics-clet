@@ -22,7 +22,7 @@ import { formatDateTime, humaniseCode, orDash } from '../components/facilitiesFo
  * One site: its record, its operating mode, and the buildings beneath it.
  *
  * The operating-mode control is the only consequential action on the screen, so it is the only one
- * given prominence — and it is hidden outright, not merely disabled, for an actor without
+ * given prominence - and it is hidden outright, not merely disabled, for an actor without
  * `FACILITIES_OPERATING_MODE_CHANGE`. A greyed-out button invites the question "how do I get this?"
  * from someone whose role is deliberately not meant to have it.
  */
@@ -181,7 +181,7 @@ const SiteDetailPage = () => {
                 }
               >
                 <p className="text-theme-sm text-gray-600">
-                  Spaces are searched rather than listed here — an estate of any size is not
+                  Spaces are searched rather than listed here - an estate of any size is not
                   browsable, and readiness is the thing worth filtering on.
                 </p>
               </SectionCard>

@@ -9,7 +9,7 @@ import {
 } from 'modules/fuel/api/enums';
 import { driverLogbooksApi } from 'modules/fuel/api/fuelApi';
 import { CreateLogbookDialog } from 'modules/fuel/dialogs/logbookDialogs';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
@@ -25,6 +25,7 @@ import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canCreateLogbooks } from 'modules/fleet/api/access';
 
 /**
  * The driver logbook register.
@@ -33,7 +34,7 @@ import { fuelPaths } from 'shared/layout/navigation';
  * route search are applied here over the returned window and are labelled as such.
  *
  * One service behaviour shapes what an operator sees and is worth knowing: a `FLEET_DRIVER`-only
- * actor gets **their own logbooks only** — `FuelApplicationService.logbooks` passes `ownOnly` from
+ * actor gets **their own logbooks only** - `FuelApplicationService.logbooks` passes `ownOnly` from
  * `isDriverOnly(actor)`. A manager or logistics officer sees the site. The dashboard does not filter
  * this itself; it is simply what came back.
  */
@@ -103,7 +104,7 @@ const DriverLogbooksPage = () => {
         align: 'right',
         cell: (row) =>
           row.endOdometer === null || row.endOdometer === undefined
-            ? '—'
+            ? '-'
             : `${formatNumber(row.endOdometer - row.startOdometer)} km`,
       },
       {
@@ -142,9 +143,13 @@ const DriverLogbooksPage = () => {
         subtitle="Journey records from draft through review to approval."
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Driver logbooks' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
-            Create logbook
-          </Button>
+          // A driver holds this - the logbook is their own journey record. A reporting viewer reads
+          // the register and creates nothing in it.
+          canCreateLogbooks() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
+              Create logbook
+            </Button>
+          ) : undefined
         }
       />
 
@@ -181,7 +186,6 @@ const DriverLogbooksPage = () => {
             onChange={setDriverId}
             allowEmpty
             emptyLabel="Any driver"
-            helperText=" "
           />
           <VehicleSelect
             siteCode={siteCode}
@@ -189,7 +193,6 @@ const DriverLogbooksPage = () => {
             onChange={setVehicleId}
             allowEmpty
             emptyLabel="Any vehicle"
-            helperText=" "
           />
           <DateField label="Journey from" value={journeyFrom} onChange={setJourneyFrom} />
           <DateField label="Journey to" value={journeyTo} onChange={setJourneyTo} />

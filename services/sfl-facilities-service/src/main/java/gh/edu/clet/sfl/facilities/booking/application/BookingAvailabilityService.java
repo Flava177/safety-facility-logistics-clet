@@ -25,7 +25,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * "What is free?" — SRS-SFL-S159-02.
+ * "What is free?" - SRS-SFL-S159-02.
  *
  * <h2>Why unavailable spaces are returned rather than filtered out</h2>
  *
@@ -136,14 +136,14 @@ public class BookingAvailabilityService {
                     .mapToInt(ResourceAllocation::quantity)
                     .sum();
             // Clamped at zero. A quantity reduced below what is already allocated is a real situation
-            // — see BookableResourceService.update — and reporting "-5 free" helps nobody.
+            // - see BookableResourceService.update - and reporting "-5 free" helps nobody.
             availability.add(new ResourceAvailability(resource, committed,
                     Math.max(0, resource.quantity() - committed)));
         }
         return List.copyOf(availability);
     }
 
-    /** Everything holding one space between two instants — the room diary. */
+    /** Everything holding one space between two instants - the room diary. */
     @Transactional(readOnly = true)
     public List<Booking> calendar(UUID roomId, BookingWindow window, ActorContext actor,
             SourceChannel channel) {

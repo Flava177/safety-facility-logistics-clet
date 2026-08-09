@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A vehicle and driver assignment for a period — the "assignment" record of SRS-SFL-S166-01 and the
+ * A vehicle and driver assignment for a period - the "assignment" record of SRS-SFL-S166-01 and the
  * workflow of SRS-SFL-S166-02.
  *
  * <p>Closure is the point the SRS guards hardest: it needs a reason, evidence and an end odometer that
@@ -18,7 +18,7 @@ import java.util.UUID;
  * trip through a side door.
  *
  * <p>{@code statusBeforeHold} exists so resuming returns the trip to whatever it was doing rather than
- * guessing — a trip held while in progress must not resume as merely assigned.
+ * guessing - a trip held while in progress must not resume as merely assigned.
  */
 public record Trip(
         UUID id,
@@ -51,8 +51,8 @@ public record Trip(
         Objects.requireNonNull(status, "status is required");
         Objects.requireNonNull(metadata, "metadata is required");
         Objects.requireNonNull(operatingMode, "operatingMode is required");
-        // Defaulted rather than required, so every existing construction site — and every row written
-        // before V23 — reads as "assigned, nobody has answered yet", which is what it was.
+        // Defaulted rather than required, so every existing construction site - and every row written
+        // before V23 - reads as "assigned, nobody has answered yet", which is what it was.
         acknowledgement = acknowledgement == null ? TripAcknowledgement.pending() : acknowledgement;
         tripNumber = requireText(tripNumber, "tripNumber", 40);
         purpose = requireText(purpose, "purpose", 500);
@@ -85,7 +85,7 @@ public record Trip(
         /*
           Reassignment to a different driver resets the acknowledgement. Carrying the previous driver's
           confirmation forward would show a dispatcher a trip confirmed by somebody who is no longer on
-          it — the one piece of information this feature exists to provide, reported wrongly.
+          it - the one piece of information this feature exists to provide, reported wrongly.
         */
         TripAcknowledgement carried = newDriverId.equals(driverId)
                 ? acknowledgement
@@ -96,14 +96,14 @@ public record Trip(
     }
 
     /**
-     * Records the assigned driver's answer — confirm, or defer with a reason.
+     * Records the assigned driver's answer - confirm, or defer with a reason.
      *
      * <p>Deliberately does not move {@link TripStatus}: see {@link TripAcknowledgementState} for why
      * the driver's answer and the trip's lifecycle are separate axes. A confirmed trip is still
      * {@code ASSIGNED} and a deferred one still holds its vehicle.
      *
      * <p>Only an assigned trip can be answered for. Acknowledging a trip already in progress is
-     * meaningless — the driver is demonstrably on it — and acknowledging a completed or cancelled one
+     * meaningless - the driver is demonstrably on it - and acknowledging a completed or cancelled one
      * would rewrite the record of a finished job.
      */
     public Trip acknowledge(TripAcknowledgement answer, RecordMetadata newMetadata) {

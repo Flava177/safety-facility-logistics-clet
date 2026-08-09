@@ -17,7 +17,7 @@ public enum BlockerSeverity {
     MAJOR,
     /** A real defect that does not stop use. Forces {@code DEGRADED}. */
     MINOR,
-    /** Noted for information — a scuffed wall, a missing sign. Does not affect status. */
+    /** Noted for information - a scuffed wall, a missing sign. Does not affect status. */
     ADVISORY;
 
     /** {@code true} when an open blocker of this severity forbids {@code READY}. */

@@ -13,7 +13,7 @@ import org.springframework.stereotype.Component;
  * Recorded SSEMP/security-visibility adapter. Security-relevant dispatch variances (broken seal / tamper /
  * custody gap) are surfaced through the shared transactional outbox rather than by writing to any security
  * database, so the visibility commits atomically with the state change and is observable and replayable.
- * The payload carries references and classifications only — never signature binaries or seal secrets.
+ * The payload carries references and classifications only - never signature binaries or seal secrets.
  */
 @Component
 public class RecordedSecurityVisibilityAdapter implements SecurityVisibilityPort {

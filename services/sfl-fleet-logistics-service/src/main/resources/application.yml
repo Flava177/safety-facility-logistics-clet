@@ -11,14 +11,41 @@ spring:
       ddl-auto: validate
     properties:
       hibernate:
+        # The FTLMP deployable owns two schemas and Hibernate takes one default. It is
+        # `fleet_logistics`, which S166, S168_fuel and S171 all map into without qualification.
+        # AVAMP's two entities carry an explicit @Table(schema = "asset_visibility") and so resolve
+        # correctly regardless - which is what made folding the deployable in a move rather than a
+        # rewrite. Anything added to `asset_visibility` later must annotate it the same way; relying
+        # on the default would silently create the table in the wrong schema and `ddl-auto: validate`
+        # would then fail at startup rather than at review.
         default_schema: fleet_logistics
         jdbc:
           time_zone: UTC
   flyway:
     enabled: true
+    # History lives in `fleet_logistics`; both schemas are declared so Flyway creates and manages
+    # each. One interleaved sequence - V1-V26 are fleet, fuel and dispatch, V27-V28 are AVAMP's,
+    # renumbered when the asset-visibility deployable was folded in.
     default-schema: fleet_logistics
-    schemas: fleet_logistics
+    schemas: fleet_logistics,asset_visibility
     locations: classpath:db/migration
+  servlet:
+    multipart:
+      # The outer bound for every upload, and it must clear the *larger* of the two real limits.
+      #
+      # There are two, because a photograph and a data file are different things: evidence is capped
+      # at 5 MB by `UploadedFileScanner`, a bulk CSV import at 20 MB by `BulkImportPolicy`. Both
+      # refuse with an error code naming the file and the ceiling it broke.
+      #
+      # This sits above the higher of them on purpose. The container answers an oversized multipart
+      # by failing the request before any handler runs - no error code, no field, nothing an operator
+      # can act on - so it is the last resort, not the enforcement. Set it below 20 MB and a
+      # legitimate import fails that way instead of with an explanation.
+      max-file-size: 21MB
+      max-request-size: 22MB
+      # Spool to disk past 1 MB instead of holding whole photographs in memory: a dozen drivers
+      # uploading pump images at once is the normal case, not the peak.
+      file-size-threshold: 1MB
   rabbitmq:
     host: ${SFL_RABBITMQ_HOST:localhost}
     port: ${SFL_RABBITMQ_PORT:5672}
@@ -50,13 +77,23 @@ management:
 sfl:
   cors:
     # Origins allowed to call /api/** and /actuator/**. 5005 is the SFL Operations UI dev server.
-    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8091,http://localhost:8093,http://localhost:8094,http://localhost:5005,http://localhost:5173,http://localhost:3000}
+    #
+    # 8090 is the portal, and it is the one that has to be here rather than the one that looks
+    # optional. Every service now serves the same bundle at /home on its own port (ADR 0006
+    # amendment), so on 8091, 8092 and 8093 the dashboard is same-origin and CORS never enters it.
+    # The portal is the only origin that is not: it serves the bundle and then asks all three
+    # services for the actor's permissions across origins. Facilities and safety-security were
+    # given 8090 when the portal was introduced; this list was not, so the fleet call was refused
+    # by the browser, permission resolution failed, and the dashboard fail-closed to an empty
+    # sidebar and a banner - for a fleet officer, whose only programme lives behind this service,
+    # that was the whole portal.
+    allowed-origins: ${SFL_CORS_ALLOWED_ORIGINS:http://localhost:8090,http://localhost:8091,http://localhost:8092,http://localhost:8093,http://localhost:5005,http://localhost:5173,http://localhost:3000}
   service-boundary:
-    schema: fleet_logistics
-    owns: "S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, and S171 Mailroom / Courier and Dispatch Tracking"
+    schema: fleet_logistics,asset_visibility
+    owns: "Fleet, Transport, Assets & Logistics Management Platform (SFL.FTLMP) - S166 Fleet and Vehicle Management, S168_fuel Fuel Management and Driver Logbooks, S171 Mailroom / Courier and Dispatch Tracking, and the AVAMP-Lite asset and device reference layer"
   security:
     # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
-    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # everything also carried `matchIfMissing = true` - so an environment that simply forgot the
     # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
     # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
     # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
@@ -66,14 +103,14 @@ sfl:
     # The local start script sets it; it stays false for servers and CI.
     open-browser: ${SFL_FLEET_OPEN_BROWSER:false}
     messaging:
-      # local    — events are delivered to the in-process transport and logged (no broker provisioned).
-      # rabbitmq — events are published to the sfl.events exchange.
+      # local    - events are delivered to the in-process transport and logged (no broker provisioned).
+      # rabbitmq - events are published to the sfl.events exchange.
       # Selecting rabbitmq without a broker fails at startup rather than silently dropping events.
       transport: ${SFL_FLEET_EVENT_TRANSPORT:local}
       exchange: ${SFL_FLEET_EVENT_EXCHANGE:sfl.events}
       drain-batch-size: 50
     notification:
-      # recorded — notification intents are persisted and logged; no provider is procured for Phase 1.
+      # recorded - notification intents are persisted and logged; no provider is procured for Phase 1.
       provider: ${SFL_FLEET_NOTIFICATION_PROVIDER:recorded}
     scheduling:
       outbox:

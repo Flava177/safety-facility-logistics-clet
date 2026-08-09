@@ -7,13 +7,13 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A booking that was held and never used — SRS-SFL-S159-01, "no-show record".
+ * A booking that was held and never used - SRS-SFL-S159-01, "no-show record".
  *
  * <p>Written by the scheduled sweep alongside the status change, rather than inferred later from a
  * {@code NO_SHOW} booking. The reason is what it captures that the status cannot: the space, the
  * window, and <strong>the room-time the booking took out of the diary</strong>. That last figure is
- * the only one that answers the question a no-show policy is written to answer — how much room-time
- * is being lost — and reconstructing it from bookings after the fact means re-deriving it every time
+ * the only one that answers the question a no-show policy is written to answer - how much room-time
+ * is being lost - and reconstructing it from bookings after the fact means re-deriving it every time
  * somebody asks.
  *
  * <p>It is the full booked duration, not the time elapsed before the sweep released the space. The

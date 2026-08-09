@@ -1,7 +1,7 @@
 /**
  * Client-side mirrors of the fleet service's Bean Validation rules.
  *
- * These exist to give an operator an answer before a round trip — never to replace the server
+ * These exist to give an operator an answer before a round trip - never to replace the server
  * check. Every mutation still submits and still maps the service's `fieldErrors` back onto the
  * form, so a rule that drifts here cannot let bad data through.
  */
@@ -54,7 +54,7 @@ export const nonNegativeInteger =
  * `@PositiveOrZero BigDecimal` on the service side: a decimal, not negative.
  *
  * Distinct from `nonNegativeInteger` because money and quantities are `BigDecimal` on the fuel
- * aggregates — a litre count of 20.5 and a unit price of 10.4750 are both legal, and rejecting them
+ * aggregates - a litre count of 20.5 and a unit price of 10.4750 are both legal, and rejecting them
  * as "not a whole number" would be the client inventing a rule the service does not have.
  */
 export const nonNegativeNumber =

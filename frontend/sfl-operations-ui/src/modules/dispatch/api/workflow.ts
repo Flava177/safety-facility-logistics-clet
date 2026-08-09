@@ -146,8 +146,8 @@ export const manifestActive = (manifest: DispatchManifest): boolean =>
  * What `DispatchClosurePolicy` will refuse a closure for.
  *
  * Two conditions, and the operator needs both named rather than one combined message: an open
- * exception case, and a custody chain that is not closable. The second is itself two things — a
- * recorded gap, or a required hop that was never recorded — which `CustodyGaps` separates.
+ * exception case, and a custody chain that is not closable. The second is itself two things - a
+ * recorded gap, or a required hop that was never recorded - which `CustodyGaps` separates.
  */
 export const manifestClosureBlockers = (
   custody: CustodyGaps | undefined,
@@ -226,7 +226,7 @@ export const EXCEPTION_RULES: Record<ExceptionAction, TransitionRule> = {
     privileged: true,
   },
   escalate: {
-    // No `requireState` guard — legal from any status, as in the fuel anomaly case.
+    // No `requireState` guard - legal from any status, as in the fuel anomaly case.
     from: [],
     label: 'Escalate',
     requiredField: 'reason',

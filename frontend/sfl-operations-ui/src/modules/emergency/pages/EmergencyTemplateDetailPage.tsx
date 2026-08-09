@@ -22,8 +22,8 @@ import type { NotificationActivation } from 'modules/emergency/api/dto';
 /**
  * One notification template.
  *
- * `GET /templates/{id}` is the only detail endpoint on this service — scenarios, audience groups
- * and recipient zones have none — so this is the only record that can be linked to and returned to
+ * `GET /templates/{id}` is the only detail endpoint on this service - scenarios, audience groups
+ * and recipient zones have none - so this is the only record that can be linked to and returned to
  * directly. Everything else is read out of its site's list.
  *
  * The activations that used it are counted here from the site's activation register rather than
@@ -47,7 +47,7 @@ const EmergencyTemplateDetailPage = () => {
    * The activations that cite this template.
    *
    * `templateId` reaches the service now, so this is a real answer to "what has this message been
-   * used for" rather than the site's window sieved down — which quietly missed older activations
+   * used for" rather than the site's window sieved down - which quietly missed older activations
    * and made a never-used template indistinguishable from a busy one at a busy site.
    */
   const activations = useApiQuery(
@@ -158,7 +158,7 @@ const EmergencyTemplateDetailPage = () => {
                   {template.channels.map((channel) => (
                     <li key={channel} className="text-theme-sm">
                       <span className="font-medium text-gray-900">{humanise(channel)}</span>
-                      <span className="text-gray-600"> — {CHANNEL_DESCRIPTIONS[channel]}</span>
+                      <span className="text-gray-600"> - {CHANNEL_DESCRIPTIONS[channel]}</span>
                     </li>
                   ))}
                 </ul>
@@ -189,7 +189,7 @@ const EmergencyTemplateDetailPage = () => {
                 </DataState>
                 <div className="px-5 pb-4">
                   <DerivedNote>
-                    Matched here from the site's activation register — the service has no endpoint
+                    Matched here from the site's activation register - the service has no endpoint
                     that answers what a template has been used for, and the register itself returns
                     an unpaged window, so an older activation may not appear.
                   </DerivedNote>

@@ -43,7 +43,7 @@ import {
  * Four things are on this screen because an operator standing in front of a blocked hall needs all
  * four to act: the space's own attributes, its readiness with the blockers behind it, the assets in
  * it that might be causing them, and its assessment history. Splitting them across tabs would make
- * the common question — "why is this not ready and what do I do?" — a three-click answer.
+ * the common question - "why is this not ready and what do I do?" - a three-click answer.
  */
 const SpaceDetailPage = () => {
   const { roomId = '' } = useParams();
@@ -125,7 +125,7 @@ const SpaceDetailPage = () => {
       key: 'checklist',
       header: 'Checklist',
       hideBelowLg: true,
-      cell: (row) => (row.checklistCode ? `${row.checklistCode} v${row.checklistVersion}` : '—'),
+      cell: (row) => (row.checklistCode ? `${row.checklistCode} v${row.checklistVersion}` : '-'),
     },
     {
       key: 'score',
@@ -176,7 +176,7 @@ const SpaceDetailPage = () => {
                   )}
                   {/*
                     The manual override. An assessment is the ordinary route and it computes the
-                    outcome; this is for the times there is no checklist to answer — a burst pipe,
+                    outcome; this is for the times there is no checklist to answer - a burst pipe,
                     or the space coming back after one. Gated on the same permission, because it
                     reaches the same state by a shorter path.
                   */}
@@ -187,7 +187,7 @@ const SpaceDetailPage = () => {
                   )}
                   {(() => {
                     // Only the applicable half of the lock pair is rendered, and it is disabled
-                    // with the reason when the actor or the record forbids it — an offered button
+                    // with the reason when the actor or the record forbids it - an offered button
                     // that answers 403 has misled the operator before they clicked it.
                     const action = space.data!.readinessLocked
                       ? unlockAction(space.data!)
@@ -234,7 +234,7 @@ const SpaceDetailPage = () => {
                 />
                 <StatCard
                   label="Score"
-                  value={readiness.data ? `${readiness.data.score}%` : '—'}
+                  value={readiness.data ? `${readiness.data.score}%` : '-'}
                   icon="gauge"
                   tone={
                     readiness.data
@@ -298,7 +298,7 @@ const SpaceDetailPage = () => {
                     { label: 'Capacity', value: orDash(space.data.capacity) },
                     {
                       label: 'Area',
-                      value: space.data.areaSqm ? `${space.data.areaSqm} m²` : '—',
+                      value: space.data.areaSqm ? `${space.data.areaSqm} m²` : '-',
                     },
                     { label: 'Cost centre', value: orDash(space.data.costCentre) },
                     { label: 'Lifecycle', value: humaniseCode(space.data.lifecycleStatus) },

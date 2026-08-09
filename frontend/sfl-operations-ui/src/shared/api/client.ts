@@ -1,7 +1,7 @@
 import { readSession } from 'shared/auth/session';
 import { FleetApiError, isApiErrorEnvelope } from 'shared/errors/FleetApiError';
 import { ApiResponseEnvelope, QueryParams } from './types';
-import { emergencyApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
+import { safetySecurityApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } from './config';
 
 /**
  * The single HTTP entry point for every SFL service call.
@@ -14,7 +14,7 @@ import { emergencyApiBaseUrl, facilitiesApiBaseUrl, fleetApiBaseUrl, sflActor } 
  * Calls address one of three services. Fleet, fuel and dispatch are three modules of the one
  * `sfl-fleet-logistics-service`; emergency notification (S174) and facilities (S152, and in time
  * S153 and S159) are services of their own on other ports. The envelope, the actor headers and the
- * error catalogue are identical across all three — only the origin differs — so the target is a
+ * error catalogue are identical across all three - only the origin differs - so the target is a
  * per-call option rather than three clients.
  */
 
@@ -54,30 +54,38 @@ export const buildQueryString = (params?: QueryParams): string => {
 };
 
 /**
- * Which SFL service a call is addressed to.
+ * Which SFL service a call is addressed to. Three platforms, three values.
  *
- * `fleet` covers the fleet, fuel and dispatch modules — one service, one origin. `emergency` is
- * the separate S174 notification service. `facilities` is the IFIMP service: S152 today, S153 and
- * S159 behind the same origin later. Named rather than passed as a raw URL so a module cannot
- * quietly point at something that is not an SFL service.
+ * - `fleet` - FTLMP: the fleet, fuel, dispatch and asset-visibility modules.
+ * - `safetySecurity` - SSEMP: S174 emergency notification today, S160–S163 as they are built.
+ * - `facilities` - IFIMP: S152, S153 and S159.
+ *
+ * Named rather than passed as a raw URL so a module cannot quietly point at something that is not
+ * an SFL service.
+ *
+ * <p>This value was `emergency` while S174 had a deployable of its own. It names the *service*, not
+ * the API surface - the origin, the display name and the port in the "could not reach" message are
+ * all deployable facts - so leaving it as `emergency` after the merge would have meant a key saying
+ * one thing and the port beside it saying another. That is precisely the half-rename that costs
+ * somebody an afternoon later.
  */
-export type SflService = 'fleet' | 'emergency' | 'facilities';
+export type SflService = 'fleet' | 'safetySecurity' | 'facilities';
 
 const serviceOrigins: Record<SflService, string> = {
   fleet: fleetApiBaseUrl,
-  emergency: emergencyApiBaseUrl,
+  safetySecurity: safetySecurityApiBaseUrl,
   facilities: facilitiesApiBaseUrl,
 };
 
 const serviceNames: Record<SflService, string> = {
   fleet: 'Fleet & Logistics service',
-  emergency: 'Emergency Notification service',
+  safetySecurity: 'Safety, Security & Emergency service',
   facilities: 'Facilities service',
 };
 
 const servicePorts: Record<SflService, string> = {
   fleet: '8093',
-  emergency: '8095',
+  safetySecurity: '8092',
   facilities: '8091',
 };
 
@@ -99,7 +107,7 @@ export interface RequestOptions {
    * Overrides `Accept` for an endpoint that does not produce JSON.
    *
    * Spring matches the handler's `produces` against `Accept` and answers 406 when they do not
-   * intersect — so a `text/csv` report asked for with `Accept: application/json` is refused before
+   * intersect - so a `text/csv` report asked for with `Accept: application/json` is refused before
    * it is ever generated.
    */
   accept?: string;
@@ -115,12 +123,12 @@ const buildHeaders = (options: RequestOptions, hasJsonBody: boolean): Headers =>
     The bearer token, when this browser has a session.
 
     Added with the login page. Before it, this client sent the X-SFL-* headers and no Authorization
-    header at all — so A1's resource server, JWT resolvers and imported realm were unreachable from
+    header at all - so A1's resource server, JWT resolvers and imported realm were unreachable from
     the dashboard, and the whole UI only worked against a service running with security switched off.
 
     Both are sent, and the services prefer the verified principal: with `SFL_SECURITY_ENABLED=false`
     the headers are the only identity there is, and with security on the JWT wins and the headers are
-    ignored. There is deliberately no mode in which a header can override a token — that ordering is
+    ignored. There is deliberately no mode in which a header can override a token - that ordering is
     what makes sending both safe rather than merely convenient.
   */
   const session = readSession();
@@ -194,8 +202,8 @@ async function request<T>(
   }
 
   if (!response.ok) {
-    // Not every failure comes back in the SFL envelope. An exception the service does not map —
-    // or anything raised before its handlers run — produces Spring's own error body, and a
+    // Not every failure comes back in the SFL envelope. An exception the service does not map -
+    // or anything raised before its handlers run - produces Spring's own error body, and a
     // reverse proxy can produce something else entirely. Those must still surface as a readable
     // error rather than crashing the screen that is rendering it.
     throw FleetApiError.fromUnmappedFailure(response.status, envelope, correlationId);
@@ -209,7 +217,7 @@ async function request<T>(
  *
  * A report is `text/csv`, not the SFL envelope, so it cannot go through `request`. It also cannot be
  * a plain link or `window.open`: the services authorise from the `X-SFL-*` headers, and a browser
- * navigation carries none of them — the request would arrive as an anonymous actor and be refused.
+ * navigation carries none of them - the request would arrive as an anonymous actor and be refused.
  * So it is fetched with the same headers as everything else and saved from a blob.
  *
  * A failure still arrives in the envelope (the exception handler runs before the CSV is written), so
@@ -223,7 +231,7 @@ export async function downloadFile(
    * The media type the endpoint produces, plus JSON for the error path.
    *
    * Both matter. Without the first, Spring answers 406 and the report is never generated; without
-   * the second, an authorisation refusal — which comes back as a JSON envelope — would itself be
+   * the second, an authorisation refusal - which comes back as a JSON envelope - would itself be
    * rejected for the wrong content type, and the operator would see a content negotiation failure
    * instead of "you are not authorised".
    */
@@ -275,16 +283,87 @@ export async function downloadFile(
   return fileName;
 }
 
+/** A fetched file held in memory, plus the object URL a preview renders from. */
+export interface FetchedBlob {
+  blob: Blob;
+  /** Must be revoked by the caller when the preview closes, or the bytes never leave memory. */
+  objectUrl: string;
+  contentType: string;
+  fileName: string;
+}
+
+/**
+ * Fetches a file for display rather than for saving.
+ *
+ * <p>A preview cannot be `<img src="/api/...">` for the same reason a download cannot be a plain
+ * link: the services authorise from the `X-SFL-*` headers and a bearer token, and an image request
+ * the browser makes on its own carries neither. It would arrive anonymous and be refused - which,
+ * for an `<img>`, shows as a broken-image icon and no explanation anywhere.
+ *
+ * <p>So the bytes are fetched like any other call and turned into an object URL. That has a second
+ * benefit worth having: an object URL is scoped to this document and dies with it, so a preview
+ * cannot be deep-linked, shared or left behind in a browser history the way a real URL to evidence
+ * could be.
+ *
+ * <p>The caller owns the returned URL and must revoke it. Not revoking leaks the whole file for the
+ * life of the tab, which for a page of ten-megabyte scans is quickly noticeable.
+ */
+export async function fetchBlob(
+  path: string,
+  query?: QueryParams,
+  fallbackFileName = 'file',
+  accept = '*/*',
+  service: SflService = 'fleet',
+): Promise<FetchedBlob> {
+  const url = `${serviceOrigins[service]}${path}${buildQueryString(query)}`;
+
+  let response: Response;
+  try {
+    response = await fetch(url, { method: 'GET', headers: buildHeaders({ accept }, false) });
+  } catch {
+    throw unreachable(service);
+  }
+
+  if (!response.ok) {
+    // The failure path is JSON even though the success path is not, because the exception handler
+    // runs before any bytes are written.
+    const text = await response.text();
+    const correlationId = response.headers.get(HEADER_CORRELATION_ID);
+    try {
+      const envelope = JSON.parse(text) as ApiResponseEnvelope<unknown>;
+      if (isApiErrorEnvelope(envelope.error)) {
+        throw FleetApiError.fromEnvelope(response.status, envelope.error, envelope.data);
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, envelope, correlationId);
+    } catch (cause) {
+      if (cause instanceof FleetApiError) {
+        throw cause;
+      }
+      throw FleetApiError.fromUnmappedFailure(response.status, null, correlationId);
+    }
+  }
+
+  const disposition = response.headers.get('Content-Disposition') ?? '';
+  const match = /filename=("?)([^";]+)\1/i.exec(disposition);
+  const blob = await response.blob();
+  return {
+    blob,
+    objectUrl: URL.createObjectURL(blob),
+    contentType: response.headers.get('Content-Type')?.split(';')[0]?.trim() || blob.type,
+    fileName: match?.[2]?.trim() || fallbackFileName,
+  };
+}
+
 export const apiClient = {
   get: <T>(path: string, query?: QueryParams, signal?: AbortSignal, service?: SflService) =>
     request<T>('GET', path, { query, signal, service }),
 
-  /** POSTs that create state — carries an `Idempotency-Key` by default. */
+  /** POSTs that create state - carries an `Idempotency-Key` by default. */
   post: <T>(path: string, body?: unknown, options?: Omit<RequestOptions, 'body'>) =>
     request<T>('POST', path, { ...options, body, idempotent: options?.idempotent ?? true }),
 
   /**
-   * Multipart POST for file upload — the fuel CSV import is the only caller today.
+   * Multipart POST for file upload - the fuel CSV import is the only caller today.
    *
    * Same actor headers, same correlation id and the same envelope parsing as every other call; the
    * only difference is that the body is a `FormData` and the browser owns the Content-Type.
@@ -298,7 +377,7 @@ export const apiClient = {
   /**
    * Replaces a value outright.
    *
-   * Added for S152's runtime configuration, which supersedes a threshold rather than patching one —
+   * Added for S152's runtime configuration, which supersedes a threshold rather than patching one -
    * PUT is the honest verb for "this key now has this value". Carries no idempotency key: the key
    * is in the path, so a repeat is the same write.
    */
@@ -309,7 +388,7 @@ export const apiClient = {
    * Removes a relationship.
    *
    * Added for S152's zone membership and readiness lock. Note what it is *not* used for: no S152
-   * record is ever deleted — archival is the lifecycle state that retires one, because §21.2 of the
+   * record is ever deleted - archival is the lifecycle state that retires one, because §21.2 of the
    * SRS protects examination-continuity records from deletion.
    */
   delete: <T>(path: string, options?: Omit<RequestOptions, 'body'>) =>

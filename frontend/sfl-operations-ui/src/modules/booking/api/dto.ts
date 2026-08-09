@@ -139,7 +139,7 @@ export interface SpaceAvailability {
   capacity: number | null;
   readinessStatus: LocationReadinessStatus;
   free: boolean;
-  /** Free but for readiness — bookable by an actor holding `FACILITIES_BOOKING_OVERRIDE`. */
+  /** Free but for readiness - bookable by an actor holding `FACILITIES_BOOKING_OVERRIDE`. */
   availableWithOverride: boolean;
   readinessIssue: ReadinessHoldReason | null;
   readinessDetail: string | null;

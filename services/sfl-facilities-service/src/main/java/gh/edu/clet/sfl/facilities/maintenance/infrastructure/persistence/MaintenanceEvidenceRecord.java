@@ -17,7 +17,7 @@ import java.util.UUID;
  *
  * <p>No blob column, and there never will be one: the architecture standard stores evidence by
  * reference. {@code content_hash} is {@code VARCHAR(64)} with a length check in the migration rather
- * than {@code CHAR(64)}, which Hibernate rejects at validation — a defect the S152 round found by
+ * than {@code CHAR(64)}, which Hibernate rejects at validation - a defect the S152 round found by
  * running against a real database.
  */
 @Entity

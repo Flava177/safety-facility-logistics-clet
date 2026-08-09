@@ -14,7 +14,7 @@ import {
  * How S152 values are shown.
  *
  * Tone is not decoration here. A blocked examination hall rendered in neutral grey, or an unassessed
- * one rendered green, is a screen actively misleading somebody about whether a room can be used — so
+ * one rendered green, is a screen actively misleading somebody about whether a room can be used - so
  * the mapping is asserted rather than left to a shared lookup written for a different vocabulary.
  */
 describe('readiness rendering', () => {
@@ -42,7 +42,7 @@ describe('readiness rendering', () => {
     expect(assetStatusTone('DEGRADED')).toBe('caution');
     expect(assetStatusTone('UNDER_MAINTENANCE')).toBe('caution');
     expect(assetStatusTone('OUT_OF_SERVICE')).toBe('blocked');
-    // Decommissioned is retired, not broken — it raises no blocker, so it is not alarming.
+    // Decommissioned is retired, not broken - it raises no blocker, so it is not alarming.
     expect(assetStatusTone('DECOMMISSIONED')).toBe('neutral');
   });
 
@@ -60,14 +60,14 @@ describe('value formatting', () => {
   it('humanises a code', () => {
     expect(humaniseCode('EXAMINATION_HALL')).toBe('Examination hall');
     expect(humaniseCode('MOOT_COURTROOM')).toBe('Moot courtroom');
-    expect(humaniseCode(null)).toBe('—');
+    expect(humaniseCode(null)).toBe('-');
   });
 
   it('renders an absent value as an em dash rather than an empty cell', () => {
-    expect(orDash(null)).toBe('—');
-    expect(orDash(undefined)).toBe('—');
-    expect(orDash('')).toBe('—');
-    // Zero is a value, not an absence — a space with capacity 0 must not read as unrecorded.
+    expect(orDash(null)).toBe('-');
+    expect(orDash(undefined)).toBe('-');
+    expect(orDash('')).toBe('-');
+    // Zero is a value, not an absence - a space with capacity 0 must not read as unrecorded.
     expect(orDash(0)).toBe('0');
   });
 
@@ -83,7 +83,7 @@ describe('value formatting', () => {
   });
 
   it('says "never" for a space that has not been assessed', () => {
-    // The word matters: "—" would read as missing data rather than as a fact about the space.
+    // The word matters: "-" would read as missing data rather than as a fact about the space.
     expect(relativeTime(null)).toBe('never');
   });
 });
@@ -103,7 +103,7 @@ describe('floorLabel', () => {
   it('says a mezzanine has no level rather than leaving it blank', () => {
     /*
       The column is nullable precisely because a mezzanine sits between two floors and has no honest
-      number. A blank cell reads as missing data instead of as the answer — and a client that showed
+      number. A blank cell reads as missing data instead of as the answer - and a client that showed
       null as 0 would file every mezzanine at ground level.
     */
     expect(floorLabel(null, 'MEZZ')).toBe('MEZZ · no level');

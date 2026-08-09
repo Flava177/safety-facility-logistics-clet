@@ -25,25 +25,26 @@ import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
+import { canManageScenarios, canManageTemplates } from 'modules/emergency/api/workflow';
 
 /**
  * What gets sent: notification templates and the scenarios that cite them.
  *
  * Two registers on one screen because they answer one question between them and are almost always
- * read together — a scenario is meaningless without the template it defaults to, and a template's
+ * read together - a scenario is meaningless without the template it defaults to, and a template's
  * break-glass flag only matters against the scenarios that will carry it. Splitting them into two
  * sidebar entries would make an operator cross-reference by hand what belongs side by side.
  *
  * Both registers are searched, filtered and paged by the service. They used to load two hundred
  * records per site and filter them in the browser, with the search box captioned "filters the loaded
- * records" — honest about what it did, and wrong about what an operator would assume. The service has
+ * records" - honest about what it did, and wrong about what an operator would assume. The service has
  * accepted `search`, `lifecycle` and `breakGlassEligible` since these endpoints were written.
  *
  * The break-glass banner counts with its own filtered reads rather than by tallying a page. It is a
  * statement about the site's exposure, so counting what happened to be on screen would have
  * understated it every time the register ran past one page.
  *
- * Neither register has a lifecycle transition — a template cannot be retired through any endpoint.
+ * Neither register has a lifecycle transition - a template cannot be retired through any endpoint.
  * That is still a gap.
  */
 const EmergencyTemplatesPage = () => {
@@ -61,7 +62,7 @@ const EmergencyTemplatesPage = () => {
    * Still loaded, for two things the registers cannot answer themselves.
    *
    * A scenario row names its default template, and the template it names may be on any page of the
-   * template register — so the id has to be resolved from a list rather than from the page in front
+   * template register - so the id has to be resolved from a list rather than from the page in front
    * of the operator. The create-scenario dialog needs the same list to offer a default.
    */
   const records = useSiteRecords(siteCode);
@@ -157,7 +158,7 @@ const EmergencyTemplatesPage = () => {
           row.breakGlassEligible ? (
             <StatusChip value="BREAK_GLASS" label="Eligible" tone="blocked" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {
@@ -211,7 +212,7 @@ const EmergencyTemplatesPage = () => {
           row.breakGlassEligible ? (
             <StatusChip value="BREAK_GLASS" label="Eligible" tone="blocked" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {
@@ -244,12 +245,17 @@ const EmergencyTemplatesPage = () => {
         ]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setCreatingTemplate(true)}>
-              Create template
-            </Button>
-            <Button variant="outline" startIcon="plus" onClick={() => setCreatingScenario(true)}>
-              Create scenario
-            </Button>
+            {/* A template and a scenario are separately granted - one is wording, one is a plan. */}
+            {canManageTemplates() && (
+              <Button variant="primary" startIcon="plus" onClick={() => setCreatingTemplate(true)}>
+                Create template
+              </Button>
+            )}
+            {canManageScenarios() && (
+              <Button variant="outline" startIcon="plus" onClick={() => setCreatingScenario(true)}>
+                Create scenario
+              </Button>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>

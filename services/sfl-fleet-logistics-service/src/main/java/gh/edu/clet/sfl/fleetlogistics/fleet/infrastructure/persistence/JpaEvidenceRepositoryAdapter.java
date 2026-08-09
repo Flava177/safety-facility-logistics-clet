@@ -32,6 +32,16 @@ class JpaEvidenceRepositoryAdapter implements EvidenceRepository {
     }
 
     @Override
+    @Transactional
+    public EvidenceReference saveAndFlush(EvidenceReference reference) {
+        EvidenceReference saved = save(reference);
+        // The row has to exist in the database, not merely in the persistence context, before the
+        // JDBC insert into fleet_evidence_files can satisfy its foreign key. See the port for why.
+        evidence.flush();
+        return saved;
+    }
+
+    @Override
     @Transactional(readOnly = true)
     public Optional<EvidenceReference> findById(UUID id) {
         return evidence.findById(id).map(EvidenceReferenceEntity::toDomain);
@@ -45,6 +55,14 @@ class JpaEvidenceRepositoryAdapter implements EvidenceRepository {
                         scope.allSites() ? List.of("*") : List.copyOf(scope.sites()),
                         relatedRecordType, relatedRecordId)
                 .stream()
+                .map(EvidenceReferenceEntity::toDomain)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<EvidenceReference> findBySha256(String siteCode, String sha256Hash, UUID excludingId) {
+        return evidence.findBySha256(siteCode, sha256Hash, excludingId).stream()
                 .map(EvidenceReferenceEntity::toDomain)
                 .toList();
     }

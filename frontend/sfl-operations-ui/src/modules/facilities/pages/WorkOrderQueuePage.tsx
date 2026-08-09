@@ -2,8 +2,9 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
+import QuickFilters from 'shared/components/QuickFilters';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { SelectInput } from 'shared/components/fields';
@@ -24,7 +25,7 @@ import {
 } from '../components/facilitiesFormat';
 
 /**
- * The work-order queue — SRS-SFL-S153-02.
+ * The work-order queue - SRS-SFL-S153-02.
  *
  * ## Overdue first, and why the sort is not a preference
  *
@@ -33,7 +34,7 @@ import {
  * for: a supervisor opening it at eight in the morning needs the overdue work in the first screen,
  * not on page three behind everything raised overnight.
  *
- * Sorting here rather than asking the service to do it is deliberate — `overdue` and
+ * Sorting here rather than asking the service to do it is deliberate - `overdue` and
  * `minutesOverdue` both come down the wire already computed, so this is arranging the answer rather
  * than recomputing it.
  *
@@ -41,7 +42,7 @@ import {
  *
  * A contractor sees only the work assigned to them. That is enforced per record by the service, on
  * reads and writes alike, so this screen shows the assignee filter to everybody and simply receives
- * a shorter list — offering a filter that implied otherwise would be the shell contradicting the
+ * a shorter list - offering a filter that implied otherwise would be the shell contradicting the
  * service.
  */
 const WorkOrderQueuePage = () => {
@@ -81,6 +82,53 @@ const WorkOrderQueuePage = () => {
   });
 
   const overdueCount = rows.filter((order) => order.overdue).length;
+
+  const resetFilters = () => {
+    setSiteCode(defaultSite);
+    setStatus('');
+    setVendorId('');
+  };
+
+  /*
+    "Outstanding only" is not one of four equal filters - it is the question this screen exists to
+    answer, asked on every visit, and it was costing the same open-read-choose as the vendor list.
+    No counts on the options: `openOnly` goes to the server, so the screen cannot know how many
+    "Everything" holds without asking for it, and a number it had to guess at would be worse than
+    none.
+  */
+  const activeFilters: ActiveFilter[] = [
+    ...(siteCode !== defaultSite
+      ? [
+          {
+            key: 'siteCode',
+            label: 'Site',
+            value: siteCode || 'All sites',
+            onClear: () => setSiteCode(defaultSite),
+          },
+        ]
+      : []),
+    ...(status
+      ? [
+          {
+            key: 'status',
+            label: 'Status',
+            value: humaniseCode(status),
+            onClear: () => setStatus(''),
+          },
+        ]
+      : []),
+    ...(vendorId
+      ? [
+          {
+            key: 'vendorId',
+            label: 'Vendor',
+            value:
+              (vendors.data ?? []).find((vendor) => vendor.id === vendorId)?.name ?? 'Selected',
+            onClear: () => setVendorId(''),
+          },
+        ]
+      : []),
+  ];
 
   const columns: Column<WorkOrder>[] = [
     {
@@ -155,7 +203,21 @@ const WorkOrderQueuePage = () => {
         crumbs={[{ label: 'Facilities', to: facilitiesPaths.dashboard }, { label: 'Work orders' }]}
       />
 
-      <FilterBar>
+      <FilterBar
+        active={activeFilters}
+        onReset={resetFilters}
+        quickFilters={
+          <QuickFilters
+            label="Which work orders"
+            value={openOnly ? 'open' : 'all'}
+            onChange={(value) => setOpenOnly(value === 'open')}
+            options={[
+              { value: 'open', label: 'Outstanding' },
+              { value: 'all', label: 'Everything' },
+            ]}
+          />
+        }
+      >
         <SiteSelect value={siteCode} onChange={setSiteCode} />
         <SelectInput
           label="Status"
@@ -176,15 +238,6 @@ const WorkOrderQueuePage = () => {
             label: vendor.name,
           }))}
         />
-        <SelectInput
-          label="Show"
-          value={openOnly ? 'open' : 'all'}
-          onChange={(value) => setOpenOnly(value === 'open')}
-          options={[
-            { value: 'open', label: 'Outstanding only' },
-            { value: 'all', label: 'Everything' },
-          ]}
-        />
       </FilterBar>
 
       <DataState
@@ -198,7 +251,7 @@ const WorkOrderQueuePage = () => {
           // a site with a full queue they simply cannot see.
           openOnly
             ? 'Nothing outstanding is visible to you. Switch to Everything to include closed and cancelled work.'
-            : 'Nothing here is visible to you. Work orders are raised against a reported fault, or generated by a preventive schedule — and a contractor sees only the ones assigned to them.'
+            : 'Nothing here is visible to you. Work orders are raised against a reported fault, or generated by a preventive schedule - and a contractor sees only the ones assigned to them.'
         }
         onRetry={orders.refetch}
       >

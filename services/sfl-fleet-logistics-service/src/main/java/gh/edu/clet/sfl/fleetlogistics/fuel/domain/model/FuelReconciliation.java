@@ -10,7 +10,7 @@ import java.util.UUID;
 /**
  * An immutable, policy-versioned record of one reconciliation run.
  *
- * <p>Written on every run since S168 shipped, and until now unreadable — the rows existed in
+ * <p>Written on every run since S168 shipped, and until now unreadable - the rows existed in
  * {@code fleet_logistics.fuel_reconciliations} with no query behind them, so a screen could report
  * that a transaction failed but never which rules it passed. This record is what makes a decision
  * reproducible: the policy and the policy version it was judged against, the outcome, the derived
@@ -48,7 +48,7 @@ public record FuelReconciliation(
                 .toList();
     }
 
-    /** The named rules that passed — the half no screen could show before this record was readable. */
+    /** The named rules that passed - the half no screen could show before this record was readable. */
     public java.util.List<String> passedRules() {
         return ruleResults.entrySet().stream()
                 .filter(entry -> passed(entry.getValue()))

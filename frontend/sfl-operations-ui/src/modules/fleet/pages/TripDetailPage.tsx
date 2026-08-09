@@ -45,7 +45,7 @@ type DialogKey =
   | 'defer'
   | null;
 
-/** Which transitions the trip's current status permits — mirrors the service's transition policy. */
+/** Which transitions the trip's current status permits - mirrors the service's transition policy. */
 const permitted = (trip: TripResponse) => ({
   assign: ['PLANNED', 'ASSIGNED', 'ON_HOLD'].includes(trip.status),
   start: trip.status === 'ASSIGNED',
@@ -62,14 +62,14 @@ const permitted = (trip: TripResponse) => ({
  * <h2>Three conditions, and the middle one is the interesting one</h2>
  *
  * The permission is necessary and not sufficient. The service also requires the signed-in identity to
- * be bound to the driver on this trip — so `canAcknowledgeTrips()` alone would put the button on
+ * be bound to the driver on this trip - so `canAcknowledgeTrips()` alone would put the button on
  * every driver's screen for every trip they can open.
  *
  * The check for "is this mine" is `!canManageTrips()`, which reads oddly and is exactly right: a
  * driver-only actor can only *load* a trip that is theirs, because the by-id read narrows to the
  * driver bound to their sign-in and refuses anything else. So for an actor without the supervising
  * permission, holding the trip in hand is proof it is theirs. A supervisor, who can load anybody's,
- * is deliberately not offered the control — the service refuses them, because a record saying the
+ * is deliberately not offered the control - the service refuses them, because a record saying the
  * driver confirmed must mean the driver confirmed.
  *
  * Status must be ASSIGNED: there is nothing to answer for on a trip already under way or finished.
@@ -77,11 +77,11 @@ const permitted = (trip: TripResponse) => ({
 const answerable = (trip: TripResponse) =>
   trip.status === 'ASSIGNED' && canAcknowledgeTrips() && !canManageTrips();
 
-/** A related record rendered as a navigable tile — the assignment's vehicle and driver. */
+/** A related record rendered as a navigable tile - the assignment's vehicle and driver. */
 const linkTile = 'block rounded-xl border border-gray-200 p-3 transition hover:border-brand-500';
 
 /**
- * Trip detail — the workflow surface.
+ * Trip detail - the workflow surface.
  *
  * Buttons are shown only for transitions the current status allows, so an operator is never
  * offered an action the service is certain to reject. The service remains the authority: an
@@ -234,7 +234,7 @@ const TripDetailPage = () => {
                 ) : (
                   <Alert variant={trip.data.acknowledgementState === 'DEFERRED' ? 'warning' : 'success'}>
                     {trip.data.acknowledgementState === 'DEFERRED'
-                      ? `You deferred this trip on ${formatDateTime(trip.data.acknowledgedAt)} — ${trip.data.acknowledgementReason}`
+                      ? `You deferred this trip on ${formatDateTime(trip.data.acknowledgedAt)} - ${trip.data.acknowledgementReason}`
                       : `You confirmed this trip on ${formatDateTime(trip.data.acknowledgedAt)}.`}
                   </Alert>
                 )}
@@ -457,7 +457,7 @@ const TripDetailPage = () => {
                                 <strong className="font-semibold text-gray-800">
                                   {finding.checkCode}
                                 </strong>{' '}
-                                — {finding.description}
+                                - {finding.description}
                               </p>
                               {finding.resolved && (
                                 <StatusChip value="RESOLVED" label="Resolved" tone="ready" />
@@ -469,7 +469,7 @@ const TripDetailPage = () => {
 
                       {inspection.hasOpenCriticalDefect && (
                         <Alert variant="error" className="mt-3">
-                          An unresolved critical defect is recorded — the vehicle is blocked from
+                          An unresolved critical defect is recorded - the vehicle is blocked from
                           use until it is cleared.
                         </Alert>
                       )}
@@ -486,7 +486,7 @@ const TripDetailPage = () => {
             {/*
              * Each dialog is mounted only while it is open. A dialog that stays mounted keeps the
              * form state it was seeded with, so the odometer and reasons from one opening would
-             * reappear in the next — and a value captured before the trip or vehicle query resolved
+             * reappear in the next - and a value captured before the trip or vehicle query resolved
              * would never be replaced.
              */}
             {dialog === 'assign' && (

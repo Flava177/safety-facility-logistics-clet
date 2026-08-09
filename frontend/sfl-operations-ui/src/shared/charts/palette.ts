@@ -3,11 +3,11 @@
  *
  * ApexCharts renders to SVG with inline attributes and cannot resolve the CSS custom properties the
  * rest of the dashboard is themed with, so the values are restated here as literals. They are copied
- * from `src/index.css` — change one, change the other, or a chart and its legend will drift apart.
+ * from `src/index.css` - change one, change the other, or a chart and its legend will drift apart.
  *
  * The categorical order is deliberate and short. Deep Teal, CLET Gold and a mid navy are far apart
  * in both hue and lightness, so they stay separable in greyscale and to a viewer with deuteranopia
- * (SC 1.4.1 — colour is never the only cue; every series is also labelled). A fourth and fifth step
+ * (SC 1.4.1 - colour is never the only cue; every series is also labelled). A fourth and fifth step
  * exist for the rare chart that needs them, but a panel that wants six series usually wants a table.
  */
 

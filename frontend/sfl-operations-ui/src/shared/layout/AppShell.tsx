@@ -3,11 +3,17 @@ import { cn } from 'shared/components/cn';
 import Sidebar from './Sidebar';
 import TopBar from './TopBar';
 import { SidebarProvider, useCloseMobileOnNavigate, useSidebar } from './SidebarContext';
+import { permissionFailure } from './actorPermissions';
 
 const ShellBody = () => {
   const { expanded } = useSidebar();
   const { pathname } = useLocation();
   useCloseMobileOnNavigate(pathname);
+  /*
+    Read once per render rather than held in state: it is decided before the first paint and cannot
+    change without a reload, so subscribing to it would be machinery for a value that never moves.
+  */
+  const permissionsUnavailable = permissionFailure();
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -36,6 +42,26 @@ const ShellBody = () => {
           tabIndex={-1}
           className="mx-auto w-full max-w-[1600px] px-5 py-6 focus:outline-none lg:px-7"
         >
+          {/*
+            Permissions could not be loaded, so nothing is being offered.
+
+            This exists because the alternative was worse and invisible. The dashboard used to treat
+            an unanswered permission lookup as "allow everything", which meant a service being down
+            presented as a driver holding the whole fleet office - and one service being up presented
+            as every other platform's controls silently vanishing. Neither said anything. Failing
+            closed is only defensible if the operator is told, and this is where they are told.
+          */}
+          {permissionsUnavailable && (
+            <div
+              role="status"
+              className="mb-5 rounded-lg border border-warning-300 bg-warning-50 px-4 py-3"
+            >
+              <p className="text-theme-sm font-semibold text-warning-800">
+                Your permissions could not be loaded
+              </p>
+              <p className="mt-1 text-theme-sm text-warning-700">{permissionsUnavailable}</p>
+            </div>
+          )}
           <Outlet />
         </main>
       </div>

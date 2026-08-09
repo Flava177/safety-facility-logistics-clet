@@ -14,7 +14,7 @@ public interface VehicleInspectionRepository {
 
     Optional<VehicleInspection> findById(UUID id);
 
-    /** The most recent inspection for a vehicle — the one readiness judges. */
+    /** The most recent inspection for a vehicle - the one readiness judges. */
     Optional<VehicleInspection> findLatestByVehicle(UUID vehicleId);
 
     List<VehicleInspection> findByVehicle(UUID vehicleId);

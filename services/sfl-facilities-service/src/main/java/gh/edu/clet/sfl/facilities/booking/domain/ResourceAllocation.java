@@ -13,7 +13,7 @@ import java.util.UUID;
  * It looks like duplication and is not. The exclusion constraint that stops a projector being in two
  * halls at once has to range over a column on <strong>this</strong> table, and a constraint cannot
  * follow a join. Moving a booking therefore has to move its allocations, which
- * {@code BookingApplicationService.reschedule} does in one transaction — and the copy is what lets
+ * {@code BookingApplicationService.reschedule} does in one transaction - and the copy is what lets
  * the database enforce the rule at all rather than trusting every future caller to check first.
  *
  * <h2>Why {@code exclusive} is stored</h2>
@@ -23,10 +23,10 @@ import java.util.UUID;
  * places, and this flag is what tells them apart:
  *
  * <ul>
- *   <li><strong>Single-instance resources</strong> — the one projector, the one lectern — are
+ *   <li><strong>Single-instance resources</strong> - the one projector, the one lectern - are
  *       {@code exclusive} and the database refuses the second allocation outright, under concurrency,
  *       without the application being involved.</li>
- *   <li><strong>Pooled resources</strong> — forty chairs, twelve laptops — are not, and their
+ *   <li><strong>Pooled resources</strong> - forty chairs, twelve laptops - are not, and their
  *       arithmetic is done in {@link gh.edu.clet.sfl.facilities.booking.domain.policy.BookingConflictPolicy}
  *       against the allocations already committed.</li>
  * </ul>

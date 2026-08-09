@@ -40,8 +40,8 @@ import type { RecordLifecycle } from './enums';
  * `ApiResponse` envelope.
  *
  * S174 operator and integration operations exposed by the service are gathered here. The real
- * provider callbacks — `POST /provider-callbacks/{provider}/delivery-status` and
- * `/acknowledgements` — which require an HMAC signature over the raw body and a registered shared
+ * provider callbacks - `POST /provider-callbacks/{provider}/delivery-status` and
+ * `/acknowledgements` - which require an HMAC signature over the raw body and a registered shared
  * secret. A browser cannot hold that secret, and a dashboard that posted delivery facts would be
  * fabricating them. They belong to the provider and are left to it.
  */
@@ -54,92 +54,92 @@ const asQuery = (params: object | undefined): QueryParams | undefined =>
 /** Default page size. The service clamps anything above 200. */
 export const DEFAULT_PAGE_SIZE = 25;
 
-/** Records — templates, scenarios, audience groups and recipient zones (SRS-SFL-S174-01). */
+/** Records - templates, scenarios, audience groups and recipient zones (SRS-SFL-S174-01). */
 export const emergencyRecordsApi = {
   templates: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<NotificationTemplate>>(
       `${BASE}/templates`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   template: (id: string, signal?: AbortSignal) =>
-    apiClient.get<NotificationTemplate>(`${BASE}/templates/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<NotificationTemplate>(`${BASE}/templates/${id}`, undefined, signal, 'safetySecurity'),
 
   createTemplate: (body: CreateTemplateRequest) =>
-    apiClient.post<NotificationTemplate>(`${BASE}/templates`, body, { service: 'emergency' }),
+    apiClient.post<NotificationTemplate>(`${BASE}/templates`, body, { service: 'safetySecurity' }),
 
   scenarios: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<EmergencyScenario>>(
       `${BASE}/scenarios`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createScenario: (body: CreateScenarioRequest) =>
-    apiClient.post<EmergencyScenario>(`${BASE}/scenarios`, body, { service: 'emergency' }),
+    apiClient.post<EmergencyScenario>(`${BASE}/scenarios`, body, { service: 'safetySecurity' }),
 
   audienceGroups: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<AudienceGroup>>(
       `${BASE}/audience-groups`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createAudienceGroup: (body: CreateAudienceGroupRequest) =>
-    apiClient.post<AudienceGroup>(`${BASE}/audience-groups`, body, { service: 'emergency' }),
+    apiClient.post<AudienceGroup>(`${BASE}/audience-groups`, body, { service: 'safetySecurity' }),
 
   recipientZones: (query: RecordSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<RecipientZone>>(
       `${BASE}/recipient-zones`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   createRecipientZone: (body: CreateRecipientZoneRequest) =>
-    apiClient.post<RecipientZone>(`${BASE}/recipient-zones`, body, { service: 'emergency' }),
+    apiClient.post<RecipientZone>(`${BASE}/recipient-zones`, body, { service: 'safetySecurity' }),
 
   scenario: (id: string, signal?: AbortSignal) =>
-    apiClient.get<EmergencyScenario>(`${BASE}/scenarios/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<EmergencyScenario>(`${BASE}/scenarios/${id}`, undefined, signal, 'safetySecurity'),
 
   audienceGroup: (id: string, signal?: AbortSignal) =>
-    apiClient.get<AudienceGroup>(`${BASE}/audience-groups/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<AudienceGroup>(`${BASE}/audience-groups/${id}`, undefined, signal, 'safetySecurity'),
 
   recipientZone: (id: string, signal?: AbortSignal) =>
-    apiClient.get<RecipientZone>(`${BASE}/recipient-zones/${id}`, undefined, signal, 'emergency'),
+    apiClient.get<RecipientZone>(`${BASE}/recipient-zones/${id}`, undefined, signal, 'safetySecurity'),
 
   /**
    * Corrects an audience group's size and directory pointer.
    *
    * The sharp edge in gap 6: `recipientCount` is what the service fans out to and the denominator
-   * every delivery percentage is read against, and it could not be corrected — a group sized at
+   * every delivery percentage is read against, and it could not be corrected - a group sized at
    * zero sent to nobody and reported a completely successful broadcast. The name is deliberately
    * not editable: closed activations cite this group.
    */
   updateAudienceGroup: (id: string, body: { directoryReference?: string | null; recipientCount?: number }) =>
-    apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'emergency' }),
+    apiClient.patch<AudienceGroup>(`${BASE}/audience-groups/${id}`, body, { service: 'safetySecurity' }),
 
-  /** Retires or reinstates a record. Archiving is not deletion — activations citing it still resolve. */
+  /** Retires or reinstates a record. Archiving is not deletion - activations citing it still resolve. */
   setLifecycle: (
     resource: 'templates' | 'scenarios' | 'audience-groups' | 'recipient-zones',
     id: string,
     lifecycle: RecordLifecycle,
   ) =>
-    apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'emergency' }),
+    apiClient.patch<unknown>(`${BASE}/${resource}/${id}/lifecycle`, { lifecycle }, { service: 'safetySecurity' }),
 };
 
-/** Activations — the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
+/** Activations - the approval-gated workflow and its terminal states (SRS-SFL-S174-02). */
 export const activationsApi = {
   search: (query: ActivationSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<NotificationActivation>>(
       `${BASE}/activations`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   detail: (id: string, signal?: AbortSignal) =>
@@ -147,7 +147,7 @@ export const activationsApi = {
       `${BASE}/activations/${id}`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /** The activation plus its per-channel fan-out and acknowledgement count, in one read. */
@@ -156,7 +156,7 @@ export const activationsApi = {
       `${BASE}/activations/${id}/status`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /**
@@ -164,14 +164,14 @@ export const activationsApi = {
    *
    * Closed gap 4. The service has written this on every state change since it was built and
    * published no way to read it, which is why the detail screen used to reconstruct a timeline from
-   * whatever fields the record still carried — and silently omit any transition that left none.
+   * whatever fields the record still carried - and silently omit any transition that left none.
    */
   history: (id: string, signal?: AbortSignal) =>
     apiClient.get<ActivationHistoryEntry[]>(
       `${BASE}/activations/${id}/history`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   /** Per-recipient delivery receipts and acknowledgements. Closed gap 8. */
@@ -180,21 +180,21 @@ export const activationsApi = {
       `${BASE}/activations/${id}/delivery`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   create: (body: CreateActivationRequest) =>
-    apiClient.post<NotificationActivation>(`${BASE}/activations`, body, { service: 'emergency' }),
+    apiClient.post<NotificationActivation>(`${BASE}/activations`, body, { service: 'safetySecurity' }),
 
   submit: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/submit`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   approve: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/approve`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
@@ -202,19 +202,19 @@ export const activationsApi = {
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/reject`,
       { reason },
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   cancel: (id: string, body: ActivationReasonRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/cancel`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   /** The send. Fans out to every selected channel and stamps the fast-lane elapsed time. */
   activate: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/activate`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
@@ -222,37 +222,37 @@ export const activationsApi = {
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/degraded-fallback`,
       body,
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   afterActionApproval: (id: string, justification: string) =>
     apiClient.post<NotificationActivation>(
       `${BASE}/activations/${id}/after-action-approval`,
       { justification },
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 
   allClear: (id: string) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/all-clear`, undefined, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   close: (id: string, body: CloseActivationRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/close`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 
   reopen: (id: string, body: ActivationReasonRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/${id}/reopen`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 };
 
 /**
- * Break-glass — a declared-emergency send with no pre-approval (Arch §0E).
+ * Break-glass - a declared-emergency send with no pre-approval (Arch §0E).
  *
  * A separate endpoint and a separate permission (`EMERGENCY_BREAK_GLASS_SEND`), not a flag on the
  * routine create. It returns an activation already in `BREAK_GLASS_ACTIVE`: there is no draft to
@@ -261,26 +261,26 @@ export const activationsApi = {
 export const breakGlassApi = {
   send: (body: BreakGlassRequest) =>
     apiClient.post<NotificationActivation>(`${BASE}/activations/break-glass`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
     }),
 };
 
-/** Drills — rehearsals with recorded performance (SRS-SFL-S174-05). */
+/** Drills - rehearsals with recorded performance (SRS-SFL-S174-05). */
 export const drillsApi = {
   search: (query: DrillSearchParams, signal?: AbortSignal) =>
     apiClient.get<EmergencyPageResponse<DrillRun>>(
       `${BASE}/drills`,
       asQuery({ size: DEFAULT_PAGE_SIZE, ...query }),
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   start: (body: StartDrillRequest) =>
-    apiClient.post<DrillRun>(`${BASE}/drills`, body, { service: 'emergency' }),
+    apiClient.post<DrillRun>(`${BASE}/drills`, body, { service: 'safetySecurity' }),
 
   complete: (id: string, body: CompleteDrillRequest) =>
     apiClient.post<DrillRun>(`${BASE}/drills/${id}/complete`, body, {
-      service: 'emergency',
+      service: 'safetySecurity',
       idempotent: false,
     }),
 };
@@ -293,18 +293,18 @@ export const emergencyDashboardApi = {
       `${BASE}/dashboard/breakdown`,
       { siteCode },
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   dashboard: (siteCode: string, signal?: AbortSignal) =>
-    apiClient.get<EmergencyDashboard>(`${BASE}/dashboard`, { siteCode }, signal, 'emergency'),
+    apiClient.get<EmergencyDashboard>(`${BASE}/dashboard`, { siteCode }, signal, 'safetySecurity'),
 };
 
 export const emergencyReportsApi = {
   /**
    * The activation register as CSV.
    *
-   * Needs `EMERGENCY_REPORT_EXPORT`, which the coordinator and SOC roles do not hold — only
+   * Needs `EMERGENCY_REPORT_EXPORT`, which the coordinator and SOC roles do not hold - only
    * auditor, compliance officer, security director and admin do. A refusal comes back in the
    * envelope and is shown as it is written, rather than as a download that silently does nothing.
    */
@@ -314,7 +314,7 @@ export const emergencyReportsApi = {
       { siteCode },
       `emergency-activations-${siteCode}.csv`,
       'text/csv, application/json',
-      'emergency',
+      'safetySecurity',
     ),
 };
 
@@ -333,7 +333,7 @@ export const emergencyIntegrationsApi = {
       `${BASE}/integrations/inbox`,
       { recentLimit },
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   health: (signal?: AbortSignal) =>
@@ -341,13 +341,13 @@ export const emergencyIntegrationsApi = {
       `${BASE}/integrations/health`,
       undefined,
       signal,
-      'emergency',
+      'safetySecurity',
     ),
 
   replay: (messageId: string) =>
     apiClient.post<{ messageId: string; requeued: boolean }>(
       `${BASE}/integrations/outbox/${messageId}/replay`,
       undefined,
-      { service: 'emergency', idempotent: false },
+      { service: 'safetySecurity', idempotent: false },
     ),
 };

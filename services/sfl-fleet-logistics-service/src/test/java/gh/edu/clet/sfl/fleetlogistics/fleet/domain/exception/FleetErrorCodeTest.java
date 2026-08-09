@@ -8,7 +8,7 @@ import org.junit.jupiter.api.Test;
 
 /**
  * The SRS <em>Error States</em> wording is contract. If a message here is reworded the SRS has changed
- * or the implementation has drifted — either way this test must fail rather than let the drift ship.
+ * or the implementation has drifted - either way this test must fail rather than let the drift ship.
  *
  * <p>Traces: SRS-SFL-S166-01, -02, -03, -04, -05 error states.
  */

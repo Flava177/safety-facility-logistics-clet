@@ -70,7 +70,7 @@ class FacilitiesArchitectureTest {
      * <p>The direction matters and it is not arbitrary. Whether a hall can be used is a fact about the
      * estate, true whether or not anybody has raised a work order about it; maintenance is one of
      * several things that can change that fact, alongside assessments and asset failures. So
-     * maintenance depends on readiness, through {@code ExternalBlockerPort} — which readiness declares
+     * maintenance depends on readiness, through {@code ExternalBlockerPort} - which readiness declares
      * itself, precisely so implementing it does not drag a fault or a work order back across the line.
      *
      * <p>This is the rule that would break first if somebody added a "which work order is fixing this
@@ -148,7 +148,7 @@ class FacilitiesArchitectureTest {
 
     @Test
     void the_application_layer_does_not_import_spring_data_or_web_types() {
-        // Spring's stereotype and transaction annotations are allowed — they are declarative and
+        // Spring's stereotype and transaction annotations are allowed - they are declarative and
         // provider-swappable. Pageable, Page and the servlet API are not: they would put an
         // infrastructure shape into a use case's signature.
         ArchRule rule = noClasses()
@@ -180,7 +180,7 @@ class FacilitiesArchitectureTest {
      * The estate's domain and application layers do not depend on readiness or the dashboard.
      *
      * <p>{@code masterdata} is the host module: its consumers depend on it, not the reverse. It reaches
-     * readiness only through {@code SpaceReadinessPort}, which it declares itself — the inversion that
+     * readiness only through {@code SpaceReadinessPort}, which it declares itself - the inversion that
      * keeps the compile-time arrow pointing one way.
      *
      * <p>The rule stops at the application boundary on purpose. A controller is the composition root

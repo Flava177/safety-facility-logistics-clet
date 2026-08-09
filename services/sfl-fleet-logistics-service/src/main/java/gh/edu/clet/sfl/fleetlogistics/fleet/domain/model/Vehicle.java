@@ -8,7 +8,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * The vehicle aggregate — the authoritative, site-scoped fleet record required by SRS-SFL-S166-01.
+ * The vehicle aggregate - the authoritative, site-scoped fleet record required by SRS-SFL-S166-01.
  *
  * <p>Three statuses are kept apart on purpose. <em>Lifecycle</em> is an administrative decision about
  * the record. <em>Service status</em> is the maintenance standing. <em>Availability</em> is derived
@@ -72,7 +72,7 @@ public record Vehicle(
     /**
      * Applies a lifecycle transition.
      *
-     * <p>A vehicle on an active trip cannot be suspended or archived — doing so would strand a trip
+     * <p>A vehicle on an active trip cannot be suspended or archived - doing so would strand a trip
      * whose vehicle no longer exists operationally.
      */
     public Vehicle changeLifecycle(VehicleLifecycleStatus target, RecordMetadata newMetadata) {
@@ -101,7 +101,7 @@ public record Vehicle(
     }
 
     /**
-     * Applies an authorised odometer correction — the only path that may move a reading backwards.
+     * Applies an authorised odometer correction - the only path that may move a reading backwards.
      * The caller is responsible for having checked the correction permission and for recording the
      * reason and evidence in the audit trail.
      */

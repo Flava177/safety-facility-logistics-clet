@@ -11,11 +11,11 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A CLET site — the root of the estate hierarchy and the unit of site-scoped authorisation
+ * A CLET site - the root of the estate hierarchy and the unit of site-scoped authorisation
  * (SRS-SFL-S152-01).
  *
  * <p>The site is also where {@link OperatingMode} lives. An examination is declared over a centre,
- * not over a room, and every space beneath inherits the stricter rules — so mode belongs here and
+ * not over a room, and every space beneath inherits the stricter rules - so mode belongs here and
  * nowhere else (NFR 23.3).
  *
  * <p>This aggregate carries the shared code-normalisation helpers the rest of the estate calls. That
@@ -50,7 +50,7 @@ public record Site(
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
-    /** A null or blank field leaves the current value alone — this is a PATCH, not a replace. */
+    /** A null or blank field leaves the current value alone - this is a PATCH, not a replace. */
     public Site update(String name, String description, String actorId, Instant at, SourceChannel channel,
             String correlationId) {
         return new Site(id, siteCode,
@@ -71,7 +71,7 @@ public record Site(
      * Declares or stands down examination mode.
      *
      * <p>Refuses a no-op rather than accepting it silently. NFR 23.3 requires mode changes to be
-     * "explicit, audited and reversible only by authorised roles" — and an audit trail containing a
+     * "explicit, audited and reversible only by authorised roles" - and an audit trail containing a
      * change from EXAMINATION to EXAMINATION records a decision nobody made.
      */
     public Site changeOperatingMode(OperatingMode target, String actorId, Instant at, SourceChannel channel,

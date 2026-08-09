@@ -108,7 +108,7 @@ class TripController {
      *
      * <p>The only write on this controller a {@code FLEET_DRIVER} can reach. It is a PATCH on the trip
      * rather than a POST to a sub-resource because it amends the assignment record rather than
-     * creating anything, and it is deliberately not part of {@code /assignment} — that endpoint
+     * creating anything, and it is deliberately not part of {@code /assignment} - that endpoint
      * requires {@code FLEET_TRIP_ASSIGN} and changes who the trip belongs to, which is the opposite of
      * what this does.
      */

@@ -4,7 +4,7 @@ import { toneColors } from 'shared/charts/palette';
 export interface ExceptionBar {
   label: string;
   value: number;
-  /** Security relevant, or past its SLA — the two things that make a case jump the queue. */
+  /** Security relevant, or past its SLA - the two things that make a case jump the queue. */
   urgent?: boolean;
 }
 

@@ -20,17 +20,17 @@ import {
  * production build drops it.
  *
  * The presets are the point. Typing seven role names to check one navigation rule is how a check
- * stops getting run, and every preset below is a real `SflRole` — each appears in the permission matrix
+ * stops getting run, and every preset below is a real `SflRole` - each appears in the permission matrix
  * of every system it is expected to reach, so nothing here grants a role the services would ignore.
  *
  * They are chosen to demonstrate **both grains** of ADR 0005:
  *
- * - *Fleet manager* and *emergency coordinator* show programme scoping — one sees FTLMP, the other
+ * - *Fleet manager* and *emergency coordinator* show programme scoping - one sees FTLMP, the other
  *   SSEMP, and neither sees the other's sidebar.
  * - *Driver* and *mailroom officer* show system scoping **inside one programme**. Both are FTLMP: the
  *   driver sees fleet and fuel and no courier manifests, the mailroom officer sees courier and dispatch
  *   and no fleet register. Programme scoping alone could not tell them apart.
- * - *Security officer* spans both grains, and is the one this work fixed — it can escalate a dispatch
+ * - *Security officer* spans both grains, and is the one this work fixed - it can escalate a dispatch
  *   exception, and the sidebar used to hide dispatch from it entirely.
  * - *Facilities manager* lands on the facilities dashboard. That line used to say "expect the
  *   no-programme page, IFIMP has no dashboard screens yet"; S152 and S153 shipped fifteen and nine
@@ -39,7 +39,7 @@ import {
  * The second group are **personal landings**, added with the role portals. Each one exists to answer
  * a question a permission cannot: `FLEET_DRIVER` holds eight permissions and every one is also held
  * by `FLEET_MANAGER`, so the only way to see a driver's landing is to be a driver and nothing else.
- * Every persona preset therefore carries exactly one role — adding a broader one is precisely what
+ * Every persona preset therefore carries exactly one role - adding a broader one is precisely what
  * `personas.ts` tests for, and doing it here by accident would silently show the operator view.
  *
  * Every preset leaves `systems` blank. Narrowing by role is what a real sign-in does; typing system
@@ -62,7 +62,7 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Driver',
-    detail: 'S166 and S168 only. Courier and dispatch disappears — a driver does not run the mailroom.',
+    detail: 'S166 and S168 only. Courier and dispatch disappears - a driver does not run the mailroom.',
     actor: { ...base, user: 'kwame.driver', displayName: 'Kwame Driver', roles: 'FLEET_DRIVER' },
   },
   {
@@ -82,7 +82,7 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Security officer',
-    detail: 'S174 and S171 — it escalates dispatch exceptions, which the sidebar used to hide.',
+    detail: 'S174 and S171 - it escalates dispatch exceptions, which the sidebar used to hide.',
     actor: {
       ...base,
       user: 'security.officer',
@@ -102,10 +102,10 @@ const PRESETS: Preset[] = [
   },
   // ── Personal landings ─────────────────────────────────────────────────────────────────────────
   // One role each, deliberately. A second role that outranks it flips the actor back to the operator
-  // view — which is the rule `personas.ts` encodes and the thing these presets exist to demonstrate.
+  // view - which is the rule `personas.ts` encodes and the thing these presets exist to demonstrate.
   {
     label: 'Requester (room / host)',
-    detail: 'Lands on "My requests". Sees only the faults they reported — narrowed by the service.',
+    detail: 'Lands on "My requests". Sees only the faults they reported - narrowed by the service.',
     actor: {
       ...base,
       user: 'akosua.requester',
@@ -125,7 +125,7 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Vendor technician',
-    detail: 'Same queue, contractor scope. Two vendors see two disjoint queues — S153 narrows per person.',
+    detail: 'Same queue, contractor scope. Two vendors see two disjoint queues - S153 narrows per person.',
     actor: {
       ...base,
       user: 'kofi.vendor',
@@ -135,7 +135,7 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Centre manager',
-    detail: 'Lands on "Centre receipts" — which states on the page that it cannot narrow to a centre.',
+    detail: 'Lands on "Centre receipts" - which states on the page that it cannot narrow to a centre.',
     actor: {
       ...base,
       user: 'adjoa.centre',
@@ -145,7 +145,7 @@ const PRESETS: Preset[] = [
   },
   {
     label: 'Auditor',
-    detail: 'Cross-programme by design. Lands on assurance — four chains, deliberately not merged.',
+    detail: 'Cross-programme by design. Lands on assurance - four chains, deliberately not merged.',
     actor: { ...base, user: 'nana.auditor', displayName: 'Nana Auditor', roles: 'AUDITOR' },
   },
   {
@@ -248,7 +248,7 @@ export const ActorSwitcher = ({ open, onClose }: ActorSwitcherProps) => {
         label="Roles"
         value={draft.roles}
         onChange={(value) => set('roles', value)}
-        helperText="Comma-separated SflRole names. A name the services do not recognise grants nothing rather than failing the request — so a typo reads as a missing permission."
+        helperText="Comma-separated SflRole names. A name the services do not recognise grants nothing rather than failing the request - so a typo reads as a missing permission."
       />
 
       <div className="grid gap-4 sm:grid-cols-2">
@@ -277,7 +277,7 @@ export const ActorSwitcher = ({ open, onClose }: ActorSwitcherProps) => {
         This changes what the dashboard <strong>asks for</strong>, not what it is allowed to have. Every
         service authorises each call from the headers it receives, so an actor without the permission
         is refused whether or not the sidebar offered the screen. Navigation scoping is a usability
-        control — see ADR 0005.
+        control - see ADR 0005.
       </Alert>
 
       {stored && (

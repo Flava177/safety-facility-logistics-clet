@@ -2,7 +2,7 @@ import { ReactNode, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import { DashboardDrilldownRow, TripResponse, WorkflowItemResponse } from 'modules/fleet/api/dto';
-import { OPERATING_MODES, OperatingMode, humanise } from 'modules/fleet/api/enums';
+import { humanise } from 'modules/fleet/api/enums';
 import {
   DRILLDOWN_INDICATORS,
   DrilldownIndicator,
@@ -18,15 +18,12 @@ import DrilldownDrawer from 'modules/fleet/components/DrilldownDrawer';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { cn } from 'shared/components/cn';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
-import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -68,7 +65,7 @@ const bucketByDay = (
 /**
  * Page-header metadata: when the snapshot was taken, what it covers, what it reconciled.
  *
- * These are facts about the query rather than statuses, so they carry no tone — three coloured chips
+ * These are facts about the query rather than statuses, so they carry no tone - three coloured chips
  * directly above a KPI row is the loudest thing the header can do, and it spends attention on
  * provenance instead of on the numbers. Staleness is the one thing here that is a status, and it is
  * marked with an icon and a name assistive technology can read: the previous build said it by
@@ -91,13 +88,19 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  *
  * Indicators come from the service's own dashboard snapshot; the trend and the sparklines are
  * bucketed from the trip and workflow records themselves, because the service exposes no
- * time-series endpoint. Nothing on this page is synthetic — where there is no history to show, no
+ * time-series endpoint. Nothing on this page is synthetic - where there is no history to show, no
  * trend is drawn.
  */
 const FleetDashboardPage = () => {
   const navigate = useNavigate();
-  const [siteCode, setSiteCode] = useState(defaultSite);
-  const [operatingMode, setOperatingMode] = useState<OperatingMode | ''>('');
+  /*
+    Fixed, not chosen. Every query below passes `siteCode: undefined`, which the services read as
+    "the actor's whole site scope" - so a manager over two sites sees both without asking, and a
+    manager over one sees theirs. The registers behind each panel still filter; a summary should not
+    need configuring before it will answer.
+  */
+  const siteCode = '';
+  const operatingMode = '';
   const [drilldown, setDrilldown] = useState<DrilldownIndicator | null>(null);
 
   const windowStart = useMemo(
@@ -158,8 +161,8 @@ const FleetDashboardPage = () => {
   /**
    * The documents behind the expired-compliance indicator.
    *
-   * There is no compliance-document search endpoint — documents are only readable per vehicle or
-   * through this indicator drilldown — so the panel lists what the service itself counts, and never
+   * There is no compliance-document search endpoint - documents are only readable per vehicle or
+   * through this indicator drilldown - so the panel lists what the service itself counts, and never
    * an expiry horizon the service was not asked about.
    */
   const expiredCompliance = useApiQuery(
@@ -312,8 +315,8 @@ const FleetDashboardPage = () => {
         crumbs={[{ label: 'Fleet' }]}
         actions={
           /*
-           * Refresh only. A "Plan a trip" button here could not open the create dialog — it lives
-           * on the trip queue — so it merely carried the operator to that page to press the same
+           * Refresh only. A "Plan a trip" button here could not open the create dialog - it lives
+           * on the trip queue - so it merely carried the operator to that page to press the same
            * button again. The action belongs where it works.
            */
           <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
@@ -335,24 +338,18 @@ const FleetDashboardPage = () => {
         }
       />
 
-      <SectionCard flush>
-        <FilterBar>
-          <SiteSelect
-            value={siteCode}
-            onChange={setSiteCode}
-            allowEmpty
-            emptyLabel="All sites in scope"
-          />
-          <EnumSelect
-            label="Operating mode"
-            value={operatingMode}
-            options={OPERATING_MODES}
-            onChange={(value) => setOperatingMode(value)}
-            allowEmpty
-          />
-        </FilterBar>
-      </SectionCard>
+      {/*
+        No filter bar.
 
+        A dashboard answers "how is the fleet, right now", and both controls made that a question the
+        reader had to configure before it would answer. Site is left unset, so every figure covers the
+        whole of the actor's own scope - which is what a manager over two sites wants and what a
+        manager over one gets for free. Operating mode filtered a summary by a property most records
+        share, which narrowed the numbers without making them more useful.
+
+        Filtering still exists where it belongs: the registers behind every panel take both, and each
+        panel links through to its register.
+      */}
       <div className="mt-5">
         <DataState
           loading={snapshot.initialising}
@@ -383,7 +380,7 @@ const FleetDashboardPage = () => {
 
               {/*
                * Eight indicators, one grid. Tone is spent only where the measure is an exception
-               * class in its own right — a blocker, an escalation, something overdue — and only
+               * class in its own right - a blocker, an escalation, something overdue - and only
                * while the count is non-zero, so a clean fleet reads as eight quiet cards rather
                * than eight green ones. The figures themselves are navy throughout.
                */}
@@ -497,25 +494,38 @@ const FleetDashboardPage = () => {
                   }
                   flush
                 >
-                  <DataState
-                    loading={activeTrips.initialising}
-                    error={activeTrips.error}
-                    empty={(activeTrips.data?.content.length ?? 0) === 0}
-                    emptyTitle="No active trips"
-                    emptyHint="Nothing is on the road in this scope right now."
-                    onRetry={activeTrips.refetch}
-                    minHeight={160}
-                  >
-                    <DataTable
-                      rows={activeTrips.data?.content ?? []}
-                      columns={tripColumns}
-                      getRowId={(row) => row.id}
-                      loading={activeTrips.loading}
-                      onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
-                      caption="Trips in progress in the current site scope, with their status."
-                      dense
-                    />
-                  </DataState>
+                  {/*
+                    An empty road is the normal state outside working hours, and this panel used to
+                    spend a third of the dashboard saying so. When nothing is in progress it now
+                    shows the week's movements instead - the same chart the activity panel uses,
+                    over the trips already fetched - so the space answers "what has been happening"
+                    rather than repeating "nothing, right now".
+                  */}
+                  {(activeTrips.data?.content.length ?? 0) === 0 && !activeTrips.initialising ? (
+                    <div className="p-5">
+                      <p className="mb-3 text-theme-sm text-gray-600">
+                        Nothing is on the road at the moment. Movements over the last seven days:
+                      </p>
+                      <ActivityChart points={activity} height={200} />
+                    </div>
+                  ) : (
+                    <DataState
+                      loading={activeTrips.initialising}
+                      error={activeTrips.error}
+                      onRetry={activeTrips.refetch}
+                      minHeight={160}
+                    >
+                      <DataTable
+                        rows={activeTrips.data?.content ?? []}
+                        columns={tripColumns}
+                        getRowId={(row) => row.id}
+                        loading={activeTrips.loading}
+                        onRowClick={(row) => navigate(fleetPaths.tripDetail(row.id))}
+                        caption="Trips in progress in the current site scope, with their status."
+                        dense
+                      />
+                    </DataState>
+                  )}
                 </SectionCard>
 
                 <SectionCard title="Open exceptions" subtitle="What needs attention today">

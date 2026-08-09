@@ -14,6 +14,8 @@ import { Checkbox, EnumSelect, NumberInput, TextAreaInput, TextInput } from 'sha
 import { EVIDENCE_RETENTION_CLASSES, EvidenceRetentionClass, humanise } from 'modules/fleet/api/enums';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, integerAtLeast, maxLength, required } from 'shared/validation/validators';
+import FileField from 'shared/components/FileField';
+import { describeEvidenceFile } from 'shared/evidence/fileEvidence';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -27,7 +29,7 @@ interface RecordHandoverDialogProps {
 }
 
 /**
- * Record a custody handover — `POST /custody`.
+ * Record a custody handover - `POST /custody`.
  *
  * Append-only. There is no edit and no delete: the chain **is** the evidence, and a correction is
  * another handover, not a rewrite of this one.
@@ -57,9 +59,7 @@ export const RecordHandoverDialog = ({
       sealState: 'INTACT' as SealState,
       verifiedCount: String(manifest.itemCount),
       notes: '',
-      evidenceStorageReference: '',
-      evidenceFileName: '',
-      evidenceSha256: '',
+      evidenceFile: null as File | null,
       retentionClass: '' as EvidenceRetentionClass | '',
     },
     schema: {
@@ -75,12 +75,15 @@ export const RecordHandoverDialog = ({
       sealState: required('Seal state'),
       verifiedCount: integerAtLeast('Verified count', 0),
       notes: maxLength('Notes', 1000),
-      evidenceStorageReference: maxLength('Evidence reference', 500),
-      evidenceFileName: maxLength('Evidence file name', 255),
-      evidenceSha256: maxLength('Evidence checksum', 128),
       
     },
     onSubmit: async (values) => {
+      const evidence = await describeEvidenceFile(
+        values.evidenceFile,
+        manifest.siteCode.value,
+        'CustodyHandover',
+        manifest.id,
+      );
       await custodyApi.record({
         dispatchId: manifest.id,
         hop: values.hop,
@@ -90,10 +93,12 @@ export const RecordHandoverDialog = ({
         sealState: values.sealState,
         verifiedCount: values.verifiedCount === '' ? null : Number(values.verifiedCount),
         notes: values.notes.trim() || null,
-        evidenceFileName: values.evidenceFileName.trim() || null,
-        evidenceContentType: null,
-        evidenceStorageReference: values.evidenceStorageReference.trim() || null,
-        evidenceSha256: values.evidenceSha256.trim() || null,
+        evidenceFileName: evidence?.fileName ?? null,
+        // Was hard-coded null while the operator typed the other three by hand, so every custody
+        // photograph reached the store with no content type at all.
+        evidenceContentType: evidence?.contentType ?? null,
+        evidenceStorageReference: evidence?.storageReference ?? null,
+        evidenceSha256: evidence?.sha256Hash ?? null,
         retentionClass: values.retentionClass || null,
       });
       onSaved();
@@ -121,7 +126,7 @@ export const RecordHandoverDialog = ({
       onSubmit={form.submit}
     >
       <Alert variant="info" title="This cannot be edited afterwards">
-        The chain of custody is append-only — it is the evidence. If something is recorded wrongly,
+        The chain of custody is append-only - it is the evidence. If something is recorded wrongly,
         the correction is another handover, not a change to this one.
       </Alert>
 
@@ -177,7 +182,7 @@ export const RecordHandoverDialog = ({
 
       {alreadyRecorded && (
         <Alert variant="warning" title="This hop already has a handover">
-          Recording a second one is allowed and is sometimes right — a consignment can change hands
+          Recording a second one is allowed and is sometimes right - a consignment can change hands
           twice in transit. It will appear alongside the first, not replace it.
         </Alert>
       )}
@@ -199,7 +204,7 @@ export const RecordHandoverDialog = ({
             )}
           </ul>
           <p className="mt-2">
-            Record it anyway if it is what happened — that is what the chain is for. The manifest
+            Record it anyway if it is what happened - that is what the chain is for. The manifest
             will not close until the gap is resolved through an exception case.
           </p>
         </Alert>
@@ -214,23 +219,15 @@ export const RecordHandoverDialog = ({
       />
 
       <div className={twoColumn}>
-        <TextInput
-          label="Evidence storage reference"
-          value={form.values.evidenceStorageReference}
-          onChange={(value) => form.setValue('evidenceStorageReference', value)}
-          {...form.fieldProps('evidenceStorageReference', 'Optional. A photograph or signature.')}
-        />
-        <TextInput
-          label="Evidence file name"
-          value={form.values.evidenceFileName}
-          onChange={(value) => form.setValue('evidenceFileName', value)}
-          {...form.fieldProps('evidenceFileName')}
-        />
-        <TextInput
-          label="Evidence checksum"
-          value={form.values.evidenceSha256}
-          onChange={(value) => form.setValue('evidenceSha256', value)}
-          {...form.fieldProps('evidenceSha256')}
+        <FileField
+          label="Evidence"
+          accept="image/*,.pdf,.png,.jpg,.jpeg"
+          value={form.values.evidenceFile}
+          onChange={(file) => form.setValue('evidenceFile', file)}
+          {...form.fieldProps(
+            'evidenceFile',
+            'Optional. A photograph or signature - the file name, type, storage reference and SHA-256 are derived from it.',
+          )}
         />
         <EnumSelect
           label="Retention class"
@@ -254,7 +251,7 @@ interface ConfirmReceiptDialogProps {
 }
 
 /**
- * Confirm receipt at the destination — `POST /receipts`.
+ * Confirm receipt at the destination - `POST /receipts`.
  *
  * The **outcome is derived, not chosen**: `ReceiptVariancePolicy` compares seal state, counts and
  * recipient against the manifest and decides CLEAN or which of the five variances it is. This dialog
@@ -405,7 +402,7 @@ export const ConfirmReceiptDialog = ({
         checked={form.values.sealVerified}
         onChange={(checked) => form.setValue('sealVerified', checked)}
         label="The seal was checked against the manifest"
-        hint="Leaving this unchecked is itself a variance — an unverified seal is not an intact one."
+        hint="Leaving this unchecked is itself a variance - an unverified seal is not an intact one."
       />
 
       <Alert variant={predicted.length === 0 ? 'success' : 'warning'} title="Outcome">
@@ -414,7 +411,7 @@ export const ConfirmReceiptDialog = ({
         ) : (
           <>
             These entries will record a variance: <strong>{predicted.join(', ')}</strong>. The
-            service decides the outcome from the seal, the counts and the recipient — it is not
+            service decides the outcome from the seal, the counts and the recipient - it is not
             chosen here. A variance raises an exception case and blocks the manifest from closing.
           </>
         )}
@@ -471,7 +468,7 @@ interface ReconcileReturnDialogProps {
 }
 
 /**
- * Reconcile the return leg — `POST /returns/reconcile`.
+ * Reconcile the return leg - `POST /returns/reconcile`.
  *
  * Shortfall, extras and the outcome are derived by `ReturnReconciliationPolicy` from the counts;
  * this previews the arithmetic so the operator sees what a discrepancy will look like before it is
@@ -489,9 +486,7 @@ export const ReconcileReturnDialog = ({
       returnedCount: '',
       brokenSeals: '0',
       notes: '',
-      evidenceStorageReference: '',
-      evidenceFileName: '',
-      evidenceSha256: '',
+      evidenceFile: null as File | null,
       retentionClass: '' as EvidenceRetentionClass | '',
     },
     schema: {
@@ -499,22 +494,27 @@ export const ReconcileReturnDialog = ({
       returnedCount: compose(required('Returned count'), integerAtLeast('Returned count', 0)),
       brokenSeals: compose(required('Broken seals'), integerAtLeast('Broken seals', 0)),
       notes: maxLength('Notes', 1000),
-      evidenceStorageReference: maxLength('Evidence reference', 500),
-      evidenceFileName: maxLength('Evidence file name', 255),
-      evidenceSha256: maxLength('Evidence checksum', 128),
       
     },
     onSubmit: async (values) => {
+      const evidence = await describeEvidenceFile(
+        values.evidenceFile,
+        manifest.siteCode.value,
+        'ReturnReconciliation',
+        manifest.id,
+      );
       await returnsApi.reconcile({
         dispatchId: manifest.id,
         expectedCount: values.expectedCount === '' ? null : Number(values.expectedCount),
         returnedCount: Number(values.returnedCount),
         brokenSeals: Number(values.brokenSeals),
         notes: values.notes.trim() || null,
-        evidenceFileName: values.evidenceFileName.trim() || null,
-        evidenceContentType: null,
-        evidenceStorageReference: values.evidenceStorageReference.trim() || null,
-        evidenceSha256: values.evidenceSha256.trim() || null,
+        evidenceFileName: evidence?.fileName ?? null,
+        // Was hard-coded null while the operator typed the other three by hand, so every custody
+        // photograph reached the store with no content type at all.
+        evidenceContentType: evidence?.contentType ?? null,
+        evidenceStorageReference: evidence?.storageReference ?? null,
+        evidenceSha256: evidence?.sha256Hash ?? null,
         retentionClass: values.retentionClass || null,
       });
       onSaved();
@@ -569,9 +569,9 @@ export const ReconcileReturnDialog = ({
           {discrepancy ? (
             <>
               This will record a <strong>discrepancy</strong>
-              {shortfall! > 0 && ` — ${shortfall} short`}
-              {extras! > 0 && ` — ${extras} more than expected`}
-              {broken > 0 && ` — ${broken} broken seal${broken === 1 ? '' : 's'}`}. An exception case
+              {shortfall! > 0 && ` - ${shortfall} short`}
+              {extras! > 0 && ` - ${extras} more than expected`}
+              {broken > 0 && ` - ${broken} broken seal${broken === 1 ? '' : 's'}`}. An exception case
               is raised and the manifest cannot close until it is resolved.
             </>
           ) : (
@@ -589,23 +589,15 @@ export const ReconcileReturnDialog = ({
       />
 
       <div className={twoColumn}>
-        <TextInput
-          label="Evidence storage reference"
-          value={form.values.evidenceStorageReference}
-          onChange={(value) => form.setValue('evidenceStorageReference', value)}
-          {...form.fieldProps('evidenceStorageReference')}
-        />
-        <TextInput
-          label="Evidence file name"
-          value={form.values.evidenceFileName}
-          onChange={(value) => form.setValue('evidenceFileName', value)}
-          {...form.fieldProps('evidenceFileName')}
-        />
-        <TextInput
-          label="Evidence checksum"
-          value={form.values.evidenceSha256}
-          onChange={(value) => form.setValue('evidenceSha256', value)}
-          {...form.fieldProps('evidenceSha256')}
+        <FileField
+          label="Evidence"
+          accept="image/*,.pdf,.png,.jpg,.jpeg"
+          value={form.values.evidenceFile}
+          onChange={(file) => form.setValue('evidenceFile', file)}
+          {...form.fieldProps(
+            'evidenceFile',
+            'Optional. A photograph or signature - the file name, type, storage reference and SHA-256 are derived from it.',
+          )}
         />
         <EnumSelect
           label="Retention class"

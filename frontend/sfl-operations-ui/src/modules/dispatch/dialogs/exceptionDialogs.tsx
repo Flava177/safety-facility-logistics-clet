@@ -3,11 +3,16 @@ import { ExceptionAction, dispatchExceptionsApi, scanImportsApi } from 'modules/
 import { SCAN_CSV_HEADERS } from 'modules/dispatch/api/enums';
 import { EXCEPTION_RULES, exceptionClosureBlockers } from 'modules/dispatch/api/workflow';
 import FileField from 'shared/components/FileField';
+import { MAX_IMPORT_BYTES } from 'shared/evidence/evidenceFilesApi';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { TextAreaInput, TextInput } from 'shared/components/fields';
 import { humanise } from 'modules/fleet/api/enums';
+// One evidence store serves the whole FTLMP service - a dispatch case's evidence is written into
+// the same table as a trip's, by RecordedDispatchEvidenceAdapter. Same reuse as `humanise` above.
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
 import { ScanImportBatch } from 'modules/dispatch/api/dto';
@@ -24,7 +29,7 @@ interface ExceptionActionDialogProps {
  * All thirteen dispatch exception transitions in one dialog.
  *
  * `POST /exceptions/{id}/{action}` takes a single `ActionRequest { value, evidenceId }`, and the
- * service overloads `value` by action — an assignee for assign and reassign, the explanation text
+ * service overloads `value` by action - an assignee for assign and reassign, the explanation text
  * for explain, the reason for everything else. One endpoint, one request shape, one dialog.
  *
  * `close` is the one with a gate: `DispatchExceptionCase.close` demands an explanation and a
@@ -119,16 +124,26 @@ export const ExceptionActionDialog = ({
           />
         ))}
 
+      {/*
+        The case itself holds no evidence - dispatch files evidence against the records a case points
+        at. `CourierItem` is the only link with a single unambiguous record type; a dispatch-level
+        case spreads its evidence across CustodyHandover, DispatchReceipt and ReturnReconciliation,
+        and the search takes one type, so those fall through to the text field rather than showing a
+        list that is quietly missing two thirds of the evidence.
+      */}
       {(needsEvidence || action === 'explain') && (
-        <TextInput
-          label="Evidence reference"
+        <EvidenceSelect
+          label="Evidence"
           required={needsEvidence}
+          search={searchEvidenceChoices}
+          relatedRecordType={exceptionCase.courierItemId ? 'CourierItem' : null}
+          relatedRecordId={exceptionCase.courierItemId}
           value={form.values.evidenceId}
           onChange={(value) => form.setValue('evidenceId', value)}
           {...form.fieldProps(
             'evidenceId',
             needsEvidence
-              ? 'Register the closure evidence first, then paste its identifier.'
+              ? 'Anything filed against this case is offered here.'
               : 'Optional. Attach what the explanation refers to.',
           )}
         />
@@ -169,14 +184,14 @@ const ACTION_NOTES: Partial<Record<ExceptionAction, string>> = {
   'request-explanation':
     'Moves the case to awaiting explanation. Record the response when it arrives.',
   explain: 'The explanation is one of the three things closure requires.',
-  approve: 'Privileged — needs DISPATCH_EXCEPTION_APPROVE. The case still has to be closed.',
-  reject: 'Privileged — needs DISPATCH_EXCEPTION_APPROVE. The case still has to be closed.',
-  escalate: 'Privileged — needs DISPATCH_EXCEPTION_ESCALATE. Raises the escalation level.',
+  approve: 'Privileged - needs DISPATCH_EXCEPTION_APPROVE. The case still has to be closed.',
+  reject: 'Privileged - needs DISPATCH_EXCEPTION_APPROVE. The case still has to be closed.',
+  escalate: 'Privileged - needs DISPATCH_EXCEPTION_ESCALATE. Raises the escalation level.',
   hold: 'The assignee is notified that the case is blocked. Resume it when the block clears.',
   resume: 'Returns the case to under review.',
   cancel: 'Privileged. The case stays in the register and in the audit trail.',
   close:
-    'Privileged. While this case is open, the manifest it belongs to cannot be closed — so closing it here is what unblocks the consignment.',
+    'Privileged. While this case is open, the manifest it belongs to cannot be closed - so closing it here is what unblocks the consignment.',
   reopen: 'Privileged. The case returns to the queue and blocks manifest closure again.',
 };
 
@@ -207,11 +222,11 @@ interface ScanImportDialogProps {
 }
 
 /**
- * Import a scanner batch — `POST /scans/imports`, multipart.
+ * Import a scanner batch - `POST /scans/imports`, multipart.
  *
  * Two positional columns: the row reference, then the scanned code. A single-column file is read as
  * the code with a reference generated for it. Each row is classified against the manifest and lands
- * as MATCHED, MISMATCH or UNREGISTERED — a mismatch or an unregistered code raises an exception
+ * as MATCHED, MISMATCH or UNREGISTERED - a mismatch or an unregistered code raises an exception
  * case, which is the whole reason for importing the batch.
  */
 export const ScanImportDialog = ({
@@ -283,10 +298,12 @@ export const ScanImportDialog = ({
         />
       </div>
 
+      {/* A scanner's whole batch answers to the import ceiling, not the evidence one. */}
       <FileField
         label="Scan CSV"
         required
         accept=".csv,text/csv"
+        maxBytes={MAX_IMPORT_BYTES}
         value={form.values.file}
         onChange={(file) => form.setValue('file', file)}
         {...form.fieldProps('file', 'A header row plus at least one scanned row.')}
@@ -294,7 +311,7 @@ export const ScanImportDialog = ({
 
       <Alert variant="info" title="File format">
         <p className="mt-1">
-          Two columns, read by position rather than by name — the header row is skipped:
+          Two columns, read by position rather than by name - the header row is skipped:
         </p>
         <p className="mt-1.5 font-mono text-theme-xs text-gray-900">
           {SCAN_CSV_HEADERS.join(', ')}
@@ -307,7 +324,7 @@ export const ScanImportDialog = ({
 
       <Alert variant="warning" title="Mismatches raise cases">
         A code that does not match the manifest, or that belongs to no registered item, records the
-        row as a mismatch and opens an exception case. That is the point of the import — but it means
+        row as a mismatch and opens an exception case. That is the point of the import - but it means
         a batch scanned against the wrong consignment will raise a case per row.
       </Alert>
     </FormDialog>

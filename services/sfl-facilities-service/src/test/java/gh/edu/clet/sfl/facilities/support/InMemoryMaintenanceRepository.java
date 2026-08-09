@@ -25,8 +25,8 @@ import java.util.concurrent.atomic.AtomicLong;
  * An in-memory CMMS, for exercising the S153 application services without a database.
  *
  * <p>The same choice {@code InMemoryFacilitiesRepository} makes, for the same reason: the interesting
- * S153 rules — the SLA calculation, the escalation ladder, the closure gate, the vendor scope, the
- * idempotency of generation — all live above persistence, and a failure should point at the rule.
+ * S153 rules - the SLA calculation, the escalation ladder, the closure gate, the vendor scope, the
+ * idempotency of generation - all live above persistence, and a failure should point at the rule.
  *
  * <p>The number sequences are {@link AtomicLong} rather than row counts, matching the real adapter.
  * A test that got duplicate fault numbers because the double counted rows would be testing the

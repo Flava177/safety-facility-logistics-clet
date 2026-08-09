@@ -19,6 +19,34 @@ spring:
     default-schema: facilities
     schemas: facilities
     locations: classpath:db/migration
+  rabbitmq:
+    # Only used when `sfl.facilities.messaging.transport=rabbitmq`. Boot creates the connection
+    # factory from these regardless, but nothing opens a connection until a publisher or a listener
+    # asks for one - which is why a default `local` deployment needs no broker running.
+    host: ${SFL_RABBITMQ_HOST:localhost}
+    port: ${SFL_RABBITMQ_PORT:5672}
+    username: ${SFL_RABBITMQ_USERNAME:sfl}
+    password: ${SFL_RABBITMQ_PASSWORD:sfl}
+    listener:
+      simple:
+        # Concurrency stays at one: the ordering that matters here is per vehicle, and one consumer is
+        # the simplest way to keep it. Two would be faster and would let a DUE and an OVERDUE for the
+        # same vehicle land out of order.
+        concurrency: 1
+        max-concurrency: 1
+        # Requeue on rejection, paired deliberately with how the handler fails.
+        #
+        # The handler throws only for the unexpected - a database blip, a lock timeout - where
+        # retrying is exactly right, and its transaction takes the inbox claim back with it so the
+        # redelivery is processed rather than skipped. Anything that can never succeed (an unreadable
+        # body, a payload missing the fields the fault needs) is logged and *returned* instead, which
+        # leaves the claim committed and acknowledges the message, so it cannot loop.
+        #
+        # The residual risk is honest: a genuine bug in the handler would requeue forever and fill the
+        # log. That is the trade for not losing a transient failure, and it is the right way round for
+        # a development broker with no dead-letter exchange behind it. A real deployment on S217 gets
+        # a DLQ and this becomes `false`.
+        default-requeue-rejected: true
   security:
     oauth2:
       resourceserver:
@@ -34,7 +62,7 @@ management:
     # Off unless a broker is deliberately in play, matching `sfl-fleet-logistics-service`.
     #
     # This service carries `spring-boot-starter-amqp` and defaults its event transport to `local`, so
-    # it does not talk to RabbitMQ at all in a default deployment — but Boot registers the Rabbit
+    # it does not talk to RabbitMQ at all in a default deployment - but Boot registers the Rabbit
     # health indicator on classpath presence alone, and a failing indicator drags the **aggregate**
     # status to DOWN. The result: a service that had started cleanly, applied its migrations and was
     # serving its API correctly reported `503 DOWN`, which a Kubernetes readiness probe or a load
@@ -59,7 +87,7 @@ sfl:
     owns: "Facilities service for S152, S153 and S159"
   security:
     # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
-    # everything also carried `matchIfMissing = true` — so an environment that simply forgot the
+    # everything also carried `matchIfMissing = true` - so an environment that simply forgot the
     # variable ran with every endpoint unauthenticated and the actor taken from whatever the caller
     # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
     # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
@@ -67,7 +95,7 @@ sfl:
   facilities:
     messaging:
       # `local` records delivery without a broker and is the single-node default. Any environment with a
-      # consumer must set `rabbitmq` deliberately — selecting it without a RabbitTemplate fails at
+      # consumer must set `rabbitmq` deliberately - selecting it without a RabbitTemplate fails at
       # startup rather than dropping events quietly, which is the failure this drainer exists to end.
       transport: ${SFL_FACILITIES_EVENT_TRANSPORT:local}
       exchange: ${SFL_FACILITIES_EVENT_EXCHANGE:sfl.events}

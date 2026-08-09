@@ -22,7 +22,7 @@ import java.util.UUID;
  * sense for the space in front of the assessor.
  *
  * <p>{@code version} increments on every change. An assessment records the version it was taken
- * against, so a result from March can still be read against the questions that were asked in March —
+ * against, so a result from March can still be read against the questions that were asked in March -
  * which is the entire reason NFR 23.8 says "versioned" rather than "configurable".
  */
 public record ReadinessChecklist(
@@ -102,7 +102,7 @@ public record ReadinessChecklist(
                 && (operatingMode == null || operatingMode == mode);
     }
 
-    /** The sum of every item's weight — the denominator of the readiness score. */
+    /** The sum of every item's weight - the denominator of the readiness score. */
     public int totalWeight() {
         return items.stream().mapToInt(ReadinessChecklistItem::weight).sum();
     }

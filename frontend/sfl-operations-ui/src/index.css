@@ -6,13 +6,13 @@
  *
  * Every ramp below is copied verbatim from the CLET UI/UX Design System in Figma
  * (collection "Base" → Colour). The Tailwind names are kept from the previous theme so no component
- * had to be rewritten to adopt them — only the values changed:
+ * had to be rewritten to adopt them - only the values changed:
  *
  *   brand-*    CLET Navy Blue      (800 is the brand value)
  *   gold-*     CLET Gold           (700 is the brand value)
- *   teal-*     Deep Teal           (700 is the brand value) — the interactive colour
+ *   teal-*     Deep Teal           (700 is the brand value) - the interactive colour
  *   slate-*    Slate
- *   gray-*     Cloud Grey — Neutrals
+ *   gray-*     Cloud Grey - Neutrals
  *   success-*  CLET Success Green  |  error-* CLET Red  |  warning-* Amber
  *   info-*     aliased to Deep Teal, because the design system maps Text/Information to it
  *
@@ -21,20 +21,20 @@
  *
  *   Text/heading      grey-900 / 800 / 700        Surface/Background  grey-50 (page), grey-0 (card)
  *   Text/body         grey-900 / 700 / 500        Borders             grey-200 (dividers)
- *   Text/link         teal — see the note below   Borders/Main        grey-600, active teal
+ *   Text/link         teal - see the note below   Borders/Main        grey-600, active teal
  *   Icons/Main        grey-800, teal, grey-600    Text/Disabled       grey-300 / 400 / 500
  *
  * WCAG 2.2 deviation, deliberate and documented. The aliases pick the *500* step of each status
  * ramp as the "default" text colour. Measured against white those are 2.1:1 (Amber 500), 2.2:1
- * (Green 500), 3.8:1 (Red 500 and Deep Teal 500) — all below the 4.5:1 that SC 1.4.3 requires for
+ * (Green 500), 3.8:1 (Red 500 and Deep Teal 500) - all below the 4.5:1 that SC 1.4.3 requires for
  * body text. The system already supplies the answer in its own "dark" aliases, so this theme uses:
  *
  *   status text  → the 700 step   (Teal 9.4:1, Green 4.9:1, Amber 5.1:1, Red 8.8:1) ✓ 1.4.3
  *   status marks → the 500 step   (dots, icons, chart series) ✓ 1.4.11 at 3:1 as non-text
  *
  * CLET Gold is the sharpest case: gold-700 on white is 2.87:1, so it can carry a shape but never a
- * word, and a gold surface needs navy text rather than white (6.2:1). Gold is therefore an accent —
- * the active navigation marker, a focus ring, one chart series — and the filled primary action is
+ * word, and a gold surface needs navy text rather than white (6.2:1). Gold is therefore an accent -
+ * the active navigation marker, a focus ring, one chart series - and the filled primary action is
  * Deep Teal 700, which is also what the design system's own table component uses for its CTA.
  */
 
@@ -81,7 +81,7 @@
   --color-white: #ffffff;
   --color-black: #18181b;
 
-  /* CLET Navy Blue — 800 is the brand value */
+  /* CLET Navy Blue - 800 is the brand value */
   --color-brand-25: #f6f7fa;
   --color-brand-50: #e8ebf0;
   --color-brand-100: #c5cedb;
@@ -95,7 +95,7 @@
   --color-brand-900: #071122;
   --color-brand-950: #040a14;
 
-  /* CLET Gold — 700 is the brand value. Accent and graphics only; never text on white. */
+  /* CLET Gold - 700 is the brand value. Accent and graphics only; never text on white. */
   --color-gold-25: #fffef7;
   --color-gold-50: #fefce8;
   --color-gold-100: #fef9c3;
@@ -109,7 +109,7 @@
   --color-gold-900: #713b0c;
   --color-gold-950: #431d06;
 
-  /* Deep Teal — 700 is the brand value and the dashboard's interactive colour */
+  /* Deep Teal - 700 is the brand value and the dashboard's interactive colour */
   --color-teal-25: #f2fafe;
   --color-teal-50: #e0f2fe;
   --color-teal-100: #bae6fd;
@@ -123,7 +123,7 @@
   --color-teal-900: #052840;
   --color-teal-950: #021a2b;
 
-  /* Information is aliased to Deep Teal in the design system — one hue, not two. */
+  /* Information is aliased to Deep Teal in the design system - one hue, not two. */
   --color-info-25: #f2fafe;
   --color-info-50: #e0f2fe;
   --color-info-100: #bae6fd;
@@ -149,7 +149,7 @@
   --color-slate-900: #0f172a;
   --color-slate-950: #020617;
 
-  /* Cloud Grey — Neutrals */
+  /* Cloud Grey - Neutrals */
   --color-gray-0: #ffffff;
   --color-gray-25: #fcfcfc;
   --color-gray-50: #fafafa;
@@ -164,7 +164,7 @@
   --color-gray-900: #18181b;
   --color-gray-950: #0c0c0e;
 
-  /* CLET Success Green — 800 is the brand value */
+  /* CLET Success Green - 800 is the brand value */
   --color-success-25: #f6fef9;
   --color-success-50: #f0fdf4;
   --color-success-100: #dcfce7;
@@ -191,7 +191,7 @@
   --color-warning-800: #92400e;
   --color-warning-900: #78350f;
 
-  /* CLET Red — 800 is the brand value */
+  /* CLET Red - 800 is the brand value */
   --color-error-25: #fffafa;
   --color-error-50: #fef2f2;
   --color-error-100: #ffe4e4;
@@ -281,7 +281,7 @@
     -webkit-appearance: none;
   }
 
-  /* SC 2.3.3 — respect a reduced-motion preference rather than animating regardless. */
+  /* SC 2.3.3 - respect a reduced-motion preference rather than animating regardless. */
   @media (prefers-reduced-motion: reduce) {
     *,
     ::before,
@@ -373,12 +373,21 @@
   padding: 0;
 }
 
+/*
+ * The month and year dropdowns are styled together because they are one control to the reader: the
+ * header says "March 2026" and either half of it opens. The year select is ours - flatpickr has no
+ * option for one and draws a number input with steppers instead, which nobody reads as typeable.
+ * See `flatpickrYearSelect.ts`.
+ */
 .flatpickr-current-month .flatpickr-monthDropdown-months,
+.flatpickr-current-month .flatpickr-yearDropdown-years,
 .flatpickr-current-month input.cur-year {
-  @apply rounded-md border-0 bg-transparent p-1 text-theme-sm font-semibold text-gray-900;
+  @apply cursor-pointer rounded-md border-0 bg-transparent p-1 text-theme-sm font-semibold text-gray-900;
+  appearance: none;
 }
 
-.flatpickr-current-month .flatpickr-monthDropdown-months:hover {
+.flatpickr-current-month .flatpickr-monthDropdown-months:hover,
+.flatpickr-current-month .flatpickr-yearDropdown-years:hover {
   @apply bg-gray-100;
 }
 

@@ -85,10 +85,23 @@ export class FleetApiError extends Error {
   }
 
   /**
+   * A refusal decided in the browser, before any request was made.
+   *
+   * <p>Status 0 because nothing was sent. It exists so a check the client can make cheaply - a file
+   * far over the size limit, say - surfaces through exactly the same error path as the service's own
+   * refusal, and every form renders it the same way without knowing which end said no.
+   *
+   * <p>It never *replaces* a server-side check. Anything refused here is refused there too.
+   */
+  static validation(message: string): FleetApiError {
+    return new FleetApiError({ status: 0, code: 'FLEET_CLIENT_VALIDATION', message });
+  }
+
+  /**
    * A failure that did not arrive in the SFL envelope.
    *
    * <p>Spring's default error body (`{ timestamp, status, error, message, path }`) is the common
-   * case — an exception the service does not map, so its handlers never ran. Anything readable in
+   * case - an exception the service does not map, so its handlers never ran. Anything readable in
    * that body is used, because "Internal Server Error at /api/v1/fleet/trips" tells an operator far
    * more than a bare status code, and the server log will have the stack trace.
    */
@@ -102,7 +115,7 @@ export class FleetApiError extends Error {
     const detail = typeof shape.message === 'string' ? shape.message : undefined;
     const path = typeof shape.path === 'string' ? shape.path : undefined;
 
-    const summary = [reason, detail].filter(Boolean).join(' — ') || `HTTP ${status}`;
+    const summary = [reason, detail].filter(Boolean).join(' - ') || `HTTP ${status}`;
 
     return new FleetApiError({
       status,
@@ -115,7 +128,7 @@ export class FleetApiError extends Error {
   }
 }
 
-/** `true` only for a real `ApiError` — a `code` and a `message`, both strings. */
+/** `true` only for a real `ApiError` - a `code` and a `message`, both strings. */
 export const isApiErrorEnvelope = (value: unknown): value is ApiErrorEnvelope => {
   if (typeof value !== 'object' || value === null) {
     return false;

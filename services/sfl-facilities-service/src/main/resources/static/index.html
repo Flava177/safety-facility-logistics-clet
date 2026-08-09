@@ -3,10 +3,10 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Facility management — moved to the SFL Operations dashboard</title>
+  <title>Facility management - moved to the SFL Operations dashboard</title>
   <!--
     This page was the only user interface SFL.IFIMP had, which is why ADR 0006 kept it when it retired
-    the other four — and kept it only until IFIMP had dashboard screens. S152 is those screens, so the
+    the other four - and kept it only until IFIMP had dashboard screens. S152 is those screens, so the
     condition it was kept under has been met.
 
     A redirect rather than a deletion, so every URL printed in a runbook still arrives somewhere. The
@@ -14,7 +14,7 @@
     an instant jump would never let anyone read it. Requests to / are redirected by the service
     immediately instead.
 
-    The target is absolute because this service does not package the dashboard bundle — only
+    The target is absolute because this service does not package the dashboard bundle - only
     sfl-fleet-logistics-service does. Behind a gateway `sfl.dashboard.base-url` makes it same-origin
     and the redirect above is the one this page mirrors.
 
@@ -66,7 +66,7 @@
     <p>Taking you there now.</p>
     <a class="cta" href="http://localhost:8093/ui/facilities">Open the dashboard</a>
     <p class="small">
-      This page was a second interface over the same API, and the only one IFIMP had until S152 — see
+      This page was a second interface over the same API, and the only one IFIMP had until S152 - see
       <code>docs/adr/0006</code>. Fault reporting and work orders are S153 and do not have dashboard
       screens yet; their endpoints are unchanged. If nothing loads, the dashboard is not running:
       build it with <code>npm run build</code> in <code>frontend/sfl-operations-ui</code> and start

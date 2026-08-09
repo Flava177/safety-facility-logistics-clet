@@ -15,7 +15,7 @@ public enum SourceChannel {
     MOBILE,
     /** An inbound integration message from an enterprise or vendor system. */
     INTEGRATION,
-    /** A scheduled job inside this service — snapshot generation, expiry sweeps. */
+    /** A scheduled job inside this service - snapshot generation, expiry sweeps. */
     SCHEDULER,
     /** A migration, seed or operator script. */
     SYSTEM

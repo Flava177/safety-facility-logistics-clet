@@ -147,7 +147,7 @@ public record WorkOrder(
      * state, it is a change of owner that the audit trail records. Modelling it as its own status
      * would make an order reassigned twice look different from one reassigned once.
      *
-     * <p>Assigning an order that is on hold releases the hold — handing work to somebody new while
+     * <p>Assigning an order that is on hold releases the hold - handing work to somebody new while
      * telling them it is blocked is not an assignment anybody can act on.
      */
     public WorkOrder assignTo(String assignee, UUID vendor, String actorId, Instant at, SourceChannel channel,
@@ -179,7 +179,7 @@ public record WorkOrder(
                 cancellationReason, actorId, at, channel, correlationId);
     }
 
-    /** The assignee says the work is done. Not yet accepted — see {@link #close}. */
+    /** The assignee says the work is done. Not yet accepted - see {@link #close}. */
     public WorkOrder complete(String notes, String actorId, Instant at, SourceChannel channel,
             String correlationId) {
         WorkOrderStatus next = status.transitionTo(WorkOrderStatus.COMPLETED);
@@ -193,8 +193,8 @@ public record WorkOrder(
      * Accepted and closed out.
      *
      * <p>SRS-SFL-S153-02: "A workflow cannot be closed without required evidence or closure reason."
-     * Both halves are enforced here rather than at the API, so a closure reached by any route — a
-     * controller, a saga, a future integration — meets the same bar. The evidence count is passed in
+     * Both halves are enforced here rather than at the API, so a closure reached by any route - a
+     * controller, a saga, a future integration - meets the same bar. The evidence count is passed in
      * because this aggregate does not own the evidence; it owns the rule about how much is needed.
      */
     public WorkOrder close(String notes, int attachedEvidence, String actorId, Instant at, SourceChannel channel,
@@ -280,7 +280,7 @@ public record WorkOrder(
      *
      * <p>Started is the signal, not assigned. Assigning work to a technician who never opens it is
      * exactly the failure a response deadline exists to catch, so an assignment that is never acted on
-     * still breaches — otherwise the ladder could be silenced by handing the job to somebody.
+     * still breaches - otherwise the ladder could be silenced by handing the job to somebody.
      *
      * <p>A completed, closed or cancelled order is past caring, and one already raised is not raised
      * again: the sweep is at-least-once, and the fastest way to make an escalation ignored is to send
@@ -299,8 +299,8 @@ public record WorkOrder(
      *
      * <p>The order is still OPEN or ASSIGNED and still needs exactly the same work; what changed is
      * that somebody has now been told nobody started it. Moving it to a state would make the ladder's
-     * bookkeeping look like a fact about the job, and the resolution deadline — a different clock,
-     * with a different recipient — still has to run its own course.
+     * bookkeeping look like a fact about the job, and the resolution deadline - a different clock,
+     * with a different recipient - still has to run its own course.
      */
     public WorkOrder withResponseEscalated(String actorId, Instant at, SourceChannel channel,
             String correlationId) {

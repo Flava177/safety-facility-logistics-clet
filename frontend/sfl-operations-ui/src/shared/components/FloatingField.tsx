@@ -22,7 +22,7 @@ interface FloatingFieldProps {
  * <h2>Why this is its own component and not a variant of `TextInput`</h2>
  *
  * `TextInput` reserves a line above for the label and a line below for the helper, so a form never
- * changes height when validation fires — that rhythm is deliberate and every operational form in the
+ * changes height when validation fires - that rhythm is deliberate and every operational form in the
  * application depends on it. A floating label breaks it by design: the label lives *in* the control.
  * Making `TextInput` do both would mean a prop that changes its layout contract, and the sign-in page
  * is currently the only screen that wants this.
@@ -32,7 +32,7 @@ interface FloatingFieldProps {
  * The obvious implementation is `placeholder="Email"` with `:placeholder-shown` CSS. It is also the
  * one that fails: a placeholder is not an accessible name, so a screen reader announces "edit text,
  * blank" and the field is unlabelled the moment the user types. This renders a real `<label>` bound
- * by `htmlFor` and moves it with a transform — the accessibility tree is identical to a normal
+ * by `htmlFor` and moves it with a transform - the accessibility tree is identical to a normal
  * labelled field, and the animation is presentation only.
  *
  * `peer-placeholder-shown` still drives the resting position, so an empty field shows the label in
@@ -105,7 +105,7 @@ const FloatingField = ({
           type="button"
           onClick={() => setRevealed((shown) => !shown)}
           // The control toggles, so the name has to say what pressing it will do rather than what
-          // the field currently is — and `aria-pressed` carries the state separately.
+          // the field currently is - and `aria-pressed` carries the state separately.
           aria-label={revealed ? 'Hide password' : 'Show password'}
           aria-pressed={revealed}
           disabled={disabled}

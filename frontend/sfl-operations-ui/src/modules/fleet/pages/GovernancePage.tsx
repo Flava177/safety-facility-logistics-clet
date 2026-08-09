@@ -10,6 +10,11 @@ import {
   humanise,
 } from 'modules/fleet/api/enums';
 import { auditApi, evidenceApi } from 'modules/fleet/api/fleetApi';
+import {
+  DriverSelect,
+  TripSelect,
+  VehicleSelect,
+} from 'modules/fleet/components/FleetReferenceSelect';
 
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
@@ -31,9 +36,30 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
-import { canRequestEvidenceExport } from '../api/access';
+import { canReadAudit, canRequestEvidenceExport, canVerifyAuditChain } from '../api/access';
+import { evidenceStorageReference, sha256Hex } from 'shared/evidence/fileEvidence';
 
 type TabKey = 'evidence' | 'audit' | 'integrity';
+
+/**
+ * The records this dialog can file evidence against, and the only ones it offers.
+ *
+ * PascalCase because the store matches `relatedRecordType` exactly and every backend path files
+ * under the entity name - `Trip`, not `TRIP`. The list is short because it is the list of registers
+ * the dashboard can *resolve an identifier out of*: offering a type with no register behind it would
+ * put the operator straight back to typing a UUID, which is the thing being fixed.
+ *
+ * Evidence for an inspection or a compliance certificate is filed by those screens' own dialogs,
+ * under the vehicle it belongs to - so nothing that was reachable stops being reachable.
+ */
+const EVIDENCE_RECORD_TYPES = ['Vehicle', 'Driver', 'Trip'] as const;
+type EvidenceRecordType = (typeof EVIDENCE_RECORD_TYPES)[number];
+
+const EVIDENCE_RECORD_TYPE_LABELS: Record<EvidenceRecordType, string> = {
+  Vehicle: 'Vehicle',
+  Driver: 'Driver',
+  Trip: 'Trip',
+};
 
 /** Audit records carry an optional id, so the row key falls back to position as it always did. */
 interface AuditRow {
@@ -41,35 +67,12 @@ interface AuditRow {
   record: AuditEventResponse;
 }
 
-const evidenceStorageReference = (
-  siteCode: string,
-  relatedRecordType: string,
-  relatedRecordId: string,
-  fileName: string,
-): string => {
-  const safeFile = fileName.replace(/[^\w.\-() ]+/g, '_').trim().replace(/\s+/g, '-') || 'evidence';
-  const safeType =
-    relatedRecordType.replace(/[^\w.-]+/g, '_').trim().toLowerCase() || 'record';
-  const safeRecord =
-    relatedRecordId.replace(/[^\w.-]+/g, '_').trim().slice(0, 120) || 'reference';
-  return `local-demo://fleet-evidence/${siteCode.toUpperCase()}/${safeType}/${safeRecord}/${Date.now()}-${safeFile}`;
-};
-
-const sha256Hex = async (file: File): Promise<string> => {
-  if (!globalThis.crypto?.subtle) {
-    throw FleetApiError.transport('This browser cannot compute the SHA-256 evidence hash.');
-  }
-  const digest = await globalThis.crypto.subtle.digest('SHA-256', await file.arrayBuffer());
-  return Array.from(new Uint8Array(digest))
-    .map((byte) => byte.toString(16).padStart(2, '0'))
-    .join('');
-};
 
 /**
  * Evidence and audit governance.
  *
  * Evidence is reachable two ways: by its own identifier, and by the record it evidences. The second
- * is new, and is the one an operator can actually use — the identifier is a UUID that appears on no
+ * is new, and is the one an operator can actually use - the identifier is a UUID that appears on no
  * paperwork, whereas the record is the thing they were looking at when they needed the evidence.
  *
  * There is still no browsable list of all evidence, and there should not be. Every read names a
@@ -215,7 +218,7 @@ const GovernancePage = () => {
         header: 'Site',
         width: 120,
         hideBelowLg: true,
-        cell: ({ record }) => (record.siteCode ? String(record.siteCode) : '—'),
+        cell: ({ record }) => (record.siteCode ? String(record.siteCode) : '-'),
       },
       {
         key: 'occurredAt',
@@ -246,11 +249,19 @@ const GovernancePage = () => {
       />
 
       <SectionCard flush>
+        {/*
+          Two of these three tabs are separately granted, and offering them to everyone is how a
+          fleet manager ended up reading `FLEET_UNAUTHORIZED_SCOPE` with a correlation id. Replaying
+          the hash chain is an auditor's, compliance officer's or administrator's act; reading the
+          audit trail is narrower than reading evidence. A tab nobody may open is not shown.
+        */}
         <Tabs
           items={[
             { value: 'evidence', label: 'Evidence' },
-            { value: 'audit', label: 'Audit records', count: audit.data?.length },
-            { value: 'integrity', label: 'Chain integrity' },
+            ...(canReadAudit()
+              ? [{ value: 'audit', label: 'Audit records', count: audit.data?.length }]
+              : []),
+            ...(canVerifyAuditChain() ? [{ value: 'integrity', label: 'Chain integrity' }] : []),
           ]}
           value={tab}
           onChange={(value) => setTab(value as TabKey)}
@@ -271,7 +282,7 @@ const GovernancePage = () => {
                     value={recordType}
                     onChange={setRecordType}
                     placeholder="Trip"
-                    helperText="As it was registered — for example Trip or VehicleInspection."
+                    helperText="As it was registered - for example Trip or Vehicle inspection."
                   />
                   <TextInput
                     label="Related record ID"
@@ -302,7 +313,7 @@ const GovernancePage = () => {
                       error={byRecord.error}
                       empty={(byRecord.data?.length ?? 0) === 0}
                       emptyTitle="Nothing filed against this record"
-                      emptyHint="Check the record type spelling — it is stored exactly as it was registered."
+                      emptyHint="Check the record type spelling - it is stored exactly as it was registered."
                       onRetry={byRecord.refetch}
                       minHeight={120}
                     >
@@ -403,11 +414,11 @@ const GovernancePage = () => {
                           label: 'Retention expires',
                           value: formatDateTime(evidence.retentionExpiresAt),
                         },
-                        { label: 'Registered by', value: evidence.createdBy ?? '—' },
+                        { label: 'Registered by', value: evidence.createdBy ?? '-' },
                         { label: 'Registered at', value: formatDateTime(evidence.createdAt) },
                         {
                           label: 'Correlation ID',
-                          value: evidence.auditCorrelationId ?? '—',
+                          value: evidence.auditCorrelationId ?? '-',
                           span: 2,
                         },
                         { label: 'Record version', value: evidence.version },
@@ -458,16 +469,16 @@ const GovernancePage = () => {
                       { label: 'Records checked', value: integrity.data.recordsChecked },
                       {
                         label: 'First divergent sequence',
-                        value: integrity.data.firstDivergentSequence ?? '—',
+                        value: integrity.data.firstDivergentSequence ?? '-',
                       },
-                      { label: 'Reason', value: integrity.data.reason ?? '—' },
+                      { label: 'Reason', value: integrity.data.reason ?? '-' },
                       {
                         label: 'Expected value',
-                        value: integrity.data.expectedValue ?? '—',
+                        value: integrity.data.expectedValue ?? '-',
                         span: 2,
                       },
-                      { label: 'Actual value', value: integrity.data.actualValue ?? '—', span: 2 },
-                      { label: 'Head hash', value: integrity.data.headHash ?? '—', span: 2 },
+                      { label: 'Actual value', value: integrity.data.actualValue ?? '-', span: 2 },
+                      { label: 'Head hash', value: integrity.data.headHash ?? '-', span: 2 },
                     ]}
                   />
                 </div>
@@ -502,7 +513,53 @@ const GovernancePage = () => {
   );
 };
 
-/* Register evidence — POST /api/v1/fleet/evidence */
+/**
+ * The identifier field, bound to whichever register the chosen record type names.
+ *
+ * One component rather than three inline ternaries so the three pickers cannot drift apart in
+ * label, required-ness or error wiring. Each is scoped to the site the evidence is being filed
+ * under, which is also the scope the actor is allowed to read - so an identifier that appears here
+ * is one this operator could have opened anyway.
+ */
+const RelatedRecordSelect = ({
+  recordType,
+  siteCode,
+  value,
+  onChange,
+  error,
+  helperText,
+  onBlur,
+}: {
+  recordType: EvidenceRecordType;
+  siteCode: string;
+  value: string;
+  onChange: (value: string) => void;
+  error: boolean;
+  helperText: string | undefined;
+  onBlur: () => void;
+}) => {
+  const shared = {
+    label: `Related ${EVIDENCE_RECORD_TYPE_LABELS[recordType].toLowerCase()}`,
+    required: true,
+    siteCode,
+    value,
+    onChange,
+    error,
+    helperText,
+    onBlur,
+  };
+
+  if (recordType === 'Driver') {
+    return <DriverSelect {...shared} />;
+  }
+  if (recordType === 'Trip') {
+    // Unlike the fuel forms, a trip is not optional here - the evidence has to hang off something.
+    return <TripSelect {...shared} allowEmpty={false} />;
+  }
+  return <VehicleSelect {...shared} />;
+};
+
+/* Register evidence - POST /api/v1/fleet/evidence */
 const RegisterEvidenceDialog = ({
   open,
   onClose,
@@ -515,7 +572,11 @@ const RegisterEvidenceDialog = ({
   const form = useFleetForm({
     initialValues: {
       siteCode: defaultSite,
-      relatedRecordType: 'VEHICLE',
+      // 'Vehicle', not 'VEHICLE'. The store matches the record type exactly, and every backend
+      // path files under PascalCase entity names - Trip, Vehicle, ComplianceDocument. Evidence
+      // registered under the old default was invisible to every picker that searches for 'Vehicle',
+      // which is precisely the lookup this dialog exists to feed.
+      relatedRecordType: 'Vehicle' as EvidenceRecordType,
       relatedRecordId: '',
       evidenceType: 'COMPLIANCE_DOCUMENT',
       evidenceFile: null as File | null,
@@ -577,7 +638,13 @@ const RegisterEvidenceDialog = ({
         <SiteSelect
           required
           value={form.values.siteCode}
-          onChange={(value) => form.setValue('siteCode', value)}
+          onChange={(value) => {
+            form.setValue('siteCode', value);
+            // The registers below are scoped to the site, so a record picked at the old one is not
+            // on offer at the new one - and leaving it selected would submit an identifier the
+            // operator can no longer see.
+            form.setValue('relatedRecordId', '');
+          }}
           {...form.fieldProps('siteCode')}
         />
         <EnumSelect
@@ -593,19 +660,32 @@ const RegisterEvidenceDialog = ({
           }
           {...form.fieldProps('retentionClass')}
         />
-        <TextInput
+        {/*
+          The record type chooses which register the identifier is picked from, which is the whole
+          reason it is a list and not free text now. `relatedRecordType` is a plain string on the
+          wire and the service will store whatever it is sent - so nothing but this control stopped
+          an operator filing evidence against a record type nothing queries, under an identifier no
+          record has. Both fields were free text, and the id is a UUID that appears on no paperwork:
+          any value at all was accepted and only failed later, when a picker searching for real
+          evidence found none.
+        */}
+        <EnumSelect
           label="Related record type"
           required
           value={form.values.relatedRecordType}
-          onChange={(value) => form.setValue('relatedRecordType', value)}
-          {...form.fieldProps(
-            'relatedRecordType',
-            'For example Trip, VehicleInspection or ComplianceDocument.',
-          )}
+          options={EVIDENCE_RECORD_TYPES}
+          onChange={(value) => {
+            form.setValue('relatedRecordType', (value || 'Vehicle') as EvidenceRecordType);
+            // The old identifier belongs to the old register. Keeping it would leave a Vehicle id
+            // sitting in a field now offering drivers, and it would submit.
+            form.setValue('relatedRecordId', '');
+          }}
+          renderOptionLabel={(option) => EVIDENCE_RECORD_TYPE_LABELS[option]}
+          {...form.fieldProps('relatedRecordType')}
         />
-        <TextInput
-          label="Related record ID"
-          required
+        <RelatedRecordSelect
+          recordType={form.values.relatedRecordType}
+          siteCode={form.values.siteCode}
           value={form.values.relatedRecordId}
           onChange={(value) => form.setValue('relatedRecordId', value)}
           {...form.fieldProps('relatedRecordId')}
@@ -631,15 +711,11 @@ const RegisterEvidenceDialog = ({
           />
         </div>
       </div>
-      <Alert variant="info">
-        The evidence file stays wherever your document store will later keep it. For this Release 1
-        demo, Fleet records the tamper-evident reference, retention class and hash chain entry.
-      </Alert>
     </FormDialog>
   );
 };
 
-/* Request export — POST /api/v1/fleet/evidence/{id}/export-requests */
+/* Request export - POST /api/v1/fleet/evidence/{id}/export-requests */
 const RequestExportDialog = ({
   open,
   evidenceId,

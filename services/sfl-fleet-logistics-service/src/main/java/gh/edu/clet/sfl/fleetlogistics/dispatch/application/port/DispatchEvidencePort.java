@@ -11,7 +11,7 @@ import java.util.UUID;
 /**
  * Governed-evidence boundary for S171. Dispatch/receipt/scan/custody documents are registered as
  * governed evidence references (hash, uploader, retention class, related record, legal hold) on the
- * shared tamper-evident foundation — never as ungoverned binaries in a dispatch column.
+ * shared tamper-evident foundation - never as ungoverned binaries in a dispatch column.
  */
 public interface DispatchEvidencePort {
 

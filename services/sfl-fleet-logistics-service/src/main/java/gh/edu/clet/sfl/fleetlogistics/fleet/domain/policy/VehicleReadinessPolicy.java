@@ -111,7 +111,7 @@ public final class VehicleReadinessPolicy {
             return;
         }
         // A document valid today but expiring before the trip ends would leave the vehicle uninsured
-        // mid-journey, so the assessment period — not just today — drives the check.
+        // mid-journey, so the assessment period - not just today - drives the check.
         if (context.requestedPeriod() != null
                 && document.isExpiredAt(context.requestedPeriod().end())) {
             blockers.add(ReadinessBlocker.of(ReadinessBlockerCode.COMPLIANCE_DOCUMENT_EXPIRED,

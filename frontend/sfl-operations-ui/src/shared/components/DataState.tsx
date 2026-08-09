@@ -34,7 +34,7 @@ export const Spinner = ({ size = 26 }: { size?: number }) => (
  *
  * Centralised so an unfinished screen cannot quietly render an empty table that looks like "no
  * vehicles" when the real answer is "the service is down". The error branch shows the service's own
- * message — SRS-defined wording — plus the correlation id, which is what support will ask for.
+ * message - SRS-defined wording - plus the correlation id, which is what support will ask for.
  */
 const DataState = ({
   loading,

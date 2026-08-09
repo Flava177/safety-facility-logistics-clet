@@ -21,6 +21,7 @@ import WorkflowTimeline, { TimelineEntry } from 'shared/components/WorkflowTimel
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+import { canManageWorkflow } from 'modules/fleet/api/access';
 
 type DialogKey =
   | 'assign'
@@ -35,7 +36,7 @@ type DialogKey =
 
 const live = (item: WorkflowItemResponse) => !['CLOSED', 'CANCELLED'].includes(item.status);
 
-/** One sentence per transition — "Transition applied" does not tell an operator what landed. */
+/** One sentence per transition - "Transition applied" does not tell an operator what landed. */
 const transitionConfirmations = {
   escalate: 'Item escalated.',
   cancel: 'Item cancelled.',
@@ -47,7 +48,7 @@ const transitionConfirmations = {
 /**
  * Workflow item detail with its immutable history.
  *
- * Transitions and comments are merged into one timeline in sequence order — that ordering is the
+ * Transitions and comments are merged into one timeline in sequence order - that ordering is the
  * audit record, so it is presented rather than re-sorted by kind.
  */
 const WorkflowDetailPage = () => {
@@ -73,7 +74,7 @@ const WorkflowDetailPage = () => {
       notifySuccess('Item moved to in progress.');
       refreshAll();
     } catch (error) {
-      // A refused transition is never silent — the service's own wording is shown.
+      // A refused transition is never silent - the service's own wording is shown.
       notifyError(error);
     } finally {
       setStarting(false);
@@ -150,6 +151,13 @@ const WorkflowDetailPage = () => {
               </Alert>
             )}
 
+            {/*
+              The whole card, not each control: assign, start, hold, resume, escalate and cancel are
+              one grant (FLEET_WORKFLOW_MANAGE), and a card of controls nobody may press is worse
+              than no card. What stays inside is the *state* gating - `live(...)` and friends - which
+              disables rather than hides, because that changes.
+            */}
+            {canManageWorkflow() && (
             <SectionCard title="Actions">
               <div className="flex flex-wrap items-center gap-2">
                 {live(item.data) && (
@@ -209,6 +217,7 @@ const WorkflowDetailPage = () => {
                 </Button>
               </div>
             </SectionCard>
+            )}
 
             <div className="grid gap-4 lg:grid-cols-[1.3fr_1fr]">
               <SectionCard title="Item">
@@ -227,7 +236,7 @@ const WorkflowDetailPage = () => {
                       label: 'Related record',
                       value: item.data.relatedRecordType
                         ? `${item.data.relatedRecordType} ${item.data.relatedRecordId ?? ''}`
-                        : '—',
+                        : '-',
                       span: 2,
                     },
                     { label: 'Description', value: item.data.description, span: 2 },
@@ -243,13 +252,13 @@ const WorkflowDetailPage = () => {
                           },
                           {
                             label: 'Closure evidence',
-                            value: item.data.closureEvidenceId ?? '—',
+                            value: item.data.closureEvidenceId ?? '-',
                           },
-                          { label: 'Closed by', value: item.data.closedBy ?? '—' },
+                          { label: 'Closed by', value: item.data.closedBy ?? '-' },
                           { label: 'Closed at', value: formatDateTime(item.data.closedAt) },
                         ]
                       : []),
-                    { label: 'Raised by', value: item.data.createdBy ?? '—' },
+                    { label: 'Raised by', value: item.data.createdBy ?? '-' },
                     { label: 'Raised at', value: formatDateTime(item.data.createdAt) },
                     { label: 'Record version', value: item.data.version },
                   ]}

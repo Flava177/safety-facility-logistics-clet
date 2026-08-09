@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import FacetFilter from 'shared/components/FacetFilter';
+import QuickFilters from 'shared/components/QuickFilters';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -19,7 +20,7 @@ import { canRequest } from '../api/workflow';
 import { bookingStatusTone, formatWindow } from '../components/bookingFormat';
 
 /**
- * The diary — SRS-SFL-S159-01.
+ * The diary - SRS-SFL-S159-01.
  *
  * The register S159 has had an API for since it shipped and no screen at all.
  *
@@ -28,7 +29,7 @@ import { bookingStatusTone, formatWindow } from '../components/bookingFormat';
  * register arrives already narrowed. There is deliberately no client-side filter: one would be a
  * display convention, and the rows would still have crossed the boundary.
  *
- * **The readiness hold is a column, not a status.** S159 decided that deliberately — a confirmed
+ * **The readiness hold is a column, not a status.** S159 decided that deliberately - a confirmed
  * booking on a hall blocked on Tuesday is still a confirmed booking somebody has in their diary, and
  * moving it to an `AT_RISK` state would decide on the estate's behalf that Tuesday's leak will still
  * be there on Friday. So the status says what the booking is and the hold says what the estate
@@ -50,8 +51,8 @@ const BookingDiaryPage = () => {
             One value goes to the service; the rest are applied to the returned set below.
 
             `BookingQuery` takes a single status and a single purpose, so a multi-select cannot be
-            pushed down whole. Sending the first narrows the fetch — which matters, the register is
-            capped at 200 — and the remainder is filtered here. That is a compromise and it is worth
+            pushed down whole. Sending the first narrows the fetch - which matters, the register is
+            capped at 200 - and the remainder is filtered here. That is a compromise and it is worth
             naming: with more than one value selected the cap applies to a *wider* set than the
             filter shows, so a very large site could clip. Widening the query to accept a list is the
             real fix and belongs in the service.
@@ -73,12 +74,46 @@ const BookingDiaryPage = () => {
       (status.length === 0 || status.includes(booking.status)) &&
       (purpose.length === 0 || purpose.includes(booking.purpose)),
   );
-  const filtered = status.length > 0 || purpose.length > 0 || Boolean(scope);
+  const clearAll = () => {
+    setStatus([]);
+    setPurpose([]);
+    setScope('');
+  };
+
+  /*
+    One chip per selected value rather than one per facet. "Status: 2 selected" is the summary the
+    closed button already gives; what the chip row is for is dropping one of the two without
+    reopening anything, and that needs them named separately.
+  */
+  const activeFilters: ActiveFilter[] = [
+    ...status.map((value) => ({
+      key: `status:${value}`,
+      label: 'Status',
+      value: humaniseCode(value),
+      onClear: () => setStatus(status.filter((entry) => entry !== value)),
+    })),
+    ...purpose.map((value) => ({
+      key: `purpose:${value}`,
+      label: 'Purpose',
+      value: humaniseCode(value),
+      onClear: () => setPurpose(purpose.filter((entry) => entry !== value)),
+    })),
+    ...(scope
+      ? [
+          {
+            key: 'scope',
+            label: 'View',
+            value: scope === 'live' ? 'Holding a space' : 'On readiness hold',
+            onClear: () => setScope(''),
+          },
+        ]
+      : []),
+  ];
 
   /*
     Counts come from what the service returned, so they describe the data in hand rather than the
     whole register. A count that claimed to be the site total would be a promise this screen cannot
-    keep — the fetch is capped and a requester's view is narrowed per record.
+    keep - the fetch is capped and a requester's view is narrowed per record.
   */
   const countBy = (pick: (booking: Booking) => string) =>
     fetched.reduce<Record<string, number>>((tally, booking) => {
@@ -111,7 +146,7 @@ const BookingDiaryPage = () => {
       cell: (booking) => (
         <CellStack
           primary={formatWindow(booking.startsAt, booking.endsAt)}
-          // The occupied window, not the booked one — it is what the next requester is refused on.
+          // The occupied window, not the booked one - it is what the next requester is refused on.
           secondary={
             booking.setupMinutes > 0 || booking.teardownMinutes > 0
               ? `Holds ${formatWindow(booking.occupiedFrom, booking.occupiedTo)}`
@@ -151,7 +186,7 @@ const BookingDiaryPage = () => {
             <StatusChip value="ON_HOLD" label="On hold" tone="blocked" />
           </span>
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400">-</span>
         ),
     },
   ];
@@ -171,12 +206,20 @@ const BookingDiaryPage = () => {
       />
 
       <FilterBar
-        onReset={() => {
-          setStatus([]);
-          setPurpose([]);
-          setScope('');
-        }}
-        resetDisabled={!filtered}
+        onReset={clearAll}
+        active={activeFilters}
+        quickFilters={
+          <QuickFilters
+            label="Which bookings"
+            value={scope}
+            onChange={setScope}
+            options={[
+              { value: '', label: 'All bookings', count: fetched.length },
+              { value: 'live', label: 'Holding a space' },
+              { value: 'held', label: 'On readiness hold' },
+            ]}
+          />
+        }
       >
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
         <FacetFilter
@@ -198,17 +241,6 @@ const BookingDiaryPage = () => {
             label: humaniseCode(value),
             count: purposeCounts[value] ?? 0,
           }))}
-        />
-        <FacetFilter
-          label="Holding"
-          selected={scope ? [scope] : []}
-          // Single-valued by nature: "holding a space" and "on readiness hold" are different
-          // questions, and selecting both would mean neither.
-          onChange={(next) => setScope(next[next.length - 1] ?? '')}
-          options={[
-            { value: 'live', label: 'Holding a space' },
-            { value: 'held', label: 'On readiness hold' },
-          ]}
         />
       </FilterBar>
 

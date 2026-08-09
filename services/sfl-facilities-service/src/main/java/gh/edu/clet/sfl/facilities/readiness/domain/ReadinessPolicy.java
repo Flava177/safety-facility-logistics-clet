@@ -12,7 +12,7 @@ import java.util.Objects;
  * what they mean, and it is deliberately a pure function of its inputs so the decision can be
  * exercised directly rather than only through a running service.
  *
- * <p>The rules, in order — the first that matches wins:
+ * <p>The rules, in order - the first that matches wins:
  * <ol>
  *   <li><strong>Any open CRITICAL blocker → {@link LocationReadinessStatus#BLOCKED}.</strong> This is
  *       the invariant SRS-SFL-S152-01 names and the one {@link #requireReadyPermitted} enforces
@@ -27,7 +27,7 @@ import java.util.Objects;
  *
  * <p>The score is the weighted percentage of checklist items passed, reported alongside the status
  * rather than driving it. A room can score 95% and still be BLOCKED because the one thing that failed
- * was the fire door — which is exactly why severity, not score, decides.
+ * was the fire door - which is exactly why severity, not score, decides.
  */
 public final class ReadinessPolicy {
 
@@ -68,7 +68,7 @@ public final class ReadinessPolicy {
     /**
      * The weighted percentage of checklist items passed.
      *
-     * <p>A checklist whose items all carry zero weight scores 100 when nothing failed and 0 otherwise —
+     * <p>A checklist whose items all carry zero weight scores 100 when nothing failed and 0 otherwise -
      * a pure pass/fail list is a legitimate configuration, and dividing by its zero total weight is not.
      */
     public static int score(List<ReadinessAssessmentItem> items) {

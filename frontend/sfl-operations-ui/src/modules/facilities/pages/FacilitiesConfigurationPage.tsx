@@ -15,7 +15,7 @@ import { formatDateTime } from '../components/facilitiesFormat';
 /**
  * The runtime configuration the S152 rules are read from.
  *
- * Every threshold here is read by the service at evaluation time — a value changed at 09:00 applies
+ * Every threshold here is read by the service at evaluation time - a value changed at 09:00 applies
  * to the 09:01 evaluation without a redeploy (NFR 23.8). The screen's job is to make clear *which*
  * value is in force: a site override and the platform default both appear, distinguished, because
  * "the staleness window is 7 days" and "the staleness window is 7 days everywhere except Accra" are

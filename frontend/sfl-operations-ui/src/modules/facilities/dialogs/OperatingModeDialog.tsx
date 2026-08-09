@@ -17,7 +17,7 @@ interface OperatingModeDialogProps {
  *
  * A dialog rather than a toggle, deliberately. NFR 23.3 requires the change to be "explicit, audited
  * and reversible only by authorised roles", and a switch that flips on a single click is none of
- * those things in spirit — it invites the accident. The consequences are spelled out before the
+ * those things in spirit - it invites the accident. The consequences are spelled out before the
  * confirm, and the reason is captured because the audit entry is worth more with one.
  */
 const OperatingModeDialog = ({ site, onClose, onChanged }: OperatingModeDialogProps) => {

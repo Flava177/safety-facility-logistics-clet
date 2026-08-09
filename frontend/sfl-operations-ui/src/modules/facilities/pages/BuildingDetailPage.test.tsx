@@ -9,7 +9,7 @@ import type { Building, Floor, Space } from '../api/dto';
  * The building screen, and the one behaviour on it worth pinning: **choosing a floor asks the server
  * again**.
  *
- * The alternative — fetching the building's spaces once and filtering the array in the browser — is
+ * The alternative - fetching the building's spaces once and filtering the array in the browser - is
  * the obvious implementation and is wrong here for a reason a rendering test can catch. The query is
  * capped at a hundred rows, so a client-side filter over a large building would filter the first page
  * rather than the floor, and the third floor of a big block would appear empty. Asserting the request

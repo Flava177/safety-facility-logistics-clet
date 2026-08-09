@@ -18,7 +18,7 @@ import ControlButton from '../components/ControlButton';
 import RegisterResourceDialog from '../dialogs/RegisterResourceDialog';
 
 /**
- * The bookable-resource register — SRS-SFL-S159-01.
+ * The bookable-resource register - SRS-SFL-S159-01.
  *
  * Projectors, furniture sets and everything else booked alongside a room. Separate from the S152
  * asset register and deliberately so: an asset is fixed plant whose condition feeds a space's
@@ -26,7 +26,7 @@ import RegisterResourceDialog from '../dialogs/RegisterResourceDialog';
  *
  * **Quantity is the column that matters.** One row holds forty chairs, and availability is arithmetic
  * against what is committed for a window. A quantity of exactly one is different in kind rather than
- * degree — it makes the resource exclusive, and exclusivity is enforced by the database's own
+ * degree - it makes the resource exclusive, and exclusivity is enforced by the database's own
  * exclusion constraint rather than by that arithmetic. The register says which, because the number
  * alone does not.
  */
@@ -94,7 +94,7 @@ const BookableResourcesPage = () => {
         resource.requiresSetup ? (
           <StatusChip value="SETUP" label="Raises a task" tone="caution" />
         ) : (
-          <span className="text-gray-400">—</span>
+          <span className="text-gray-400">-</span>
         ),
     },
     {

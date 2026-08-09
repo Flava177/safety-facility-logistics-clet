@@ -44,8 +44,8 @@ import org.springframework.transaction.annotation.Transactional;
  * Readiness checklists, assessments, blockers and locks (SRS-SFL-S152-01, -02, -05).
  *
  * <p>The one rule everything here serves: <strong>a space cannot be READY while a critical blocker is
- * open.</strong> It is enforced in exactly two places — {@link #submitAssessment}, where a derived
- * status is computed, and {@link #setReadinessDirectly}, where a status is set by hand — and both
+ * open.</strong> It is enforced in exactly two places - {@link #submitAssessment}, where a derived
+ * status is computed, and {@link #setReadinessDirectly}, where a status is set by hand - and both
  * route through {@link ReadinessPolicy}, so there is no third path around it.
  *
  * <p>Implements {@link SpaceReadinessPort} so the asset register can tell readiness that an asset
@@ -175,7 +175,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      * <ol>
      *   <li>resolve the checklist (explicit, or by space type and operating mode),</li>
      *   <li>snapshot each answer against the item as it is worded today,</li>
-     *   <li>resolve the blockers the previous assessment raised — they are being reassessed,</li>
+     *   <li>resolve the blockers the previous assessment raised - they are being reassessed,</li>
      *   <li>raise a blocker for each failed item, at the item's declared severity,</li>
      *   <li>evaluate every open blocker, including ones from assets and manual raises,</li>
      *   <li>write the derived status back to the space.</li>
@@ -216,7 +216,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
                                 "Superseded by assessment " + assessmentId, actor.actorId(), at))));
 
         // Build the new blockers in memory before persisting anything. They carry a foreign key to the
-        // assessment, so the assessment row has to exist first — but the assessment's own outcome is
+        // assessment, so the assessment row has to exist first - but the assessment's own outcome is
         // derived from these very blockers. Constructing them, evaluating, saving the assessment and
         // only then saving the blockers is what satisfies both.
         List<ReadinessBlocker> raised = new ArrayList<>();
@@ -230,7 +230,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
         // Evaluated against the blockers that will be open once this assessment lands: the ones already
         // open from other sources, plus the ones it is about to raise. `everAssessed` is true because
-        // this *is* an assessment — asking the store would report a first-ever inspection as UNKNOWN,
+        // this *is* an assessment - asking the store would report a first-ever inspection as UNKNOWN,
         // so one that passed every item would come back as never inspected.
         List<ReadinessBlocker> openAfter = new ArrayList<>(readiness.findOpenBlockers(room.id()));
         openAfter.addAll(raised);
@@ -310,7 +310,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      * Closes a blocker and re-derives the space's readiness.
      *
      * <p>Resolving the last open critical blocker is what lets a space become READY again, so the
-     * recompute is not an optimisation — it is the second half of the operation.
+     * recompute is not an optimisation - it is the second half of the operation.
      */
     @Transactional
     public ReadinessBlocker resolveBlocker(ReadinessCommands.ResolveBlocker command) {
@@ -411,7 +411,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     }
 
     // =========================================================================================
-    // SpaceReadinessPort — called by the asset register
+    // SpaceReadinessPort - called by the asset register
     // =========================================================================================
 
     /**
@@ -419,7 +419,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      *
      * <p>Keyed on the asset's id as the blocker's {@code sourceReference}, so an asset that recovers
      * closes exactly the blockers it opened and nothing else. An asset that is impaired but already has
-     * an open blocker at the right severity is left alone — re-raising on every save would fill the
+     * an open blocker at the right severity is left alone - re-raising on every save would fill the
      * queue with duplicates of one fault.
      */
     @Override
@@ -471,7 +471,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     }
 
     // =========================================================================================
-    // ExternalBlockerPort — what another module may do to a space's readiness
+    // ExternalBlockerPort - what another module may do to a space's readiness
     // =========================================================================================
 
     /**
@@ -492,7 +492,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         }
         Optional<FacilityRoom> maybeRoom = facilities.findRoom(roomId);
         if (maybeRoom.isEmpty()) {
-            // A caller may legitimately reference a location the estate has no room for — a corridor,
+            // A caller may legitimately reference a location the estate has no room for - a corridor,
             // a car park. Silently doing nothing is correct: there is no space whose readiness could
             // change, and refusing would make the caller's own write fail for a reason it cannot fix.
             return null;
@@ -536,7 +536,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         }
         Instant at = now();
         // One source can hold blockers on more than one space only if the caller reuses a reference
-        // across rooms, which nothing does today — but re-deriving per distinct room rather than per
+        // across rooms, which nothing does today - but re-deriving per distinct room rather than per
         // blocker costs nothing and does not assume it.
         java.util.Set<UUID> touched = new java.util.LinkedHashSet<>();
         for (ReadinessBlocker blocker : open) {
@@ -558,7 +558,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      *
      * <p>Criticality sets the ceiling and status sets how much of it applies: a critical asset that is
      * out of service blocks the space, the same asset merely degraded impairs it. A low-criticality
-     * asset never rises above advisory however broken it is — a failed noticeboard light does not stop
+     * asset never rises above advisory however broken it is - a failed noticeboard light does not stop
      * an examination.
      */
     private static BlockerSeverity severityFor(FacilityAsset asset) {
@@ -597,8 +597,8 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      * returned. They are not: the response comes from {@link #evaluate}, which takes no actor and
      * filters nothing.
      *
-     * <p>A null site code takes {@code requireRequestedSite} down to {@code requireAnySiteScope} —
-     * "you hold at least one site, somewhere" — so the room's own site was never compared to the
+     * <p>A null site code takes {@code requireRequestedSite} down to {@code requireAnySiteScope} -
+     * "you hold at least one site, somewhere" - so the room's own site was never compared to the
      * caller's scopes. An actor scoped only to Kumasi, holding nothing but
      * {@code FACILITIES_READINESS_READ}, could read an Accra room's readiness status, score and
      * blocker summary by pasting a room id. That is the by-id scope skip A0 found in fuel, in a
@@ -635,7 +635,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      * The checklist an assessment is taken against.
      *
      * <p>Explicit id wins. Otherwise the applicable one is resolved from the space's type and the
-     * site's operating mode, and if there is none the assessment still proceeds with no items — a space
+     * site's operating mode, and if there is none the assessment still proceeds with no items - a space
      * with no configured checklist can still carry manual blockers, and refusing the whole operation
      * would make an unconfigured site look broken rather than unconfigured.
      */

@@ -10,13 +10,14 @@ import {
   WorkflowSeverity,
 } from 'modules/fleet/api/enums';
 import { workflowApi } from 'modules/fleet/api/fleetApi';
-import { EvidenceSelect } from 'modules/fleet/components/EvidenceSelect';
+import { EvidenceSelect } from 'shared/components/EvidenceSelect';
 import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { EnumSelect, TextAreaInput, TextInput } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
+import { searchEvidenceChoices } from 'modules/fleet/api/fleetApi';
 
 const twoColumn = 'grid gap-4 sm:grid-cols-2';
 
@@ -26,7 +27,7 @@ interface BaseProps {
   onSaved: () => void;
 }
 
-/* Raise — POST /api/v1/fleet/workflow-items */
+/* Raise - POST /api/v1/fleet/workflow-items */
 export const RaiseWorkflowItemDialog = ({
   open,
   onClose,
@@ -134,7 +135,7 @@ export const RaiseWorkflowItemDialog = ({
           label="Assignee"
           value={form.values.assignee}
           onChange={(value) => form.setValue('assignee', value)}
-          {...form.fieldProps('assignee', 'Optional — leave blank to raise unassigned.')}
+          {...form.fieldProps('assignee', 'Optional - leave blank to raise unassigned.')}
         />
       </div>
       <TextInput
@@ -156,7 +157,7 @@ export const RaiseWorkflowItemDialog = ({
   );
 };
 
-/* Assign — PATCH /api/v1/fleet/workflow-items/{id}/assignment */
+/* Assign - PATCH /api/v1/fleet/workflow-items/{id}/assignment */
 export const AssignWorkflowItemDialog = ({
   open,
   onClose,
@@ -208,7 +209,7 @@ export const AssignWorkflowItemDialog = ({
   );
 };
 
-/* Close — PATCH /api/v1/fleet/workflow-items/{id}/closure */
+/* Close - PATCH /api/v1/fleet/workflow-items/{id}/closure */
 export const CloseWorkflowItemDialog = ({
   open,
   onClose,
@@ -250,6 +251,7 @@ export const CloseWorkflowItemDialog = ({
       <EvidenceSelect
         label="Closure evidence"
         required
+        search={searchEvidenceChoices}
         relatedRecordType={item.relatedRecordType}
         relatedRecordId={item.relatedRecordId}
         value={form.values.closureEvidenceId}
@@ -290,7 +292,7 @@ export const ReasonTransitionDialog = ({
     escalate: {
       title: 'Escalate item',
       submit: 'Escalate',
-      note: 'Manual escalation is privileged — the service refuses it without the approval permission.',
+      note: 'Manual escalation is privileged - the service refuses it without the approval permission.',
     },
     cancel: {
       title: 'Cancel item',
@@ -356,7 +358,7 @@ export const ReasonTransitionDialog = ({
   );
 };
 
-/* Comment — POST /api/v1/fleet/workflow-items/{id}/comments */
+/* Comment - POST /api/v1/fleet/workflow-items/{id}/comments */
 export const AddCommentDialog = ({
   open,
   onClose,

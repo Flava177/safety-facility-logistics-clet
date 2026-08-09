@@ -14,7 +14,7 @@ import org.springframework.data.repository.query.Param;
 /**
  * Spring Data access to {@code facilities.bookings}.
  *
- * <p>Every overlap test is written {@code occupiedFrom < :to and :from < occupiedTo} — the half-open
+ * <p>Every overlap test is written {@code occupiedFrom < :to and :from < occupiedTo} - the half-open
  * rule, in the same shape as {@code BookingWindow.overlaps} and the {@code tstzrange(..., '[)')} in
  * the exclusion constraint. Three expressions of one rule, and they must not drift; a test in
  * {@code S159MandatoryScenariosTest} pins the boundary case where a booking ends exactly as the next
@@ -63,12 +63,12 @@ public interface JpaBookingJpaRepository extends JpaRepository<BookingRecord, UU
      * <em>"could not determine data type of parameter $11"</em>.
      *
      * <p>The reason is that {@code :p is null} gives the planner no type to infer from, so the
-     * placeholder's type has to come from the driver — and pgjdbc sends {@code UNSPECIFIED} when
+     * placeholder's type has to come from the driver - and pgjdbc sends {@code UNSPECIFIED} when
      * Hibernate binds a null {@code Instant} as {@code TIMESTAMP_WITH_TIMEZONE}. String, UUID and
      * enum parameters carry a concrete OID and are fine, which is why the same idiom works
      * everywhere else in this file and in {@code JpaWorkOrderRepository}.
      *
-     * <p>So the adapter substitutes wide sentinels for an unbounded search — see
+     * <p>So the adapter substitutes wide sentinels for an unbounded search - see
      * {@code JpaBookingRepositoryAdapter.UNBOUNDED_FROM}. Found by running the service against real
      * PostgreSQL; no unit test can see it, because it is the driver and the planner disagreeing.
      */

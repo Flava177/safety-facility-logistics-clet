@@ -10,7 +10,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * An operational space — room, hall, moot courtroom, plant room (SRS-SFL-S152-01).
+ * An operational space - room, hall, moot courtroom, plant room (SRS-SFL-S152-01).
  *
  * <p>The single most-referenced record in IFIMP. S153 raises faults against it, S159 will book it,
  * S162a zones contain it, S173 stages events in it and the S152-05 dashboard reports on it. Its
@@ -20,7 +20,7 @@ import java.util.UUID;
  *   <li>{@code spaceType} replaces the free-text room type, so "which spaces can host an examination"
  *       is answerable.</li>
  *   <li>{@code bookable} and {@code examinationCapable} default from the type and are overridable per
- *       space — a lecture hall under refurbishment is not bookable, whatever its type says.</li>
+ *       space - a lecture hall under refurbishment is not bookable, whatever its type says.</li>
  *   <li>{@code readinessStatus} is <em>derived</em> from assessments and blockers, and the readiness
  *       module owns it. {@link #applyReadiness} is deliberately the only way in.</li>
  *   <li>{@code readinessLocked} is the examination lock (NFR 23.3): while set, attribute and readiness
@@ -71,7 +71,7 @@ public record FacilityRoom(
         }
     }
 
-    /** Registers a space. Readiness starts {@code UNKNOWN} — nothing has assessed it yet. */
+    /** Registers a space. Readiness starts {@code UNKNOWN} - nothing has assessed it yet. */
     public static FacilityRoom create(UUID id, UUID floorId, String siteCode, String roomCode, String name,
             SpaceType spaceType, Integer capacity, BigDecimal areaSqm, String costCentre, Boolean bookable,
             Boolean examinationCapable, String actorId, Instant at, SourceChannel channel, String correlationId) {
@@ -88,8 +88,8 @@ public record FacilityRoom(
      * Updates the space's own attributes.
      *
      * <p>Refuses while the readiness lock is engaged. Changing a locked hall's capacity mid-examination
-     * is exactly the change NFR 23.3 exists to prevent, and the caller must release the lock — an
-     * audited act — rather than edit around it.
+     * is exactly the change NFR 23.3 exists to prevent, and the caller must release the lock - an
+     * audited act - rather than edit around it.
      */
     public FacilityRoom update(String name, SpaceType spaceType, Integer capacity, BigDecimal areaSqm,
             String costCentre, Boolean bookable, Boolean examinationCapable, String actorId, Instant at,
@@ -163,7 +163,7 @@ public record FacilityRoom(
      * {@code true} when this space can currently be offered for booking.
      *
      * <p>Three conditions, all necessary: it is flagged bookable, its record is operational, and its
-     * readiness is not {@code BLOCKED}. {@code DEGRADED} still books — a hall with one failed projector
+     * readiness is not {@code BLOCKED}. {@code DEGRADED} still books - a hall with one failed projector
      * is usable and refusing it would be worse than warning about it.
      */
     public boolean availableForBooking() {

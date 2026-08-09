@@ -22,8 +22,8 @@ type OutboxEntry = DispatchIntegrationHealth['outbox']['recentDeadLetters'][numb
 /**
  * Scanner and carrier integration health.
  *
- * The dispatch service returns inbound and outbound health in **one** payload — unlike fuel, which
- * splits them across two endpoints — so this screen is a single fetch. Both halves are service-wide
+ * The dispatch service returns inbound and outbound health in **one** payload - unlike fuel, which
+ * splits them across two endpoints - so this screen is a single fetch. Both halves are service-wide
  * rather than site-scoped: the inbox is shared, and a message here may belong to another module.
  *
  * Replay is offered for dead-lettered outbound messages only. Inbound scanner events are idempotent
@@ -69,7 +69,7 @@ const DispatchIntegrationPage = () => {
         header: 'Site',
         width: 110,
         hideBelowLg: true,
-        cell: (row) => row.siteCode ?? '—',
+        cell: (row) => row.siteCode ?? '-',
       },
       {
         key: 'received',
@@ -194,7 +194,7 @@ const DispatchIntegrationPage = () => {
                 title={`${inbox.rejectedMessages} inbound messages were rejected`}
               >
                 A rejected message failed signature verification or schema validation and was not
-                applied. The sending system has to correct and re-send it — there is no replay for
+                applied. The sending system has to correct and re-send it - there is no replay for
                 inbound.
               </Alert>
             )}
@@ -273,7 +273,7 @@ const DispatchIntegrationPage = () => {
               <div className="px-5 pt-2 pb-4">
                 <p className="text-theme-xs text-gray-600">
                   Checked {formatDateTime(inbox?.checkedAt)}. The inbox is shared across the service
-                  and is not filtered to dispatch or to a site — a message here may belong to another
+                  and is not filtered to dispatch or to a site - a message here may belong to another
                   module.
                 </p>
               </div>
@@ -286,7 +286,7 @@ const DispatchIntegrationPage = () => {
                   <span className="font-mono text-theme-xs">
                     /integrations/scanners/{'{provider}'}/events
                   </span>
-                  , and are idempotent on their own signature — a provider that re-sends the same
+                  , and are idempotent on their own signature - a provider that re-sends the same
                   event is safe without anyone intervening.
                 </li>
                 <li>
@@ -299,7 +299,7 @@ const DispatchIntegrationPage = () => {
                 <li>
                   <strong>Outbound</strong> publication is what tells the rest of the platform a
                   consignment moved. A dead letter means a downstream system is out of step with what
-                  this module recorded — {humanise('REPLAY').toLowerCase()} is the fix, once the cause
+                  this module recorded - {humanise('REPLAY').toLowerCase()} is the fix, once the cause
                   is dealt with.
                 </li>
               </ul>

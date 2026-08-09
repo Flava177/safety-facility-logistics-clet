@@ -30,14 +30,14 @@ import {
  *
  * S152's estate is Site → Building → Floor → Space, and until now the dashboard had screens for the
  * first, second and fourth. `listFloors`, `getFloor` and `createFloor` were written, exported and
- * called by nothing, and a building row on the site page led nowhere — so the only way to place a
+ * called by nothing, and a building row on the site page led nowhere - so the only way to place a
  * space was to already know a floor id.
  *
  * ## Why floors are a list beside the spaces rather than a page of their own
  *
  * A floor has four fields and no behaviour: a code, a name, a level number and a lifecycle status.
  * Nothing is ever done *to* a floor. What somebody wants from "the second floor" is **what is on
- * it**, so selecting one filters the spaces beside it rather than navigating away — and the building
+ * it**, so selecting one filters the spaces beside it rather than navigating away - and the building
  * stays on screen, which is the context that makes a floor mean anything.
  *
  * ## Level number is nullable and signed, and the sort has to survive both
@@ -58,7 +58,7 @@ const BuildingDetailPage = () => {
 
   /*
     Scoped to the building when no floor is chosen, so the page opens on everything in it rather than
-    on nothing. `floorId` narrows within that — both are server-side filters, because a client
+    on nothing. `floorId` narrows within that - both are server-side filters, because a client
     filtering a page of fifty rooms would be filtering a page rather than the register.
   */
   const spaces = useApiQuery(

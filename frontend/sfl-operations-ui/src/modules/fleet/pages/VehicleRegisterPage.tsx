@@ -18,13 +18,14 @@ import { defaultPageSize } from 'shared/api/config';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
-import FilterBar from 'shared/components/FilterBar';
+import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
+import SearchInput from 'shared/components/SearchInput';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { EnumSelect } from 'shared/components/fields';
 import { formatOdometer } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -53,7 +54,7 @@ const emptyFilters: Filters = {
 /**
  * The vehicle register.
  *
- * Filtering, sorting and paging all run server-side — the service owns site scoping, so a
+ * Filtering, sorting and paging all run server-side - the service owns site scoping, so a
  * client-side filter over one page would quietly show the wrong denominator.
  */
 const VehicleRegisterPage = () => {
@@ -167,7 +168,26 @@ const VehicleRegisterPage = () => {
     [],
   );
 
-  const filtersActive = JSON.stringify(filters) !== JSON.stringify(emptyFilters);
+  /*
+    Seven controls, six of them dropdowns, and a closed dropdown says nothing. This register is
+    where that costs the most: filtered to a category and a service status, the table can be two
+    rows and look like a broken query. The chips say which two constraints did it.
+  */
+  const clearFilter = (key: keyof Filters) => () => setFilter(key, emptyFilters[key]);
+  const chip = (key: keyof Filters, label: string, value: string): ActiveFilter[] =>
+    filters[key] === emptyFilters[key]
+      ? []
+      : [{ key, label, value, onClear: clearFilter(key) }];
+
+  const activeFilters: ActiveFilter[] = [
+    ...chip('siteCode', 'Site', filters.siteCode === '' ? 'All sites' : filters.siteCode),
+    ...chip('registrationNumber', 'Registration', filters.registrationNumber),
+    ...chip('status', 'Lifecycle', humanise(filters.status)),
+    ...chip('serviceStatus', 'Service', humanise(filters.serviceStatus)),
+    ...chip('availability', 'Availability', humanise(filters.availability)),
+    ...chip('category', 'Category', humanise(filters.category)),
+    ...chip('responsibleUnit', 'Unit', filters.responsibleUnit),
+  ];
 
   return (
     <div>
@@ -192,16 +212,17 @@ const VehicleRegisterPage = () => {
       />
 
       <SectionCard flush>
-        <FilterBar onReset={resetFilters} resetDisabled={!filtersActive}>
+        <FilterBar onReset={resetFilters} active={activeFilters}>
           <SiteSelect
             value={filters.siteCode}
             onChange={(value) => setFilter('siteCode', value)}
             allowEmpty
           />
-          <TextInput
+          <SearchInput
             label="Registration number"
             value={filters.registrationNumber}
             onChange={(value) => setFilter('registrationNumber', value)}
+            placeholder="GT-1234-24"
           />
           <EnumSelect
             label="Lifecycle"
@@ -231,7 +252,7 @@ const VehicleRegisterPage = () => {
             onChange={(value) => setFilter('category', value)}
             allowEmpty
           />
-          <TextInput
+          <SearchInput
             label="Responsible unit"
             value={filters.responsibleUnit}
             onChange={(value) => setFilter('responsibleUnit', value)}

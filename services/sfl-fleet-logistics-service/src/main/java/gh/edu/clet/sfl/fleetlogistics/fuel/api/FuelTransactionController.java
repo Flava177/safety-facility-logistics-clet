@@ -66,7 +66,7 @@ public class FuelTransactionController {
         return ApiResponse.ok(service.reconciliations(id,actors.resolve(h)));
     }
 
-    /** The transaction's audit trail — its own slice of the hash-chained log. */
+    /** The transaction's audit trail - its own slice of the hash-chained log. */
     @GetMapping("/{id}/history") public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id,HttpServletRequest h){
         return ApiResponse.ok(service.history("FuelTransaction",id,actors.resolve(h)));
     }
@@ -75,8 +75,8 @@ public class FuelTransactionController {
 
     @PostMapping("/{id}/void") public ApiResponse<FuelTransaction> voidTransaction(@PathVariable UUID id,@Valid @RequestBody ReasonRequest r,HttpServletRequest h){return ApiResponse.ok(service.voidTransaction(id,r.reason(),actors.resolve(h),actors.resolveSourceChannel(h)));}
 
-    FuelApplicationService.CaptureFuel command(TransactionRequest r,HttpServletRequest h){return new FuelApplicationService.CaptureFuel(r.siteCode(),r.providerTransactionId(),r.sourceSystem(),r.vehicleId(),r.driverId(),r.tripId(),r.occurredAt(),r.vendorReference(),r.stationReference(),r.fuelProduct(),r.quantity(),r.quantityUnit(),r.unitPrice(),r.totalCost(),r.currency(),r.cardReference(),r.odometerReading(),r.receiptEvidenceId(),r.comments(),actors.resolveIdempotencyKey(h),actors.resolve(h),actors.resolveSourceChannel(h));}
+    FuelApplicationService.CaptureFuel command(TransactionRequest r,HttpServletRequest h){return new FuelApplicationService.CaptureFuel(r.siteCode(),r.providerTransactionId(),r.sourceSystem(),r.vehicleId(),r.driverId(),r.tripId(),r.occurredAt(),r.vendorReference(),r.stationReference(),r.fuelProduct(),r.quantity(),r.quantityUnit(),r.unitPrice(),r.totalCost(),r.currency(),r.cardReference(),r.odometerReading(),r.receiptEvidenceId(),r.pumpEvidenceId(),r.comments(),actors.resolveIdempotencyKey(h),actors.resolve(h),actors.resolveSourceChannel(h));}
 
-    public record TransactionRequest(@NotBlank String siteCode,String providerTransactionId,@NotBlank String sourceSystem,@NotNull UUID vehicleId,@NotNull UUID driverId,UUID tripId,@NotNull Instant occurredAt,@NotBlank String vendorReference,String stationReference,@NotBlank String fuelProduct,@NotNull @Positive BigDecimal quantity,@NotBlank String quantityUnit,@NotNull @PositiveOrZero BigDecimal unitPrice,BigDecimal totalCost,@NotBlank String currency,String cardReference,@PositiveOrZero long odometerReading,UUID receiptEvidenceId,String comments){}
+    public record TransactionRequest(@NotBlank String siteCode,String providerTransactionId,@NotBlank String sourceSystem,@NotNull UUID vehicleId,@NotNull UUID driverId,UUID tripId,@NotNull Instant occurredAt,@NotBlank String vendorReference,String stationReference,@NotBlank String fuelProduct,@NotNull @Positive BigDecimal quantity,@NotBlank String quantityUnit,@NotNull @PositiveOrZero BigDecimal unitPrice,BigDecimal totalCost,@NotBlank String currency,String cardReference,@PositiveOrZero long odometerReading,UUID receiptEvidenceId,UUID pumpEvidenceId,String comments){}
     public record ReasonRequest(@NotBlank String reason){}
 }

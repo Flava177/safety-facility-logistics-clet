@@ -11,19 +11,19 @@ import java.util.Set;
  * Role to fleet-permission mapping for the SRS S166 user classes.
  *
  * <p>{@code SiteScopedPrincipal} carries roles and site scopes but no permissions, so permissions are
- * derived here rather than read from a token claim. Keeping the derivation in the fleet feature — not in
- * {@code sfl-service-common} — means no fleet business rule leaks into the shared library, and the matrix
+ * derived here rather than read from a token claim. Keeping the derivation in the fleet feature - not in
+ * {@code sfl-service-common} - means no fleet business rule leaks into the shared library, and the matrix
  * can be replaced by real token claims later without touching call sites (gap report C-07).
  *
  * <p>The SRS user classes map to roles as follows:
  * <ul>
- *   <li>Fleet or Logistics Officer — {@link SflRole#FLEET_LOGISTICS_OFFICER}</li>
- *   <li>Fleet Manager — {@link SflRole#FLEET_MANAGER}</li>
- *   <li>Driver / limited mobile user — {@link SflRole#FLEET_DRIVER}</li>
- *   <li>Auditor — {@link SflRole#AUDITOR}; Compliance Officer — {@link SflRole#COMPLIANCE_OFFICER}</li>
- *   <li>System Administrator — {@link SflRole#SFL_ADMIN}, {@link SflRole#DTI_ADMIN}</li>
- *   <li>Read-only management/reporting — {@link SflRole#FLEET_REPORTING_VIEWER}, {@link SflRole#COMMAND_ROLE}</li>
- *   <li>Service integration principal — {@link SflRole#SERVICE_INTEGRATION}, {@link SflRole#INTEGRATION_ENGINEER}</li>
+ *   <li>Fleet or Logistics Officer - {@link SflRole#FLEET_LOGISTICS_OFFICER}</li>
+ *   <li>Fleet Manager - {@link SflRole#FLEET_MANAGER}</li>
+ *   <li>Driver / limited mobile user - {@link SflRole#FLEET_DRIVER}</li>
+ *   <li>Auditor - {@link SflRole#AUDITOR}; Compliance Officer - {@link SflRole#COMPLIANCE_OFFICER}</li>
+ *   <li>System Administrator - {@link SflRole#SFL_ADMIN}, {@link SflRole#DTI_ADMIN}</li>
+ *   <li>Read-only management/reporting - {@link SflRole#FLEET_REPORTING_VIEWER}, {@link SflRole#COMMAND_ROLE}</li>
+ *   <li>Service integration principal - {@link SflRole#SERVICE_INTEGRATION}, {@link SflRole#INTEGRATION_ENGINEER}</li>
  * </ul>
  */
 public final class FleetPermissionMatrix {
@@ -129,7 +129,7 @@ public final class FleetPermissionMatrix {
           Driver / limited mobile user: sees the work assigned to them and records inspections.
 
           FLEET_TRIP_ACKNOWLEDGE is their only write against the trip register, and it is narrow by
-          construction — it answers for one trip, the one assigned to them, and the record check in
+          construction - it answers for one trip, the one assigned to them, and the record check in
           TripApplicationService.acknowledge enforces that. Note what is still absent: no
           FLEET_TRIP_MANAGE, so a driver cannot create a trip, start one, hold one or close one; no
           FLEET_TRIP_ASSIGN, so they cannot assign a trip to themselves or anybody else; no

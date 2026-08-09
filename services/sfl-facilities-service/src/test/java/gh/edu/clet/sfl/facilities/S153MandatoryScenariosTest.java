@@ -74,7 +74,7 @@ import org.junit.jupiter.api.Test;
  * against in-memory adapters so a failure points at a rule rather than at a mapping; the
  * Testcontainers test covers persistence and the V9 migration.
  *
- * <p>The clock is mutable — {@link #clock} is reassigned rather than fixed — because half of S153 is
+ * <p>The clock is mutable - {@link #clock} is reassigned rather than fixed - because half of S153 is
  * about time passing. A fixed clock cannot express "four hours later the sweep runs", which is the
  * single most important behaviour in this module.
  */
@@ -393,7 +393,7 @@ class S153MandatoryScenariosTest {
      * <h2>Why these tests exist</h2>
      *
      * <p>Both sweeps were written for the scheduler, where the trust boundary is implicit, and both
-     * were later given an HTTP verb — {@code POST /maintenance/schedules/runs} and
+     * were later given an HTTP verb - {@code POST /maintenance/schedules/runs} and
      * {@code POST /maintenance/escalations/runs}. Neither gained a check. So any actor who could
      * obtain a token could raise preventive work orders across every site, and escalate every overdue
      * fault and work order across every site, attributed to themselves, paging the maintenance
@@ -426,7 +426,7 @@ class S153MandatoryScenariosTest {
          * <p>The escalation sweep was first gated on {@code FACILITIES_WORK_ORDER_UPDATE}, on the
          * reasoning that escalating moves a work order's state. This test failed: a technician holds
          * Update, because it is what lets them progress the job in front of them. That is exactly the
-         * distinction that matters — doing the work is not the authority to declare, estate-wide, that
+         * distinction that matters - doing the work is not the authority to declare, estate-wide, that
          * everybody's work is late and to page a supervisor at every site about it. Both sweeps now
          * require {@code FACILITIES_PM_SCHEDULE_MANAGE}, which technicians do not hold.
          */
@@ -455,7 +455,7 @@ class S153MandatoryScenariosTest {
 
         @Test
         void a_facilities_manager_may_still_run_both_by_hand() {
-            // The stated purpose of the HTTP endpoints — "what the scheduler does, on demand" — has to
+            // The stated purpose of the HTTP endpoints - "what the scheduler does, on demand" - has to
             // keep working for the role that operates the estate.
             assertThat(preventive.generateDueWorkOrders(manager, TODAY)).isEmpty();
             assertThat(escalation.sweep(manager).total()).isZero();
@@ -490,7 +490,7 @@ class S153MandatoryScenariosTest {
             assertThat(audit.actions()).contains(AuditAction.WORK_ORDER_ESCALATED);
 
             // The half of SRS-SFL-S153-02 that was missing. "Escalates the item AND notifies the
-            // configured role" — the level moving is the first half, and for three passes the
+            // configured role" - the level moving is the first half, and for three passes the
             // assertions stopped there while the event went to an outbox nothing drained.
             WorkOrder escalated = maintenance.findWorkOrder(order.id()).orElseThrow();
             assertThat(notifications.about(escalated.workOrderNumber(),
@@ -498,7 +498,7 @@ class S153MandatoryScenariosTest {
                     .singleElement()
                     .satisfies(sent -> assertThat(sent.context()).containsEntry("escalationLevel", "1"));
 
-            // Work nobody ever started, now past both deadlines, breaches both — and they are two
+            // Work nobody ever started, now past both deadlines, breaches both - and they are two
             // different facts about it, so they are two notifications rather than one merged one.
             assertThat(notifications.about(escalated.workOrderNumber(),
                     NotificationPort.NotificationKind.RESPONSE_OVERDUE)).hasSize(1);
@@ -549,7 +549,7 @@ class S153MandatoryScenariosTest {
 
             clock.advance(Duration.ofHours(1));
 
-            // Someone picked it up, so there is nothing to chase — even though the deadline has passed.
+            // Someone picked it up, so there is nothing to chase - even though the deadline has passed.
             assertThat(escalation.sweep(system).responseBreaches()).isZero();
             assertThat(notifications.sent()).isEmpty();
         }
@@ -776,7 +776,7 @@ class S153MandatoryScenariosTest {
 
             clock.advance(Duration.ofDays(400));
 
-            // Well past a one-year retention, and untouched — which is the whole point of a hold.
+            // Well past a one-year retention, and untouched - which is the whole point of a hold.
             assertThat(disposal.sweep(system)).isZero();
             assertThat(maintenance.findEvidence(attached.id()).orElseThrow().fileReference()).isNotNull();
         }
@@ -1077,7 +1077,7 @@ class S153MandatoryScenariosTest {
                 SourceChannel.WEB));
     }
 
-    /** An assigned, started work order at the given priority — the state closure is attempted from. */
+    /** An assigned, started work order at the given priority - the state closure is attempted from. */
     private WorkOrder readyToClose(FaultPriority priority) {
         WorkOrder order = assign(createWorkOrder(triage(report(priority), priority)), "technician");
         return transition(order, MaintenanceCommands.TransitionWorkOrder.Transition.START, null);
@@ -1101,7 +1101,7 @@ class S153MandatoryScenariosTest {
      * A clock that can be pushed forward.
      *
      * <p>Half of S153 is about time passing, and {@code Clock.fixed} cannot express "four hours later
-     * the sweep runs" — the single most important behaviour in this module. Mutable rather than a
+     * the sweep runs" - the single most important behaviour in this module. Mutable rather than a
      * series of fixed clocks so a test reads as a sequence of events at one service.
      */
     private static final class MutableClock extends Clock {

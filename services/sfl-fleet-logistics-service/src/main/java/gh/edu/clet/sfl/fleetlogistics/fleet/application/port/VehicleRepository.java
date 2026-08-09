@@ -14,7 +14,7 @@ import java.util.UUID;
 
 /**
  * Outbound port for the vehicle register. Owned by the application layer; implemented by the JPA
- * adapter. There is no delete operation — the SRS forbids hard deletion of operational history.
+ * adapter. There is no delete operation - the SRS forbids hard deletion of operational history.
  */
 public interface VehicleRepository {
 

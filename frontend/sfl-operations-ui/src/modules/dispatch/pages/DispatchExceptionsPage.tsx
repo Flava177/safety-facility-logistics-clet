@@ -69,7 +69,7 @@ const DispatchExceptionsPage = () => {
    * Each view is a set of server-side predicates, not a pass over whatever came back.
    *
    * This was gap 2. "Breaching SLA" used to mean the breaches *in the loaded window*, which at a
-   * busy site is a different and much smaller number than the breaches at the site — and the
+   * busy site is a different and much smaller number than the breaches at the site - and the
    * difference only showed up when somebody went looking for a case nobody had seen.
    */
   const viewParams =
@@ -212,7 +212,7 @@ const DispatchExceptionsPage = () => {
           row.dispatchId && exceptionOpen(row) ? (
             <StatusChip value="BLOCKED" label="Manifest" tone="blocked" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {

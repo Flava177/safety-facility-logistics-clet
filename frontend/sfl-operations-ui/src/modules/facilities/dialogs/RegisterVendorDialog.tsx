@@ -16,7 +16,7 @@ interface RegisterVendorDialogProps {
  * Registering a maintenance vendor.
  *
  * `externalVendorId` is the field worth understanding. It carries the procurement system's own
- * identifier for the same company, as a **value rather than a link** — this service does not own
+ * identifier for the same company, as a **value rather than a link** - this service does not own
  * supplier data and must not look like it does. When S153-04's procurement integration is built,
  * this is the seam it plugs into, and until then it is how somebody reconciles the two registers by
  * hand without guessing from company names.
@@ -171,7 +171,7 @@ const RegisterVendorDialog = ({ siteCode, onClose, onSubmit }: RegisterVendorDia
         <Alert variant="info" title="This is a local reference">
           <p className="text-theme-sm">
             Enough to assign work and track a response time. Supplier master data stays in
-            procurement — the ID above is how the two are matched up.
+            procurement - the ID above is how the two are matched up.
           </p>
         </Alert>
       </div>

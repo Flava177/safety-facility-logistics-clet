@@ -20,4 +20,16 @@ interface EvidenceReferenceJpaRepository extends JpaRepository<EvidenceReference
             @Param("siteScopes") List<String> siteScopes,
             @Param("relatedRecordType") String relatedRecordType,
             @Param("relatedRecordId") String relatedRecordId);
+
+    @Query("""
+            select evidence from EvidenceReferenceEntity evidence
+             where evidence.siteCode = :siteCode
+               and lower(evidence.sha256Hash) = lower(:sha256Hash)
+               and (:excludingId is null or evidence.id <> :excludingId)
+             order by evidence.createdAt asc
+            """)
+    List<EvidenceReferenceEntity> findBySha256(
+            @Param("siteCode") String siteCode,
+            @Param("sha256Hash") String sha256Hash,
+            @Param("excludingId") UUID excludingId);
 }

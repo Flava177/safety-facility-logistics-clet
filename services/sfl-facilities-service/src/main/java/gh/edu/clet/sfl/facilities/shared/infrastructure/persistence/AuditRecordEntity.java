@@ -39,7 +39,7 @@ class AuditRecordEntity {
      *
      * <p>jsonb normalises: it reorders object keys and drops insignificant whitespace, so what comes
      * back is not what went in. These fields are inputs to the record hash, so a normalising column
-     * type would make every record replay as tampered — which is exactly what happened the first time
+     * type would make every record replay as tampered - which is exactly what happened the first time
      * this ran against PostgreSQL. See V5 for the same note beside the column definition.
      */
     @Column(name = "before_value")

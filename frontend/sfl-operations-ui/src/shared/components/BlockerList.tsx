@@ -5,7 +5,7 @@ import StatusChip from './StatusChip';
 
 interface BlockerListProps {
   blockers: BlockerResponse[];
-  /** Shown when there is nothing blocking — silence would read as "not checked". */
+  /** Shown when there is nothing blocking - silence would read as "not checked". */
   clearMessage?: string;
 }
 
@@ -34,7 +34,7 @@ const BlockerList = ({
           variant="error"
           title={`${blocking.length} blocking ${
             blocking.length === 1 ? 'issue' : 'issues'
-          } — the service will refuse this`}
+          } - the service will refuse this`}
         >
           <ul className="mt-1.5 space-y-2">
             {blocking.map((blocker) => (

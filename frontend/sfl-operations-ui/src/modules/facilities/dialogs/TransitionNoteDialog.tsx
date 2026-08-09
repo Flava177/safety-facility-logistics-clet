@@ -22,7 +22,7 @@ interface TransitionNoteDialogProps {
  *
  * One dialog rather than three, because the three differ in nothing but their wording and their
  * endpoint. Three near-identical files would be three places to forget the version check, and the
- * consequence text — which is the part that actually helps somebody — would drift apart between
+ * consequence text - which is the part that actually helps somebody - would drift apart between
  * them.
  *
  * Every one of these notes is mandatory in the service. A hold with no reason, a reopen with no

@@ -28,7 +28,8 @@ final class FleetHttpStatusMapper {
 
             case FLEET_INTEGRATION_INVALID_SIGNATURE -> HttpStatus.UNAUTHORIZED;
 
-            case FLEET_RECORD_NOT_FOUND -> HttpStatus.NOT_FOUND;
+            case FLEET_RECORD_NOT_FOUND,
+                 FLEET_EVIDENCE_CONTENT_MISSING -> HttpStatus.NOT_FOUND;
 
             case FLEET_DUPLICATE_IDENTIFIER,
                  FLEET_RECORD_VERSION_CONFLICT,
@@ -38,6 +39,10 @@ final class FleetHttpStatusMapper {
                  FLEET_AUDIT_CHAIN_FAILURE,
                  FLEET_IDEMPOTENCY_KEY_CONFLICT,
                  FUEL_POLICY_PERIOD_OVERLAP,
+                 // A conflict with what the record already is, not a malformed request: the version
+                 // sent is a perfectly good number that happens to be one already in use for a
+                 // different rule set.
+                 FUEL_POLICY_VERSION_NOT_ADVANCED,
                  FUEL_IMPORT_ALREADY_PROCESSED -> HttpStatus.CONFLICT;
 
             case FLEET_MISSING_SITE_SCOPE,
@@ -48,7 +53,10 @@ final class FleetHttpStatusMapper {
                  FLEET_DRIVER_INELIGIBLE,
                  FLEET_ODOMETER_REGRESSION,
                  FLEET_ARCHIVED_RECORD_IMMUTABLE,
-                 FLEET_IDEMPOTENCY_KEY_REQUIRED -> HttpStatus.UNPROCESSABLE_ENTITY;
+                 FLEET_IDEMPOTENCY_KEY_REQUIRED,
+                 // A refused upload is a rejected payload, not a malformed request: the multipart
+                 // parsed fine and the client is told exactly which rule the file broke.
+                 FLEET_UPLOAD_REJECTED -> HttpStatus.UNPROCESSABLE_ENTITY;
 
             case FLEET_INTEGRATION_NOT_CONFIGURED -> HttpStatus.SERVICE_UNAVAILABLE;
 

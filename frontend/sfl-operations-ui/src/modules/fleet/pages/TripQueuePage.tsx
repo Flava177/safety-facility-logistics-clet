@@ -80,12 +80,26 @@ const TripQueuePage = () => {
       {
         key: 'tripNumber',
         header: 'Trip',
-        width: 200,
+        width: 150,
+        cell: (row) => <CellStack primary={row.tripNumber} secondary={row.purpose} />,
+      },
+      {
+        /*
+          The route gets a column of its own.
+
+          It was the secondary line under the trip number, sharing 200px with it, so on any realistic
+          place name - "Accra HQ Motor Pool", "Regional Examination Centre" - it truncated to the
+          point of being unreadable, and it was the first thing anyone scanning this register looks
+          for. Origin over destination rather than side by side: two short lines survive a narrow
+          column where one long one does not.
+        */
+        key: 'route',
+        header: 'Route',
+        width: 240,
         cell: (row) => (
-          <CellStack primary={row.tripNumber} secondary={`${row.origin} → ${row.destination}`} />
+          <CellStack primary={row.origin || 'Not set'} secondary={`to ${row.destination || 'not set'}`} />
         ),
       },
-      { key: 'purpose', header: 'Purpose', width: 200, cell: (row) => row.purpose },
       {
         key: 'plannedStart',
         header: 'Planned window',
@@ -108,7 +122,7 @@ const TripQueuePage = () => {
         /*
           A separate column from Status, not a variant of it. A dispatcher's question the morning a
           vehicle is due out is "which of these has the driver not answered for", and folding the
-          answer into the status chip would make that question unanswerable at a glance — an assigned
+          answer into the status chip would make that question unanswerable at a glance - an assigned
           trip and a confirmed one are both ASSIGNED.
         */
         key: 'acknowledgementState',
@@ -134,7 +148,7 @@ const TripQueuePage = () => {
               }
             />
           ) : (
-            <span className="text-gray-400">—</span>
+            <span className="text-gray-400">-</span>
           ),
       },
       {
@@ -211,7 +225,7 @@ const TripQueuePage = () => {
 
         {/*
           Why the list is shorter than the site's, when it is. The server sends this on a narrowed
-          list — a driver sees their own trips — and sends nothing on an unnarrowed one. Showing it is
+          list - a driver sees their own trips - and sends nothing on an unnarrowed one. Showing it is
           what stops a driver reading their own list as "the queue is nearly empty today", and what
           tells an unbound driver why theirs is empty rather than leaving them at a blank screen.
         */}

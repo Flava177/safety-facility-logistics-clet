@@ -4,7 +4,7 @@ package gh.edu.clet.sfl.facilities.shared.domain.audit;
  * The outcome of replaying a segment of the audit chain (SRS-SFL-S152-03).
  *
  * <p>A broken result names the record it broke at and what was expected against what was found, so
- * the "Audit Chain Failure — escalate to compliance and security" alert carries something an
+ * the "Audit Chain Failure - escalate to compliance and security" alert carries something an
  * investigator can act on rather than a bare boolean.
  */
 public record AuditChainVerification(

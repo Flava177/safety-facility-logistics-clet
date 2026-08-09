@@ -10,7 +10,7 @@ import type { NotificationChannel } from 'modules/emergency/api/dto';
  */
 
 /**
- * Elapsed time from the send command to the last gateway hand-off — "1.2 s", "840 ms".
+ * Elapsed time from the send command to the last gateway hand-off - "1.2 s", "840 ms".
  *
  * Milliseconds below a second, one decimal above it. The unit changes because the figure is read
  * against a target measured in seconds: "1240 ms" makes an operator do arithmetic to answer a
@@ -18,7 +18,7 @@ import type { NotificationChannel } from 'modules/emergency/api/dto';
  */
 export const formatElapsed = (millis: number | null | undefined): string => {
   if (millis === null || millis === undefined) {
-    return '—';
+    return '-';
   }
   if (millis < 1000) {
     return `${Math.round(millis)} ms`;
@@ -34,7 +34,7 @@ export const formatElapsed = (millis: number | null | undefined): string => {
 
 /** A whole-number percentage, or an em dash when the denominator is zero. */
 export const percentOf = (part: number, whole: number): string =>
-  whole > 0 ? `${Math.round((100 * part) / whole)}%` : '—';
+  whole > 0 ? `${Math.round((100 * part) / whole)}%` : '-';
 
 export const percentValue = (part: number, whole: number): number =>
   whole > 0 ? Math.round((100 * part) / whole) : 0;

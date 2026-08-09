@@ -44,7 +44,7 @@ public class ChainOfCustodyController {
       * Custody handovers.
       *
       * <p>A {@code dispatchId} reads one consignment's chain, which is what the manifest screen
-      * wants. A {@code siteCode} reads across consignments — closing gap 7, which made questions
+      * wants. A {@code siteCode} reads across consignments - closing gap 7, which made questions
       * like "every handover this custodian touched last week" unanswerable without knowing each
       * manifest in advance.
       */

@@ -15,7 +15,7 @@ import org.springframework.context.annotation.Configuration;
  * OpenAPI description for the facilities service.
  *
  * <p>The development actor headers are declared globally rather than on each operation. Every S152
- * endpoint authorises against them, so a reader of the specification — or someone driving Swagger UI —
+ * endpoint authorises against them, so a reader of the specification - or someone driving Swagger UI -
  * needs them on the first call they make, and repeating them on sixty operations is how one gets
  * missed.
  */
@@ -26,7 +26,7 @@ class FacilitiesOpenApiConfiguration {
     OpenAPI facilitiesOpenApi() {
         return new OpenAPI()
                 .info(new Info()
-                        .title("SFL Facilities Service — S152 CAFM/IWMS")
+                        .title("SFL Facilities Service - S152 CAFM/IWMS")
                         .version("v1")
                         .description("""
                                 Computer-Aided Facility Management / IWMS (SRS-SFL-S152-01..05) for the CLET \

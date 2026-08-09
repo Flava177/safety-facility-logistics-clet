@@ -14,7 +14,7 @@ import java.util.UUID;
  * <p>Deliberately distinct from S152 {@code FacilityAsset}. An asset is fixed plant whose condition
  * feeds a space readiness score; a resource is portable, and its scarcity is the point. The same
  * projector can be an asset while bolted to a ceiling and a resource once it is on a trolley, and
- * nothing here tries to reconcile the two registers — {@link #assetId} carries the link where one
+ * nothing here tries to reconcile the two registers - {@link #assetId} carries the link where one
  * exists, as a value rather than a foreign key.
  *
  * @param quantity how many of this resource exist. One row for a set of forty chairs, not forty rows.
@@ -92,7 +92,7 @@ public record BookableResource(
      * one is two facts that can disagree, and the disagreement would be resolved differently by the
      * domain and by the database's exclusion constraint.
      *
-     * <p>This is the boundary between what the database guarantees and what the application checks —
+     * <p>This is the boundary between what the database guarantees and what the application checks -
      * see {@link ResourceAllocation} for why the two are enforced in different places.
      */
     public boolean isExclusive() {

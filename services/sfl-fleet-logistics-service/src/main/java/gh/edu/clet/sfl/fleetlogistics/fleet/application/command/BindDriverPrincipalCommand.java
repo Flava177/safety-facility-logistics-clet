@@ -5,7 +5,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import java.util.UUID;
 
 /**
- * Links a driver profile to the identity that signs in as it — or unlinks it, with a null subject.
+ * Links a driver profile to the identity that signs in as it - or unlinks it, with a null subject.
  *
  * <p>Its own command rather than a field on the update path, because it is a different decision with a
  * different consequence. Correcting a licence class changes what the driver may drive; changing this

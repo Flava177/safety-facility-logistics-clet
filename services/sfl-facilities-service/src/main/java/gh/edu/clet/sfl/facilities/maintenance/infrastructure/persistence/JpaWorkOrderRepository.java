@@ -58,7 +58,7 @@ public interface JpaWorkOrderRepository extends JpaRepository<WorkOrderRecord, U
      * Work nobody has started, past the response deadline, not yet raised.
      *
      * <p>Started rather than assigned: assigning a job to somebody who never opens it is exactly what
-     * this deadline exists to catch. {@code responseEscalatedAt is null} is the idempotence guard —
+     * this deadline exists to catch. {@code responseEscalatedAt is null} is the idempotence guard -
      * the sweep is at-least-once, and re-raising every fifteen minutes is how an escalation gets muted.
      */
     @Query("""

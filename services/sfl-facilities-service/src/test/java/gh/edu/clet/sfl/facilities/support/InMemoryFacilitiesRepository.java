@@ -25,7 +25,7 @@ import java.util.UUID;
  * An in-memory estate, for exercising the application services without a database.
  *
  * <p>The workflow tests are about authorisation, idempotency, duplicate detection and readiness
- * recomputation — decisions that live above persistence. Running them against maps keeps them fast
+ * recomputation - decisions that live above persistence. Running them against maps keeps them fast
  * and keeps a failure pointing at the rule rather than at a mapping. Persistence itself is covered by
  * the Testcontainers integration test.
  */

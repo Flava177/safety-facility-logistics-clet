@@ -24,7 +24,7 @@ public class FuelAnomalyController {
      * standing were all applied by the client to whatever window came back. That made a "breaching
      * SLA" view mean "breaches among the first hundred cases", which is exactly the queue an
      * operator must not be given. {@code openOnly} and {@code dueBefore} together are what make the
-     * SLA view a real query — {@code dueBefore} existed on the repository and was reachable only
+     * SLA view a real query - {@code dueBefore} existed on the repository and was reachable only
      * from the sweep scheduler.
      */
     @GetMapping public ApiResponse<FuelPageResponse<FuelAnomalyCase>> list(

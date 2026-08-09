@@ -8,7 +8,7 @@ import java.util.UUID;
  * One append-only audit record (SRS-SFL-S152-03).
  *
  * <p>Carries everything the requirement names: actor, timestamp, before/after values, source channel
- * and correlation ID — plus the sequence number and hash pair that make the chain replay-verifiable.
+ * and correlation ID - plus the sequence number and hash pair that make the chain replay-verifiable.
  *
  * <p>{@code sequenceNo}, {@code previousHash} and {@code recordHash} are unset at construction and
  * filled by {@link AuditHashChain#seal}, because a record cannot know its own position until the
@@ -46,7 +46,7 @@ public record AuditEvent(
     }
 
     /**
-     * An unsealed record — no position in the chain yet.
+     * An unsealed record - no position in the chain yet.
      *
      * @param siteScope the site the change belongs to, or {@code *} for a platform-wide change
      */

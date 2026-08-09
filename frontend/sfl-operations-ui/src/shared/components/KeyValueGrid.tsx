@@ -15,7 +15,7 @@ interface KeyValueGridProps {
 }
 
 const isBlank = (value: ReactNode) =>
-  value === null || value === undefined || value === '' || value === '—';
+  value === null || value === undefined || value === '' || value === '-';
 
 const columnClasses: Record<2 | 3 | 4, string> = {
   2: 'sm:grid-cols-2',
@@ -38,7 +38,7 @@ const KeyValueGrid = ({ items, columns = 3 }: KeyValueGridProps) => (
               isBlank(item.value) ? 'text-gray-500' : 'text-gray-900',
             )}
           >
-            {isBlank(item.value) ? '—' : item.value}
+            {isBlank(item.value) ? '-' : item.value}
           </span>
           {item.masked && (
             <span className="text-theme-xs font-semibold text-gold-900">(masked)</span>

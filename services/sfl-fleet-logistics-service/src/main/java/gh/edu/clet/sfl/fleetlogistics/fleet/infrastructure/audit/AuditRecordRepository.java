@@ -10,7 +10,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
  * <p>There are deliberately no update or delete query methods; the SRS forbids modification by normal
  * application roles and a database trigger enforces the same rule.
  *
- * <p>Filtered search lives in {@link AuditRecordSearch} rather than in a derived query — the JPQL
+ * <p>Filtered search lives in {@link AuditRecordSearch} rather than in a derived query - the JPQL
  * version could not execute at all against PostgreSQL. See that interface for the detail.
  */
 public interface AuditRecordRepository extends JpaRepository<AuditRecordEntity, UUID>, AuditRecordSearch {

@@ -1,6 +1,7 @@
+import { servesPlatform } from 'shared/platform';
 import { IconName } from 'shared/components/Icon';
 import { ProgrammeCode, SystemCode, entitledTo, entitledToSystem } from './programmes';
-import { permits } from './actorPermissions';
+import { actorIsReviewer, permits, permitsAny } from './actorPermissions';
 import type { SflPermission } from './permissions';
 import { isPersona, PersonaCode } from './personas';
 
@@ -8,12 +9,12 @@ import { isPersona, PersonaCode } from './personas';
  * Dashboard navigation.
  *
  * Only destinations that are built and wired to a service appear here. Modules that do not exist
- * yet are not listed at all — a greyed-out "coming soon" entry costs an operator a click to
+ * yet are not listed at all - a greyed-out "coming soon" entry costs an operator a click to
  * discover nothing, and it makes a working dashboard look half-finished.
  *
  * **Every section declares the programme it belongs to**, and the shell renders only the sections
  * the actor is entitled to. Phase 1 is 13 systems under 4 programme modules delivered as 5
- * services, and those counts do not line up — a programme is a user-facing grouping, a service is
+ * services, and those counts do not line up - a programme is a user-facing grouping, a service is
  * a deployment unit. See `programmes.ts` and ADR 0005.
  *
  * The programme is a property of the **system**, not of the service it happens to ship in. S174 is
@@ -26,13 +27,13 @@ export interface NavItem {
   label: string;
   to: string;
   icon: IconName;
-  /** Matches child routes too — `/fleet/vehicles/42` still highlights "Vehicle register". */
+  /** Matches child routes too - `/fleetvehicle/fleet/vehicles/42` still highlights "Vehicle register". */
   matchPrefix?: string;
   description?: string;
   /**
    * The permission this screen's first read requires, when it is more than the section's system.
    *
-   * **Absent means the system entitlement is the whole requirement**, which is true of most screens —
+   * **Absent means the system entitlement is the whole requirement**, which is true of most screens -
    * a role entitled to S171 can read courier items, manifests and exception cases.
    *
    * It is not true of dashboards. A mailroom officer is entitled to S171 and holds no
@@ -41,6 +42,20 @@ export interface NavItem {
    * not inferred from the name.
    */
   permission?: SflPermission;
+  /**
+   * What makes this screen *this person's job*, as opposed to something they may look at.
+   *
+   * <p>Gating the sidebar on `permission` alone asked "may you read this", and nearly every role may
+   * read nearly everything - so a driver was offered the fleet office's registers, a technician the
+   * whole estate, and every account looked the same. The distinction the services already draw is
+   * finer and it is drawn in verbs: a technician holds `FACILITIES_WORK_ORDER_UPDATE`, a supervisor
+   * holds `FACILITIES_WORK_ORDER_CLOSE`. Naming the verb here is what makes the sidebar say it.
+   *
+   * <p>Any one of them is enough. Omit it for screens where reading genuinely is the work - the
+   * audit and evidence views - and see `actorIsReviewer`, which keeps those visible to the roles
+   * whose whole job is reading.
+   */
+  capability?: SflPermission | SflPermission[];
   /**
    * Show this item only to a given persona.
    *
@@ -61,7 +76,7 @@ export interface NavSection {
   /** Which of the four SFL programmes this section belongs to. Drives what a user sees. */
   programme: ProgrammeCode;
   /**
-   * Which system it belongs to — the finer half of the same decision.
+   * Which system it belongs to - the finer half of the same decision.
    *
    * Programme alone is not enough inside FTLMP, where three systems share one deployable: without
    * this, a mailroom officer sees the fleet register and a driver sees the courier manifests.
@@ -73,7 +88,7 @@ export interface NavSection {
 /**
  * S152 CAFM/IWMS routes.
  *
- * The first IFIMP module in this dashboard, and the platform S153 and S159 will attach to — so these
+ * The first IFIMP module in this dashboard, and the platform S153 and S159 will attach to - so these
  * paths are `/facilities/...` rather than `/cafm/...`: a user is looking at facilities, and which
  * system inside IFIMP serves a screen is not their problem.
  *
@@ -82,103 +97,116 @@ export interface NavSection {
  * so it lives on the space detail screen and on the dashboard drilldown rather than as a third list
  * to cross-reference by hand.
  */
+/**
+ * The routes that exist outside any platform's screens.
+ *
+ * <p>Sign-in has no sidebar, no actor and no system guard, but it still has to live at an address -
+ * and that address is under `/fleetvehicle` because FTLMP is the deployable that serves the bundle.
+ * Kept as a constant rather than the literal it used to be: the route moved once, and the guard that
+ * redirects to it was the one place that had to be found by hand when it did.
+ */
+export const authPaths = {
+  login: '/login',
+};
+
 export const facilitiesPaths = {
   dashboard: '/facilities',
-  sites: '/facilities/sites',
-  siteDetail: (siteId: string) => `/facilities/sites/${siteId}`,
+  sites: '/facilities/estate/sites',
+  siteDetail: (siteId: string) => `/facilities/estate/sites/${siteId}`,
   /*
     Buildings have a detail route and no register. A building is only ever reached from the site that
-    owns it — nobody searches an estate for a building — and a fourth register would be a sidebar
+    owns it - nobody searches an estate for a building - and a fourth register would be a sidebar
     entry whose whole content is "choose a site first".
   */
-  buildingDetail: (buildingId: string) => `/facilities/buildings/${buildingId}`,
-  spaces: '/facilities/spaces',
-  spaceDetail: (roomId: string) => `/facilities/spaces/${roomId}`,
-  assets: '/facilities/assets',
-  assetDetail: (assetId: string) => `/facilities/assets/${assetId}`,
-  zones: '/facilities/zones',
-  devices: '/facilities/devices',
-  assessments: '/facilities/assessments',
-  assessmentDetail: (assessmentId: string) => `/facilities/assessments/${assessmentId}`,
-  checklists: '/facilities/checklists',
-  checklistDetail: (checklistId: string) => `/facilities/checklists/${checklistId}`,
-  audit: '/facilities/audit',
-  configuration: '/facilities/configuration',
+  buildingDetail: (buildingId: string) => `/facilities/estate/buildings/${buildingId}`,
+  spaces: '/facilities/estate/spaces',
+  spaceDetail: (roomId: string) => `/facilities/estate/spaces/${roomId}`,
+  assets: '/facilities/estate/assets',
+  assetDetail: (assetId: string) => `/facilities/estate/assets/${assetId}`,
+  zones: '/facilities/estate/zones',
+  devices: '/facilities/estate/devices',
+  assessments: '/facilities/estate/assessments',
+  assessmentDetail: (assessmentId: string) => `/facilities/estate/assessments/${assessmentId}`,
+  checklists: '/facilities/estate/checklists',
+  checklistDetail: (checklistId: string) => `/facilities/estate/checklists/${checklistId}`,
+  audit: '/facilities/estate/audit',
+  configuration: '/facilities/estate/configuration',
 
-  // S153 CMMS. Same route base as S152 because it is the same service and the same programme; the
-  // system code differs, which is what the route guard reads.
-  faults: '/facilities/faults',
-  faultDetail: (faultId: string) => `/facilities/faults/${faultId}`,
-  workOrders: '/facilities/work-orders',
-  workOrderDetail: (workOrderId: string) => `/facilities/work-orders/${workOrderId}`,
+  // S153 CMMS, under /facilities/maintenance. It shares a service and a programme with S152 and now
+  // says so *and* stays distinguishable: the two used to share one flat level, so nothing in a URL
+  // told you whether a screen was estate registry or maintenance - and the route guard reads a system
+  // code the reader cannot see.
+  faults: '/facilities/maintenance/faults',
+  faultDetail: (faultId: string) => `/facilities/maintenance/faults/${faultId}`,
+  workOrders: '/facilities/maintenance/work-orders',
+  workOrderDetail: (workOrderId: string) => `/facilities/maintenance/work-orders/${workOrderId}`,
   schedules: '/facilities/maintenance/schedules',
   scheduleDetail: (scheduleId: string) => `/facilities/maintenance/schedules/${scheduleId}`,
   vendors: '/facilities/maintenance/vendors',
-  evidenceDetail: (evidenceId: string) => `/facilities/maintenance-evidence/${evidenceId}`,
+  evidenceDetail: (evidenceId: string) => `/facilities/maintenance/evidence/${evidenceId}`,
 };
 
 /**
  * S159 room and resource booking routes.
  *
- * Under `/bookings` rather than `/facilities/bookings`, which is the odd one out among the three
- * IFIMP systems and is deliberate. S152 and S153 are read by the people who run the estate; the
+ * Under `/facilities/bookings`, a sibling of `estate` and `maintenance`. S152 and S153 are read by the people who run the estate; the
  * booking diary is read by everybody who ever needs a room, and most of them do not think of
  * themselves as visiting facilities at all. A path a lecturer can be told over the phone is worth
  * more than a URL that mirrors the service topology.
  *
  * Availability is a destination, not a dialog on the diary. It is where a booking begins, it takes
- * eight fields, and its answer is a page of spaces with reasons — none of which fits in a modal, and
+ * eight fields, and its answer is a page of spaces with reasons - none of which fits in a modal, and
  * all of which somebody will want to link to.
  */
 export const bookingPaths = {
-  diary: '/bookings',
+  diary: '/facilities/bookings',
   /*
     Static siblings of `:bookingId`. React Router ranks a static segment above a dynamic one, so
-    `/bookings/availability` never resolves as a booking whose id is the word "availability" — and
+    `/facilities/bookings/availability` never resolves as a booking whose id is the word "availability" - and
     ids are UUIDs regardless. Keep new static children out of the UUID shape and this stays true.
   */
-  availability: '/bookings/availability',
-  resources: '/bookings/resources',
-  setupTasks: '/bookings/turnaround',
-  bookingDetail: (bookingId: string) => `/bookings/${bookingId}`,
+  availability: '/facilities/bookings/availability',
+  resources: '/facilities/bookings/resources',
+  setupTasks: '/facilities/bookings/turnaround',
+  bookingDetail: (bookingId: string) => `/facilities/bookings/${bookingId}`,
 };
 
 export const fleetPaths = {
-  dashboard: '/fleet',
-  vehicles: '/fleet/vehicles',
-  vehicleDetail: (vehicleId: string) => `/fleet/vehicles/${vehicleId}`,
-  drivers: '/fleet/drivers',
-  driverDetail: (driverId: string) => `/fleet/drivers/${driverId}`,
-  trips: '/fleet/trips',
-  tripDetail: (tripId: string) => `/fleet/trips/${tripId}`,
-  workflow: '/fleet/workflow',
-  workflowDetail: (itemId: string) => `/fleet/workflow/${itemId}`,
-  compliance: '/fleet/compliance',
-  governance: '/fleet/governance',
-  integrations: '/fleet/integrations',
+  dashboard: '/fleetvehicle/fleet',
+  vehicles: '/fleetvehicle/fleet/vehicles',
+  vehicleDetail: (vehicleId: string) => `/fleetvehicle/fleet/vehicles/${vehicleId}`,
+  drivers: '/fleetvehicle/fleet/drivers',
+  driverDetail: (driverId: string) => `/fleetvehicle/fleet/drivers/${driverId}`,
+  trips: '/fleetvehicle/fleet/trips',
+  tripDetail: (tripId: string) => `/fleetvehicle/fleet/trips/${tripId}`,
+  workflow: '/fleetvehicle/fleet/workflow',
+  workflowDetail: (itemId: string) => `/fleetvehicle/fleet/workflow/${itemId}`,
+  compliance: '/fleetvehicle/fleet/compliance',
+  governance: '/fleetvehicle/fleet/governance',
+  integrations: '/fleetvehicle/fleet/integrations',
 };
 
 /**
  * S168 fuel routes.
  *
  * Policy detail has no endpoint of its own (`GET /policies/{id}` does not exist), so the screen
- * selects out of the site's policy list — the route still exists because a policy is a record an
+ * selects out of the site's policy list - the route still exists because a policy is a record an
  * operator links to and comes back to.
  */
 export const fuelPaths = {
-  dashboard: '/fuel',
-  transactions: '/fuel/transactions',
-  transactionDetail: (transactionId: string) => `/fuel/transactions/${transactionId}`,
-  logbooks: '/fuel/logbooks',
-  logbookDetail: (logbookId: string) => `/fuel/logbooks/${logbookId}`,
-  reconciliation: '/fuel/reconciliation',
-  anomalies: '/fuel/anomalies',
-  anomalyDetail: (anomalyId: string) => `/fuel/anomalies/${anomalyId}`,
-  cards: '/fuel/cards',
-  imports: '/fuel/imports',
-  policies: '/fuel/policies',
-  policyDetail: (policyId: string) => `/fuel/policies/${policyId}`,
-  integrations: '/fuel/integrations',
+  dashboard: '/fleetvehicle/fuel',
+  transactions: '/fleetvehicle/fuel/transactions',
+  transactionDetail: (transactionId: string) => `/fleetvehicle/fuel/transactions/${transactionId}`,
+  logbooks: '/fleetvehicle/fuel/logbooks',
+  logbookDetail: (logbookId: string) => `/fleetvehicle/fuel/logbooks/${logbookId}`,
+  reconciliation: '/fleetvehicle/fuel/reconciliation',
+  anomalies: '/fleetvehicle/fuel/anomalies',
+  anomalyDetail: (anomalyId: string) => `/fleetvehicle/fuel/anomalies/${anomalyId}`,
+  cards: '/fleetvehicle/fuel/cards',
+  imports: '/fleetvehicle/fuel/imports',
+  policies: '/fleetvehicle/fuel/policies',
+  policyDetail: (policyId: string) => `/fleetvehicle/fuel/policies/${policyId}`,
+  integrations: '/fleetvehicle/fuel/integrations',
 };
 
 /**
@@ -189,16 +217,16 @@ export const fuelPaths = {
  * than as three more sidebar entries an operator would have to cross-reference by hand.
  */
 export const dispatchPaths = {
-  dashboard: '/dispatch',
-  items: '/dispatch/items',
-  itemDetail: (itemId: string) => `/dispatch/items/${itemId}`,
-  manifests: '/dispatch/manifests',
-  manifestDetail: (manifestId: string) => `/dispatch/manifests/${manifestId}`,
-  inbound: '/dispatch/inbound',
-  exceptions: '/dispatch/exceptions',
-  exceptionDetail: (caseId: string) => `/dispatch/exceptions/${caseId}`,
-  scans: '/dispatch/scans',
-  integrations: '/dispatch/integrations',
+  dashboard: '/fleetvehicle/dispatch',
+  items: '/fleetvehicle/dispatch/items',
+  itemDetail: (itemId: string) => `/fleetvehicle/dispatch/items/${itemId}`,
+  manifests: '/fleetvehicle/dispatch/manifests',
+  manifestDetail: (manifestId: string) => `/fleetvehicle/dispatch/manifests/${manifestId}`,
+  inbound: '/fleetvehicle/dispatch/inbound',
+  exceptions: '/fleetvehicle/dispatch/exceptions',
+  exceptionDetail: (caseId: string) => `/fleetvehicle/dispatch/exceptions/${caseId}`,
+  scans: '/fleetvehicle/dispatch/scans',
+  integrations: '/fleetvehicle/dispatch/integrations',
 };
 
 /**
@@ -206,26 +234,26 @@ export const dispatchPaths = {
  *
  * Break-glass is a destination rather than a mode on the compose dialog. It is a different
  * authorisation, it creates a different obligation, and in a declared emergency it has to be one
- * click from anywhere — a screen that is both a warning and the shortest path is what that needs.
+ * click from anywhere - a screen that is both a warning and the shortest path is what that needs.
  *
  * Templates and scenarios share a screen, and so do audience groups and recipient zones: each pair
  * answers one question between them and is chosen together on every activation. Only the template
  * has a detail route, because `GET /templates/{id}` is the only detail endpoint this service has.
  */
 export const emergencyPaths = {
-  dashboard: '/emergency',
-  activations: '/emergency/activations',
-  activationDetail: (activationId: string) => `/emergency/activations/${activationId}`,
-  breakGlass: '/emergency/break-glass',
-  templates: '/emergency/templates',
-  templateDetail: (templateId: string) => `/emergency/templates/${templateId}`,
-  audiences: '/emergency/audiences',
-  drills: '/emergency/drills',
-  integrations: '/emergency/integrations',
+  dashboard: '/safetysecurity/emergency',
+  activations: '/safetysecurity/emergency/activations',
+  activationDetail: (activationId: string) => `/safetysecurity/emergency/activations/${activationId}`,
+  breakGlass: '/safetysecurity/emergency/break-glass',
+  templates: '/safetysecurity/emergency/templates',
+  templateDetail: (templateId: string) => `/safetysecurity/emergency/templates/${templateId}`,
+  audiences: '/safetysecurity/emergency/audiences',
+  drills: '/safetysecurity/emergency/drills',
+  integrations: '/safetysecurity/emergency/integrations',
 };
 
 /**
- * Personal landings — the "what do I have to do today" views.
+ * Personal landings - the "what do I have to do today" views.
  *
  * Under `/me/` rather than inside a system's routes because they cross systems: a driver's day is
  * S166 assignments and an S168 logbook, and filing either under the other would be arbitrary. The
@@ -246,7 +274,7 @@ export const navSections: NavSection[] = [
   //
   // First in the list on purpose. `landingPath()` returns the first item of the first entitled
   // section, so putting these ahead of the operator sections is what makes a driver open on their
-  // own day rather than on the fleet dashboard — with no change to the router or the shell.
+  // own day rather than on the fleet dashboard - with no change to the router or the shell.
   //
   // Each is `persona`-gated, so an operator never sees them: the sections below are unchanged for
   // everybody who was already served.
@@ -346,6 +374,7 @@ export const navSections: NavSection[] = [
         description: 'Readiness, blockers and examination risk',
         // Enforced by FacilityDashboardService.
         permission: 'FACILITIES_DASHBOARD_READ',
+        capability: 'FACILITIES_DASHBOARD_DRILLDOWN',
       },
       {
         label: 'Readiness assessments',
@@ -355,6 +384,7 @@ export const navSections: NavSection[] = [
         description: 'Inspect a space against its checklist',
         // Enforced by ReadinessApplicationService.assessments.
         permission: 'FACILITIES_READINESS_READ',
+        capability: 'FACILITIES_READINESS_ASSESS',
       },
     ],
   },
@@ -375,6 +405,17 @@ export const navSections: NavSection[] = [
         description: 'Reported problems, triage and SLA',
         // Enforced by FacilityFaultService. A requester holds this and sees only their own.
         permission: 'FACILITIES_FAULT_READ',
+        /*
+          Triage *or* report, and the second one was missing.
+
+          Gating on triage alone hid this screen from `IFIMP_TECHNICIAN`, which holds
+          FACILITIES_FAULT_REPORT and not FACILITIES_FAULT_TRIAGE - so a technician could raise a
+          fault and had nowhere in the dashboard to raise it. FACILITIES_FAULT_REPORT was, before
+          this, a capability no navigation item asked for at all: three roles hold it and none of
+          them was offered a fault screen. Reporting one is doing something here, which is the test
+          this list is supposed to apply.
+        */
+        capability: ['FACILITIES_FAULT_TRIAGE', 'FACILITIES_FAULT_REPORT'],
       },
       {
         label: 'Work orders',
@@ -384,6 +425,11 @@ export const navSections: NavSection[] = [
         description: 'The queue, its assignees and what is overdue',
         // Enforced by WorkOrderApplicationService, which also narrows a vendor to their own.
         permission: 'FACILITIES_WORK_ORDER_READ',
+        capability: [
+          'FACILITIES_WORK_ORDER_ASSIGN',
+          'FACILITIES_WORK_ORDER_CLOSE',
+          'FACILITIES_WORK_ORDER_CREATE',
+        ],
       },
       {
         label: 'Preventive schedules',
@@ -392,6 +438,7 @@ export const navSections: NavSection[] = [
         matchPrefix: facilitiesPaths.schedules,
         description: 'Planned servicing, and what it has raised',
         permission: 'FACILITIES_PM_SCHEDULE_READ',
+        capability: 'FACILITIES_PM_SCHEDULE_MANAGE',
       },
       {
         label: 'Vendors',
@@ -399,6 +446,7 @@ export const navSections: NavSection[] = [
         icon: 'users',
         description: 'Contractors, contracts and response times',
         permission: 'FACILITIES_VENDOR_READ',
+        capability: 'FACILITIES_VENDOR_MANAGE',
       },
     ],
   },
@@ -415,11 +463,15 @@ export const navSections: NavSection[] = [
         label: 'Booking diary',
         to: bookingPaths.diary,
         icon: 'calendar',
-        // Not `matchPrefix`: the diary is the index of `/bookings`, and a prefix match would keep it
+        // Not `matchPrefix`: the diary is the index of `/facilities/bookings`, and a prefix match would keep it
         // highlighted while the operator is on turnaround or the resource register.
         description: 'What is booked, and what the estate thinks of it',
         // Enforced by BookingApplicationService.search. A requester holds this and sees only their own.
         permission: 'FACILITIES_BOOKING_READ',
+        capability: [
+          'FACILITIES_BOOKING_APPROVE',
+          'FACILITIES_BOOKING_REQUEST',
+        ],
       },
       {
         label: 'Find a space',
@@ -429,13 +481,14 @@ export const navSections: NavSection[] = [
         // The availability endpoints are read with BOOKING_READ; the request that follows needs more,
         // and the page hides the control rather than the screen.
         permission: 'FACILITIES_BOOKING_READ',
+        capability: 'FACILITIES_BOOKING_REQUEST',
       },
       {
         label: 'Room turnaround',
         to: bookingPaths.setupTasks,
         icon: 'clipboard',
         description: 'What has to happen to a room before its next booking',
-        // BOOKING_READ, not SETUP_TASK_MANAGE — read off `BookingSetupService.queue`, which gates the
+        // BOOKING_READ, not SETUP_TASK_MANAGE - read off `BookingSetupService.queue`, which gates the
         // queue on reading bookings and reserves SETUP_TASK_MANAGE for raising and resolving a task.
         // Gating the screen on the write permission would hide the queue from everybody who can only
         // look at it, which is most of the people who need to.
@@ -447,6 +500,7 @@ export const navSections: NavSection[] = [
         icon: 'package',
         description: 'Projectors, furniture and what else can be booked',
         permission: 'FACILITIES_RESOURCE_READ',
+        capability: 'FACILITIES_RESOURCE_MANAGE',
       },
     ],
   },
@@ -462,6 +516,7 @@ export const navSections: NavSection[] = [
         matchPrefix: facilitiesPaths.sites,
         description: 'Centres, and the operating mode each is in',
         permission: 'FACILITIES_SITE_READ',
+        capability: 'FACILITIES_SITE_MANAGE',
       },
       {
         label: 'Spaces',
@@ -470,6 +525,7 @@ export const navSections: NavSection[] = [
         matchPrefix: facilitiesPaths.spaces,
         description: 'Rooms, halls and courtrooms with their readiness',
         permission: 'FACILITIES_SPACE_READ',
+        capability: 'FACILITIES_SPACE_MANAGE',
       },
       {
         label: 'Facility assets',
@@ -478,6 +534,7 @@ export const navSections: NavSection[] = [
         matchPrefix: facilitiesPaths.assets,
         description: 'Fixed plant, its condition and what it serves',
         permission: 'FACILITIES_ASSET_READ',
+        capability: 'FACILITIES_ASSET_MANAGE',
       },
       {
         label: 'Zones',
@@ -485,6 +542,7 @@ export const navSections: NavSection[] = [
         icon: 'layers',
         description: 'What each zone covers, for safety and emergency',
         permission: 'FACILITIES_ZONE_READ',
+        capability: 'FACILITIES_ZONE_MANAGE',
       },
       {
         label: 'Device references',
@@ -492,6 +550,7 @@ export const navSections: NavSection[] = [
         icon: 'activity',
         description: 'Cameras, readers and panels, and where they sit',
         permission: 'FACILITIES_DEVICE_REFERENCE_READ',
+        capability: 'FACILITIES_DEVICE_REFERENCE_REGISTER',
       },
     ],
   },
@@ -507,6 +566,7 @@ export const navSections: NavSection[] = [
         matchPrefix: facilitiesPaths.checklists,
         description: 'The questions an assessment asks, and what a failure costs',
         permission: 'FACILITIES_READINESS_READ',
+        capability: 'FACILITIES_READINESS_CHECKLIST_MANAGE',
       },
       {
         label: 'Audit & integrity',
@@ -522,6 +582,7 @@ export const navSections: NavSection[] = [
         icon: 'gauge',
         description: 'Thresholds the rules are read from, and their versions',
         permission: 'FACILITIES_CONFIG_READ',
+        capability: 'FACILITIES_CONFIG_MANAGE',
       },
     ],
   },
@@ -537,16 +598,7 @@ export const navSections: NavSection[] = [
         description: 'Readiness, activity and exceptions',
         // Enforced by FleetDashboardApplicationService.
         permission: 'FLEET_DASHBOARD_READ',
-      },
-      {
-        label: 'Trips & assignments',
-        to: fleetPaths.trips,
-        icon: 'route',
-        matchPrefix: fleetPaths.trips,
-        description: 'Plan, assign, start and close movements',
-        // Enforced by TripApplicationService. A driver holds this and sees the register; planning,
-        // assigning and closing are separate permissions the page gates its controls on.
-        permission: 'FLEET_TRIP_READ',
+        capability: 'FLEET_DASHBOARD_DRILLDOWN',
       },
       {
         label: 'Workflow queue',
@@ -558,6 +610,28 @@ export const navSections: NavSection[] = [
         // and escalations across the fleet; a driver records an inspection against their own trip
         // and has no business reading everybody else's defects.
         permission: 'FLEET_WORKFLOW_READ',
+        capability: [
+          'FLEET_WORKFLOW_MANAGE',
+          'FLEET_WORKFLOW_APPROVE',
+          'FLEET_WORKFLOW_ASSIGN',
+        ],
+      },
+      {
+        label: 'Trips & assignments',
+        to: fleetPaths.trips,
+        icon: 'route',
+        matchPrefix: fleetPaths.trips,
+        description: 'Plan, assign, start and close movements',
+        // Enforced by TripApplicationService. A driver holds this and sees the register; planning,
+        // assigning and closing are separate permissions the page gates its controls on.
+        permission: 'FLEET_TRIP_READ',
+        capability: [
+          'FLEET_TRIP_MANAGE',
+          'FLEET_TRIP_ASSIGN',
+          // A driver confirms or defers the trip assigned to them. TripApplicationService narrows
+          // the register to their own records, so this offers them their work, not the fleet's.
+          'FLEET_TRIP_ACKNOWLEDGE',
+        ],
       },
     ],
   },
@@ -573,9 +647,10 @@ export const navSections: NavSection[] = [
         matchPrefix: fleetPaths.vehicles,
         description: 'Fleet inventory and readiness',
         // A driver holds this: they need to look up the vehicle they are taking out. Registering,
-        // editing and retiring one are FLEET_VEHICLE_MANAGE, which they do not hold — the page
+        // editing and retiring one are FLEET_VEHICLE_MANAGE, which they do not hold - the page
         // hides those controls rather than offering a button the service refuses.
         permission: 'FLEET_VEHICLE_READ',
+        capability: 'FLEET_VEHICLE_MANAGE',
       },
       {
         label: 'Driver register',
@@ -586,7 +661,7 @@ export const navSections: NavSection[] = [
         /*
           A driver holds FLEET_DRIVER_READ and sees the list, the same way they see the vehicle
           register: they work alongside these people and need to look them up. What they do not hold
-          is FLEET_DRIVER_MANAGE — so no registering, editing or retiring, including of themselves —
+          is FLEET_DRIVER_MANAGE - so no registering, editing or retiring, including of themselves -
           and no FLEET_DRIVER_SENSITIVE_READ, so licence numbers arrive masked from the service
           rather than being hidden by this screen.
 
@@ -595,6 +670,7 @@ export const navSections: NavSection[] = [
           people who cover each other's trips, and eligibility is why a colleague cannot.
         */
         permission: 'FLEET_DRIVER_READ',
+        capability: 'FLEET_DRIVER_MANAGE',
       },
     ],
   },
@@ -616,8 +692,8 @@ export const navSections: NavSection[] = [
         to: fleetPaths.governance,
         icon: 'document',
         description: 'Closure evidence and audit trail',
-        // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second — they attach
-        // evidence to their own trip closure — and that is deliberately not a licence to read the
+        // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second - they attach
+        // evidence to their own trip closure - and that is deliberately not a licence to read the
         // fleet's evidence library or replay the audit chain.
         permission: 'FLEET_EVIDENCE_READ',
       },
@@ -628,6 +704,7 @@ export const navSections: NavSection[] = [
         description: 'Inbound and outbound message flow',
         // Enforced by FleetIntegrationApplicationService.
         permission: 'FLEET_INTEGRATION_HEALTH_READ',
+        capability: 'FLEET_INTEGRATION_REPLAY',
       },
     ],
   },
@@ -643,6 +720,13 @@ export const navSections: NavSection[] = [
         description: 'Spend, volume and reconciliation standing',
         // Enforced by FuelApplicationService.dashboard.
         permission: 'FUEL_REPORT_READ',
+        capability: [
+          'FUEL_TRANSACTION_CAPTURE',
+          'FUEL_RECONCILIATION_RUN',
+          'FUEL_POLICY_MANAGE',
+          'FUEL_CARD_MANAGE',
+          'FUEL_ANOMALY_MANAGE',
+        ],
       },
       {
         label: 'Fuel transactions',
@@ -653,6 +737,11 @@ export const navSections: NavSection[] = [
         // Driver-only actors are narrowed by FuelApplicationService.transactions, so this register
         // can be safely shown to drivers without leaking colleagues' fills.
         permission: 'FUEL_TRANSACTION_READ',
+        capability: [
+          'FUEL_TRANSACTION_CAPTURE',
+          'FUEL_TRANSACTION_VOID',
+          'FUEL_TRANSACTION_IMPORT',
+        ],
       },
       {
         label: 'Driver logbooks',
@@ -663,6 +752,14 @@ export const navSections: NavSection[] = [
         // Narrowed per record in SQL by FuelApplicationService.logbooks on created_by, so a driver
         // holding this genuinely sees only their own.
         permission: 'FUEL_LOGBOOK_READ',
+        capability: [
+          'FUEL_LOGBOOK_REVIEW',
+          'FUEL_LOGBOOK_REOPEN',
+          // The driver's own logbook. FuelApplicationService.logbooks narrows per created_by, so a
+          // driver sees theirs and a reviewer sees the site's - one screen, two scopes.
+          'FUEL_LOGBOOK_CREATE',
+          'FUEL_LOGBOOK_SUBMIT',
+        ],
       },
       {
         label: 'Reconciliation',
@@ -678,6 +775,11 @@ export const navSections: NavSection[] = [
         matchPrefix: fuelPaths.anomalies,
         description: 'Exception queue, explanation and closure',
         permission: 'FUEL_ANOMALY_READ',
+        capability: [
+          'FUEL_ANOMALY_MANAGE',
+          'FUEL_ANOMALY_APPROVE',
+          'FUEL_ANOMALY_ESCALATE',
+        ],
       },
       {
         label: 'Fuel cards',
@@ -686,6 +788,7 @@ export const navSections: NavSection[] = [
         matchPrefix: fuelPaths.cards,
         description: 'Masked card register, assignments and card limits',
         permission: 'FUEL_CARD_READ',
+        capability: 'FUEL_CARD_MANAGE',
       },
       {
         label: 'CSV imports',
@@ -701,8 +804,9 @@ export const navSections: NavSection[] = [
         matchPrefix: fuelPaths.policies,
         description: 'Effective-dated limits the rules are read from',
         // The limits every reconciliation is judged against. A driver being judged by them is not a
-        // reason to let them read — still less edit — the thresholds.
+        // reason to let them read - still less edit - the thresholds.
         permission: 'FUEL_POLICY_READ',
+        capability: 'FUEL_POLICY_MANAGE',
       },
       {
         label: 'Provider integration',
@@ -725,6 +829,11 @@ export const navSections: NavSection[] = [
         description: 'Consignments in transit and open exceptions',
         // Enforced by DispatchDashboardService.
         permission: 'DISPATCH_REPORT_READ',
+        capability: [
+          'DISPATCH_ITEM_MANAGE',
+          'DISPATCH_EXCEPTION_MANAGE',
+          'DISPATCH_MANIFEST_CREATE',
+        ],
       },
       {
         label: 'Courier items',
@@ -733,6 +842,10 @@ export const navSections: NavSection[] = [
         matchPrefix: dispatchPaths.items,
         description: 'Every tracked item, inbound and outbound',
         permission: 'DISPATCH_ITEM_READ',
+        capability: [
+          'DISPATCH_ITEM_MANAGE',
+          'DISPATCH_ITEM_REGISTER',
+        ],
       },
       {
         label: 'Manifests',
@@ -741,6 +854,10 @@ export const navSections: NavSection[] = [
         matchPrefix: dispatchPaths.manifests,
         description: 'Seals, custody, receipt and the return leg',
         permission: 'DISPATCH_MANIFEST_READ',
+        capability: [
+          'DISPATCH_MANIFEST_CREATE',
+          'DISPATCH_CUSTODY_RECORD',
+        ],
       },
       {
         label: 'Inbound mail',
@@ -748,6 +865,10 @@ export const navSections: NavSection[] = [
         icon: 'inbox',
         description: 'Registration and acknowledged distribution',
         permission: 'DISPATCH_ITEM_READ',
+        capability: [
+          'DISPATCH_INBOUND_REGISTER',
+          'DISPATCH_INBOUND_DISTRIBUTE',
+        ],
       },
       {
         label: 'Exception cases',
@@ -756,6 +877,11 @@ export const navSections: NavSection[] = [
         matchPrefix: dispatchPaths.exceptions,
         description: 'Custody gaps, variances and discrepancies',
         permission: 'DISPATCH_EXCEPTION_READ',
+        capability: [
+          'DISPATCH_EXCEPTION_MANAGE',
+          'DISPATCH_EXCEPTION_APPROVE',
+          'DISPATCH_EXCEPTION_ESCALATE',
+        ],
       },
       {
         label: 'Scan imports',
@@ -763,6 +889,10 @@ export const navSections: NavSection[] = [
         icon: 'upload',
         description: 'Scanner batches and per-row outcomes',
         permission: 'DISPATCH_MANIFEST_READ',
+        capability: [
+          'DISPATCH_INTEGRATION_INGEST',
+          'DISPATCH_MANIFEST_CREATE',
+        ],
       },
       {
         label: 'Scanner integration',
@@ -775,7 +905,7 @@ export const navSections: NavSection[] = [
   },
   {
     // SSEMP, not FTLMP. S174 is its own deployable service but it belongs to the safety,
-    // security and emergency programme — so a fleet operator does not see it, and a SOC
+    // security and emergency programme - so a fleet operator does not see it, and a SOC
     // operator or emergency coordinator does. ADR 0005.
     heading: 'Emergency notifications',
     programme: 'SSEMP',
@@ -788,6 +918,11 @@ export const navSections: NavSection[] = [
         description: 'Live broadcasts and outstanding obligations',
         // Enforced by EmergencyDashboardService.
         permission: 'EMERGENCY_REPORT_READ',
+        capability: [
+          'EMERGENCY_ACTIVATION_CREATE',
+          'EMERGENCY_ACTIVATION_APPROVE',
+          'EMERGENCY_ACTIVATION_SEND',
+        ],
       },
       {
         label: 'Activations',
@@ -796,6 +931,12 @@ export const navSections: NavSection[] = [
         matchPrefix: emergencyPaths.activations,
         description: 'Compose, approve, send, stand down and close',
         permission: 'EMERGENCY_ACTIVATION_READ',
+        capability: [
+          'EMERGENCY_ACTIVATION_CREATE',
+          'EMERGENCY_ACTIVATION_APPROVE',
+          'EMERGENCY_ACTIVATION_SEND',
+          'EMERGENCY_ALL_CLEAR_SEND',
+        ],
       },
       {
         label: 'Break glass',
@@ -803,7 +944,7 @@ export const navSections: NavSection[] = [
         icon: 'zap',
         description: 'Declared-emergency send with no approval',
         // The one screen in the platform that sends without approval. It is offered only to an
-        // actor who may actually press it — a break-glass page somebody cannot use is worse than
+        // actor who may actually press it - a break-glass page somebody cannot use is worse than
         // absent, because in a declared emergency they will try.
         permission: 'EMERGENCY_BREAK_GLASS_SEND',
       },
@@ -814,6 +955,10 @@ export const navSections: NavSection[] = [
         matchPrefix: emergencyPaths.templates,
         description: 'What a broadcast says, and what cites it',
         permission: 'EMERGENCY_TEMPLATE_READ',
+        capability: [
+          'EMERGENCY_TEMPLATE_MANAGE',
+          'EMERGENCY_SCENARIO_MANAGE',
+        ],
       },
       {
         label: 'Audiences & zones',
@@ -821,6 +966,7 @@ export const navSections: NavSection[] = [
         icon: 'users',
         description: 'Who a broadcast reaches, and where',
         permission: 'EMERGENCY_AUDIENCE_READ',
+        capability: 'EMERGENCY_AUDIENCE_MANAGE',
       },
       {
         label: 'Drills',
@@ -828,6 +974,10 @@ export const navSections: NavSection[] = [
         icon: 'target',
         description: 'Rehearsals and notification performance',
         permission: 'EMERGENCY_REPORT_READ',
+        capability: [
+          'EMERGENCY_ACTIVATION_CREATE',
+          'EMERGENCY_AFTER_ACTION_APPROVE',
+        ],
       },
       {
         label: 'Provider integration',
@@ -854,27 +1004,87 @@ export const directorate = {
 };
 
 /** The navigation sections this actor is entitled to, in declared order. */
-/** No persona named means "everyone who is entitled" — the ordinary case. */
+/** No persona named means "everyone who is entitled" - the ordinary case. */
 const suitsPersona = (persona?: PersonaCode): boolean => persona === undefined || isPersona(persona);
+
+/**
+ * Whether this screen belongs to this actor.
+ *
+ * Read first - it is still a floor, and a screen you cannot read is not one you can work. Then the
+ * capability, which is the part that tells a driver from a fleet manager. A reviewer passes the
+ * second test by holding a reviewing permission, because reading is their work rather than a
+ * diminished version of somebody else's.
+ */
+const offered = (item: NavItem): boolean => {
+  if (!permits(item.permission)) {
+    return false;
+  }
+  if (!item.capability) {
+    return true;
+  }
+  return permitsAny(item.capability) || actorIsReviewer();
+};
 
 export const entitledSections = (): NavSection[] =>
   navSections
+    /*
+      Scope to the platform this origin serves, before entitlement is considered at all.
+
+      A section can be entitled to the actor and still have no business here: the same bundle is
+      served by four jars, and on 8091 the fleet sections have no API behind them. Offering them
+      produced "Could not reach the Fleet & Logistics service at http://localhost:8093" from a
+      dashboard the operator had opened to look at facilities - a true message about a screen that
+      should never have been on that origin. The portal answers ALL and keeps everything.
+    */
+    .filter((section) => servesPlatform(section.programme))
     .filter((section) => entitledTo(section.programme) && entitledToSystem(section.system))
-    // Then drop the items the actor cannot read, and any section left with none — an empty heading is
-    // worse than no heading. `permits` returns true for everything when the services could not be
-    // asked, so a failed lookup never hides a screen.
+    // Then drop the items the actor cannot act on, and any section left with none - an empty heading
+    // is worse than no heading. `permits` now returns false when the services could not be asked, so
+    // a failed lookup hides everything and the shell says why; it no longer shows the whole sidebar.
     .map((section) => ({
       ...section,
-      items: section.items.filter((item) => permits(item.permission) && suitsPersona(item.persona)),
+      items: section.items.filter((item) => offered(item) && suitsPersona(item.persona)),
     }))
     .filter((section) => section.items.length > 0);
 
 /**
  * Where an actor lands when they open the application.
  *
- * The first destination of the first programme they are entitled to — **not** the fleet dashboard,
+ * The first destination of the first programme they are entitled to - **not** the fleet dashboard,
  * which is only the right answer for a fleet user. `null` when they are entitled to nothing, which
  * the router turns into an explanation rather than a redirect loop.
  */
 export const landingPath = (): string | null =>
   entitledSections()[0]?.items[0]?.to ?? null;
+
+
+/**
+ * Whether the screen at this path is one the actor may work, by the same rule the sidebar uses.
+ *
+ * <p>Matched by longest prefix rather than exactly, so a detail page inherits its register's answer:
+ * `/fleetvehicle/fleet/vehicles/42` is the vehicle register as far as entitlement is concerned, and
+ * declaring the rule twice is how the two drift apart.
+ *
+ * <p>`null` when no navigation item owns the path - a screen reached only from inside another, with
+ * no rule of its own to apply. The service still authorises it; this returns "no opinion" rather
+ * than inventing one.
+ */
+export const navItemFor = (pathname: string): NavItem | null => {
+  let best: NavItem | null = null;
+  for (const section of navSections) {
+    for (const item of section.items) {
+      if (pathname === item.to || pathname.startsWith(`${item.to}/`)) {
+        if (!best || item.to.length > best.to.length) {
+          best = item;
+        }
+      }
+    }
+  }
+  return best;
+};
+
+/** `true` when a navigation item owns this path and the actor may not work it. */
+export const capabilityRefusedFor = (pathname: string): boolean => {
+  const item = navItemFor(pathname);
+  return item ? !offered(item) : false;
+};

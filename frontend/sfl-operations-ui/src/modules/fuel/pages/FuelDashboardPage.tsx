@@ -24,7 +24,6 @@ import {
   formatMoney,
   formatQuantity,
 } from 'modules/fuel/components/fuelFormat';
-import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
@@ -44,7 +43,7 @@ const SPEND_DAYS = 14;
 /**
  * Lays the service's daily totals onto a fixed window.
  *
- * The arithmetic is the service's — this only supplies the days it had nothing to report, so the
+ * The arithmetic is the service's - this only supplies the days it had nothing to report, so the
  * axis stays a full fortnight. A gap in the line would read as missing data rather than a quiet day,
  * which is a presentation problem and is why it is solved here rather than in a query.
  */
@@ -88,7 +87,7 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  *
  * The last two derivations went with `/dashboard/daily-totals` and `/dashboard/anomaly-counts`. The
  * spend trend was bucketed in the browser from one page of transactions, and the by-type breakdown
- * counted a page of the anomaly queue — both correct for a quiet site and both silently short for a
+ * counted a page of the anomaly queue - both correct for a quiet site and both silently short for a
  * busy one. The one remaining caption is on reconciliation, where a single figure really is a
  * remainder of two others.
  *
@@ -127,7 +126,7 @@ const FuelDashboardPage = () => {
   /**
    * One transaction, for the currency and the quantity unit.
    *
-   * The aggregate carries neither, and both belong to the site rather than to the row — a site
+   * The aggregate carries neither, and both belong to the site rather than to the row - a site
    * transacts in one currency and dispenses in one unit. This used to be the whole spend window, a
    * page of records fetched so two labels could be read off the first one.
    */
@@ -315,7 +314,6 @@ const FuelDashboardPage = () => {
             value={siteCode}
             onChange={setSiteCode}
             required
-            helperText="Every fuel endpoint is scoped to one site."
           />
         </FilterBar>
       </SectionCard>
@@ -329,14 +327,20 @@ const FuelDashboardPage = () => {
         >
           {data && (
             <div className="space-y-5">
-              {data.stale && (
-                <Alert variant="warning" title="This snapshot may be out of date">
-                  The service marks the fuel dashboard stale when no transaction has changed in the
-                  last fifteen minutes.
-                  {data.sourceUpdatedAt
-                    ? ` The most recent change was ${formatDateTime(data.sourceUpdatedAt)}.`
-                    : ' No transaction has ever been recorded at this site.'}
-                </Alert>
+              {/*
+                Staleness is shown as a quiet note beside the figures rather than a warning banner
+                across the top.
+
+                The banner explained the platform's freshness threshold to somebody who had asked for
+                a fuel summary, and it fires constantly on a site that simply has not refuelled today
+                - so it trained people to scroll past the one place a real warning would appear. What
+                is worth saying is when the figures were last true, which the note below says in a
+                line.
+              */}
+              {data.stale && data.sourceUpdatedAt && (
+                <p className="text-theme-xs text-gray-500">
+                  Figures as at {formatDateTime(data.sourceUpdatedAt)}.
+                </p>
               )}
 
               {/*

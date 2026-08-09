@@ -20,7 +20,7 @@ import { fromLocalInput, setupTaskTone } from '../components/bookingFormat';
 import ResolveSetupTaskDialog from '../dialogs/ResolveSetupTaskDialog';
 
 /**
- * The room-turnaround queue — SRS-SFL-S159-02.
+ * The room-turnaround queue - SRS-SFL-S159-02.
  *
  * ## Ordered by when the room is needed, not when the task was raised
  *

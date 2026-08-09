@@ -19,7 +19,7 @@ import java.util.Set;
  *       protected from deletion. Un-archiving would let a record leave and re-enter the estate with
  *       its history implying it never left.</li>
  *   <li><strong>{@link #SUSPENDED} is reversible.</strong> A suspended space is one temporarily out
- *       of service — a flooded hall, a floor under works — and it has to come back.</li>
+ *       of service - a flooded hall, a floor under works - and it has to come back.</li>
  * </ul>
  */
 public enum RecordLifecycleStatus {
@@ -30,7 +30,7 @@ public enum RecordLifecycleStatus {
     INACTIVE,
     /** Temporarily out of service and expected to return. */
     SUSPENDED,
-    /** Permanently retired. Terminal — readable forever, never reactivated. */
+    /** Permanently retired. Terminal - readable forever, never reactivated. */
     ARCHIVED;
 
     private static final Map<RecordLifecycleStatus, Set<RecordLifecycleStatus>> ALLOWED = Map.of(

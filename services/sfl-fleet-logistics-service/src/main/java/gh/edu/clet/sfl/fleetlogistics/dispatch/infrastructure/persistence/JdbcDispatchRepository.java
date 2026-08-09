@@ -43,7 +43,7 @@ import tools.jackson.databind.ObjectMapper;
  * JDBC persistence adapter for S171 (V16–V20 tables). It maps the dispatch domain records to/from the
  * {@code fleet_logistics} schema, preserving optimistic locking on mutable operational records, site
  * scope, edge/scan idempotency and audit correlation. Business transitions stay in domain/application
- * code — this adapter never decides state. Instant values bind as UTC {@link OffsetDateTime} because the
+ * code - this adapter never decides state. Instant values bind as UTC {@link OffsetDateTime} because the
  * pgjdbc driver cannot infer a SQL type for {@link Instant}; the columns are TIMESTAMPTZ so UTC is exact.
  */
 @Repository
@@ -63,7 +63,7 @@ public class JdbcDispatchRepository implements DispatchRepository {
     /**
      * A WHERE clause and its bind values, minus the leading site-scope array.
      *
-     * <p>Built once per query and used twice — for the count and for the page — so the two can never
+     * <p>Built once per query and used twice - for the count and for the page - so the two can never
      * disagree about which records they are describing.
      */
     private record Where(StringBuilder sql, List<Object> args) {
@@ -72,7 +72,7 @@ public class JdbcDispatchRepository implements DispatchRepository {
             if (value != null) { sql.append(" AND ").append(fragment); args.add(value); }
             return this;
         }
-        /** A predicate with no bind value — for IS NULL / IS NOT NULL and set tests. */
+        /** A predicate with no bind value - for IS NULL / IS NOT NULL and set tests. */
         Where when(boolean apply, String fragment) { if (apply) sql.append(" AND ").append(fragment); return this; }
     }
 

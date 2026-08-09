@@ -66,7 +66,7 @@ const NO_INPUT_ACTIONS: ExceptionAction[] = ['review', 'request-explanation', 'r
  *
  * The thing that makes this queue different from the fuel one is what an open case *does*: it blocks
  * the manifest it belongs to from closing. So the screen leads with which consignment is held up,
- * and closure — the action that releases it — is the one the layout points at.
+ * and closure - the action that releases it - is the one the layout points at.
  */
 const DispatchExceptionDetailPage = () => {
   const { caseId = '' } = useParams();
@@ -164,7 +164,7 @@ const DispatchExceptionDetailPage = () => {
             )}
             {breached && (
               <Alert variant="error" title="This case has breached its SLA">
-                It was due {formatDateTime(record.slaDueAt)} — {formatDueIn(record.slaDueAt)}.
+                It was due {formatDateTime(record.slaDueAt)} - {formatDueIn(record.slaDueAt)}.
               </Alert>
             )}
             {record.securityRelevant && exceptionOpen(record) && (
@@ -255,13 +255,13 @@ const DispatchExceptionDetailPage = () => {
                       { label: 'SLA standing', value: formatDueIn(record.slaDueAt) },
                       { label: 'Escalation level', value: record.escalationLevel },
                       { label: 'Occurrence key', value: record.occurrenceKey, span: 2 },
-                      { label: 'Explanation', value: record.explanation ?? '—', span: 2 },
+                      { label: 'Explanation', value: record.explanation ?? '-', span: 2 },
                       {
                         label: 'Decision',
-                        value: record.decision ? humanise(record.decision) : '—',
+                        value: record.decision ? humanise(record.decision) : '-',
                       },
-                      { label: 'Evidence reference', value: record.evidenceId ?? '—' },
-                      { label: 'Closure reason', value: record.closureReason ?? '—', span: 2 },
+                      { label: 'Evidence reference', value: record.evidenceId ?? '-' },
+                      { label: 'Closure reason', value: record.closureReason ?? '-', span: 2 },
                     ]}
                   />
                 </SectionCard>
@@ -322,9 +322,9 @@ const DispatchExceptionDetailPage = () => {
                   <KeyValueGrid
                     columns={2}
                     items={[
-                      { label: 'Raised by', value: record.metadata.createdBy ?? '—' },
+                      { label: 'Raised by', value: record.metadata.createdBy ?? '-' },
                       { label: 'Raised at', value: formatDateTime(record.metadata.createdAt) },
-                      { label: 'Last change by', value: record.metadata.lastModifiedBy ?? '—' },
+                      { label: 'Last change by', value: record.metadata.lastModifiedBy ?? '-' },
                       {
                         label: 'Last change at',
                         value: formatDateTime(record.metadata.lastModifiedAt),
@@ -332,7 +332,7 @@ const DispatchExceptionDetailPage = () => {
                       { label: 'Record version', value: record.metadata.version },
                       {
                         label: 'Correlation ID',
-                        value: record.metadata.auditCorrelationId ?? '—',
+                        value: record.metadata.auditCorrelationId ?? '-',
                         span: 2,
                       },
                     ]}

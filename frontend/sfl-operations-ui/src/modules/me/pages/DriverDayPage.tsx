@@ -9,13 +9,13 @@ import { driverLogbooksApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi
 import type { DriverLogbook, FuelTransaction } from 'modules/fuel/api/dto';
 
 /**
- * A driver's day — the eight permissions `FLEET_DRIVER` actually holds, and nothing else.
+ * A driver's day - the eight permissions `FLEET_DRIVER` actually holds, and nothing else.
  *
  * ## Why this screen is narrow on purpose
  *
  * The SRS gives the driver **no §2.3 user class**, and every `SRS-SFL-S168fuel-*` requirement is
  * written "As a Fleet or Logistics Officer". What exists is a role with eight permissions and a
- * logbook that somebody has to fill in for the anti-fraud control to have an input — so this is
+ * logbook that somebody has to fill in for the anti-fraud control to have an input - so this is
  * built as the minimum surface those permissions imply and is recorded as a **Deviation** in
  * `docs/frontend/SFL_Role_Portal_Trace_Matrix.md`, with the Transportation & Logistics Unit named as
  * the owner who must confirm the user class.
@@ -26,10 +26,10 @@ import type { DriverLogbook, FuelTransaction } from 'modules/fuel/api/dto';
  * ## "My logbooks" is true. "My transactions" is not.
  *
  * `FuelApplicationService.logbooks` narrows on `created_by` in SQL, and `logbook(id, actor)` refuses
- * a colleague's record by id — so the logbook list below genuinely is this driver's. Fuel
+ * a colleague's record by id - so the logbook list below genuinely is this driver's. Fuel
  * *transactions* are **not** narrowed per record: a driver holds `FUEL_TRANSACTION_READ` and the
- * service returns every transaction at the site. So that panel is labelled for what it is —
- * transactions recorded against vehicles, at this site — and does not claim to be personal. Saying
+ * service returns every transaction at the site. So that panel is labelled for what it is -
+ * transactions recorded against vehicles, at this site - and does not claim to be personal. Saying
  * "my fuel" over a list containing a colleague's fill would be a lie the screen tells on the
  * service's behalf, and the gap is recorded in `docs/fuel/S168_Fuel_Gap_And_Conflict_Report.md`.
  *
@@ -74,7 +74,7 @@ const DriverDayPage = () => {
   const transactionColumns: Column<FuelTransaction>[] = [
     { key: 'occurredAt', header: 'When', cell: (row) => row.occurredAt?.slice(0, 16).replace('T', ' ') },
     { key: 'quantity', header: 'Quantity', cell: (row) => `${row.quantity} ${row.quantityUnit}` },
-    { key: 'station', header: 'Station', cell: (row) => row.stationReference ?? '—' },
+    { key: 'station', header: 'Station', cell: (row) => row.stationReference ?? '-' },
     { key: 'status', header: 'Status', cell: (row) => <StatusChip value={row.status} /> },
   ];
 

@@ -5,7 +5,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import java.util.UUID;
 
 /**
- * The authorised odometer-correction workflow — the only route by which a reading may move backwards
+ * The authorised odometer-correction workflow - the only route by which a reading may move backwards
  * (SRS-SFL-S166-01 record integrity, SRS-SFL-S166-03 before/after audit).
  *
  * <p>Both a reason and an evidence reference are mandatory, and the caller must hold

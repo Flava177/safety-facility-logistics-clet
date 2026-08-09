@@ -22,9 +22,9 @@ import { faultPriorities } from './enums';
  * Two different questions, answered together because a screen has to combine them before it renders
  * a button:
  *
- * - **May this actor?** — `permits`, backed by `GET /actor/permissions`, which is the service's own
+ * - **May this actor?** - `permits`, backed by `GET /actor/permissions`, which is the service's own
  *   answer rather than a guess from role names.
- * - **May this record?** — the same rules the service enforces, evaluated locally so a control that
+ * - **May this record?** - the same rules the service enforces, evaluated locally so a control that
  *   would be refused is disabled with a reason instead of failing on click.
  *
  * This is a usability layer and never the enforcement point: every one of these calls is authorised
@@ -34,7 +34,7 @@ import { faultPriorities } from './enums';
 /** A control the screen may render, with why it is unavailable when it is. */
 export interface Action {
   allowed: boolean;
-  /** Present when `allowed` is false — shown as the disabled control's tooltip. */
+  /** Present when `allowed` is false - shown as the disabled control's tooltip. */
   reason?: string;
 }
 
@@ -69,7 +69,7 @@ export const changeOperatingModeAction = (site: Site): Action => {
  * Whether a space's attributes may be edited.
  *
  * The readiness lock is the interesting case: while it is engaged the service refuses the edit, and
- * the way through is to release the lock — an audited act — rather than to edit around it.
+ * the way through is to release the lock - an audited act - rather than to edit around it.
  */
 export const updateSpaceAction = (space: Space): Action => {
   if (!permits('FACILITIES_SPACE_MANAGE')) {
@@ -171,7 +171,7 @@ export const canAssessReadiness = (): boolean => permits('FACILITIES_READINESS_A
 export const canManageChecklists = (): boolean => permits('FACILITIES_READINESS_CHECKLIST_MANAGE');
 export const canManageAssets = (): boolean => permits('FACILITIES_ASSET_MANAGE');
 /**
- * Adding to the estate hierarchy — a **building**, a **floor** or a space.
+ * Adding to the estate hierarchy - a **building**, a **floor** or a space.
  *
  * All three are `FACILITIES_SPACE_MANAGE` in `FacilitiesMasterDataService`, and that is not an
  * oversight to route around here: a building and a floor exist only to hold spaces, and somebody
@@ -222,7 +222,7 @@ export const canTransitionTo = (from: WorkOrderStatus, to: WorkOrderStatus): boo
  * SRS-SFL-S153-02: "A workflow cannot be closed without required evidence or closure reason." The
  * evidence half is checked here so the button carries the shortfall as a number; the reason half is
  * the form's own required field. The service answers `CLOSURE_EVIDENCE_MISSING` naming both counts,
- * and this wording matches it deliberately — two different sentences for one rule is how a user
+ * and this wording matches it deliberately - two different sentences for one rule is how a user
  * learns to distrust both.
  */
 export const closeAction = (order: WorkOrder, attachedEvidence: number): Action => {
@@ -356,7 +356,7 @@ export const attachEvidenceAction = (order: WorkOrder): Action => {
 /**
  * Exporting evidence out of CLET.
  *
- * Its own permission, held only by reviewers — SRS-SFL-S153-03 makes export a distinct authorised
+ * Its own permission, held only by reviewers - SRS-SFL-S153-03 makes export a distinct authorised
  * act with a recorded reason, not a stronger form of reading.
  */
 export const exportEvidenceAction = (): Action =>
@@ -367,7 +367,7 @@ export const exportEvidenceAction = (): Action =>
  *
  * Separate from {@link closeAction} because the two answer different questions and the screen treats
  * them differently. A **permission** denial is permanent for this session, so the control is not
- * rendered at all — a button that can never be pressed is clutter, and one that reads "you do not
+ * rendered at all - a button that can never be pressed is clutter, and one that reads "you do not
  * have permission" on every visit reads as a broken screen. A **shortfall** is actionable, so that
  * control is rendered and disabled with the count.
  *

@@ -8,7 +8,7 @@ import java.util.Set;
 /**
  * The life of a work order.
  *
- * <p>The pre-S152 spine had three states — {@code OPEN}, {@code ASSIGNED}, {@code CLOSED} — which is
+ * <p>The pre-S152 spine had three states - {@code OPEN}, {@code ASSIGNED}, {@code CLOSED} - which is
  * too thin for SRS-SFL-S153-02: that requirement names "creation, assignment, reassignment,
  * escalation, hold, cancellation and closure". Hold and cancellation had nowhere to live, so a job
  * waiting on a part looked identical to one nobody had started, and a job abandoned looked identical
@@ -22,17 +22,17 @@ import java.util.Set;
  *
  * <p>Passing through {@link #COMPLETED} is <strong>not</strong> mandatory, though. Closure is reachable
  * from any working state, because the gate on closing is the closing permission and the evidence rule,
- * not the route taken to get there — and a supervisor who does a job themselves should not have to
+ * not the route taken to get there - and a supervisor who does a job themselves should not have to
  * hand it to themselves first. It is also what the pre-S153 rows did, so they migrate meaning intact.
  *
  * <p>Reassignment is not a state. It is an {@link #ASSIGNED} to {@link #ASSIGNED} move, which this
- * machine allows on purpose — the transition is what the audit trail records, not a status change.
+ * machine allows on purpose - the transition is what the audit trail records, not a status change.
  */
 public enum WorkOrderStatus {
 
     /** Raised, nobody assigned. */
     OPEN,
-    /** Has an owner — an internal technician or a vendor. Reassignment stays in this state. */
+    /** Has an owner - an internal technician or a vendor. Reassignment stays in this state. */
     ASSIGNED,
     /** The assignee has started. Distinguishes real progress from an untouched queue. */
     IN_PROGRESS,

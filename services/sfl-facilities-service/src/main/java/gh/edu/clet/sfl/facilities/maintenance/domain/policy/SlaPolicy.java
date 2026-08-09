@@ -15,7 +15,7 @@ import java.util.Objects;
  *
  * <h2>Why this is a value object and not a service</h2>
  *
- * The rules arrive as configuration, but applying them is arithmetic on a deadline — no repository,
+ * The rules arrive as configuration, but applying them is arithmetic on a deadline - no repository,
  * no clock of its own, nothing to mock. Keeping it a value object means the SLA table for a site can
  * be built once per evaluation run and applied to a thousand work orders without a thousand
  * configuration reads, and means the interesting tests ("does a critical fault in examination mode
@@ -26,7 +26,7 @@ import java.util.Objects;
  * <ul>
  *   <li><strong>Operating mode compresses the SLA, it does not replace it.</strong> A site in
  *       {@link OperatingMode#EXAMINATION} multiplies every duration by
- *       {@link #examinationFactor} — normally less than one. Expressing it as a factor rather than a
+ *       {@link #examinationFactor} - normally less than one. Expressing it as a factor rather than a
  *       second table means a site that lengthens one priority's SLA cannot forget to lengthen its
  *       examination equivalent.</li>
  *   <li><strong>Escalation is a ladder, not a flag.</strong> Level 1 at the deadline, and one further
@@ -40,7 +40,7 @@ import java.util.Objects;
  * @param resolution how long to finish, by priority. This is what a work order's due date is set from.
  * @param examinationFactor multiplier applied to both while the site is in examination mode.
  * @param escalationInterval how long between successive escalation levels once overdue.
- * @param maxEscalationLevel the ceiling. Beyond it, nothing further is raised — an item that has
+ * @param maxEscalationLevel the ceiling. Beyond it, nothing further is raised - an item that has
  *        reached the top of the ladder is already with the person who can act on it.
  */
 public record SlaPolicy(

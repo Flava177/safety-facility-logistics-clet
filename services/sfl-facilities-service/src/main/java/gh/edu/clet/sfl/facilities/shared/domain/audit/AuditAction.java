@@ -7,12 +7,12 @@ package gh.edu.clet.sfl.facilities.shared.domain.audit;
  * ({@code GET /api/v1/facilities/audit?action=...}) and hashed by name, so a typo would both hide a
  * record from its own filter and produce a hash nobody can reproduce.
  *
- * <p>Additive only. Renaming a constant would invalidate every hash computed with the old name — the
+ * <p>Additive only. Renaming a constant would invalidate every hash computed with the old name - the
  * chain would replay as tampered. Deprecate, never rename.
  */
 public enum AuditAction {
 
-    // Estate register — SRS-SFL-S152-01
+    // Estate register - SRS-SFL-S152-01
     SITE_CREATED,
     SITE_UPDATED,
     SITE_LIFECYCLE_CHANGED,
@@ -36,7 +36,7 @@ public enum AuditAction {
     FACILITY_ASSET_STATUS_CHANGED,
     FACILITY_ASSET_RELOCATED,
 
-    // Readiness — SRS-SFL-S152-01, -02, -05
+    // Readiness - SRS-SFL-S152-01, -02, -05
     READINESS_CHECKLIST_CREATED,
     READINESS_CHECKLIST_UPDATED,
     READINESS_ASSESSMENT_SUBMITTED,
@@ -45,7 +45,7 @@ public enum AuditAction {
     READINESS_LOCK_ENGAGED,
     READINESS_LOCK_RELEASED,
 
-    // Maintenance — SRS-SFL-S153-01, -02, -03
+    // Maintenance - SRS-SFL-S153-01, -02, -03
     FAULT_REPORTED,
     FAULT_TRIAGED,
     FAULT_DISMISSED,
@@ -87,7 +87,7 @@ public enum AuditAction {
     EVIDENCE_DISPOSED,
     EVIDENCE_LEGAL_HOLD_CHANGED,
 
-    // Booking — SRS-SFL-S159-01, -02, -03
+    // Booking - SRS-SFL-S159-01, -02, -03
     BOOKING_REQUESTED,
     BOOKING_CONFIRMED,
     BOOKING_REJECTED,
@@ -115,7 +115,7 @@ public enum AuditAction {
     BOOKING_SETUP_TASK_CREATED,
     BOOKING_SETUP_TASK_RESOLVED,
 
-    // Governance — SRS-SFL-S152-03, -04, -05
+    // Governance - SRS-SFL-S152-03, -04, -05
     RUNTIME_CONFIGURATION_CHANGED,
     DASHBOARD_SNAPSHOT_GENERATED,
     AUDIT_INTEGRITY_VERIFIED,

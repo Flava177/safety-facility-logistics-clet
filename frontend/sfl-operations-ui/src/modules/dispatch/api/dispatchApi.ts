@@ -42,7 +42,7 @@ import {
  * Typed client for the S171 Mailroom, Courier and Dispatch Tracking API.
  *
  * Paths were taken from the controllers and confirmed against the running service's
- * `/v3/api-docs` — forty endpoints, all of them wired here, none invented.
+ * `/v3/api-docs` - forty endpoints, all of them wired here, none invented.
  *
  * **Every collection is paged.** Each returns `DispatchPageResponse<T>` with `page`, `size`,
  * `totalElements` and the ordering it actually applied. That closed gap 1; the client-side window
@@ -87,7 +87,7 @@ export const courierItemsApi = {
   register: (body: RegisterItemRequest) => apiClient.post<CourierItem>(`${BASE}/items`, body),
 
   /**
-   * One path serves all six moves. None of them takes a body — the transition is the whole request,
+   * One path serves all six moves. None of them takes a body - the transition is the whole request,
    * and what it is allowed to do is decided by `CourierItem`'s own state guards.
    */
   advance: (itemId: string, action: ItemAction) =>
@@ -115,7 +115,7 @@ export const inboundMailApi = {
    * Records internal distribution with an acknowledgement.
    *
    * Legal only from `RECEIVED` or `STAGED`, and the acknowledgement is what closes the item's
-   * inbound obligation — the signature reference is optional but is the only evidence there is.
+   * inbound obligation - the signature reference is optional but is the only evidence there is.
    */
   distribute: (itemId: string, body: DistributeInboundRequest) =>
     apiClient.post<CourierItem>(`${BASE}/inbound/${itemId}/distribute`, body, {
@@ -162,7 +162,7 @@ export const manifestsApi = {
   history: (manifestId: string, signal?: AbortSignal) =>
     apiClient.get<DispatchAuditEvent[]>(`${BASE}/manifests/${manifestId}/history`, undefined, signal),
 
-  /** Adding an item is legal only while the manifest is a draft — sealing freezes the contents. */
+  /** Adding an item is legal only while the manifest is a draft - sealing freezes the contents. */
   addItem: (manifestId: string, body: AddManifestItemRequest) =>
     apiClient.post<DispatchManifestItem>(`${BASE}/manifests/${manifestId}/items`, body, {
       idempotent: false,
@@ -212,7 +212,7 @@ export const custodyApi = {
    * Custody across a site's consignments.
    *
    * Closed gap 7. Custody was readable per consignment only, so "everything this custodian handled
-   * last week" needed the manifests known first — the wrong way round when the custodian is the
+   * last week" needed the manifests known first - the wrong way round when the custodian is the
    * reason for asking.
    */
   search: (params: CustodySearchParams, signal?: AbortSignal) =>
@@ -265,7 +265,7 @@ export const returnsApi = {
     apiClient.post<ReturnReconciliation>(`${BASE}/returns/reconcile`, body, { idempotent: false }),
 };
 
-/** The thirteen transitions `DispatchExceptionController` accepts — the same set as fuel anomalies. */
+/** The thirteen transitions `DispatchExceptionController` accepts - the same set as fuel anomalies. */
 export const EXCEPTION_ACTIONS = [
   'assign',
   'reassign',
@@ -306,7 +306,7 @@ export const dispatchExceptionsApi = {
 
 export const scanImportsApi = {
   /**
-   * `POST /scans/imports` — multipart, two positional CSV columns.
+   * `POST /scans/imports` - multipart, two positional CSV columns.
    *
    * Column one is the row reference, column two the scanned code; a single-column file is read as
    * the code with a generated reference. Rows are classified against the manifest and land as
@@ -325,7 +325,7 @@ export const scanImportsApi = {
     });
   },
 
-  /** The site's scan batches. Closed gap 3 — a batch used to be reachable only by a kept id. */
+  /** The site's scan batches. Closed gap 3 - a batch used to be reachable only by a kept id. */
   search: (params: ScanBatchSearchParams, signal?: AbortSignal) =>
     apiClient.get<DispatchPageResponse<ScanImportBatch>>(
       `${BASE}/scans/imports`,

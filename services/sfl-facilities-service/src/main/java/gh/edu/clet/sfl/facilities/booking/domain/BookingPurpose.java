@@ -5,7 +5,7 @@ package gh.edu.clet.sfl.facilities.booking.domain;
  *
  * <p>Not decoration: {@link #EXAMINATION} is the one that changes the rules. An examination booking
  * is tested against {@code availableForExamination} rather than {@code availableForBooking}, which is
- * the stricter of the two — S152 requires readiness {@code READY} outright for an examination, where
+ * the stricter of the two - S152 requires readiness {@code READY} outright for an examination, where
  * an ordinary booking tolerates {@code DEGRADED}.
  */
 public enum BookingPurpose {
@@ -18,7 +18,7 @@ public enum BookingPurpose {
     EXAMINATION,
     MEETING,
     EVENT,
-    /** Held deliberately empty — maintenance access, a survey, a decant. */
+    /** Held deliberately empty - maintenance access, a survey, a decant. */
     RESERVED,
     OTHER;
 

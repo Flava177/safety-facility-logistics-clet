@@ -32,11 +32,11 @@ import org.springframework.web.bind.annotation.RestController;
  * Planning: vendors, preventive schedules, and the two sweeps.
  *
  * <p>Three small registers under one controller rather than three controllers with one endpoint
- * group each. They share an audience — whoever plans maintenance rather than performs it — and
+ * group each. They share an audience - whoever plans maintenance rather than performs it - and
  * splitting them would produce three files whose only difference is the noun.
  *
  * <p>The two {@code /runs} endpoints exist so a sweep can be triggered by hand. They do exactly what
- * the scheduler does, are idempotent for the same reasons, and return what moved — which is what
+ * the scheduler does, are idempotent for the same reasons, and return what moved - which is what
  * makes them useful for an operator checking whether the automation is working rather than reading
  * a log to find out.
  */

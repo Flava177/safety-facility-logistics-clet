@@ -20,7 +20,7 @@ import org.springframework.web.bind.annotation.RestController;
  *
  * <p>The summary needs {@code FACILITIES_DASHBOARD_READ}; every drilldown needs
  * {@code FACILITIES_DASHBOARD_DRILLDOWN} as well, which is the requirement's "Restricted Drilldown"
- * error state — a manager may see that eleven spaces are blocked without being entitled to see which.
+ * error state - a manager may see that eleven spaces are blocked without being entitled to see which.
  */
 @RestController
 @RequestMapping("/api/v1/facilities/dashboard")

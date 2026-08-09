@@ -9,7 +9,7 @@ import java.util.Objects;
 import java.util.UUID;
 
 /**
- * A fleet workflow item — one piece of accountable work in a queue (SRS-SFL-S166-02).
+ * A fleet workflow item - one piece of accountable work in a queue (SRS-SFL-S166-02).
  *
  * <p>The SLA due date is stamped when the item is raised, from the configuration active at that
  * moment, and re-derived on each escalation. That is deliberate: an item raised under yesterday's SLA

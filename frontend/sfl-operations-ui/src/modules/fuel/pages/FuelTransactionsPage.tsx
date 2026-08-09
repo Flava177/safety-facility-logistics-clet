@@ -4,7 +4,7 @@ import { FuelTransaction } from 'modules/fuel/api/dto';
 import { FUEL_TRANSACTION_STATUSES, FuelTransactionStatus } from 'modules/fuel/api/enums';
 import { fuelTransactionsApi } from 'modules/fuel/api/fuelApi';
 import { CaptureTransactionDialog } from 'modules/fuel/dialogs/transactionDialogs';
-import { DriverSelect, VehicleSelect } from 'modules/fuel/components/FleetReferenceSelect';
+import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import { formatMoney, formatQuantity, shortId } from 'modules/fuel/components/fuelFormat';
 import Button from 'shared/components/Button';
@@ -21,6 +21,7 @@ import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
+import { canCaptureFuel, canExportFuelReports } from 'modules/fleet/api/access';
 
 /** `sourceSystem` is an exact match on the wire; these are the values this deployment writes. */
 const SOURCE_FILTERS = [
@@ -32,8 +33,8 @@ const SOURCE_FILTERS = [
  * The fuel transaction register.
  *
  * Every filter here goes to the service, and the table is server-paged with a real total. Source
- * and vendor used to be applied in the browser over a capped window — so "manual captures at this
- * site" really meant "manual captures among the first two hundred" — and are now query parameters.
+ * and vendor used to be applied in the browser over a capped window - so "manual captures at this
+ * site" really meant "manual captures among the first two hundred" - and are now query parameters.
  */
 const FuelTransactionsPage = () => {
   const navigate = useNavigate();
@@ -196,17 +197,26 @@ const FuelTransactionsPage = () => {
         crumbs={[{ label: 'Fuel', to: fuelPaths.dashboard }, { label: 'Transactions' }]}
         actions={
           <>
-            <Button
-              variant="outline"
-              startIcon="download"
-              loading={exporting}
-              onClick={exportReport}
-            >
-              Export CSV
-            </Button>
-            <Button variant="primary" startIcon="plus" onClick={() => setCapturing(true)}>
-              Capture transaction
-            </Button>
+            {/*
+              Both controls are gated, and on different permissions, because they are different
+              questions. A reporting viewer holds FUEL_TRANSACTION_READ and may open this register;
+              they hold neither the export nor the capture grant, and were being offered both.
+            */}
+            {canExportFuelReports() && (
+              <Button
+                variant="outline"
+                startIcon="download"
+                loading={exporting}
+                onClick={exportReport}
+              >
+                Export CSV
+              </Button>
+            )}
+            {canCaptureFuel() && (
+              <Button variant="primary" startIcon="plus" onClick={() => setCapturing(true)}>
+                Capture transaction
+              </Button>
+            )}
           </>
         }
       />
@@ -227,7 +237,6 @@ const FuelTransactionsPage = () => {
             onChange={setVehicleId}
             allowEmpty
             emptyLabel="Any vehicle"
-            helperText=" "
           />
           <DriverSelect
             siteCode={siteCode}
@@ -235,7 +244,6 @@ const FuelTransactionsPage = () => {
             onChange={setDriverId}
             allowEmpty
             emptyLabel="Any driver"
-            helperText=" "
           />
           <DateTimeField label="From" value={from} onChange={setFrom} />
           <DateTimeField label="To" value={to} onChange={setTo} />

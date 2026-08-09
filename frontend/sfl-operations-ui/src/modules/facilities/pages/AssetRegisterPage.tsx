@@ -22,7 +22,7 @@ import {
 /**
  * The facility asset register.
  *
- * Fixed plant — the chillers, lifts, generators and panels S153 will raise work orders against. Not
+ * Fixed plant - the chillers, lifts, generators and panels S153 will raise work orders against. Not
  * AVAMP-Lite's asset references, which carry cross-programme identity for movable things; the two
  * are linked by value and answer different questions.
  *

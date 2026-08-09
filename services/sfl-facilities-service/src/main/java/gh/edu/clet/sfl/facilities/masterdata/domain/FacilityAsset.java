@@ -13,12 +13,12 @@ import java.util.UUID;
  *
  * <p>§21.1 of the SRS makes this the parent of work orders, preventive schedules and closure
  * evidence: "One asset may have many faults, work orders, schedules and closure evidence records."
- * It is therefore the single highest-leverage record in this build — S153 cannot be built properly
+ * It is therefore the single highest-leverage record in this build - S153 cannot be built properly
  * without it, and every maintenance question ("what broke", "what is due", "what is critical here")
  * is a query over it.
  *
  * <p><strong>Not the same thing as AVAMP-Lite.</strong> {@code sfl-asset-visibility-service} owns
- * cross-programme asset and device <em>reference identity</em> — the thing a vehicle, a camera and a
+ * cross-programme asset and device <em>reference identity</em> - the thing a vehicle, a camera and a
  * laptop all have. This owns the chiller bolted to a plant room that maintenance is raised against.
  * The two are linked by {@code assetReferenceId}, held as a plain value: no foreign key, no read of
  * another service's schema.
@@ -85,7 +85,7 @@ public record FacilityAsset(
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
-    /** A null or blank field leaves the current value alone — this is a PATCH, not a replace. */
+    /** A null or blank field leaves the current value alone - this is a PATCH, not a replace. */
     public FacilityAsset update(String name, AssetCategory category, AssetCriticality criticality,
             String manufacturer, String modelNumber, String serialNumber, LocalDate warrantyExpiresOn,
             Integer serviceIntervalDays, String custodian, String actorId, Instant at, SourceChannel channel,
@@ -160,7 +160,7 @@ public record FacilityAsset(
     /**
      * When this asset is next due for service, or {@code null} when it is not on a schedule.
      *
-     * <p>Counts from the last service where there is one, and from installation otherwise — an asset
+     * <p>Counts from the last service where there is one, and from installation otherwise - an asset
      * installed and never serviced is due, and treating "never serviced" as "not due" is how a
      * generator goes three years without a look.
      */

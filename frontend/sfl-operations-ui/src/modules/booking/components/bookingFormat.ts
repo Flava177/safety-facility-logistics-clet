@@ -3,7 +3,7 @@ import type { Booking } from '../api/dto';
 import type { BookingStatus, SetupTaskStatus } from '../api/enums';
 
 /**
- * How S159 values are shown. Tone and wording only — no derivation.
+ * How S159 values are shown. Tone and wording only - no derivation.
  *
  * Whether a booking holds its space, what window it occupies and whether a setup task is overdue are
  * all decided by the service and arrive on the record. Nothing here recomputes them.
@@ -12,7 +12,7 @@ import type { BookingStatus, SetupTaskStatus } from '../api/enums';
 /**
  * `IN_USE` and `RESERVED` are already in the shared status table, mapped for a vehicle and a fuel
  * card. Both readings happen to be right here, but relying on that would mean a future edit to the
- * fleet's tone silently recolours the room diary — so S159 states its own, the way the emergency
+ * fleet's tone silently recolours the room diary - so S159 states its own, the way the emergency
  * module does for `ACTIVE`.
  */
 export const bookingStatusTone = (status: BookingStatus): Tone => {
@@ -98,7 +98,7 @@ export const toLocalInput = (iso: string): string => {
 
 export const fromLocalInput = (local: string): string => new Date(local).toISOString();
 
-/** The next whole hour, local, as a `datetime-local` value — the sensible default for a new booking. */
+/** The next whole hour, local, as a `datetime-local` value - the sensible default for a new booking. */
 export const nextHourLocalInput = (now = new Date()): string => {
   const start = new Date(now);
   start.setMinutes(0, 0, 0);
@@ -117,7 +117,7 @@ export const plusHoursLocalInput = (localValue: string, hours: number): string =
  *
  * Only the two rules that need no context: an end after its start, and both fields present. Whether
  * the window has passed, whether it sits inside the site's booking horizon and whether the space is
- * free are decisions with context — the service owns all three, and guessing at them here would
+ * free are decisions with context - the service owns all three, and guessing at them here would
  * produce a screen that refuses bookings the estate would have taken.
  */
 export const windowProblem = (startsLocal: string, endsLocal: string): string | null => {

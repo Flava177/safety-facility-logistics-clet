@@ -64,7 +64,7 @@ type Pending = 'assign' | 'hold' | 'reopen' | 'close' | 'cancel' | 'part' | 'evi
  * SRS-SFL-S153-02 refuses closure without the evidence the order required *when it was raised*. That
  * count is stored on the order, not recomputed, so an assignee is held to the rule that applied to
  * their job rather than one changed while they were working. The screen shows the shortfall as
- * "1 of 2 required" and disables close with the same sentence the service would answer with — two
+ * "1 of 2 required" and disables close with the same sentence the service would answer with - two
  * different wordings for one rule is how a user learns to distrust both.
  *
  * ## Time on hold sits beside the deadline, never inside it
@@ -78,7 +78,7 @@ type Pending = 'assign' | 'hold' | 'reopen' | 'close' | 'cancel' | 'part' | 'evi
  *
  * The buttons come from `WorkOrderStatus`'s own transition table by way of `workflow.ts`, not from a
  * remembered sequence. Reassignment is `ASSIGNED → ASSIGNED`, and closure is reachable from any
- * working state — neither is obvious, and hard-coding an order would get both wrong.
+ * working state - neither is obvious, and hard-coding an order would get both wrong.
  */
 const WorkOrderDetailPage = () => {
   const { workOrderId = '' } = useParams();
@@ -96,7 +96,7 @@ const WorkOrderDetailPage = () => {
     evidence.refetch();
   };
 
-  /** Only what counts towards closure — an invoice proves spend, not that the work was done. */
+  /** Only what counts towards closure - an invoice proves spend, not that the work was done. */
   const closureEvidence = (evidence.data ?? []).filter((item) => item.supportsClosure).length;
 
   const run = async (work: () => Promise<unknown>, success: string) => {
@@ -218,7 +218,7 @@ const WorkOrderDetailPage = () => {
                   )}
                   {(() => {
                     // Two different reasons a close button might not be pressable, and they are
-                    // shown differently on purpose. No permission — a technician never has it —
+                    // shown differently on purpose. No permission - a technician never has it -
                     // renders nothing, because a dead button on every job reads as a broken screen.
                     // Evidence short renders it disabled with the count, because that is something
                     // the person looking at it can go and fix.
@@ -248,13 +248,13 @@ const WorkOrderDetailPage = () => {
 
             <div className="space-y-5">
               {order.data.overdue && (
-                <Alert variant="error" title={`Past its SLA — ${overdueBy(order.data.minutesOverdue)}`}>
+                <Alert variant="error" title={`Past its SLA - ${overdueBy(order.data.minutesOverdue)}`}>
                   The deadline was {formatDateTime(order.data.slaDueAt)}.
                   {order.data.escalationLevel > 0
                     ? ` Escalated to level ${order.data.escalationLevel}.`
                     : ' The next scheduled sweep will escalate it.'}
                   {order.data.totalHeldSeconds > 0 &&
-                    ` ${heldFor(order.data.totalHeldSeconds)} of that was spent on hold — the clock does not stop for a hold.`}
+                    ` ${heldFor(order.data.totalHeldSeconds)} of that was spent on hold - the clock does not stop for a hold.`}
                 </Alert>
               )}
 
@@ -296,7 +296,7 @@ const WorkOrderDetailPage = () => {
                 />
                 <StatCard
                   label="SLA"
-                  value={order.data.overdue ? 'Overdue' : order.data.slaDueAt ? 'On time' : '—'}
+                  value={order.data.overdue ? 'Overdue' : order.data.slaDueAt ? 'On time' : '-'}
                   caption={
                     order.data.slaDueAt ? `Due ${formatDateTime(order.data.slaDueAt)}` : 'No deadline'
                   }
@@ -394,7 +394,7 @@ const WorkOrderDetailPage = () => {
 
               <SectionCard
                 title="Parts"
-                subtitle="What was fitted. Not a stores system — no stock is tracked."
+                subtitle="What was fitted. Not a stores system - no stock is tracked."
                 flush
                 actions={
                   order.data.open && (
@@ -481,7 +481,7 @@ const WorkOrderDetailPage = () => {
       {pending === 'hold' && order.data && (
         <TransitionNoteDialog
           title="Put on hold"
-          description={`${order.data.workOrderNumber} — ${order.data.title}`}
+          description={`${order.data.workOrderNumber} - ${order.data.title}`}
           label="Why it is blocked"
           placeholder="e.g. Waiting on a replacement ballast from the supplier."
           note="The SLA clock keeps running. Held time is recorded but never subtracted from the deadline."
@@ -503,7 +503,7 @@ const WorkOrderDetailPage = () => {
       {pending === 'reopen' && order.data && (
         <TransitionNoteDialog
           title="Reopen work order"
-          description={`${order.data.workOrderNumber} — ${order.data.title}`}
+          description={`${order.data.workOrderNumber} - ${order.data.title}`}
           label="Why it is going back"
           placeholder="e.g. The fire door still binds against the frame."
           note="This reverses somebody's judgement that the work was finished, so it takes the closing permission."
@@ -525,7 +525,7 @@ const WorkOrderDetailPage = () => {
       {pending === 'cancel' && order.data && (
         <TransitionNoteDialog
           title="Cancel work order"
-          description={`${order.data.workOrderNumber} — ${order.data.title}`}
+          description={`${order.data.workOrderNumber} - ${order.data.title}`}
           label="Why"
           placeholder="e.g. Duplicate of WO-CLET-HQ-000112."
           note="Cancellation is terminal. The fault behind it stays open."

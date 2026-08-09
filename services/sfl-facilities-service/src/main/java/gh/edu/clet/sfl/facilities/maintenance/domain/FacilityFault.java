@@ -20,7 +20,7 @@ import java.util.UUID;
  *
  * <h2>What changed from the pre-S152 version, and why</h2>
  *
- * The original record predated the S152 platform and carried none of it — no {@link RecordMetadata},
+ * The original record predated the S152 platform and carried none of it - no {@link RecordMetadata},
  * no lifecycle, no optimistic lock, and a {@code locationCode} string where the estate now has real
  * spaces. Three consequences followed, and all three are fixed here:
  *
@@ -29,12 +29,12 @@ import java.util.UUID;
  *       fault that stops a hall being used, and a readiness system that does not know about it, is
  *       the gap this module exists to close.</li>
  *   <li>There was no version, so two officers triaging the same fault silently overwrote each other.</li>
- *   <li>The status was a label with nothing enforcing the order. It is now a state machine — see
+ *   <li>The status was a label with nothing enforcing the order. It is now a state machine - see
  *       {@link FacilityFaultStatus}.</li>
  * </ul>
  *
  * <p>{@code locationCode} is kept beside {@code roomId} rather than replaced by it. A fault can be
- * reported against a corridor, a car park or an external wall — places the estate model has no room
+ * reported against a corridor, a car park or an external wall - places the estate model has no room
  * for, deliberately, because they are not bookable spaces. Requiring a room would mean either
  * inventing rooms for them or refusing the report.
  *
@@ -131,7 +131,7 @@ public record FacilityFault(
      *
      * <p>The priority may change here and only here. SRS-SFL-S153-02 computes the SLA from priority,
      * so letting it be edited afterwards would mean either a stale due date or a due date that moves
-     * — and a due date that moves is not a deadline.
+     * - and a due date that moves is not a deadline.
      */
     public FacilityFault triage(FaultPriority confirmedPriority, String notes, Instant slaDue, String actorId,
             Instant at, SourceChannel channel, String correlationId) {
@@ -220,7 +220,7 @@ public record FacilityFault(
      * carry it through unchanged rather than clearing it, and they must: the reconciliation that
      * actually closes the blocker runs <em>after</em> the transition and decides what to do by reading
      * this flag. A transition that helpfully set it to false first would leave the blocker open on the
-     * space forever, with the fault reading as resolved — a hall that nobody can book and nothing
+     * space forever, with the fault reading as resolved - a hall that nobody can book and nothing
      * explains. Found by a test; worth a paragraph.
      */
     public FacilityFault withBlockerRaised(boolean raised) {

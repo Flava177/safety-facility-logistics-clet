@@ -12,7 +12,7 @@ import java.util.UUID;
  *
  * <p>Reconciliation resolves the policy in force at a transaction's own {@code occurredAt}. With two
  * ACTIVE policies covering that instant, {@code findApplicablePolicy} returns whichever row the
- * ordering happens to surface — so the rules a transaction is judged against, and the policy version
+ * ordering happens to surface - so the rules a transaction is judged against, and the policy version
  * stamped on its reconciliation record, stop being reproducible. That is the whole point of an
  * effective-dated policy, so the overlap is refused at creation rather than left to be discovered.
  *

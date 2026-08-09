@@ -11,7 +11,7 @@ import java.util.UUID;
  *
  * <h2>Why this port is declared here and not by the caller</h2>
  *
- * S152's {@code SpaceReadinessPort} is declared by {@code masterdata} and implemented by readiness —
+ * S152's {@code SpaceReadinessPort} is declared by {@code masterdata} and implemented by readiness -
  * consumer-declared, which is the usual inversion. This one is deliberately the other way round, and
  * the reason is a constraint rather than a preference: <strong>readiness must not learn about work
  * orders.</strong>
@@ -40,7 +40,7 @@ public interface ExternalBlockerPort {
      * <p>Idempotent by {@code (source, sourceReference)}: called twice with the same severity it does
      * nothing the second time, and called with a different severity it closes the old blocker and
      * raises one at the new level. That is what lets a caller reconcile on every save without
-     * filling the queue with duplicates of one problem — the same contract
+     * filling the queue with duplicates of one problem - the same contract
      * {@code reconcileAssetBlockers} already offers for assets.
      *
      * @param roomId the space affected. Nothing happens if it is unknown to the estate.

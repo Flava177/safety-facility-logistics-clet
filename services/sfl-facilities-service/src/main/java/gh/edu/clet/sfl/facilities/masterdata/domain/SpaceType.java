@@ -8,7 +8,7 @@ package gh.edu.clet.sfl.facilities.masterdata.domain;
  * and should never appear in either list. A typed set can.
  *
  * <p>{@link #isBookableByDefault()} and {@link #isExaminationCapableByDefault()} are defaults, not
- * rules — a space overrides both, because a lecture hall under refurbishment is not bookable and a
+ * rules - a space overrides both, because a lecture hall under refurbishment is not bookable and a
  * particular meeting room may be approved for examinations. The type sets the sensible starting point
  * so an operator registering two hundred rooms is not answering the same two questions two hundred
  * times.
@@ -28,7 +28,7 @@ public enum SpaceType {
     AUDITORIUM(true, true),
     /** Consumable and equipment storage. */
     STORE(false, false),
-    /** Plant, switch and server rooms — back-of-house, never bookable. */
+    /** Plant, switch and server rooms - back-of-house, never bookable. */
     PLANT_ROOM(false, false),
     /** Corridors, lobbies, stairwells. Modelled because zones and devices attach to them. */
     CIRCULATION(false, false),

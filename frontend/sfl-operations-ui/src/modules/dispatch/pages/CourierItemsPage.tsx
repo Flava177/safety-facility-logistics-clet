@@ -30,11 +30,12 @@ import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canRegisterItems } from 'modules/fleet/api/access';
 
 /**
  * The courier item register.
  *
- * Site, direction, status, sensitivity, handler and the date range all reach the service — those are
+ * Site, direction, status, sensitivity, handler and the date range all reach the service - those are
  * the six filters `GET /items` accepts. Item type is filtered here over the returned window and is
  * labelled as such, because the endpoint has no parameter for it.
  *
@@ -203,9 +204,12 @@ const CourierItemsPage = () => {
             >
               Export CSV
             </Button>
-            <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
-              Register item
-            </Button>
+{/* DISPATCH_ITEM_REGISTER - a mailroom officer's grant, not a reader's. */}
+            {canRegisterItems() && (
+                          <Button variant="primary" startIcon="plus" onClick={() => setRegistering(true)}>
+                Register item
+              </Button>
+            )}
           </>
         }
       />
@@ -305,7 +309,7 @@ const CourierItemsPage = () => {
             notifySuccess(
               `${item.itemNumber} registered.`,
               item.chainOfCustodyRequired
-                ? 'It requires a chain of custody — every handover must be recorded.'
+                ? 'It requires a chain of custody - every handover must be recorded.'
                 : 'No chain of custody is required for this item.',
             );
             query.refetch();

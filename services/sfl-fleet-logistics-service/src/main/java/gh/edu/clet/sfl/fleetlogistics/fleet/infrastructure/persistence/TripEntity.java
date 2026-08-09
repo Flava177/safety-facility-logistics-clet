@@ -90,7 +90,7 @@ public class TripEntity {
     @Column(name = "end_odometer")
     private Long endOdometer;
 
-    /** The assigned driver's answer. Independent of {@link #status} — see TripAcknowledgementState. */
+    /** The assigned driver's answer. Independent of {@link #status} - see TripAcknowledgementState. */
     @Enumerated(EnumType.STRING)
     @Column(name = "acknowledgement_state", nullable = false, length = 20)
     private TripAcknowledgementState acknowledgementState;

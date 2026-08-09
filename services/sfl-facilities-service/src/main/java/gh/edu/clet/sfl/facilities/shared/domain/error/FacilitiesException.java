@@ -30,7 +30,7 @@ public class FacilitiesException extends RuntimeException {
     /**
      * A record that does not exist.
      *
-     * <p>The identifier is deliberately included: this is not a permission boundary — an actor who
+     * <p>The identifier is deliberately included: this is not a permission boundary - an actor who
      * cannot see a site is refused with {@link UnauthorizedScopeException} before the lookup runs.
      */
     public static class RecordNotFoundException extends FacilitiesException {
@@ -39,7 +39,7 @@ public class FacilitiesException extends RuntimeException {
         }
     }
 
-    /** A parent referenced by a create command does not exist — a floor whose building is unknown. */
+    /** A parent referenced by a create command does not exist - a floor whose building is unknown. */
     public static class InvalidParentReferenceException extends FacilitiesException {
         public InvalidParentReferenceException(String parentType, Object id) {
             super(FacilitiesErrorCode.INVALID_PARENT_REFERENCE,
@@ -101,7 +101,7 @@ public class FacilitiesException extends RuntimeException {
         }
     }
 
-    /** READY refused while a critical blocker is open — the rule S152 readiness turns on. */
+    /** READY refused while a critical blocker is open - the rule S152 readiness turns on. */
     public static class ReadinessBlockedException extends FacilitiesException {
         public ReadinessBlockedException(int openCriticalBlockers) {
             super(FacilitiesErrorCode.READINESS_BLOCKED,

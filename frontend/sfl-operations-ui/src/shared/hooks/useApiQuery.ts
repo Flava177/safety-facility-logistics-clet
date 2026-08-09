@@ -13,7 +13,7 @@ export interface ApiQueryState<T> {
 /**
  * Minimal read hook: fetch on mount and whenever `deps` change, with cancellation.
  *
- * Deliberately small — the app has no data-fetching library, and every screen needs the same four
+ * Deliberately small - the app has no data-fetching library, and every screen needs the same four
  * states (loading, empty, error, success). Keeping refetching explicit also keeps mutations honest:
  * screens refetch after a write rather than guessing the new server state.
  */
@@ -26,7 +26,7 @@ export function useApiQuery<T>(
   const [loading, setLoading] = useState(true);
   const [reloadToken, setReloadToken] = useState(0);
   /**
-   * Whether a first response has ever landed — state, not a ref.
+   * Whether a first response has ever landed - state, not a ref.
    *
    * It was a ref, and `initialising` read `loadedOnce.current` during render. That is exactly
    * what `react-hooks/refs` forbids: a ref read during render is invisible to React, so under
@@ -74,7 +74,7 @@ export function useApiQuery<T>(
     };
     // The dependency array is the caller's, by design: this hook exists to re-run a fetch when
     // the caller's inputs change, and it cannot know what those are. `fetcher` is deliberately
-    // absent — it is an inline closure at every call site and would re-run on every render.
+    // absent - it is an inline closure at every call site and would re-run on every render.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [...deps, reloadToken]);
 

@@ -62,13 +62,13 @@ public final class FleetTripRequests {
     /**
      * {@code PATCH /api/v1/fleet/trips/{tripId}/acknowledgement}.
      *
-     * <p>{@code answer} accepts {@code CONFIRMED} or {@code DEFERRED} only — {@code PENDING} is the
+     * <p>{@code answer} accepts {@code CONFIRMED} or {@code DEFERRED} only - {@code PENDING} is the
      * state an assignment starts in, not an answer a driver can give, and allowing it would let a
      * driver erase their own deferral and the reason with it.
      *
      * <p>The "a deferral needs a reason" rule is <em>not</em> expressed here as a bean-validation
      * annotation. It is a cross-field rule, and enforcing it at the edge would mean the aggregate
-     * still had to enforce it for every other path — two implementations of one rule, which drift.
+     * still had to enforce it for every other path - two implementations of one rule, which drift.
      * {@code TripAcknowledgement} owns it; this layer only bounds the length.
      */
     public record AcknowledgeTrip(

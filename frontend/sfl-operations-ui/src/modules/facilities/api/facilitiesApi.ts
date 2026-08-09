@@ -78,7 +78,7 @@ import type { DeviceReferenceType } from './enums';
 /**
  * The S152 API surface.
  *
- * One function per endpoint, all addressed to the `facilities` service — S152 today, S153 and S159
+ * One function per endpoint, all addressed to the `facilities` service - S152 today, S153 and S159
  * behind the same origin later. The shared client handles the actor headers, the correlation ID, the
  * `{data, error}` envelope and the error catalogue, so nothing here touches `fetch`.
  *
@@ -312,7 +312,7 @@ export const getActorPermissions = (signal?: AbortSignal) =>
 // S153 CMMS
 //
 // Same service, same client, same envelope. `idempotent: true` appears on exactly the four
-// state-creating POSTs the service marks as accepting an `Idempotency-Key` — reporting a fault,
+// state-creating POSTs the service marks as accepting an `Idempotency-Key` - reporting a fault,
 // raising a work order, attaching evidence, registering a vendor or schedule. It is deliberately
 // absent from every PATCH: those are guarded by the record's version and its state machine, so a
 // repeat is either a no-op or an invalid-transition error, and a key there would be ceremony.
@@ -401,7 +401,7 @@ export const attachEvidence = (workOrderId: string, request: AttachEvidenceReque
 export const getEvidence = (evidenceId: string, signal?: AbortSignal) =>
   get<MaintenanceEvidence>(`/maintenance-evidence/${evidenceId}`, undefined, signal);
 
-/** Authorises and records an export. It does not move the file — it returns the reference to fetch. */
+/** Authorises and records an export. It does not move the file - it returns the reference to fetch. */
 export const exportEvidence = (evidenceId: string, request: ExportEvidenceRequest) =>
   post<EvidenceExportGrant>(`/maintenance-evidence/${evidenceId}/exports`, request);
 
@@ -447,7 +447,7 @@ export const changeScheduleLifecycle = (scheduleId: string, request: ChangeLifec
 // ---- sweeps ---------------------------------------------------------------------------------------
 
 /**
- * Runs preventive generation on demand — what the scheduler does, when somebody asks.
+ * Runs preventive generation on demand - what the scheduler does, when somebody asks.
  *
  * Idempotent by cycle: a schedule already generated for its current due date produces nothing,
  * however often this is called. No `Idempotency-Key` is needed or accepted for that reason.

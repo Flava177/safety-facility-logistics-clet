@@ -14,6 +14,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundExcep
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.RecordMetadata;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.BulkImportPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import java.nio.charset.StandardCharsets;
 import java.time.Clock;
@@ -59,6 +60,10 @@ public class DispatchScanService {
     @Transactional
     public ScanImportBatch importCsv(ImportScanBatch c) {
         access.require(c.actor(), SflPermission.DISPATCH_INTEGRATION_INGEST, c.siteCode(), "ScanImportBatch", null);
+        // The same ceiling the fuel import answers to, and for the same reason: until this existed
+        // the container's multipart limit was the only bound on either endpoint, and it refuses a
+        // request before any handler runs - so the operator got a bare failure with nothing to act on.
+        BulkImportPolicy.requireWithinLimit(c.batchReference(), c.content());
         String reference = c.batchReference() == null || c.batchReference().isBlank()
                 ? DispatchNumbers.next("SCAN") : c.batchReference().strip();
         var existing = repository.findScanBatchByReference(c.siteCode(), c.sourceSystem(), reference);
@@ -135,7 +140,7 @@ public class DispatchScanService {
      * The site's scan batches.
      *
      * <p>Closes gap 3. Both {@code /imports/{id}} and {@code /imports/{id}/rows} already existed, so
-     * a batch was a real record — but the only way back to one was an identifier returned once at
+     * a batch was a real record - but the only way back to one was an identifier returned once at
      * upload and kept nowhere, which meant an import could not be revisited the next morning.
      */
     public DispatchRepository.DispatchPage<ScanImportBatch> batches(String site, String sourceSystem, UUID dispatchId,

@@ -95,7 +95,7 @@ public class DriverApplicationService {
                 site,
                 command.responsibleUnit(),
                 // The identity that will sign in as this driver, if it is known at registration. Null
-                // is the ordinary case — most driver references exist for people who never open SFL —
+                // is the ordinary case - most driver references exist for people who never open SFL -
                 // and an unbound profile is assignable but shows its holder no trips of their own.
                 command.principalSubject(),
                 RecordMetadata.createdBy(command.actor().actorId(), now, command.sourceChannel(),
@@ -179,7 +179,7 @@ public class DriverApplicationService {
      * caller a usable error instead of a constraint violation.
      *
      * <p>A null or blank subject unbinds, which is the supported way to revoke access when somebody
-     * leaves. It is not an error — an unbound profile is still assignable, it just shows nobody
+     * leaves. It is not an error - an unbound profile is still assignable, it just shows nobody
      * anything.
      */
     @Transactional

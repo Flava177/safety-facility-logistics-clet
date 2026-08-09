@@ -1,9 +1,9 @@
 /**
- * The programme model — which of the four SFL programmes a set of roles may see.
+ * The programme model - which of the four SFL programmes a set of roles may see.
  *
  * Deliberately free of any import: no config, no `import.meta.env`, no React. That is what lets the
  * mapping be exercised directly rather than only through a running application, and the decision it
- * encodes — who sees what — is worth being able to check.
+ * encodes - who sees what - is worth being able to check.
  *
  * Phase 1 is **13 systems under 4 programme modules, delivered as 5 services**, and those counts do
  * not line up. A programme is a user-facing grouping; a service is a deployment unit. See
@@ -17,11 +17,11 @@
  *   programme scoping alone shows a mailroom officer the whole fleet register and a driver the courier
  *   manifests. Neither can do anything with them, and the service says so on every call.
  *
- * The finer grain is derived from the same place as the coarser one — the roles the actor already
- * sends — because that is what IAM will carry as a claim.
+ * The finer grain is derived from the same place as the coarser one - the roles the actor already
+ * sends - because that is what IAM will carry as a claim.
  */
 
-export type ProgrammeCode = 'IFIMP' | 'SSEMP' | 'FTLMP' | 'AVAMP';
+export type ProgrammeCode = 'IFIMP' | 'SSEMP' | 'FTLMP';
 
 export interface Programme {
   code: ProgrammeCode;
@@ -45,12 +45,7 @@ export const programmes: Record<ProgrammeCode, Programme> = {
   FTLMP: {
     code: 'FTLMP',
     label: 'Fleet, Transport & Logistics',
-    scope: 'Fleet and vehicles, fuel and driver logbooks, courier and dispatch',
-  },
-  AVAMP: {
-    code: 'AVAMP',
-    label: 'Asset & Device Visibility',
-    scope: 'Asset and device reference across every programme',
+    scope: 'Fleet and vehicles, fuel and driver logbooks, courier and dispatch, asset and device visibility',
   },
 };
 
@@ -60,12 +55,12 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  * The systems that have screens.
  *
  * Five of the thirteen. The others arrive with their own screens rather than being declared ahead of
- * them — a code here with nothing behind it would be a promise the sidebar cannot keep, and
+ * them - a code here with nothing behind it would be a promise the sidebar cannot keep, and
  * {@link systemsFor} would happily entitle somebody to it.
  *
  * S152 is the first IFIMP system to arrive. Until it did, the programme was declared in
  * {@link programmes} and had no systems at all, so a facilities manager was entitled to a programme
- * that showed them nothing — an empty sidebar with no explanation.
+ * that showed them nothing - an empty sidebar with no explanation.
  *
  * ## Why S153 is its own code even though no role's entitlement differs from S152
  *
@@ -75,7 +70,7 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  *
  * It is here for three reasons. The C9 mapping lists S153 as a **Fast-Track system in its own
  * right**, the same status as S152, and the coverage claims in `solution.md` and ADR 0006 count
- * systems — "IFIMP: S152 and S153 complete" is only checkable if both exist. `VITE_SFL_SYSTEMS=S153`
+ * systems - "IFIMP: S152 and S153 complete" is only checkable if both exist. `VITE_SFL_SYSTEMS=S153`
  * becomes possible, which is how somebody looks at maintenance in isolation and is not possible
  * otherwise. And the no-entitlement page names the system: a user refused maintenance should read
  * "Maintenance management", not "Facility management".
@@ -88,7 +83,7 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  *
  * `IFIMP_REQUESTER` is entitled to S152, S153 and S159 and holds almost nothing in the first two: it
  * can report a fault and read the estate, and that is all. What it is *for* is booking rooms. Before
- * S159 had a code, that role's whole purpose was a screen the model could not name — and the
+ * S159 had a code, that role's whole purpose was a screen the model could not name - and the
  * no-entitlement page told a refused requester they could not see "Facility management", which is not
  * what they came for.
  */
@@ -117,9 +112,9 @@ export const allSystems = Object.keys(systems) as SystemCode[];
 /**
  * Roles that see every programme.
  *
- * Two kinds, both deliberate. **Platform administration** — `SFL_ADMIN`, `DTI_ADMIN` — is the
- * superadmin case the rule exists to make meaningful. **Cross-cutting oversight** — audit and
- * compliance — genuinely spans all four: an auditor who could see only one programme could not do
+ * Two kinds, both deliberate. **Platform administration** - `SFL_ADMIN`, `DTI_ADMIN` - is the
+ * superadmin case the rule exists to make meaningful. **Cross-cutting oversight** - audit and
+ * compliance - genuinely spans all four: an auditor who could see only one programme could not do
  * the job, and both roles read and export rather than operate, so breadth costs little.
  */
 export const crossProgrammeRoles: readonly string[] = [
@@ -133,14 +128,14 @@ export const crossProgrammeRoles: readonly string[] = [
  * Which programme each role belongs to.
  *
  * Transcribed from `SflRole` and the per-service permission matrices. A role absent from this map
- * grants no programme rather than defaulting to one — the same way the services drop a role name
+ * grants no programme rather than defaulting to one - the same way the services drop a role name
  * they do not recognise instead of failing the request.
  *
  * This is the mapping IAM will eventually carry as a claim. Until then it is derived from the roles
  * the actor already sends, so there is no separate entitlement list to drift out of step.
  */
 export const roleProgrammes: Record<string, ProgrammeCode[]> = {
-  // SFL.IFIMP — facilities and infrastructure
+  // SFL.IFIMP - facilities and infrastructure
   FACILITIES_DIRECTOR: ['IFIMP'],
   FACILITIES_MANAGER: ['IFIMP'],
   IFIMP_MAINTENANCE_SUPERVISOR: ['IFIMP'],
@@ -148,17 +143,17 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   IFIMP_REQUESTER: ['IFIMP'],
   VENDOR_TECHNICIAN: ['IFIMP'],
 
-  // SFL.SSEMP — safety, security and emergency, including S174
+  // SFL.SSEMP - safety, security and emergency, including S174
   SECURITY_DIRECTOR: ['SSEMP'],
   SECURITY_OFFICER: ['SSEMP'],
   SOC_OPERATOR: ['SSEMP'],
   EMERGENCY_COORDINATOR: ['SSEMP'],
   HSE_MANAGER: ['SSEMP'],
-  // Command sits over the emergency workflow — it approves activations and records after-action
-  // approval — and over facility incident response with it.
+  // Command sits over the emergency workflow - it approves activations and records after-action
+  // approval - and over facility incident response with it.
   COMMAND_ROLE: ['SSEMP', 'IFIMP'],
 
-  // SFL.FTLMP — fleet, transport and logistics
+  // SFL.FTLMP - fleet, transport and logistics
   FLEET_MANAGER: ['FTLMP'],
   FLEET_LOGISTICS_OFFICER: ['FTLMP'],
   FLEET_DRIVER: ['FTLMP'],
@@ -169,10 +164,18 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   // A centre manager receives consignments and books the rooms they are for.
   CENTRE_MANAGER: ['FTLMP', 'IFIMP'],
 
-  // SFL.AVAMP — the device reference layer, plus the technical roles that maintain the feeds
-  // carrying device data into every programme.
-  INTEGRATION_ENGINEER: ['AVAMP', 'IFIMP', 'SSEMP', 'FTLMP'],
-  SERVICE_INTEGRATION: ['AVAMP', 'IFIMP', 'SSEMP', 'FTLMP'],
+  /*
+    The technical roles that maintain the feeds carrying device and asset data into every programme.
+
+    They used to carry a fourth code, AVAMP, for the asset and device reference layer. That was a
+    programme with no deployable of its own - its two entities were folded into the fleet service on
+    5 August, into the `asset_visibility` schema it still owns - and no screens, so entitlement to it
+    granted nothing and appeared nowhere. A programme the shell can neither show nor explain is a
+    concept with a maintenance cost and no reader; asset visibility is now what FTLMP's scope says it
+    is, which is where the code already lived.
+  */
+  INTEGRATION_ENGINEER: ['IFIMP', 'SSEMP', 'FTLMP'],
+  SERVICE_INTEGRATION: ['IFIMP', 'SSEMP', 'FTLMP'],
 };
 
 /**
@@ -190,20 +193,20 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
  *   logbook; they do not run the mailroom.
  * - `MAILROOM_OFFICER`, `DISPATCH_CONTROLLER`, `LOGISTICS_COORDINATOR` and `CENTRE_MANAGER` are in the
  *   dispatch matrix only. A mailroom officer signs in to the mailroom.
- * - `SECURITY_OFFICER` is in the dispatch **and** emergency matrices — it can escalate a dispatch
+ * - `SECURITY_OFFICER` is in the dispatch **and** emergency matrices - it can escalate a dispatch
  *   exception on a security-relevant consignment, which is a real permission the console used to hide.
  *
  * A role absent from this map is not narrowed; see {@link systemsFor} for why that is the right
  * default rather than the fail-closed one used for programmes.
  */
 export const roleSystems: Record<string, SystemCode[]> = {
-  // SFL.IFIMP — S152 is the facilities platform, S153 the maintenance module and S159 the booking
+  // SFL.IFIMP - S152 is the facilities platform, S153 the maintenance module and S159 the booking
   // module, all three in one service. Transcribed from `FacilitiesPermissionMatrix`: a role appears
   // here exactly when that matrix grants it something for that system.
   //
   // `VENDOR_TECHNICIAN` is the one worth reading twice, and it is now the only IFIMP role **not**
   // entitled to S159. A contractor holds work-order and evidence permissions plus three estate
-  // *reads* — site, space and asset — and nothing else: no dashboard, no readiness, not even
+  // *reads* - site, space and asset - and nothing else: no dashboard, no readiness, not even
   // `FACILITIES_FAULT_READ`, and no `FACILITIES_BOOKING_READ`. S152 and S153 are granted because the
   // estate reads are what let a work order say where it is and what it is on; dropping S152 would
   // break the link from a job to the hall it is in. Its `EnumSet` in the matrix is explicit rather
@@ -221,7 +224,7 @@ export const roleSystems: Record<string, SystemCode[]> = {
   IFIMP_REQUESTER: ['S152', 'S153', 'S159'],
   VENDOR_TECHNICIAN: ['S152', 'S153'],
 
-  // SFL.FTLMP — all three systems live in `sfl-fleet-logistics-service`
+  // SFL.FTLMP - all three systems live in `sfl-fleet-logistics-service`
   FLEET_MANAGER: ['S166', 'S168', 'S171'],
   FLEET_LOGISTICS_OFFICER: ['S166', 'S168', 'S171'],
   FLEET_REPORTING_VIEWER: ['S166', 'S168', 'S171'],
@@ -230,15 +233,15 @@ export const roleSystems: Record<string, SystemCode[]> = {
   MAILROOM_OFFICER: ['S171'],
   LOGISTICS_COORDINATOR: ['S171'],
   // A centre manager receives consignments, declares their centre's operating mode, and owns its
-  // diary — the role the matrix expects to hold `FACILITIES_BOOKING_OVERRIDE` in practice.
+  // diary - the role the matrix expects to hold `FACILITIES_BOOKING_OVERRIDE` in practice.
   CENTRE_MANAGER: ['S152', 'S153', 'S159', 'S171'],
 
-  // SFL.SSEMP — S174 is its own deployable, split by ADR 0004
+  // SFL.SSEMP - S174 is its own deployable, split by ADR 0004
   EMERGENCY_COORDINATOR: ['S174'],
   SECURITY_DIRECTOR: ['S174'],
   SOC_OPERATOR: ['S174'],
   // An HSE manager reads the estate to place an incident and judge a location's standing. It takes
-  // the matrix's shared READ_ONLY set, which carries FACILITIES_BOOKING_READ — so the diary is
+  // the matrix's shared READ_ONLY set, which carries FACILITIES_BOOKING_READ - so the diary is
   // readable, and nothing in the section can book, approve or turn a room around.
   HSE_MANAGER: ['S152', 'S153', 'S159', 'S174'],
 
@@ -256,7 +259,7 @@ export const parseList = (value: string): string[] =>
     .map((entry) => entry.trim().toUpperCase())
     .filter(Boolean);
 
-/** `true` when any role sees every programme — the manager and superadmin case. */
+/** `true` when any role sees every programme - the manager and superadmin case. */
 export const isCrossProgramme = (roles: string[]): boolean =>
   roles.some((role) => crossProgrammeRoles.includes(role));
 
@@ -267,7 +270,7 @@ export const isCrossProgramme = (roles: string[]): boolean =>
  * sees nothing. That is the safer default to *read*: an empty sidebar is a question somebody asks,
  * where a full one is not.
  *
- * **A role's systems imply their programmes**, and that union is not a convenience — it is what stops
+ * **A role's systems imply their programmes**, and that union is not a convenience - it is what stops
  * the two maps drifting. Adding a system to {@link roleSystems} entitles the role to that system's
  * programme automatically, so the pair cannot fall out of step the way they had:
  *
@@ -275,7 +278,7 @@ export const isCrossProgramme = (roles: string[]): boolean =>
  *   {@link roleProgrammes} listed only IFIMP and SSEMP. The whole FTLMP side of the console was hidden
  *   from a role that could operate it.
  * - `SECURITY_OFFICER` can read dispatch items and manifests and escalate a dispatch exception, and
- *   was listed as SSEMP alone — so it could never see the consignment it was meant to escalate.
+ *   was listed as SSEMP alone - so it could never see the consignment it was meant to escalate.
  *
  * Both close here by construction rather than by being edited into a second list.
  */
@@ -301,7 +304,7 @@ export const programmesFor = (roles: string[]): ProgrammeCode[] => {
  * Fail-closed is right for programmes, where the question is "should this person be in safety at all"
  * and silence should mean no. It is wrong here. A new FTLMP role added to {@link roleProgrammes} and
  * forgotten in {@link roleSystems} would otherwise produce a console that is entitled to a programme
- * and shows none of it — an empty sidebar with no explanation, which reads as a broken build rather
+ * and shows none of it - an empty sidebar with no explanation, which reads as a broken build rather
  * than as a permission. Widening to the programme keeps the failure legible, and the services refuse
  * anything the role cannot do regardless.
  */
@@ -316,7 +319,7 @@ export const systemsFor = (roles: string[]): SystemCode[] => {
   if (declared.size > 0) {
     return allSystems.filter((code) => declared.has(code));
   }
-  // No role said anything about systems, so nothing is narrowed — see above.
+  // No role said anything about systems, so nothing is narrowed - see above.
   const entitledProgrammes = programmesFor(roles);
   return allSystems.filter((code) => entitledProgrammes.includes(systems[code].programme));
 };

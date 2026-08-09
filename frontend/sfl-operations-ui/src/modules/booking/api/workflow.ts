@@ -11,10 +11,10 @@ import { TERMINAL_STATUSES } from './enums';
  *
  * **A permission denial hides the control; a state or data shortfall disables it with the reason.**
  * S153 paid for that distinction: a technician was shown a Close button disabled with "You do not have
- * permission" — permanently, on every job, forever. A control somebody will never be allowed to press
+ * permission" - permanently, on every job, forever. A control somebody will never be allowed to press
  * is noise; a control they cannot press *yet* is information.
  *
- * So every function here returns one of three things — allowed, hidden, or disabled with a sentence —
+ * So every function here returns one of three things - allowed, hidden, or disabled with a sentence -
  * and the pages render that rather than deciding for themselves.
  *
  * <h2>`FACILITIES_BOOKING_CANCEL` is misnamed, and this file must not repeat the mistake</h2>
@@ -26,7 +26,7 @@ import { TERMINAL_STATUSES } from './enums';
  * holding that one grant.
  *
  * That is why every function below takes the booking rather than asking a permission in isolation.
- * Gating reschedule on `FACILITIES_BOOKING_REQUEST` — the reading the names suggest — would offer a
+ * Gating reschedule on `FACILITIES_BOOKING_REQUEST` - the reading the names suggest - would offer a
  * requester the control on a hall booked by the registry, and the service would refuse it.
  *
  * <h2>Nothing here recomputes what the service derives</h2>
@@ -48,7 +48,7 @@ const disabled = (reason: string): ControlState => ({ kind: 'disabled', reason }
 
 export const isTerminal = (status: BookingStatus): boolean => TERMINAL_STATUSES.includes(status);
 
-/** Sentence case for a status inside running prose — `IN_USE` reads badly mid-sentence. */
+/** Sentence case for a status inside running prose - `IN_USE` reads badly mid-sentence. */
 const spoken = (status: string): string => status.toLowerCase().replace(/_/g, ' ');
 
 /** Who the services will see this browser as. The same value the client sends as `X-SFL-User`. */
@@ -58,7 +58,7 @@ export const isOwnBooking = (booking: Booking): boolean =>
   booking.requestedBy.toLowerCase() === currentActor().toLowerCase();
 
 /**
- * Whether this actor may act on this booking at all — the client half of `requireMayAct`.
+ * Whether this actor may act on this booking at all - the client half of `requireMayAct`.
  *
  * Used by reschedule, start, complete and cancel, because the service uses one rule for all four.
  */
@@ -68,13 +68,13 @@ const mayAct = (booking: Booking): boolean =>
 /**
  * Approve or reject.
  *
- * There is no `APPROVED` state in this domain — approval is an event recorded as a `BookingApproval`,
+ * There is no `APPROVED` state in this domain - approval is an event recorded as a `BookingApproval`,
  * and a booking needing none is confirmed at request. So `REQUESTED` already means "waiting on a
  * decision", and `approvalRequired` is not re-tested here.
  *
  * The self-approval refusal is not a permission and is not negotiable: an approver deciding on their
  * own request is the one thing separation of duties exists to stop, and administrators are not exempt.
- * Disabled rather than hidden, because the actor plainly holds the authority — what they lack is
+ * Disabled rather than hidden, because the actor plainly holds the authority - what they lack is
  * distance from this particular request, and saying so is the difference between a rule and a bug.
  */
 export const canDecide = (booking: Booking): ControlState => {
@@ -138,7 +138,7 @@ export const canCancel = (booking: Booking): ControlState => {
 /**
  * Book into a space readiness would otherwise refuse.
  *
- * Separate from requesting because it is a different authority and creates a different obligation —
+ * Separate from requesting because it is a different authority and creates a different obligation -
  * the reason is recorded against the booking and is what an auditor reads later. Note that
  * `FACILITIES_READINESS_OVERRIDE` does **not** imply it: the matrix withholds booking override from
  * `IFIMP_MAINTENANCE_SUPERVISOR` deliberately.

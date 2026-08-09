@@ -19,13 +19,14 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { dispatchPaths } from 'shared/layout/navigation';
+import { canCreateManifests } from 'modules/fleet/api/access';
 
 /**
  * The manifest register.
  *
  * Site, status, destination centre, trip and the date range all reach the service. The seal count is
  * shown beside the item count because the two disagreeing is the first sign that a consignment was
- * assembled wrongly — a sealed manifest with no seals recorded should not exist.
+ * assembled wrongly - a sealed manifest with no seals recorded should not exist.
  */
 const ManifestsPage = () => {
   const navigate = useNavigate();
@@ -119,7 +120,7 @@ const ManifestsPage = () => {
           row.tripId ? (
             <StatusChip value="ASSIGNED" label="Trip" tone="active" />
           ) : (
-            <span className="text-gray-500">—</span>
+            <span className="text-gray-500">-</span>
           ),
       },
       {
@@ -142,9 +143,12 @@ const ManifestsPage = () => {
         subtitle="Consignments, their seals, custody chain, receipt and return leg."
         crumbs={[{ label: 'Dispatch', to: dispatchPaths.dashboard }, { label: 'Manifests' }]}
         actions={
-          <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
-            Create manifest
-          </Button>
+          // DISPATCH_MANIFEST_CREATE. A reporting viewer reads the register and creates nothing.
+          canCreateManifests() ? (
+            <Button variant="primary" startIcon="plus" onClick={() => setCreating(true)}>
+              Create manifest
+            </Button>
+          ) : undefined
         }
       />
 
@@ -211,7 +215,7 @@ const ManifestsPage = () => {
           onSaved={(manifest) => {
             notifySuccess(
               `${manifest.manifestNumber} created as a draft.`,
-              'Add its items before sealing — the contents freeze at that point.',
+              'Add its items before sealing - the contents freeze at that point.',
             );
             query.refetch();
             navigate(dispatchPaths.manifestDetail(manifest.id));

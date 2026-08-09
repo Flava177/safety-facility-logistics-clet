@@ -35,7 +35,7 @@ interface JpaFacilityAssetRepository extends JpaRepository<FacilityAssetRecord, 
             Pageable pageable);
 
     /**
-     * Assets in a space that are not operational — the readiness engine's hot path.
+     * Assets in a space that are not operational - the readiness engine's hot path.
      *
      * <p>Restricted to {@code ACTIVE} records: a decommissioned chiller is not a reason a hall is
      * unusable, and an archived record raising blockers would be a permanent, unfixable one.
@@ -52,7 +52,7 @@ interface JpaFacilityAssetRepository extends JpaRepository<FacilityAssetRecord, 
             """)
     List<FacilityAssetRecord> findImpairingByRoom(@Param("roomId") UUID roomId);
 
-    /** Every active asset in a site — the dashboard's asset input. */
+    /** Every active asset in a site - the dashboard's asset input. */
     @Query("""
             select a from FacilityAssetRecord a
             where (:siteCode is null or a.siteCode = :siteCode)

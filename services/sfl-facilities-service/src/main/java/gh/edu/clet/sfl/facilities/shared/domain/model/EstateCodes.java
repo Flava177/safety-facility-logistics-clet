@@ -10,7 +10,7 @@ import java.util.Locale;
  * the only thing that had codes; readiness checklists and blockers have them too, and reaching into
  * another aggregate for a static helper is not a dependency worth having.
  *
- * <p>Deliberately trivial and deliberately shared. The risk it removes is not complexity — it is two
+ * <p>Deliberately trivial and deliberately shared. The risk it removes is not complexity - it is two
  * modules disagreeing about whether a code is case-sensitive.
  */
 public final class EstateCodes {

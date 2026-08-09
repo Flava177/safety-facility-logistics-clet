@@ -22,14 +22,14 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * "What is free?" — SRS-SFL-S159-02.
+ * "What is free?" - SRS-SFL-S159-02.
  *
  * <p>These endpoints reserve nothing. Two people can both be told Hall A is free and both request it;
  * the first wins and the second is refused. Holding a space during a five-minute browse would mean
  * the estate's diary was mostly locked by people who had wandered off.
  *
  * <p>{@code setupMinutes} and {@code teardownMinutes} are accepted here because availability must be
- * asked with the same buffers the booking will carry — a hall that looks free for a two-hour
+ * asked with the same buffers the booking will carry - a hall that looks free for a two-hour
  * examination is not free once thirty minutes of layout change are added at each end.
  */
 @RestController

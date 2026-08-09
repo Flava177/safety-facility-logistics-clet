@@ -21,7 +21,7 @@ interface ResolveBlockerDialogProps {
  * unexplained mandatory field.
  *
  * Resolving the last open critical blocker is what lets a space become READY again, so the dialog
- * names that consequence for a critical one — the operator is not just closing a row.
+ * names that consequence for a critical one - the operator is not just closing a row.
  */
 const ResolveBlockerDialog = ({ blocker, onClose, onResolved }: ResolveBlockerDialogProps) => {
   const [notes, setNotes] = useState('');

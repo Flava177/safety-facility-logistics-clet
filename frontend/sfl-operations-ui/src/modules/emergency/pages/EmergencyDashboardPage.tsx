@@ -6,7 +6,7 @@ import {
   emergencyDashboardApi,
   drillsApi,
 } from 'modules/emergency/api/emergencyApi';
-import { activationLive, awaitingApproval } from 'modules/emergency/api/workflow';
+import { activationLive, awaitingApproval, canBreakGlass } from 'modules/emergency/api/workflow';
 import { ActivationStatusChip } from 'modules/emergency/components/EmergencyFields';
 import { formatElapsed, percentOf } from 'modules/emergency/components/emergencyFormat';
 import { DerivedNote } from 'modules/fuel/components/Provenance';
@@ -27,7 +27,7 @@ import { emergencyPaths } from 'shared/layout/navigation';
 /**
  * The emergency notification dashboard.
  *
- * Seven counts come from the service, and they are seven exception counts — active broadcasts,
+ * Seven counts come from the service, and they are seven exception counts - active broadcasts,
  * break-glass sends, failed recipients, outstanding acknowledgements, escalations, all-clears
  * pending closure and completed drills. That is the right emphasis for a mass notification system:
  * in normal operation every figure here is zero, and any figure that is not is something somebody
@@ -149,13 +149,17 @@ const EmergencyDashboardPage = () => {
         }
         actions={
           <>
-            <Button
-              variant="danger"
-              startIcon="zap"
-              onClick={() => navigate(emergencyPaths.breakGlass)}
-            >
-              Break glass
-            </Button>
+{/* The break-glass page hides its own send control too; this stops the journey earlier, so
+                nobody is walked to a screen whose one purpose they may not carry out. */}
+            {canBreakGlass() && (
+                          <Button
+                variant="danger"
+                startIcon="zap"
+                onClick={() => navigate(emergencyPaths.breakGlass)}
+              >
+                Break glass
+              </Button>
+            )}
             <Button
               variant="outline"
               startIcon="refresh"
@@ -190,7 +194,7 @@ const EmergencyDashboardPage = () => {
             {counts.stale && (
               <Alert variant="warning" title="These counts are older than the freshness threshold">
                 The service reports its own source data as stale for this site. Figures below may
-                lag what has actually happened — check the activation register directly before
+                lag what has actually happened - check the activation register directly before
                 acting on a zero.
               </Alert>
             )}
@@ -210,7 +214,7 @@ const EmergencyDashboardPage = () => {
                 }
               >
                 A live activation has gone out and has not been stood down. Send the all-clear once
-                the emergency is over — closure needs evidence and cannot be done from here.
+                the emergency is over - closure needs evidence and cannot be done from here.
               </Alert>
             )}
 
@@ -313,7 +317,7 @@ const EmergencyDashboardPage = () => {
               </DataState>
               <div className="px-5 pb-4">
                 <DerivedNote>
-                  Counted from the activation register rather than published by the service — the
+                  Counted from the activation register rather than published by the service - the
                   dashboard endpoint returns totals, not the records behind them.
                 </DerivedNote>
               </div>
@@ -329,7 +333,7 @@ const EmergencyDashboardPage = () => {
                 onRetry={drills.refetch}
                 empty={!lastDrill}
                 emptyTitle="No drill has been completed"
-                emptyHint="Start one from the drills screen — an untested notification path is an assumption."
+                emptyHint="Start one from the drills screen - an untested notification path is an assumption."
                 minHeight={140}
               >
                 {lastDrill && (

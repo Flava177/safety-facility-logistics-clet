@@ -24,7 +24,7 @@ interface RecordPartDialogProps {
  * Not a stores system. There is no stock level, no reorder point and no reservation, because CLET
  * has no inventory system for this to reconcile against and inventing one here would produce numbers
  * nobody maintains. What is recorded is what was fitted, how many, and what it cost if anybody knows
- * — enough for a job cost, not enough for procurement.
+ * - enough for a job cost, not enough for procurement.
  */
 const RecordPartDialog = ({ onClose, onSubmit }: RecordPartDialogProps) => {
   const [partCode, setPartCode] = useState('');

@@ -19,11 +19,71 @@
         <module>sfl-facilities-service</module>
         <module>sfl-safety-security-service</module>
         <module>sfl-fleet-logistics-service</module>
-        <module>sfl-asset-visibility-service</module>
-        <module>sfl-emergency-notification-service</module>
+        <module>sfl-portal-service</module>
     </modules>
     <properties>
         <java.version>17</java.version>
+        <frontend-maven-plugin.version>1.15.1</frontend-maven-plugin.version>
+        <node.version>v22.14.0</node.version>
+        <!--
+          Inherited by every module. ${project.basedir} resolves per module, so from services/<module>
+          this lands on <repo>/frontend - which is why it is written with two levels up and must not
+          be "corrected" to one. The aggregator's own copy, in the ui profile below, needs one level.
+        -->
+        <sfl.ui.dir>${project.basedir}/../../frontend/sfl-operations-ui</sfl.ui.dir>
+        <sfl.ui.dist>${sfl.ui.dir}/dist</sfl.ui.dist>
     </properties>
+
+    <profiles>
+        <!--
+          -Pui builds the dashboard once, here, before any module is packaged. It lives on the
+          aggregator rather than in a service because every service now copies the same dist into its
+          own jar: built in a module, the build would race the copies of the modules ahead of it in
+          the reactor and they would silently package a stale bundle.
+        -->
+        <profile>
+            <id>ui</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.eirslett</groupId>
+                        <artifactId>frontend-maven-plugin</artifactId>
+                        <version>${frontend-maven-plugin.version}</version>
+                        <!--
+                          Not inherited. A profile's plugins are inherited by every child, and each
+                          child would resolve ${project.basedir} to its own directory and go looking
+                          for services/<module>/../frontend - which does not exist. The dashboard is
+                          built exactly once, here, at the top of the reactor.
+                        -->
+                        <inherited>false</inherited>
+                        <configuration>
+                            <workingDirectory>${project.basedir}/../frontend/sfl-operations-ui</workingDirectory>
+                            <installDirectory>${project.basedir}/../frontend/sfl-operations-ui</installDirectory>
+                        </configuration>
+                        <executions>
+                            <execution>
+                                <id>install-node-and-npm</id>
+                                <goals><goal>install-node-and-npm</goal></goals>
+                                <phase>generate-resources</phase>
+                                <configuration><nodeVersion>${node.version}</nodeVersion></configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-install</id>
+                                <goals><goal>npm</goal></goals>
+                                <phase>generate-resources</phase>
+                                <configuration><arguments>install --no-audit --no-fund</arguments></configuration>
+                            </execution>
+                            <execution>
+                                <id>npm-build</id>
+                                <goals><goal>npm</goal></goals>
+                                <phase>generate-resources</phase>
+                                <configuration><arguments>run build</arguments></configuration>
+                            </execution>
+                        </executions>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>
 

@@ -6,8 +6,8 @@ import Icon from 'shared/components/Icon';
  *
  * Far less of the fuel module needs this than once did: the dashboard publishes its anomaly,
  * logbook and import indicators, the registers page properly, and the detail screens read a real
- * audit history. What is left is genuinely derived — a chart bucketed by day from fetched records,
- * a freshness threshold this application chose — and it still says so, because a derived figure sitting
+ * audit history. What is left is genuinely derived - a chart bucketed by day from fetched records,
+ * a freshness threshold this application chose - and it still says so, because a derived figure sitting
  * silently beside a published one is how a dashboard starts lying.
  */
 export const DerivedNote = ({ children }: { children: ReactNode }) => (

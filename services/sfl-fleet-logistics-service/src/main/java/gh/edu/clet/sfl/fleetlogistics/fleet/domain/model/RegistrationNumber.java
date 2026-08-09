@@ -6,7 +6,7 @@ import java.util.Locale;
  * A vehicle registration number.
  *
  * <p>Normalised to upper case with internal whitespace collapsed to a single space, so that
- * {@code gt 1234-26} and {@code GT 1234-26} cannot both be registered as active in the same site —
+ * {@code gt 1234-26} and {@code GT 1234-26} cannot both be registered as active in the same site -
  * that is the SRS-SFL-S166-01 duplicate-identifier rule, and it only holds if the comparison form is
  * canonical. The database partial unique index applies the same normalisation.
  */

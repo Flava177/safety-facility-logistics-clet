@@ -7,7 +7,12 @@ import {
   ACTIVATION_RULES,
   activationLive,
   afterActionOutstanding,
+  canApproveActivations,
+  canApproveAfterAction,
+  canCreateActivations,
   canRecordAfterAction,
+  canSendActivations,
+  canSendAllClear,
   canTransition,
   whyUnavailable,
 } from 'modules/emergency/api/workflow';
@@ -51,12 +56,12 @@ import { emergencyPaths } from 'shared/layout/navigation';
  * One activation, end to end.
  *
  * Read through `GET /activations/{id}/status`, which returns the activation, its per-channel
- * fan-out and the acknowledgement count in a single request — so the record and its counters can
+ * fan-out and the acknowledgement count in a single request - so the record and its counters can
  * never be a refresh apart from each other.
  *
  * The history is the service's own record of every transition, read from `activation_history`. It
  * used to be reconstructed from whatever timestamps the activation still carried, which silently
- * omitted any transition that left no field behind — that was gap 4, and it is closed.
+ * omitted any transition that left no field behind - that was gap 4, and it is closed.
  */
 const ActivationDetailPage = () => {
   const { activationId = '' } = useParams();
@@ -110,9 +115,9 @@ const ActivationDetailPage = () => {
         title: humanise(entry.action),
         detail: entry.fromStatus
           ? `${humanise(entry.fromStatus)} → ${humanise(entry.toStatus)}${
-              entry.comment ? ` — ${entry.comment}` : ''
+              entry.comment ? ` - ${entry.comment}` : ''
             }`
-          : `${humanise(entry.toStatus)}${entry.comment ? ` — ${entry.comment}` : ''}`,
+          : `${humanise(entry.toStatus)}${entry.comment ? ` - ${entry.comment}` : ''}`,
         actor: entry.actor,
         occurredAt: entry.occurredAt,
         // Break-glass and escalation are the two an operator scanning the column must not miss.
@@ -226,8 +231,17 @@ const ActivationDetailPage = () => {
                 </span>
               }
               actions={
+                /*
+                  Each control needs both answers, and they are different questions.
+
+                  `canTransition` is the activation's state - a no there is temporary, and the record
+                  will reach that state later. The permission is the person - a no there is permanent.
+                  Gating on state alone offered every role every control on the page and let the
+                  service refuse them one at a time; the permission each one carries is the one
+                  ActivationService itself requires, so what is offered and what is accepted agree.
+                */
                 <>
-                  {canTransition(activation, 'submit') && (
+                  {canTransition(activation, 'submit') && canCreateActivations() && (
                     <Button
                       variant="primary"
                       startIcon="workflow"
@@ -244,7 +258,7 @@ const ActivationDetailPage = () => {
                       Submit for approval
                     </Button>
                   )}
-                  {canTransition(activation, 'approve') && (
+                  {canTransition(activation, 'approve') && canApproveActivations() && (
                     <Button
                       variant="primary"
                       startIcon="check-circle"
@@ -261,22 +275,22 @@ const ActivationDetailPage = () => {
                       Approve
                     </Button>
                   )}
-                  {canTransition(activation, 'reject') && (
+                  {canTransition(activation, 'reject') && canApproveActivations() && (
                     <Button variant="outline" startIcon="close" onClick={() => setRejecting(true)}>
                       Reject
                     </Button>
                   )}
-                  {canTransition(activation, 'cancel') && (
+                  {canTransition(activation, 'cancel') && canCreateActivations() && (
                     <Button variant="outline" startIcon="close" onClick={() => setCancelling(true)}>
                       Cancel
                     </Button>
                   )}
-                  {canTransition(activation, 'activate') && (
+                  {canTransition(activation, 'activate') && canSendActivations() && (
                     <Button variant="danger" startIcon="megaphone" onClick={() => setSending(true)}>
                       Send broadcast
                     </Button>
                   )}
-                  {canTransition(activation, 'degradedFallback') && (
+                  {canTransition(activation, 'degradedFallback') && canSendActivations() && (
                     <Button
                       variant="outline"
                       startIcon="alert-circle"
@@ -285,7 +299,7 @@ const ActivationDetailPage = () => {
                       Record degraded fallback
                     </Button>
                   )}
-                  {canTransition(activation, 'allClear') && (
+                  {canTransition(activation, 'allClear') && canSendAllClear() && (
                     <Button
                       variant="primary"
                       startIcon="check-circle"
@@ -294,7 +308,7 @@ const ActivationDetailPage = () => {
                       Send all-clear
                     </Button>
                   )}
-                  {afterActionOutstanding(activation) && canRecordAfterAction(activation) && (
+                  {afterActionOutstanding(activation) && canRecordAfterAction(activation) && canApproveAfterAction() && (
                     <Button
                       variant="accent"
                       startIcon="shield-check"
@@ -324,7 +338,7 @@ const ActivationDetailPage = () => {
               {activationLive(activation) && (
                 <Alert variant="error" title="This broadcast is live">
                   It has gone out and has not been stood down. Send the all-clear when the emergency
-                  is over — that is what tells the record it is finished, and it is not the same as
+                  is over - that is what tells the record it is finished, and it is not the same as
                   closing it.
                 </Alert>
               )}
@@ -425,13 +439,13 @@ const ActivationDetailPage = () => {
                       label: 'Escalation level',
                       value:
                         activation.escalationLevel > 0
-                          ? `${activation.escalationLevel} — the acknowledgement SLA was breached`
+                          ? `${activation.escalationLevel} - the acknowledgement SLA was breached`
                           : 'None',
                     },
                     {
                       label: 'Degraded mode',
                       value: activation.degradedMode
-                        ? `Yes — fallback path ${activation.fallbackPath ?? 'not recorded'}`
+                        ? `Yes - fallback path ${activation.fallbackPath ?? 'not recorded'}`
                         : 'No',
                     },
                   ]}
@@ -473,7 +487,7 @@ const ActivationDetailPage = () => {
                     <Alert variant="info" title="Delivered is zero because no provider has replied">
                       Sent means the message was handed to the gateway. Delivered, failed and
                       acknowledged are only written when a provider posts a signed callback to this
-                      service — so on a system with no live provider they stay at zero, and that is
+                      service - so on a system with no live provider they stay at zero, and that is
                       not a failed broadcast.
                     </Alert>
                   </div>
@@ -532,7 +546,7 @@ const ActivationDetailPage = () => {
                         </span>
                         <span className="text-gray-600">
                           {' '}
-                          on {formatDateTime(activation.afterActionApprovedAt)} —{' '}
+                          on {formatDateTime(activation.afterActionApprovedAt)} -{' '}
                           {activation.afterActionJustification}
                         </span>
                       </span>
@@ -557,7 +571,7 @@ const ActivationDetailPage = () => {
                       label: 'Correlation ID',
                       value: (
                         <span className="font-mono text-theme-xs">
-                          {activation.metadata.correlationId ?? '—'}
+                          {activation.metadata.correlationId ?? '-'}
                         </span>
                       ),
                       span: 2,

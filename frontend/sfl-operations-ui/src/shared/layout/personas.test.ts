@@ -4,7 +4,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
  * The persona rule, which is the one thing in this dashboard a permission cannot express.
  *
  * Each case re-imports the module with a different actor, because `actorRoles` is resolved once at
- * load — deliberately, so the sidebar cannot change under a render. `vi.resetModules()` is what makes
+ * load - deliberately, so the sidebar cannot change under a render. `vi.resetModules()` is what makes
  * that testable without making it mutable in production.
  */
 const withRoles = async (roles: string) => {
@@ -60,7 +60,7 @@ describe('personas', () => {
     expect(contractor.isPersona('technician')).toBe(true);
   });
 
-  it('does not treat a supervisor as a technician — they run the queue', async () => {
+  it('does not treat a supervisor as a technician - they run the queue', async () => {
     const { isPersona } = await withRoles('IFIMP_TECHNICIAN,IFIMP_MAINTENANCE_SUPERVISOR');
     expect(isPersona('technician')).toBe(false);
   });

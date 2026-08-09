@@ -24,8 +24,8 @@ import org.springframework.stereotype.Component;
  *
  * <p>SRS-SFL-S153-02 says escalation happens "when the scheduled evaluation runs", which means
  * something has to run it. This is that something, and it is deliberately thin: it builds a system
- * actor, calls the application service, and logs what moved. Every decision — what is overdue, what
- * level it is owed, whether a schedule has already generated — is in the services, where it is
+ * actor, calls the application service, and logs what moved. Every decision - what is overdue, what
+ * level it is owed, whether a schedule has already generated - is in the services, where it is
  * testable without a clock and a thread.
  *
  * <h2>Two things worth knowing before changing the intervals</h2>
@@ -37,7 +37,7 @@ import org.springframework.stereotype.Component;
  * <p><strong>Neither is safe to run on more than one instance at once</strong> in the sense of being
  * wasteful, not wrong: two instances sweeping together will both read the same overdue rows, and the
  * second will find every level already applied and do nothing. It is idempotence rather than a lock,
- * which is the right trade for two jobs that run this rarely — a distributed lock would be a second
+ * which is the right trade for two jobs that run this rarely - a distributed lock would be a second
  * thing to operate for a saving of a few wasted queries. Recorded because it is the kind of thing
  * somebody adds a lock for without asking whether it is needed.
  */
@@ -51,7 +51,7 @@ public class MaintenanceScheduledJobs {
      *
      * <p>A service account with {@code *} scope, because a sweep is estate-wide by nature and cannot
      * ask a person for their sites. {@code serviceAccount} is true so an audit reader can tell this
-     * from a person who happens to have every site — a distinction that matters when the question is
+     * from a person who happens to have every site - a distinction that matters when the question is
      * "who escalated this at three in the morning?"
      */
     private static final SiteScopedPrincipal SYSTEM = new SiteScopedPrincipal(
@@ -95,7 +95,7 @@ public class MaintenanceScheduledJobs {
         } catch (RuntimeException failure) {
             // Swallowed on purpose. An uncaught exception from a fixedDelay task cancels the schedule
             // for the life of the process, so one bad row would silently stop every future escalation
-            // — the failure mode being least likely to be noticed, on the job whose whole purpose is
+            // - the failure mode being least likely to be noticed, on the job whose whole purpose is
             // to notice things.
             log.error("SLA escalation sweep failed; it will be retried on the next run", failure);
         }
@@ -105,7 +105,7 @@ public class MaintenanceScheduledJobs {
      * Disposes of evidence whose retention has run out.
      *
      * <p>Daily, and deliberately not more often. Retention is measured in years, so nothing is gained
-     * by checking hourly — and this is the one job in the module that destroys something, so its blast
+     * by checking hourly - and this is the one job in the module that destroys something, so its blast
      * radius per run should be as small as the requirement allows.
      */
     @Scheduled(cron = "${sfl.maintenance.disposal.cron:0 30 2 * * *}")

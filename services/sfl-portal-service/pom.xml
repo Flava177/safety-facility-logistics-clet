@@ -1,0 +1,75 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>gh.edu.clet.sfl</groupId>
+        <artifactId>sfl-services</artifactId>
+        <version>0.1.0-SNAPSHOT</version>
+    </parent>
+    <artifactId>sfl-portal-service</artifactId>
+    <name>sfl-portal-service</name>
+    <description>SFL Operations portal - the one dashboard bundle for all three platforms, on a URL that names none of them</description>
+
+    <!--
+      This module exists to own an address, not behaviour. The dashboard used to be packaged by
+      sfl-fleet-logistics-service, which meant every user of facilities and safety-security reached
+      their screens through a URL that said "fleet" - one service appearing to own the other two.
+      Serving the same single bundle (ADR 0006 is unchanged - there is still exactly one) from a
+      module of its own puts the portal on http://localhost:8090/home, which names no service.
+
+      It has no database, no security filter chain and no API. It is a static file server, and the
+      dependency list below should stay that short: anything that needs a backend belongs in the
+      platform service that owns the data.
+    -->
+
+
+    <dependencies>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-web</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>gh.edu.clet.sfl</groupId>
+            <artifactId>sfl-service-common</artifactId>
+            <version>${project.version}</version>
+        </dependency>
+    </dependencies>
+
+    <build>
+        <plugins>
+            <plugin>
+                <groupId>org.springframework.boot</groupId>
+                <artifactId>spring-boot-maven-plugin</artifactId>
+            </plugin>
+            <!--
+              Copies the built dashboard into the jar. Harmless when the bundle is absent: the
+              directory is optional and the portal starts and says so rather than failing.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-resources-plugin</artifactId>
+                <executions>
+                    <execution>
+                        <id>copy-operations-ui</id>
+                        <phase>process-resources</phase>
+                        <goals>
+                            <goal>copy-resources</goal>
+                        </goals>
+                        <configuration>
+                            <outputDirectory>${project.build.outputDirectory}/static/home</outputDirectory>
+                            <overwrite>true</overwrite>
+                            <resources>
+                                <resource>
+                                    <directory>${sfl.ui.dist}</directory>
+                                    <filtering>false</filtering>
+                                </resource>
+                            </resources>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
+</project>

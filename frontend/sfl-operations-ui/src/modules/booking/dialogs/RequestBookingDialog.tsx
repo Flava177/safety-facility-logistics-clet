@@ -13,7 +13,7 @@ import { formatWindow } from '../components/bookingFormat';
 
 interface RequestBookingDialogProps {
   space: SpaceAvailability;
-  /** The window the availability search was run for. Not editable here — see below. */
+  /** The window the availability search was run for. Not editable here - see below. */
   startsAt: string;
   endsAt: string;
   setupMinutes: number;
@@ -31,7 +31,7 @@ interface RequestBookingDialogProps {
  * ## Why the window is fixed here
  *
  * It is the window the verdict on this space was given for. Letting it be edited in the dialog would
- * mean submitting against a "free" that was computed for a different window — the operator would read
+ * mean submitting against a "free" that was computed for a different window - the operator would read
  * *available*, change the time, and be refused with no idea why. Changing the window means going back
  * and asking again, which is one click and always tells the truth.
  *
@@ -45,7 +45,7 @@ interface RequestBookingDialogProps {
  *
  * Only offered when readiness would otherwise refuse **and** the actor holds
  * `FACILITIES_BOOKING_OVERRIDE`. The reason is required in that case and is recorded against the
- * booking — it is what an auditor reads when asked why an examination ran in a degraded hall.
+ * booking - it is what an auditor reads when asked why an examination ran in a degraded hall.
  */
 const RequestBookingDialog = ({
   space,
@@ -75,7 +75,7 @@ const RequestBookingDialog = ({
   const overCapacity =
     space.capacity !== null && attendees !== '' && Number(attendees) > space.capacity;
 
-  /** Only the resources actually asked for, and only positive quantities — the service rejects `0`. */
+  /** Only the resources actually asked for, and only positive quantities - the service rejects `0`. */
   const requestedResources = (): Record<string, number> => {
     const chosen: Record<string, number> = {};
     Object.entries(wanted).forEach(([resourceId, quantity]) => {
@@ -138,7 +138,7 @@ const RequestBookingDialog = ({
           onChange={setTitle}
           required
           maxLength={200}
-          placeholder="Contract Law II — Week 6 lecture"
+          placeholder="Contract Law II - Week 6 lecture"
           helperText="Shown in the diary. Say what would let somebody else recognise it."
         />
 

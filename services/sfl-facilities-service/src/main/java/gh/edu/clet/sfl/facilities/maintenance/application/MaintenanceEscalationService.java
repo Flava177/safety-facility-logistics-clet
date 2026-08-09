@@ -20,7 +20,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * The SLA sweep — SRS-SFL-S153-02.
+ * The SLA sweep - SRS-SFL-S153-02.
  *
  * <blockquote>"Given an SLA threshold is breached, when the scheduled evaluation runs, then the
  * system escalates the item and notifies the configured role."</blockquote>
@@ -31,7 +31,7 @@ import org.springframework.transaction.annotation.Transactional;
  * be evaluated "using the runtime configuration active at the time of evaluation", so the ladder is
  * fetched per site per run rather than held in a field. A rule tightened this morning applies at the
  * next sweep, not at the next deployment. The per-site policies are cached for the duration of one
- * run only — long enough to avoid a configuration read per work order, short enough that the
+ * run only - long enough to avoid a configuration read per work order, short enough that the
  * guarantee holds.
  *
  * <p><strong>It is idempotent.</strong> The level is a pure function of the deadline and the clock
@@ -43,10 +43,10 @@ import org.springframework.transaction.annotation.Transactional;
  * <p><strong>It notifies through a port, and the port records rather than pretends.</strong> This class
  * used to publish {@code sfl.ifimp.work-order-escalated.v1} to the outbox and stop, on the reasoning
  * that delivery belongs to a notification service and a second notifier here would be a second place
- * for CLET's escalation contact list to be wrong. The reasoning holds — the contact list still lives in
+ * for CLET's escalation contact list to be wrong. The reasoning holds - the contact list still lives in
  * one place, behind {@link NotificationPort}, and a real provider replaces the adapter by
  * configuration. The consequence did not: nothing consumed those events, so for three passes the
- * requirement's own words — "notifies the configured role" — were simply not true, and the gap report
+ * requirement's own words - "notifies the configured role" - were simply not true, and the gap report
  * said so. An escalation nobody is told about is a database row, not an escalation.
  *
  * <p>An escalated work order tells its assignee; one with no assignee tells the supervisor's desk,
@@ -84,7 +84,7 @@ public class MaintenanceEscalationService {
      *
      * @param systemActor the actor the escalations are recorded against. Not a person, and the audit
      *        trail says so through {@link SourceChannel#SCHEDULER}.
-     * @return what moved, so a caller — a test, or an operator triggering the sweep by hand — can see
+     * @return what moved, so a caller - a test, or an operator triggering the sweep by hand - can see
      *         the effect rather than inferring it from the log.
      */
     @Transactional
@@ -95,14 +95,14 @@ public class MaintenanceEscalationService {
           `POST /maintenance/escalations/runs` call the same method, and only one of them is trusted.
 
           This one is worse than the schedule sweep it sits beside. It had no check, it is estate-wide,
-          and it does not merely write — it notifies. Any authenticated caller could raise the
+          and it does not merely write - it notifies. Any authenticated caller could raise the
           escalation level on every overdue fault and work order across every site, attributed to
           themselves in the audit trail, and page the maintenance supervisor at each of those sites.
           Repeatable at will, which makes it a way to make escalations meaningless: the fastest route
           to an ignored escalation is a stream of them.
 
           FACILITIES_PM_SCHEDULE_MANAGE, and not the FACILITIES_WORK_ORDER_UPDATE this first reached
-          for. Update is the permission a technician holds to progress the job in front of them —
+          for. Update is the permission a technician holds to progress the job in front of them -
           correct for one work order, far too broad for a control that moves every overdue item in the
           estate and pages a supervisor at every affected site. The technician who holds Update is
           precisely the person who should not be able to declare everybody's work late.
@@ -158,7 +158,7 @@ public class MaintenanceEscalationService {
      * The second track: work nobody has picked up.
      *
      * <p>{@code maintenance.sla.response.*} has been read, stored and exposed since S153 shipped, and
-     * nothing used it — only the resolution deadline escalated. So "nobody has started this" and
+     * nothing used it - only the resolution deadline escalated. So "nobody has started this" and
      * "nobody has finished this" produced the same event, to the same person, which is precisely the
      * distinction an SLA ladder exists to draw. A job untouched for three hours needs the supervisor
      * who can reassign it; a job being worked on that is running late needs a different conversation.
@@ -216,7 +216,7 @@ public class MaintenanceEscalationService {
         }
     }
 
-    /** Overdue items without escalating them — for a dashboard, or for a dry run. */
+    /** Overdue items without escalating them - for a dashboard, or for a dry run. */
     @Transactional(readOnly = true)
     public List<WorkOrder> overdueWorkOrders() {
         return maintenance.findOverdueWorkOrders(clock.instant(), SWEEP_LIMIT);

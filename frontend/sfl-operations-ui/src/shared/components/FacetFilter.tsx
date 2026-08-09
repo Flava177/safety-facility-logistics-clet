@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import Icon from './Icon';
+import { FieldLabelSpacer } from './fields';
 import { cn } from './cn';
 
 export interface FacetOption {
@@ -28,7 +29,7 @@ interface FacetFilterProps {
  * <h2>What this replaces, and why it is better rather than merely newer</h2>
  *
  * The registers filtered through single-value `Select` dropdowns: one status, one purpose, one type.
- * That forces a real question — "show me everything that needs attention" — to be asked several
+ * That forces a real question - "show me everything that needs attention" - to be asked several
  * times, because *overdue* and *escalated* and *blocked* are three separate filter runs, and the
  * operator has to hold the union in their head across three screens of results.
  *
@@ -41,7 +42,7 @@ interface FacetFilterProps {
  *
  * <h2>Empty means unconstrained</h2>
  *
- * Selecting nothing returns everything. The alternative — treating no selection as "match nothing" —
+ * Selecting nothing returns everything. The alternative - treating no selection as "match nothing" -
  * is defensible and wrong here, because it makes the resting state of every register an empty table.
  * The button label says which it is: "Any status" when unconstrained, the value when one is chosen,
  * "2 selected" beyond that.
@@ -109,6 +110,12 @@ const FacetFilter = ({
 
   return (
     <div ref={rootRef} className={cn('relative', className)}>
+      {/*
+        The button carries its own name, so it needs no label - but it shares a row with fields that
+        have one, and that row aligns on the control. Reserving the label's height is what keeps this
+        level with them; see `FieldLabelSpacer`.
+      */}
+      <FieldLabelSpacer />
       <button
         type="button"
         disabled={disabled}

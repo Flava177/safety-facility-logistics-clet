@@ -25,7 +25,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 /**
- * The bookable-resource register — SRS-SFL-S159-01.
+ * The bookable-resource register - SRS-SFL-S159-01.
  *
  * <p>Separate from {@code /facility-assets} and deliberately so: an asset is fixed plant whose
  * condition feeds a space's readiness, a resource is portable and its scarcity is the point. The same

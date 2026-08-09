@@ -15,7 +15,7 @@ import org.junit.jupiter.api.Test;
  *
  * <p>These are the cheapest tests in S159 and the ones most worth having. Every conflict decision in
  * the service, every availability answer, and the {@code tstzrange(..., '[)')} in the exclusion
- * constraint are three expressions of what this class does in four lines — and the two failure modes
+ * constraint are three expressions of what this class does in four lines - and the two failure modes
  * are opposite and both bad. Treat the ends as closed and every back-to-back lecture reports a
  * phantom clash; treat them as open and the hall is double-booked on the hour.
  */

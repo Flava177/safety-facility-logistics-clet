@@ -12,7 +12,7 @@ public interface JpaMaintenanceEvidenceRepository extends JpaRepository<Maintena
     /**
      * Candidates for disposal: not held, not already disposed of, oldest first.
      *
-     * <p>Whether a candidate is actually eligible is the domain's arithmetic, not this query's — the
+     * <p>Whether a candidate is actually eligible is the domain's arithmetic, not this query's - the
      * retention class decides that. This exists so the sweep reads a bounded slice rather than the
      * whole table, and the partial index in V13 matches it.
      */

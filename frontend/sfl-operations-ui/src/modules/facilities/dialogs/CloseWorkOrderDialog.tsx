@@ -11,19 +11,19 @@ interface CloseWorkOrderDialogProps {
   order: WorkOrder;
   attachedEvidence: number;
   onClose: () => void;
-  /** Marking complete — what a technician does, since they cannot close. */
+  /** Marking complete - what a technician does, since they cannot close. */
   onComplete: (notes: string) => Promise<void>;
   onSubmit: (request: CloseWorkOrderRequest) => Promise<void>;
 }
 
 /**
- * Finishing a work order — the two halves of it, in one dialog.
+ * Finishing a work order - the two halves of it, in one dialog.
  *
  * ## Why complete and close share a screen
  *
  * They are the same moment from two chairs. A technician marks work `COMPLETED`; a supervisor
  * accepts it and marks it `CLOSED`. Which of the two this dialog offers depends on what the actor
- * may do, and a technician never sees a close button they would be refused — no technician holds
+ * may do, and a technician never sees a close button they would be refused - no technician holds
  * `FACILITIES_WORK_ORDER_CLOSE`, which is the whole point of separating the states.
  *
  * ## The evidence gate
@@ -80,7 +80,7 @@ const CloseWorkOrderDialog = ({
     <FormDialog
       open
       title={closing ? 'Close work order' : 'Mark complete'}
-      description={`${order.workOrderNumber} — ${order.title}`}
+      description={`${order.workOrderNumber} - ${order.title}`}
       submitLabel={closing ? 'Close' : 'Mark complete'}
       submitting={submitting}
       submitDisabled={closing && !canClose.allowed}
@@ -113,7 +113,7 @@ const CloseWorkOrderDialog = ({
             <p className="text-theme-sm">
               {canClose.allowed
                 ? `${attachedEvidence} item(s) attached, ${order.evidenceRequired} required.`
-                : `${shortfall}. Attach the shortfall on the work order before closing — the service refuses closure without it.`}
+                : `${shortfall}. Attach the shortfall on the work order before closing - the service refuses closure without it.`}
             </p>
           </Alert>
         )}

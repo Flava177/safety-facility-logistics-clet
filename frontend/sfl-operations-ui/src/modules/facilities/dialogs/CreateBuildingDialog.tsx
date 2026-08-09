@@ -23,7 +23,7 @@ interface CreateBuildingDialogProps {
  *
  * **A building holds nothing until it has a floor**, because a space is placed on a floor rather than
  * in a building. Saying so here is cheaper than letting somebody register four buildings and then
- * discover they cannot put a room in any of them — which is why this dialog's caller navigates
+ * discover they cannot put a room in any of them - which is why this dialog's caller navigates
  * straight to the new building rather than returning to the list.
  */
 const CreateBuildingDialog = ({
@@ -71,7 +71,7 @@ const CreateBuildingDialog = ({
     <FormDialog
       open
       title="Register a building"
-      description={`${site.siteCode} — ${site.name}`}
+      description={`${site.siteCode} - ${site.name}`}
       submitLabel="Register it"
       submitting={submitting}
       submitDisabled={invalid}

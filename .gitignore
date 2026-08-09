@@ -442,25 +442,43 @@ $RECYCLE.BIN/
 .eslintcache
 tmp/
 
-# Local scratch and design binaries — the .fig lives in Figma, not in git
+# Local scratch and design binaries ï¿½ the .fig lives in Figma, not in git
 COMMIT_MSG_*.txt
 *.fig
 
-# Documentation stays on the working machine.
-# The SRS, ADRs, per-system design notes, gap reports, runbooks and the implementation log are
-# working documents, not deliverables of this repository. Three curated guides are tracked and
-# re-included below; everything else in Markdown is local.
+# Markdown is ignored by default and re-included by name.
+#
+# The default is the useful way round: a scratch note dropped anywhere in the tree stays local
+# without anybody having to think about it, and everything meant to be read by the next person is
+# listed here explicitly.
+#
+# The documentation used to be local in its entirety - the SRS, the ADRs, the per-system design
+# notes, the gap reports and the implementation log all lived only on the machine that wrote them.
+# They are the record of why this system is shaped the way it is, and CLAUDE.md sends every reader
+# to them, so they are now tracked. `solution.md` in particular is the implementation log every pass
+# appends to; losing it loses the reasoning behind every decision in the repository.
 *.md
 !/README.md
 !/services/README.md
 !/frontend/sfl-operations-ui/README.md
+!/solution.md
+!/docs/**/*.md
 
-# The docs tree, including the SRS binaries, which do not belong in git at all.
-docs/
+# The SRS binaries stay out, which is what the rule above them used to be for.
+#
+# Four files, 3.4 MB, and a `.docx` is opaque to every tool that makes a repository worth having -
+# no diff, no blame, no review. They belong in the document store the SRS itself describes. The
+# Markdown beside them is re-included above; this keeps the tree from carrying the originals.
+docs/**/*.docx
+docs/**/*.pdf
 
-# Assistant and agent scratch â€” never committed.
+# Assistant and agent scratch - never committed.
 .agents/
 .codex/
 .claude/
 CLAUDE.md
 AGENTS.md
+
+# The project-local Node the `-Pui` Maven profile downloads (frontend-maven-plugin). Ninety-eight
+# megabytes of platform-specific binaries that the build fetches on demand - a toolchain, not source.
+frontend/sfl-operations-ui/node/

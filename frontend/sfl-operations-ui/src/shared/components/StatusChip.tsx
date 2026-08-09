@@ -6,7 +6,7 @@ export type Tone = 'ready' | 'caution' | 'blocked' | 'neutral' | 'active' | 'acc
 /**
  * A tinted pill: light surface, dark text of the same hue.
  *
- * Every pairing here is a 50/100 surface with a 700/800 label, which lands between 7:1 and 12:1 —
+ * Every pairing here is a 50/100 surface with a 700/800 label, which lands between 7:1 and 12:1 -
  * so a status is as readable as body copy (SC 1.4.3) while still being colour-coded at a glance.
  * Colour is never the only carrier: the status word is in the pill (SC 1.4.1).
  */
@@ -121,7 +121,7 @@ const statusTones: Record<string, Tone> = {
   STAGED: 'active',
   DELIVERED: 'ready',
   SEALED: 'active',
-  // Seal state — a compromised seal is the thing an operator must not miss.
+  // Seal state - a compromised seal is the thing an operator must not miss.
   INTACT: 'ready',
   BROKEN: 'blocked',
   REPLACED: 'caution',
@@ -136,7 +136,7 @@ const statusTones: Record<string, Tone> = {
   OUTSTANDING: 'blocked',
   // Scan batch.
   PARTIAL: 'caution',
-  // Sensitivity — SECRET is not an alarm, but it must never read as ordinary.
+  // Sensitivity - SECRET is not an alarm, but it must never read as ordinary.
   ORDINARY: 'neutral',
   CONFIDENTIAL: 'caution',
   SECRET: 'blocked',
@@ -153,7 +153,7 @@ const statusTones: Record<string, Tone> = {
   // Emergency notification (S174).
   //
   // ACTIVE is deliberately absent from this block. It is already mapped to `ready` above, which is
-  // right for a vehicle, a driver and a master-data record — and wrong for an activation, where it
+  // right for a vehicle, a driver and a master-data record - and wrong for an activation, where it
   // means a live emergency broadcast is out. `activationTone` in the emergency module states that
   // reading instead, so the two never quietly overwrite each other.
   PENDING_APPROVAL: 'caution',

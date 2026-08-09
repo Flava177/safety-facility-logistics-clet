@@ -15,7 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /**
- * Disposes of closure evidence whose retention period has run out — SRS-SFL-S153-03.
+ * Disposes of closure evidence whose retention period has run out - SRS-SFL-S153-03.
  *
  * <p>Retention classes have been recorded and {@code disposalEligibleFrom} computed since S153 shipped,
  * and {@code ix_maintenance_evidence_retention} was added for exactly this query. Nothing ran it. The
@@ -23,14 +23,14 @@ import org.springframework.transaction.annotation.Transactional;
  * that first defines what the retention classes mean. That round is past.
  *
  * <p><strong>It removes the reference, not the record.</strong> A retention policy has to prove two
- * different things — that a thing was destroyed when it should have been, and that it existed and was
- * destroyed for a stated reason — and deleting the row proves neither. What survives is the hash, the
+ * different things - that a thing was destroyed when it should have been, and that it existed and was
+ * destroyed for a stated reason - and deleting the row proves neither. What survives is the hash, the
  * retention class, who uploaded it and when, plus the disposal date and reason. An auditor asking what
  * happened to a closure photograph gets an answer instead of a silence indistinguishable from the
  * evidence never having been captured.
  *
  * <p><strong>A legal hold beats the clock.</strong> Held evidence is not a candidate, and the aggregate
- * refuses disposal outright rather than letting the sweep decide — two layers, because this is the one
+ * refuses disposal outright rather than letting the sweep decide - two layers, because this is the one
  * rule here whose failure is not recoverable.
  *
  * <p><strong>It is deliberately conservative about batch size and it audits every single act.</strong>
@@ -64,7 +64,7 @@ public class EvidenceDisposalService {
     /**
      * Disposes of everything past its retention date.
      *
-     * @param systemActor the actor the disposals are recorded against — not a person, and the audit
+     * @param systemActor the actor the disposals are recorded against - not a person, and the audit
      *        trail says so through {@link SourceChannel#SCHEDULER}
      * @return how many references were cleared, so an operator triggering this by hand sees the effect
      *         rather than inferring it from a log line

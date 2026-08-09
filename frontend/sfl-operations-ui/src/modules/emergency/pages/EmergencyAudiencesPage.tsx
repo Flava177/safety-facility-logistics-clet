@@ -22,17 +22,18 @@ import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
 import { emergencyPaths } from 'shared/layout/navigation';
+import { canManageAudiences } from 'modules/emergency/api/workflow';
 
 /**
  * Who receives a broadcast: audience groups and the zones a broadcast can be narrowed to.
  *
- * Paired for the same reason templates and scenarios are — an activation chooses from both at once,
+ * Paired for the same reason templates and scenarios are - an activation chooses from both at once,
  * and the two answer one question between them. Neither holds a contact detail: an audience group
  * is a directory pointer and a count, a zone is a facilities-location pointer and a name.
  *
  * The recipient count is the load-bearing field on this screen. It is what the service fans out to
  * and the denominator every delivery and acknowledgement percentage is read against, and no
- * endpoint can correct one once it is created — so a group sized wrongly quietly distorts every
+ * endpoint can correct one once it is created - so a group sized wrongly quietly distorts every
  * activation that ever uses it.
  *
  * Both tables are searched, filtered and paged by the service now. The search box used to be
@@ -41,7 +42,7 @@ import { emergencyPaths } from 'shared/layout/navigation';
  *
  * The two figures above the tables still come from that two-hundred-record read, because the service
  * has no aggregate for either. Total reach is a sum and the zero-sized warning names every offending
- * group, and neither can be assembled from a page — so they say what they cover rather than implying
+ * group, and neither can be assembled from a page - so they say what they cover rather than implying
  * the whole site.
  */
 const EmergencyAudiencesPage = () => {
@@ -138,7 +139,7 @@ const EmergencyAudiencesPage = () => {
         align: 'right',
         hideBelowLg: true,
         cell: (row) =>
-          totalReach > 0 ? `${Math.round((100 * row.recipientCount) / totalReach)}%` : '—',
+          totalReach > 0 ? `${Math.round((100 * row.recipientCount) / totalReach)}%` : '-',
       },
       {
         key: 'lifecycle',
@@ -208,12 +209,17 @@ const EmergencyAudiencesPage = () => {
         ]}
         actions={
           <>
-            <Button variant="primary" startIcon="plus" onClick={() => setCreatingAudience(true)}>
-              Create audience group
-            </Button>
-            <Button variant="outline" startIcon="plus" onClick={() => setCreatingZone(true)}>
-              Create zone
-            </Button>
+            {/* Both write to the audience register, so both sit behind the one grant. */}
+            {canManageAudiences() && (
+              <>
+                <Button variant="primary" startIcon="plus" onClick={() => setCreatingAudience(true)}>
+                  Create audience group
+                </Button>
+                <Button variant="outline" startIcon="plus" onClick={() => setCreatingZone(true)}>
+                  Create zone
+                </Button>
+              </>
+            )}
             <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
               Refresh
             </Button>
@@ -253,7 +259,7 @@ const EmergencyAudiencesPage = () => {
           title={`${emptyGroups.length} audience group${emptyGroups.length === 1 ? ' is' : 's are'} sized at zero`}
           className="mb-5"
         >
-          A group with no recipients sends to nobody and still reports a successful broadcast — the
+          A group with no recipients sends to nobody and still reports a successful broadcast - the
           channel record shows a target of zero, which is not the same as a failure and reads
           exactly like a clean send.{' '}
           {emptyGroups.map((group) => group.name).join(', ')}. The count cannot be corrected through

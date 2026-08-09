@@ -5,7 +5,7 @@ import { defaultPageSize } from 'shared/api/config';
  * Page state for a server-paged register.
  *
  * It replaced the client-side window the fuel registers needed while that service returned bare,
- * capped arrays, and now serves dispatch and emergency for the same reason — all three page
+ * capped arrays, and now serves dispatch and emergency for the same reason - all three page
  * properly. What is left to hold is which page and what size, plus the one rule that matters:
  * **a filter change resets to page 0**. Page four of the previous result set is meaningless against
  * the new one, and an empty table on a filter that did match records reads as "nothing found".
@@ -29,7 +29,7 @@ export function useServerPage(
   const [size, setSizeState] = useState(initialSize);
 
   /**
-   * Reset to page 0 when the filter changes — during render, not in an effect.
+   * Reset to page 0 when the filter changes - during render, not in an effect.
    *
    * The effect version called `setPage(0)` on a filter change, which React 19 flags as a cascading
    * render: the table paints once with the old page against the new filter, then again. Adjusting

@@ -174,7 +174,7 @@ public class ReadinessController {
     @Operation(summary = "Read a space's current readiness and the reasons for it",
             description = "SRS-SFL-S152-05 drilldown: the status, the score and every open blocker.")
     public ApiResponse<ReadinessResponses.OutcomeResponse> roomReadiness(@PathVariable UUID roomId, HttpServletRequest http) {
-        // Was "authorised through the blocker read, which is the data this returns" — it was not the
+        // Was "authorised through the blocker read, which is the data this returns" - it was not the
         // data this returns, and the blocker read it borrowed passed a null site code, which checks
         // only that the caller holds some site somewhere. See ReadinessApplicationService.roomReadiness.
         return ApiResponse.ok(ReadinessResponses.OutcomeResponse.from(

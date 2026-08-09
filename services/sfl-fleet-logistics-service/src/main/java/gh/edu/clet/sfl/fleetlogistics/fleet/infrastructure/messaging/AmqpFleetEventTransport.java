@@ -8,7 +8,7 @@ import java.nio.charset.StandardCharsets;
 
 /**
  * RabbitMQ transport: exchange {@code sfl.events}, routing key {@code {platform}.{event-name}.v{version}},
- * dead-letter exchange {@code sfl.events.dlx} — the Phase 1 topology from the event catalog.
+ * dead-letter exchange {@code sfl.events.dlx} - the Phase 1 topology from the event catalog.
  */
 class AmqpFleetEventTransport implements FleetEventTransport {
 

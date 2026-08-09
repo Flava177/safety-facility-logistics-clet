@@ -31,13 +31,13 @@ import {
 } from '../components/bookingFormat';
 
 /**
- * "What is free?" — SRS-SFL-S159-02, and the way into every booking.
+ * "What is free?" - SRS-SFL-S159-02, and the way into every booking.
  *
  * ## Unavailable spaces stay on the list
  *
  * A hall that cannot take the window is shown with the reason rather than filtered out. The question
  * behind "what is free at ten?" is almost always "can I have Hall A at ten?", and a hall simply
- * absent from a list answers neither — the operator cannot tell whether it is taken, blocked, or not
+ * absent from a list answers neither - the operator cannot tell whether it is taken, blocked, or not
  * a bookable space at all.
  *
  * ## Nothing here reserves anything
@@ -108,8 +108,8 @@ const AvailabilitySearchPage = () => {
     Gated on its own permission rather than ridden in on the page's.
 
     `BookingAvailabilityService.resources` requires `FACILITIES_RESOURCE_READ` while `spaces` requires
-    `FACILITIES_BOOKING_READ`. Today every role holding one holds the other — both are in the
-    matrix's shared `READ_ONLY` set — so asking unconditionally would work, and would keep working
+    `FACILITIES_BOOKING_READ`. Today every role holding one holds the other - both are in the
+    matrix's shared `READ_ONLY` set - so asking unconditionally would work, and would keep working
     right up until a role held one and not the other. At that point the request would 403 and the
     dialog would show an empty resource list, which reads as "nothing is free" rather than "you may
     not see this".
@@ -132,7 +132,7 @@ const AvailabilitySearchPage = () => {
     <>
       <PageHeader
         title="Find a space"
-        subtitle="What can take this window, and what cannot — with the reason"
+        subtitle="What can take this window, and what cannot - with the reason"
         crumbs={[
           { label: 'Bookings', to: bookingPaths.diary },
           { label: 'Find a space' },
@@ -166,7 +166,7 @@ const AvailabilitySearchPage = () => {
             onChange={setSetupMinutes}
             min={0}
             suffix="min"
-            helperText="Asked for with the booking — a hall free for two hours may not be free for three."
+            helperText="Asked for with the booking - a hall free for two hours may not be free for three."
           />
           <NumberInput
             label="Teardown buffer"
@@ -210,7 +210,7 @@ const AvailabilitySearchPage = () => {
       >
         <div className="space-y-5">
           <SpaceGroup
-            title={`Free — ${free.length}`}
+            title={`Free - ${free.length}`}
             subtitle={window ? formatWindow(window.from, window.to) : undefined}
             spaces={free}
             onOpen={(space) => navigate(facilitiesPaths.spaceDetail(space.roomId))}
@@ -219,7 +219,7 @@ const AvailabilitySearchPage = () => {
 
           {overridable.length > 0 && (
             <SpaceGroup
-              title={`Readiness refuses — ${overridable.length}`}
+              title={`Readiness refuses - ${overridable.length}`}
               subtitle={
                 mayOverride
                   ? 'Free of other bookings. You may book into these with a recorded reason.'
@@ -233,7 +233,7 @@ const AvailabilitySearchPage = () => {
 
           {taken.length > 0 && (
             <SpaceGroup
-              title={`Already taken — ${taken.length}`}
+              title={`Already taken - ${taken.length}`}
               subtitle="Held by another booking for some part of this window."
               spaces={taken}
               onOpen={(space) => navigate(facilitiesPaths.spaceDetail(space.roomId))}
@@ -257,7 +257,7 @@ const AvailabilitySearchPage = () => {
             setBooking(null);
             notify.notifySuccess(
               created.status === 'CONFIRMED'
-                ? `${created.bookingReference} confirmed — this booking needed no approval.`
+                ? `${created.bookingReference} confirmed - this booking needed no approval.`
                 : `${created.bookingReference} requested. It holds the space until it is decided.`,
             );
             navigate(bookingPaths.bookingDetail(created.id));
@@ -305,7 +305,7 @@ const SpaceGroup = ({ title, subtitle, spaces, onOpen, onBook }: SpaceGroupProps
 
               {/*
                 Named, not counted. "Held by 2 bookings" makes an operator open another screen to find
-                out whether one of them is theirs — which, on a space they are trying to book, it
+                out whether one of them is theirs - which, on a space they are trying to book, it
                 frequently is.
               */}
               {space.heldBy.length > 0 && (

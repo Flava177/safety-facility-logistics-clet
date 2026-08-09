@@ -9,15 +9,15 @@
  * bundle that is served to the browser.
  *
  * That is a deliberate and bounded choice. The services this dashboard talks to run locally with
- * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the `X-SFL-*` headers claim — so a login
+ * `SFL_SECURITY_ENABLED=false`, where the actor is whatever the `X-SFL-*` headers claim - so a login
  * page here can only ever decide *which headers to send*. Making it look like more than that would be
  * the worse outcome: a form that appears to authenticate while the service behind it is open.
  *
  * <h2>The real path already exists beside it</h2>
  *
- * `deploy/keycloak/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
- * password, and `keycloak.ts` exchanges them for a genuine token. When a service runs with security
- * on, that is the path — and `session.ts` stores either kind identically, so nothing downstream cares
+ * `deploy/idp/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
+ * password, and `oidc.ts` exchanges them for a genuine token. When a service runs with security
+ * on, that is the path - and `session.ts` stores either kind identically, so nothing downstream cares
  * which one signed you in. The roles below and the roles in the realm are the same roles.
  *
  * <h2>Why the role list is here rather than fetched</h2>
@@ -26,6 +26,9 @@
  * services already know; if one were wrong the account would sign in and then be refused everything,
  * which is why `accounts.test.ts` checks each against `roleProgrammes`/`roleSystems`.
  */
+
+import { programmesFor } from 'shared/layout/programmeModel';
+import { servingPlatform } from 'shared/platform';
 
 export interface SeededAccount {
   email: string;
@@ -38,7 +41,7 @@ export interface SeededAccount {
   description: string;
 }
 
-/** One password for every seeded account. Development only — see the docblock. */
+/** One password for every seeded account. Development only - see the docblock. */
 export const SEEDED_PASSWORD = 'Password@Clet1';
 
 export const seededAccounts: SeededAccount[] = [
@@ -49,7 +52,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Fleet Manager',
     roles: ['FLEET_MANAGER'],
     sites: ['CLET-HQ'],
-    description: 'Fleet, fuel and dispatch — plans trips and assigns drivers',
+    description: 'Fleet, fuel and dispatch - plans trips and assigns drivers',
   },
   {
     email: 'driver@clet.gh',
@@ -73,7 +76,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Reporting Viewer',
     roles: ['FLEET_REPORTING_VIEWER'],
     sites: ['CLET-HQ'],
-    description: 'Fleet, fuel and dispatch — read only',
+    description: 'Fleet, fuel and dispatch - read only',
   },
   {
     email: 'dispatchcontroller@clet.gh',
@@ -207,7 +210,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Nana Auditor',
     roles: ['AUDITOR'],
     sites: ['*'],
-    description: 'Read and prove — audit, evidence, chain replay',
+    description: 'Read and prove - audit, evidence, chain replay',
   },
   {
     email: 'complianceofficer@clet.gh',
@@ -232,3 +235,27 @@ export const findAccount = (email: string): SeededAccount | undefined => {
   const wanted = email.trim().toLowerCase();
   return seededAccounts.find((account) => account.email.toLowerCase() === wanted);
 };
+
+/**
+ * The accounts that can actually work on the origin serving this bundle.
+ *
+ * <p>The sign-in page used to list all twenty-two on every service, which reads as an invitation and
+ * is not one: signing into the facilities service as a driver produced a session with no facilities
+ * capability and an empty dashboard, and nothing on the page had said that would happen. On the
+ * portal the full list is right, because the portal serves all three platforms.
+ *
+ * <p>Programme entitlement rather than permissions, deliberately. Permissions are resolved from the
+ * service after a session exists; this decision has to be made before one does. The two agree at this
+ * grain - a role entitled to no programme on this platform holds no permission on it either.
+ */
+export const accountsForServingPlatform = (): SeededAccount[] => {
+  const platform = servingPlatform();
+  if (platform === 'ALL' || platform === 'UNKNOWN') {
+    return seededAccounts;
+  }
+  return seededAccounts.filter((account) => programmesFor(account.roles).includes(platform));
+};
+
+/** `true` when this account has no business on the origin serving the bundle. */
+export const accountIsForeignToPlatform = (account: SeededAccount): boolean =>
+  !accountsForServingPlatform().some((candidate) => candidate.email === account.email);

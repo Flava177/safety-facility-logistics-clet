@@ -79,7 +79,7 @@ class DriverController {
      * Links this driver profile to the sign-in that belongs to it, or unlinks it with a null subject.
      *
      * <p>The binding is what lets a driver see their own trips and confirm them; without it their
-     * list is empty. Separate from the profile update because it is a different authority — see
+     * list is empty. Separate from the profile update because it is a different authority - see
      * {@code DriverApplicationService.bindPrincipal}.
      */
     @PatchMapping("/{driverId}/principal")

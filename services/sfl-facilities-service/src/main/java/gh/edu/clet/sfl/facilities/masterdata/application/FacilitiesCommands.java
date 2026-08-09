@@ -18,8 +18,8 @@ import java.util.UUID;
 /**
  * Every write command the estate accepts, in one file.
  *
- * <p>Twenty small records in twenty files would be twenty files of ceremony. They share one shape —
- * the payload, then {@code actor}, {@code channel} and {@code idempotencyKey} — and reading them
+ * <p>Twenty small records in twenty files would be twenty files of ceremony. They share one shape -
+ * the payload, then {@code actor}, {@code channel} and {@code idempotencyKey} - and reading them
  * together is how the API surface stays legible.
  *
  * <p>{@code idempotencyPayload()} on the create commands returns the fields that make a request
@@ -150,8 +150,8 @@ public final class FacilitiesCommands {
      * A readiness status set by hand rather than derived from an assessment.
      *
      * <p>Kept because an officer standing in a room sometimes knows something the checklist does not.
-     * It is still subject to the critical-blocker rule — {@code ReadinessPolicy.requireReadyPermitted}
-     * runs before it applies — so it is an override of the *process*, never of the *invariant*.
+     * It is still subject to the critical-blocker rule - {@code ReadinessPolicy.requireReadyPermitted}
+     * runs before it applies - so it is an override of the *process*, never of the *invariant*.
      */
     public record UpdateRoomReadiness(
             UUID roomId,
