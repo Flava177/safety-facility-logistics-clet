@@ -10,7 +10,7 @@
 # the containers and all three die on Flyway, which reads as a broken build rather than a missed step.
 #
 # One command instead. It brings up the containers, builds and tests, then launches the three services
-# and holds them in one console. Ctrl+C stops all three.
+# and holds them in one console. Ctrl+C stops all four - by port, see `stop_all`.
 #
 # ## The tests are not skipped
 #
@@ -87,14 +87,6 @@ docker info >/dev/null 2>&1 || die "Docker is not responding. Start Docker Deskt
 # Ports 8090-8093 would clash immediately afterwards in any case, so a leftover run is fatal whether
 # or not this invocation builds - which is why the check sits here rather than beside the build.
 #
-# ## What it will and will not stop
-#
-# Only processes started the way `launch` starts them: `java -jar <root>/services/sfl-*-service/
-# target/*.jar`. An IntelliJ debug session runs the same service from a classpath rather than a jar
-# and therefore does not match, deliberately - stopping somebody's breakpoints to save a rebuild
-# would be a poor trade, and the three Spring Boot run configurations exist precisely so one service
-# can be debugged while the rest are left alone. If a debugged service is holding port 8091, this
-# script will still fail on the port, and that is the right outcome: the developer knows why.
 # ## Found by port, not by command line
 #
 # The first version of this asked WMI for java processes and matched their command lines. It never
@@ -282,10 +274,53 @@ stop_all() {
   STOPPING=1
   printf '\n'
   step "Stopping"
+
+  # ## Stopped by port, because the recorded PID is the wrong process
+  #
+  # `launch` runs `java ... | sed` inside a subshell, so `$!` is the *subshell*, and java is its
+  # grandchild. Killing the recorded PID therefore killed the log prefixer and left the service
+  # running - Ctrl+C printed "stopped 12345" four times and all four services carried on holding
+  # their ports and their jars.
+  #
+  # That is where every orphan in this project came from, and the header of this file claimed
+  # otherwise for as long as it was wrong. The jar-lock guard at the top exists to clean up after
+  # this bug; it is still worth having, because a console closed without Ctrl+C leaves the same
+  # mess - but it should not be the only thing that works.
+  #
+  # Java goes first and the subshells after. The other order kills `sed`, and java then blocks
+  # writing to a closed pipe instead of shutting down.
+  for port in 8090 8091 8092 8093; do
+    pid="$(port_pid "$port")"
+    if [ -n "$pid" ]; then
+      stop_pid "$pid"
+      ok "stopped the service on $port"
+    fi
+  done
+
+  # The subshells end by themselves once java exits and the pipe closes. This is for one that has
+  # not noticed yet, so `wait` below does not sit on it.
   for pid in "${PIDS[@]:-}"; do
-    [ -n "$pid" ] && kill "$pid" 2>/dev/null && ok "stopped $pid"
+    [ -n "$pid" ] && kill "$pid" 2>/dev/null
   done
   wait 2>/dev/null
+
+  # Verified rather than assumed. Reporting a stop that did not happen is the whole reason this
+  # function needed rewriting.
+  waited=0
+  while :; do
+    still=""
+    for port in 8090 8091 8092 8093; do
+      [ -n "$(port_pid "$port")" ] && still="$still $port"
+    done
+    [ -z "$still" ] && break
+    sleep 1
+    waited=$((waited + 1))
+    if [ "$waited" -ge 15 ]; then
+      warn "still listening on$still - stop these by hand before the next build"
+      exit 1
+    fi
+  done
+  ok "all four stopped"
   exit 0
 }
 trap stop_all INT TERM
