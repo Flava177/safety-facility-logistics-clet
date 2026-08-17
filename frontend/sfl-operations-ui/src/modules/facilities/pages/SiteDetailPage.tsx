@@ -12,10 +12,25 @@ import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { Building, CreateBuildingRequest } from '../api/dto';
-import { changeOperatingMode, createBuilding, getSite, listBuildings } from '../api/facilitiesApi';
-import { canManageSpaces, changeOperatingModeAction } from '../api/workflow';
+import {
+  changeOperatingMode,
+  changeSiteLifecycle,
+  createBuilding,
+  getSite,
+  listBuildings,
+  updateSite,
+} from '../api/facilitiesApi';
+import {
+  canManageSpaces,
+  changeOperatingModeAction,
+  changeSiteLifecycleControl,
+  editSiteControl,
+} from '../api/workflow';
+import { EditRowAction, RetireRowAction } from '../components/RowActions';
 import CreateBuildingDialog from '../dialogs/CreateBuildingDialog';
 import OperatingModeDialog from '../dialogs/OperatingModeDialog';
+import { LifecycleDialog } from '../dialogs/common';
+import { EditSiteDialog } from '../dialogs/siteDialogs';
 import { formatDateTime, humaniseCode, orDash } from '../components/facilitiesFormat';
 
 /**
@@ -32,6 +47,8 @@ const SiteDetailPage = () => {
   const notify = useNotifier();
   const [changingMode, setChangingMode] = useState(false);
   const [addingBuilding, setAddingBuilding] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [retiring, setRetiring] = useState(false);
 
   const site = useApiQuery((signal) => getSite(siteId, signal), [siteId]);
   const buildings = useApiQuery(
@@ -84,16 +101,30 @@ const SiteDetailPage = () => {
                 { label: site.data.siteCode },
               ]}
               actions={
-                modeAction.allowed ? (
-                  <Button
-                    variant={site.data.operatingMode === 'EXAMINATION' ? 'outline' : 'accent'}
-                    onClick={() => setChangingMode(true)}
-                  >
-                    {site.data.operatingMode === 'EXAMINATION'
-                      ? 'Stand down examination mode'
-                      : 'Declare examination mode'}
-                  </Button>
-                ) : undefined
+                <>
+                  <EditRowAction
+                    size="md"
+                    state={editSiteControl(site.data)}
+                    onClick={() => setEditing(true)}
+                    label={`Edit ${site.data.siteCode}`}
+                  />
+                  <RetireRowAction
+                    size="md"
+                    state={changeSiteLifecycleControl(site.data)}
+                    onClick={() => setRetiring(true)}
+                    label={`Retire ${site.data.siteCode}`}
+                  />
+                  {modeAction.allowed && (
+                    <Button
+                      variant={site.data.operatingMode === 'EXAMINATION' ? 'outline' : 'accent'}
+                      onClick={() => setChangingMode(true)}
+                    >
+                      {site.data.operatingMode === 'EXAMINATION'
+                        ? 'Stand down examination mode'
+                        : 'Declare examination mode'}
+                    </Button>
+                  )}
+                </>
               }
             />
 
@@ -189,6 +220,35 @@ const SiteDetailPage = () => {
           </>
         )}
       </DataState>
+
+      {editing && site.data && (
+        <EditSiteDialog
+          site={site.data}
+          onClose={() => setEditing(false)}
+          onSubmit={async (request) => {
+            const saved = await updateSite(site.data!.id, request);
+            setEditing(false);
+            notify.notifySuccess(`${saved.siteCode} updated.`);
+            site.refetch();
+          }}
+        />
+      )}
+
+      {retiring && site.data && (
+        <LifecycleDialog
+          noun="site"
+          label={site.data.siteCode}
+          current={site.data.lifecycleStatus}
+          expectedVersion={site.data.metadata.version}
+          onClose={() => setRetiring(false)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeSiteLifecycle(site.data!.id, { status, expectedVersion });
+            setRetiring(false);
+            notify.notifySuccess(`${saved.siteCode} is now ${status.toLowerCase()}.`);
+            site.refetch();
+          }}
+        />
+      )}
 
       {changingMode && site.data && (
         <OperatingModeDialog

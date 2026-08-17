@@ -1,32 +1,92 @@
 import { useState } from 'react';
+import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
-import DataTable, { Column } from 'shared/components/DataTable';
+import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { Zone, ZoneMember } from '../api/dto';
-import { listZoneMembers, listZones } from '../api/facilitiesApi';
+import {
+  addZoneMember,
+  changeZoneLifecycle,
+  createZone,
+  listBuildings,
+  listDeviceReferences,
+  listSpaces,
+  listZoneMembers,
+  listZones,
+  removeZoneMember,
+} from '../api/facilitiesApi';
+import { createZoneControl, manageZoneMembersControl, retireZoneControl } from '../api/workflow';
+import RowActions, { RemoveRowAction, RetireRowAction } from '../components/RowActions';
 import { formatDateTime, orDash } from '../components/facilitiesFormat';
+import { LifecycleDialog } from '../dialogs/common';
+import { AddZoneMemberDialog, CreateZoneDialog } from '../dialogs/zoneDialogs';
 
 /**
  * Zones and what they cover.
  *
- * A zone is how the safety and emergency systems address the estate - S162a life-safety events
- * arrive per zone, S174 broadcasts target recipient zones - so "what is actually in this zone" is
- * the question the screen exists to answer. Selecting a zone loads its membership rather than
- * navigating away, because the comparison between zones is the common task.
+ * A zone is how the safety and emergency systems address the estate - life-safety events arrive per
+ * zone, emergency broadcasts target recipient zones - so "what is actually in this zone" is the
+ * question the screen exists to answer. Selecting a zone loads its membership rather than navigating
+ * away, because the comparison between zones is the common task.
+ *
+ * Membership is edited here for the same reason it is read here: an empty zone resolves to nobody,
+ * and the moment somebody notices that is the moment they should be able to fix it.
  */
 const ZonesPage = () => {
+  const notify = useNotifier();
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
   const [selected, setSelected] = useState<Zone | null>(null);
+  const [adding, setAdding] = useState(false);
+  const [addingMember, setAddingMember] = useState(false);
+  const [retiring, setRetiring] = useState<Zone | null>(null);
 
   const zones = useApiQuery((signal) => listZones(siteCode || undefined, signal), [siteCode]);
   const members = useApiQuery(
     (signal) => (selected ? listZoneMembers(selected.id, signal) : Promise.resolve([])),
     [selected?.id],
+  );
+
+  /**
+   * What each member actually is, rather than the identifier it is stored as.
+   *
+   * `ZoneMember` carries only `memberType` and `memberId`, so the register was a column of raw
+   * UUIDs - which tells an operator deciding whether an evacuation zone covers the right rooms
+   * precisely nothing. The names come from the same three registers the add dialog picks out of, so
+   * the row reads as what it is and keeps the identifier underneath for support.
+   *
+   * Fetched per selected zone rather than per member: three requests for a whole zone, not one per
+   * row. Where a name cannot be resolved - a record archived or outside this site - the identifier
+   * stands on its own rather than being hidden behind a guess.
+   */
+  const memberNames = useApiQuery(
+    async (signal) => {
+      if (!selected) {
+        return new Map<string, string>();
+      }
+      const [spaces, buildings, devices] = await Promise.all([
+        listSpaces(selected.siteCode, signal),
+        listBuildings(selected.siteCode, signal),
+        listDeviceReferences({ siteCode: selected.siteCode }, signal),
+      ]);
+      return new Map<string, string>([
+        ...spaces.map((space): [string, string] => [space.id, `${space.roomCode} · ${space.name}`]),
+        ...buildings.map((building): [string, string] => [
+          building.id,
+          `${building.buildingCode} · ${building.name}`,
+        ]),
+        ...devices.map((device): [string, string] => [
+          device.id,
+          `${device.deviceCode} · ${device.name}`,
+        ]),
+      ]);
+    },
+    [selected?.id, selected?.siteCode],
   );
 
   const zoneColumns: Column<Zone>[] = [
@@ -51,6 +111,21 @@ const ZonesPage = () => {
       cell: (zone) =>
         zone.parentZoneId ? <StatusChip value="NESTED" label="Nested" tone="neutral" /> : null,
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 110,
+      align: 'right',
+      cell: (zone) => (
+        <RowActions>
+          <RetireRowAction
+            state={retireZoneControl(zone)}
+            onClick={() => setRetiring(zone)}
+            label={`Retire ${zone.zoneCode}`}
+          />
+        </RowActions>
+      ),
+    },
   ];
 
   const memberColumns: Column<ZoneMember>[] = [
@@ -63,7 +138,14 @@ const ZonesPage = () => {
     {
       key: 'memberId',
       header: 'Record',
-      cell: (member) => <span className="font-mono text-theme-xs">{member.memberId}</span>,
+      cell: (member) => {
+        const name = memberNames.data?.get(member.memberId);
+        return name ? (
+          <CellStack primary={name} secondary={member.memberId} />
+        ) : (
+          <span className="font-mono text-theme-xs">{member.memberId}</span>
+        );
+      },
     },
     {
       key: 'addedBy',
@@ -77,17 +159,61 @@ const ZonesPage = () => {
       header: 'Added',
       width: 190,
       align: 'right',
+      cell: (member) => <span className="text-gray-600">{formatDateTime(member.addedAt)}</span>,
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 110,
+      align: 'right',
       cell: (member) => (
-        <span className="text-gray-600">{formatDateTime(member.addedAt)}</span>
+        <RowActions>
+          <RemoveRowAction
+            state={selected ? manageZoneMembersControl(selected) : { kind: 'hidden' }}
+            onClick={() => void removeMember(member)}
+            label="Remove from this zone"
+          />
+        </RowActions>
       ),
     },
   ];
+
+  /**
+   * Removing a member.
+   *
+   * No confirmation dialog, and that is deliberate rather than an omission: the act is a single
+   * reversible click, the row states exactly what is being removed, and adding it back is the button
+   * directly above. A confirmation here would be ceremony. The irreversible acts in this module -
+   * archiving - do get one.
+   */
+  const removeMember = async (member: ZoneMember) => {
+    if (!selected) {
+      return;
+    }
+    try {
+      await removeZoneMember(selected.id, member.memberType, member.memberId);
+      notify.notifySuccess(`Removed from ${selected.zoneCode}.`);
+      members.refetch();
+    } catch (cause) {
+      notify.notifyError(cause);
+    }
+  };
 
   return (
     <>
       <PageHeader
         title="Zones"
         subtitle="How safety, life-safety and emergency systems address this estate"
+        actions={
+          <ControlButton
+            state={createZoneControl()}
+            variant="primary"
+            startIcon="plus"
+            onClick={() => setAdding(true)}
+          >
+            Add a zone
+          </ControlButton>
+        }
       />
 
       <FilterBar>
@@ -129,6 +255,17 @@ const ZonesPage = () => {
           <SectionCard
             title={`What ${selected.zoneCode} covers`}
             subtitle={`${selected.name}${selected.purpose ? ` · ${selected.purpose}` : ''}`}
+            actions={
+              <ControlButton
+                state={manageZoneMembersControl(selected)}
+                variant="outline"
+                size="sm"
+                startIcon="plus"
+                onClick={() => setAddingMember(true)}
+              >
+                Add a record
+              </ControlButton>
+            }
           >
             <DataState
               loading={members.loading}
@@ -151,6 +288,51 @@ const ZonesPage = () => {
           </SectionCard>
         )}
       </div>
+
+      {adding && (
+        <CreateZoneDialog
+          siteCode={siteCode || defaultSite}
+          onClose={() => setAdding(false)}
+          onSubmit={async (request) => {
+            const created = await createZone(request);
+            setAdding(false);
+            notify.notifySuccess(`${created.zoneCode} added to ${created.siteCode}.`);
+            zones.refetch();
+          }}
+        />
+      )}
+
+      {addingMember && selected && (
+        <AddZoneMemberDialog
+          zone={selected}
+          onClose={() => setAddingMember(false)}
+          onSubmit={async (request) => {
+            await addZoneMember(selected.id, request);
+            setAddingMember(false);
+            notify.notifySuccess(`Added to ${selected.zoneCode}.`);
+            members.refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="zone"
+          label={retiring.zoneCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeZoneLifecycle(retiring.id, { status, expectedVersion });
+            setRetiring(null);
+            if (selected?.id === saved.id) {
+              setSelected(saved);
+            }
+            notify.notifySuccess(`${saved.zoneCode} is now ${status.toLowerCase()}.`);
+            zones.refetch();
+          }}
+        />
+      )}
     </>
   );
 };

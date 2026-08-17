@@ -70,6 +70,33 @@ public final class FacilitiesRequests {
             Integer levelNumber) {
     }
 
+    public record UpdateBuilding(
+            @Size(max = 160) String name,
+            @Size(max = 1000) String description,
+            Long expectedVersion) {
+    }
+
+    public record UpdateFloor(
+            @Size(max = 160) String name,
+            Integer levelNumber,
+            Long expectedVersion) {
+    }
+
+    /**
+     * Correcting a device reference.
+     *
+     * <p>No status field, deliberately. The vendor feed reports that, and a request body that let an
+     * operator set it would be this service asserting an observation only the vendor system makes.
+     * No site or code either - both are how other records refer to this one.
+     */
+    public record UpdateDeviceReference(
+            @Size(max = 160) String name,
+            DeviceReferenceType type,
+            @Size(max = 160) String vendor,
+            @Size(max = 160) String externalReference,
+            Long expectedVersion) {
+    }
+
     public record CreateRoom(
             @NotNull UUID floorId,
             @NotBlank @Size(max = 80) String roomCode,

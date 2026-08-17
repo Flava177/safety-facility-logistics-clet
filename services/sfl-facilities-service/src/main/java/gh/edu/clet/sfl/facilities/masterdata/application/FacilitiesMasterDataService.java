@@ -575,6 +575,176 @@ public class FacilitiesMasterDataService {
         return device;
     }
 
+
+    // =========================================================================================
+    // Editing and retiring the rest of the estate
+    //
+    // Buildings, floors, zones, device references and assets each had a `changeLifecycle` on the
+    // domain record and, for most of them, an `update` too - and no endpoint reached either. The
+    // gap was recorded in S152_UI_Gap_Report §3 rather than worked around, and this closes it.
+    //
+    // Every one follows the same four steps as the site equivalents above, in the same order, and
+    // the order is the point: load, authorise against the record's *own* site, check the version,
+    // then write and audit. Authorising before loading would leak whether an id exists to somebody
+    // scoped to another centre; checking the version after writing would not be a check at all.
+    // =========================================================================================
+
+    @Transactional
+    public Building updateBuilding(FacilitiesCommands.UpdateBuilding command) {
+        ActorContext actor = command.actor();
+        Building building = requireBuilding(command.buildingId());
+        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, building.siteCode(),
+                command.channel(), "Building", building.id().toString());
+        building.metadata().requireVersion(command.expectedVersion(), "Building", building.id());
+
+        Building saved = facilities.saveBuilding(building.update(command.name(), command.description(),
+                actor.actorId(), now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.BUILDING_UPDATED, "Building",
+                saved.id().toString(), saved.siteCode(), building, saved);
+        publish("sfl.ifimp.building-updated.v1", "Building", saved.id(), saved.siteCode(), actor, saved);
+        return saved;
+    }
+
+    @Transactional
+    public Building changeBuildingLifecycle(FacilitiesCommands.ChangeBuildingLifecycle command) {
+        ActorContext actor = command.actor();
+        Building building = requireBuilding(command.buildingId());
+        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, building.siteCode(),
+                command.channel(), "Building", building.id().toString());
+        building.metadata().requireVersion(command.expectedVersion(), "Building", building.id());
+
+        Building saved = facilities.saveBuilding(building.changeLifecycle(command.status(), actor.actorId(),
+                now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.BUILDING_LIFECYCLE_CHANGED, "Building",
+                saved.id().toString(), saved.siteCode(), building.lifecycleStatus(), saved.lifecycleStatus());
+        publish("sfl.ifimp.building-lifecycle-changed.v1", "Building", saved.id(), saved.siteCode(), actor,
+                saved);
+        return saved;
+    }
+
+    @Transactional
+    public FacilityFloor updateFloor(FacilitiesCommands.UpdateFloor command) {
+        ActorContext actor = command.actor();
+        FacilityFloor floor = requireFloor(command.floorId());
+        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, floor.siteCode(),
+                command.channel(), "Floor", floor.id().toString());
+        floor.metadata().requireVersion(command.expectedVersion(), "Floor", floor.id());
+
+        FacilityFloor saved = facilities.saveFloor(floor.update(command.name(), command.levelNumber(),
+                actor.actorId(), now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.FLOOR_UPDATED, "Floor", saved.id().toString(),
+                saved.siteCode(), floor, saved);
+        publish("sfl.ifimp.floor-updated.v1", "Floor", saved.id(), saved.siteCode(), actor, saved);
+        return saved;
+    }
+
+    @Transactional
+    public FacilityFloor changeFloorLifecycle(FacilitiesCommands.ChangeFloorLifecycle command) {
+        ActorContext actor = command.actor();
+        FacilityFloor floor = requireFloor(command.floorId());
+        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, floor.siteCode(),
+                command.channel(), "Floor", floor.id().toString());
+        floor.metadata().requireVersion(command.expectedVersion(), "Floor", floor.id());
+
+        FacilityFloor saved = facilities.saveFloor(floor.changeLifecycle(command.status(), actor.actorId(),
+                now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.FLOOR_LIFECYCLE_CHANGED, "Floor",
+                saved.id().toString(), saved.siteCode(), floor.lifecycleStatus(), saved.lifecycleStatus());
+        publish("sfl.ifimp.floor-lifecycle-changed.v1", "Floor", saved.id(), saved.siteCode(), actor, saved);
+        return saved;
+    }
+
+    @Transactional
+    public Zone changeZoneLifecycle(FacilitiesCommands.ChangeZoneLifecycle command) {
+        ActorContext actor = command.actor();
+        Zone zone = requireZone(command.zoneId());
+        authorization.require(actor, SflPermission.FACILITIES_ZONE_MANAGE, zone.siteCode(),
+                command.channel(), "Zone", zone.id().toString());
+        zone.metadata().requireVersion(command.expectedVersion(), "Zone", zone.id());
+
+        Zone saved = facilities.saveZone(zone.changeLifecycle(command.status(), actor.actorId(), now(),
+                command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.ZONE_LIFECYCLE_CHANGED, "Zone",
+                saved.id().toString(), saved.siteCode(), zone.lifecycleStatus(), saved.lifecycleStatus());
+        publish("sfl.ifimp.zone-lifecycle-changed.v1", "Zone", saved.id(), saved.siteCode(), actor, saved);
+        return saved;
+    }
+
+    /**
+     * Corrects a device reference.
+     *
+     * <p>Takes the registration permission rather than a new one: whoever may put a device on the
+     * estate map is the one who has to fix it when the vendor renames it, and inventing a second
+     * grant for the correction would leave the register accumulating wrong names nobody was allowed
+     * to touch.
+     *
+     * <p>The status is not editable here. It belongs to the vendor feed, and a hand-set status would
+     * be this service asserting an observation it has not made.
+     */
+    @Transactional
+    public DeviceReference updateDeviceReference(FacilitiesCommands.UpdateDeviceReference command) {
+        ActorContext actor = command.actor();
+        DeviceReference device = requireDeviceReference(command.deviceId());
+        authorization.require(actor, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER, device.siteCode(),
+                command.channel(), "DeviceReference", device.id().toString());
+        device.metadata().requireVersion(command.expectedVersion(), "DeviceReference", device.id());
+
+        DeviceReference saved = facilities.saveDeviceReference(device.update(command.name(), command.type(),
+                command.vendor(), command.externalReference(), actor.actorId(), now(), command.channel(),
+                actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_UPDATED, "DeviceReference",
+                saved.id().toString(), saved.siteCode(), device, saved);
+        publish("sfl.ifimp.device-reference-updated.v1", "DeviceReference", saved.id(), saved.siteCode(),
+                actor, saved);
+        return saved;
+    }
+
+    @Transactional
+    public DeviceReference changeDeviceReferenceLifecycle(
+            FacilitiesCommands.ChangeDeviceReferenceLifecycle command) {
+        ActorContext actor = command.actor();
+        DeviceReference device = requireDeviceReference(command.deviceId());
+        authorization.require(actor, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER, device.siteCode(),
+                command.channel(), "DeviceReference", device.id().toString());
+        device.metadata().requireVersion(command.expectedVersion(), "DeviceReference", device.id());
+
+        DeviceReference saved = facilities.saveDeviceReference(device.changeLifecycle(command.status(),
+                actor.actorId(), now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_LIFECYCLE_CHANGED,
+                "DeviceReference", saved.id().toString(), saved.siteCode(), device.lifecycleStatus(),
+                saved.lifecycleStatus());
+        publish("sfl.ifimp.device-reference-lifecycle-changed.v1", "DeviceReference", saved.id(),
+                saved.siteCode(), actor, saved);
+        return saved;
+    }
+
+    private Building requireBuilding(UUID id) {
+        return facilities.findBuilding(id)
+                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Building", id));
+    }
+
+    private FacilityFloor requireFloor(UUID id) {
+        return facilities.findFloor(id)
+                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Floor", id));
+    }
+
+    private Zone requireZone(UUID id) {
+        return facilities.findZone(id)
+                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Zone", id));
+    }
+
+    private DeviceReference requireDeviceReference(UUID id) {
+        return facilities.findDeviceReference(id)
+                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("DeviceReference", id));
+    }
+
     // =========================================================================================
     // Internals
     // =========================================================================================

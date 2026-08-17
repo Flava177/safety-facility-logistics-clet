@@ -83,9 +83,9 @@ const MyRequestsPage = () => {
       <section className="space-y-3">
         <h2 className="text-lg font-semibold text-slate-800">My bookings</h2>
         <p className="text-sm text-slate-600">
-          S159 room and resource booking has a complete API and no screens yet. Your bookings are
-          narrowed to you by the service, and this panel will list them once that module is built -
-          it is not showing an empty list because you have none.
+          Room and resource booking has its own screens, under Room booking in the navigation. Your
+          bookings are narrowed to you by the service there; this panel is not showing an empty list
+          because you have none.
         </p>
       </section>
     </div>

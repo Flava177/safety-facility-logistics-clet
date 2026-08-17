@@ -1,21 +1,23 @@
-import { sflActor } from 'shared/api/config';
+import { actorSiteFailure, actorSites, defaultSite, scopeIsEverySite } from 'shared/layout/actorSites';
 import { SelectInput } from './fields';
 
 /**
- * The actor's site scope, parsed once.
+ * The actor's site scope.
  *
- * `sflActor.sites` is the comma-separated value the dashboard sends as `X-SFL-Sites` on every
- * request, so it is by definition the complete set of sites this operator may read or write. Both
- * the filters and the request fields derive from it, which is why it lives beside the control
- * rather than being re-parsed in each of the nine screens that need it.
+ * <p>Both the list and the default now come from `shared/layout/actorSites`, which resolves the `*`
+ * wildcard into real site codes rather than treating it as one. Re-exported here because forty call
+ * sites import `defaultSite` from this module and the indirection is not worth a rename.
  */
-export const sflSites: string[] = sflActor.sites
-  .split(',')
-  .map((site) => site.trim())
-  .filter(Boolean);
+export { defaultSite };
 
-/** The site a form opens on. */
-export const defaultSite: string = sflSites[0] ?? '';
+/**
+ * Every site this actor may name.
+ *
+ * A function rather than a constant: for a wildcard scope the list arrives from the site register at
+ * boot, after this module is evaluated but before the first paint, so a constant captured here would
+ * be the unresolved one.
+ */
+export const sflSites = (): string[] => actorSites();
 
 interface SiteSelectProps {
   label?: string;
@@ -40,18 +42,31 @@ interface SiteSelectProps {
  * and having the submission bounced. The options are the actor's own sites, so the dashboard can no
  * longer offer a site it cannot write to. Its props mirror `TextInput` so it drops into the same
  * grid without any other change.
+ *
+ * <p>Where the site list could not be resolved, the control says so on itself rather than rendering
+ * an empty dropdown that reads as a screen with nothing in it. The caller's own `helperText` wins,
+ * so a field with something more specific to say still says it.
  */
 const SiteSelect = ({
   label = 'Site code',
   emptyLabel = 'All sites',
+  helperText,
   ...rest
-}: SiteSelectProps) => (
-  <SelectInput
-    {...rest}
-    label={label}
-    emptyLabel={emptyLabel}
-    options={sflSites.map((site) => ({ value: site, label: site }))}
-  />
-);
+}: SiteSelectProps) => {
+  const sites = actorSites();
+  const failure = actorSiteFailure();
 
+  return (
+    <SelectInput
+      {...rest}
+      label={label}
+      emptyLabel={emptyLabel}
+      helperText={helperText ?? failure ?? undefined}
+      error={rest.error || (failure !== null && rest.required)}
+      options={sites.map((site) => ({ value: site, label: site }))}
+    />
+  );
+};
+
+export { scopeIsEverySite };
 export default SiteSelect;

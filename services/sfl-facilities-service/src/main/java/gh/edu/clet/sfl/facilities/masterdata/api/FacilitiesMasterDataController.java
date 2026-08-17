@@ -140,6 +140,26 @@ public class FacilitiesMasterDataController {
 
     // ---- floors -------------------------------------------------------------------------------
 
+    @PatchMapping("/buildings/{buildingId}")
+    @Operation(summary = "Update a building's name or description",
+            description = "Requires FACILITIES_SPACE_MANAGE. Recorded as a known gap in "
+                    + "S152_UI_Gap_Report §3 until this existed.")
+    public ApiResponse<BuildingResponse> updateBuilding(@PathVariable UUID buildingId,
+            @Valid @RequestBody FacilitiesRequests.UpdateBuilding request, HttpServletRequest http) {
+        return ApiResponse.ok(BuildingResponse.from(service.updateBuilding(
+                new FacilitiesCommands.UpdateBuilding(buildingId, request.name(), request.description(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
+
+    @PatchMapping("/buildings/{buildingId}/lifecycle")
+    @Operation(summary = "Move a building through its lifecycle", description = "ARCHIVED is terminal.")
+    public ApiResponse<BuildingResponse> changeBuildingLifecycle(@PathVariable UUID buildingId,
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+        return ApiResponse.ok(BuildingResponse.from(service.changeBuildingLifecycle(
+                new FacilitiesCommands.ChangeBuildingLifecycle(buildingId, request.status(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
+
     @PostMapping("/floors")
     @Operation(summary = "Register a floor")
     public ResponseEntity<ApiResponse<FloorResponse>> createFloor(@Valid @RequestBody FacilitiesRequests.CreateFloor request,
@@ -163,6 +183,25 @@ public class FacilitiesMasterDataController {
     }
 
     // ---- spaces -------------------------------------------------------------------------------
+
+    @PatchMapping("/floors/{floorId}")
+    @Operation(summary = "Update a floor's name or level",
+            description = "Requires FACILITIES_SPACE_MANAGE. A null level is a mezzanine, not a missing value.")
+    public ApiResponse<FloorResponse> updateFloor(@PathVariable UUID floorId,
+            @Valid @RequestBody FacilitiesRequests.UpdateFloor request, HttpServletRequest http) {
+        return ApiResponse.ok(FloorResponse.from(service.updateFloor(
+                new FacilitiesCommands.UpdateFloor(floorId, request.name(), request.levelNumber(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
+
+    @PatchMapping("/floors/{floorId}/lifecycle")
+    @Operation(summary = "Move a floor through its lifecycle", description = "ARCHIVED is terminal.")
+    public ApiResponse<FloorResponse> changeFloorLifecycle(@PathVariable UUID floorId,
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+        return ApiResponse.ok(FloorResponse.from(service.changeFloorLifecycle(
+                new FacilitiesCommands.ChangeFloorLifecycle(floorId, request.status(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
 
     @PostMapping("/rooms")
     @Operation(summary = "Register a space",
@@ -302,6 +341,16 @@ public class FacilitiesMasterDataController {
         return ResponseEntity.noContent().build();
     }
 
+    @PatchMapping("/zones/{zoneId}/lifecycle")
+    @Operation(summary = "Move a zone through its lifecycle",
+            description = "An archived zone still resolves for historical events; it takes no new members.")
+    public ApiResponse<ZoneResponse> changeZoneLifecycle(@PathVariable UUID zoneId,
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+        return ApiResponse.ok(ZoneResponse.from(service.changeZoneLifecycle(
+                new FacilitiesCommands.ChangeZoneLifecycle(zoneId, request.status(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
+
     // ---- device references --------------------------------------------------------------------
 
     @PostMapping("/device-references")
@@ -332,6 +381,28 @@ public class FacilitiesMasterDataController {
     @Operation(summary = "Read one device reference")
     public ApiResponse<DeviceReferenceResponse> deviceReference(@PathVariable UUID deviceId, HttpServletRequest http) {
         return ApiResponse.ok(DeviceReferenceResponse.from(service.deviceReference(deviceId, actor(http), channel(http))));
+    }
+
+    @PatchMapping("/device-references/{deviceId}")
+    @Operation(summary = "Correct a device reference",
+            description = "Name, type, vendor and vendor reference. The status is the vendor feed's to "
+                    + "report and is not settable here. Requires FACILITIES_DEVICE_REFERENCE_REGISTER.")
+    public ApiResponse<DeviceReferenceResponse> updateDeviceReference(@PathVariable UUID deviceId,
+            @Valid @RequestBody FacilitiesRequests.UpdateDeviceReference request, HttpServletRequest http) {
+        return ApiResponse.ok(DeviceReferenceResponse.from(service.updateDeviceReference(
+                new FacilitiesCommands.UpdateDeviceReference(deviceId, request.name(), request.type(),
+                        request.vendor(), request.externalReference(), request.expectedVersion(),
+                        actor(http), channel(http)))));
+    }
+
+    @PatchMapping("/device-references/{deviceId}/lifecycle")
+    @Operation(summary = "Move a device reference through its lifecycle",
+            description = "A decommissioned device stops being part of the estate map. ARCHIVED is terminal.")
+    public ApiResponse<DeviceReferenceResponse> changeDeviceReferenceLifecycle(@PathVariable UUID deviceId,
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+        return ApiResponse.ok(DeviceReferenceResponse.from(service.changeDeviceReferenceLifecycle(
+                new FacilitiesCommands.ChangeDeviceReferenceLifecycle(deviceId, request.status(),
+                        request.expectedVersion(), actor(http), channel(http)))));
     }
 
     private ActorContext actor(HttpServletRequest http) {

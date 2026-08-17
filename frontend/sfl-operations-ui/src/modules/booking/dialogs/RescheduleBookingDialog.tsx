@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { DateTimeField } from 'shared/components/DateField';
 import { NumberInput, TextAreaInput } from 'shared/components/fields';
@@ -120,14 +119,6 @@ const RescheduleBookingDialog = ({ booking, onClose, onSubmit }: RescheduleBooki
           />
         )}
 
-        <Alert variant="info" title="What moves with it">
-          <p className="text-theme-sm">
-            Every resource this booking holds moves to the new window in the same transaction, and any
-            readiness hold is cleared - the reconciliation sweep re-places it within the minute if it
-            still applies. The approval is <strong>not</strong> reset: an approved booking stays
-            approved.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

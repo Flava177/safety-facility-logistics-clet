@@ -3,9 +3,9 @@ import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
-import Select from 'shared/components/Select';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { humaniseCode } from 'modules/facilities/components/facilitiesFormat';
@@ -129,16 +129,19 @@ const BookableResourcesPage = () => {
         }
       />
 
+      {/*
+        Both controls labelled. A bare `Select` renders no label line and `FilterBar` aligns its
+        children at the top, so it sat a label's height above the site select beside it.
+      */}
       <FilterBar onReset={() => setCategory('')} resetDisabled={!category}>
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-        <Select
+        <SelectInput
+          label="Category"
           value={category}
           onChange={setCategory}
-          placeholder="Any category"
-          options={[
-            { value: '', label: 'Any category' },
-            ...RESOURCE_CATEGORIES.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          allowEmpty
+          emptyLabel="Any category"
+          options={RESOURCE_CATEGORIES.map((value) => ({ value, label: humaniseCode(value) }))}
         />
       </FilterBar>
 

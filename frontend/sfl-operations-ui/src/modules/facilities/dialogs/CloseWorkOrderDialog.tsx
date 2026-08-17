@@ -118,24 +118,6 @@ const CloseWorkOrderDialog = ({
           </Alert>
         )}
 
-        {closing && order.facilityFaultId && (
-          <Alert variant="info" title="This also closes the fault">
-            <p className="text-theme-sm">
-              The fault behind this work order is resolved when it closes, and any readiness blocker
-              it holds on a space is cleared with it.
-            </p>
-          </Alert>
-        )}
-
-        {closing && order.workOrderType === 'PREVENTIVE' && (
-          <Alert variant="info" title="This records the service">
-            <p className="text-theme-sm">
-              Closing a preventive order sets the asset&rsquo;s last-serviced date, which moves its
-              next service due date and the estate&rsquo;s overdue count.
-            </p>
-          </Alert>
-        )}
-
         {!closing && (
           <Alert variant="info" title="Not closed yet">
             <p className="text-theme-sm">

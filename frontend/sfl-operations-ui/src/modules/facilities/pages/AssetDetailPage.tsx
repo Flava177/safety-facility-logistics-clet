@@ -11,9 +11,16 @@ import StatusChip from 'shared/components/StatusChip';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
-import { changeAssetStatus, getAsset, getSpace } from '../api/facilitiesApi';
-import { canManageAssets, changeAssetStatusAction } from '../api/workflow';
+import { changeAssetStatus, getAsset, getSpace, relocateAsset, updateAsset } from '../api/facilitiesApi';
+import {
+  canManageAssets,
+  changeAssetStatusAction,
+  editAssetControl,
+  relocateAssetControl,
+} from '../api/workflow';
+import { EditRowAction, MoveRowAction } from '../components/RowActions';
 import AssetStatusDialog from '../dialogs/AssetStatusDialog';
+import { EditAssetDialog, RelocateAssetDialog } from '../dialogs/assetDialogs';
 import {
   formatDate,
   formatDateTime,
@@ -34,6 +41,8 @@ const AssetDetailPage = () => {
   const navigate = useNavigate();
   const notify = useNotifier();
   const [changingStatus, setChangingStatus] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [moving, setMoving] = useState(false);
 
   const asset = useApiQuery((signal) => getAsset(assetId, signal), [assetId]);
   const space = useApiQuery(
@@ -75,16 +84,30 @@ const AssetDetailPage = () => {
                   condition staring at a greyed button with a reason they cannot act on. The grant
                   decides whether the control exists; the action still decides whether it is live.
                 */
-                canManageAssets() ? (
-                  <Button
-                    variant="primary"
-                    disabled={!statusAction.allowed}
-                    title={statusAction.reason}
-                    onClick={() => setChangingStatus(true)}
-                  >
-                    Change condition
-                  </Button>
-                ) : undefined
+                <>
+                  <EditRowAction
+                    size="md"
+                    state={editAssetControl(asset.data)}
+                    onClick={() => setEditing(true)}
+                    label={`Edit ${asset.data.assetCode}`}
+                  />
+                  <MoveRowAction
+                    size="md"
+                    state={relocateAssetControl(asset.data)}
+                    onClick={() => setMoving(true)}
+                    label={`Move ${asset.data.assetCode}`}
+                  />
+                  {canManageAssets() && (
+                    <Button
+                      variant="primary"
+                      disabled={!statusAction.allowed}
+                      title={statusAction.reason}
+                      onClick={() => setChangingStatus(true)}
+                    >
+                      Change condition
+                    </Button>
+                  )}
+                </>
               }
             />
 
@@ -199,7 +222,7 @@ const AssetDetailPage = () => {
                     { label: 'Lifecycle', value: humaniseCode(asset.data.lifecycleStatus) },
                     { label: 'Status notes', value: orDash(asset.data.statusNotes), span: 2 },
                     {
-                      label: 'AVAMP reference',
+                      label: 'Asset visibility reference',
                       value: orDash(asset.data.assetReferenceId),
                     },
                     {
@@ -213,6 +236,35 @@ const AssetDetailPage = () => {
           </>
         )}
       </DataState>
+
+      {editing && asset.data && (
+        <EditAssetDialog
+          asset={asset.data}
+          onClose={() => setEditing(false)}
+          onSubmit={async (request) => {
+            const saved = await updateAsset(asset.data!.id, request);
+            setEditing(false);
+            notify.notifySuccess(`${saved.assetCode} updated.`);
+            asset.refetch();
+          }}
+        />
+      )}
+
+      {moving && asset.data && (
+        <RelocateAssetDialog
+          asset={asset.data}
+          onClose={() => setMoving(false)}
+          onSubmit={async (request) => {
+            const saved = await relocateAsset(asset.data!.id, request);
+            setMoving(false);
+            notify.notifySuccess(
+              `${saved.assetCode} moved. Readiness has been re-derived for both spaces.`,
+            );
+            asset.refetch();
+            space.refetch();
+          }}
+        />
+      )}
 
       {changingStatus && asset.data && (
         <AssetStatusDialog

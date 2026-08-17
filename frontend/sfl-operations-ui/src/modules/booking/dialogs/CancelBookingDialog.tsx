@@ -81,12 +81,6 @@ const CancelBookingDialog = ({ booking, onClose, onSubmit }: CancelBookingDialog
           </Alert>
         )}
 
-        <Alert variant="info" title="What cancelling does">
-          <p className="text-theme-sm">
-            The space and every resource the booking holds are released, and its setup tasks are
-            marked skipped with your reason. Nothing moves out of a cancelled booking afterwards.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

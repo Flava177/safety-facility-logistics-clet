@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { TextAreaInput, TextInput } from 'shared/components/fields';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
@@ -116,12 +115,6 @@ const CreateBuildingDialog = ({
           placeholder="What it is used for, or how to find it."
         />
 
-        <Alert variant="info" title="It will need a floor">
-          <p className="text-theme-sm">
-            A space is placed on a floor, not in a building, so this will hold nothing until it has at
-            least one. You will land on the new building, where you can add one.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

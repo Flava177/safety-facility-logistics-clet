@@ -10,6 +10,24 @@ import {
   severityTone,
 } from './facilitiesFormat';
 
+describe('humaniseCode keeps acronyms as acronyms', () => {
+  it.each([
+    ['HVAC', 'HVAC'],
+    ['CCTV_CAMERA', 'CCTV camera'],
+    ['IT_INFRASTRUCTURE', 'IT infrastructure'],
+    ['UPS', 'UPS'],
+    ['RFID_READER', 'RFID reader'],
+    ['IOT_SENSOR', 'IOT sensor'],
+  ])('renders %s as %s rather than sentence-casing it', (code, expected) => {
+    expect(humaniseCode(code)).toBe(expected);
+  });
+
+  it('still sentence-cases an ordinary enum value', () => {
+    expect(humaniseCode('EXAMINATION_HALL')).toBe('Examination hall');
+    expect(humaniseCode('MOOT_COURTROOM')).toBe('Moot courtroom');
+  });
+});
+
 /**
  * How S152 values are shown.
  *

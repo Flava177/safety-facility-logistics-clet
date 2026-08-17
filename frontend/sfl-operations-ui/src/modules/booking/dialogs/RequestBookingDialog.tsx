@@ -247,12 +247,6 @@ const RequestBookingDialog = ({
           </>
         )}
 
-        <Alert variant="info" title="Asking does not hold the space">
-          <p className="text-theme-sm">
-            Nothing is reserved by looking. If somebody requests this space first, this will come back
-            refused rather than confirming two bookings into one room.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

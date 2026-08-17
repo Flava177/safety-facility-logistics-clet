@@ -1,4 +1,6 @@
 import { sflActor } from 'shared/api/config';
+import { allowed, disabled, hidden } from 'shared/components/ControlButton';
+import type { ControlState } from 'shared/components/ControlButton';
 import { permits } from 'shared/layout/actorPermissions';
 import type { Booking, SetupTask } from './dto';
 import type { BookingStatus } from './enums';
@@ -37,14 +39,13 @@ import { TERMINAL_STATUSES } from './enums';
  * invisible.
  */
 
-export type ControlState =
-  | { kind: 'allowed' }
-  | { kind: 'hidden' }
-  | { kind: 'disabled'; reason: string };
-
-export const allowed: ControlState = { kind: 'allowed' };
-export const hidden: ControlState = { kind: 'hidden' };
-const disabled = (reason: string): ControlState => ({ kind: 'disabled', reason });
+/*
+  The three-state model moved to `shared/components/ControlButton` when facilities became its second
+  caller. Re-exported here rather than re-declared, so `ControlState` remains one type across the
+  application and this module's imports did not have to change.
+*/
+export type { ControlState } from 'shared/components/ControlButton';
+export { allowed, hidden };
 
 export const isTerminal = (status: BookingStatus): boolean => TERMINAL_STATUSES.includes(status);
 

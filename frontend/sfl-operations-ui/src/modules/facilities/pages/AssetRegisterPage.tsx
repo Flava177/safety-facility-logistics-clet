@@ -1,42 +1,64 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
-import Select from 'shared/components/Select';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { SelectInput } from 'shared/components/fields';
+import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { FacilityAsset } from '../api/dto';
 import { assetCategories, assetCriticalities, assetOperationalStatuses } from '../api/enums';
 import type { AssetCategory, AssetCriticality, AssetOperationalStatus } from '../api/enums';
-import { searchAssets } from '../api/facilitiesApi';
 import {
-  assetStatusTone,
-  formatDate,
-  humaniseCode,
-} from '../components/facilitiesFormat';
+  changeAssetLifecycle,
+  registerAsset,
+  relocateAsset,
+  searchAssets,
+  updateAsset,
+} from '../api/facilitiesApi';
+import {
+  createAssetControl,
+  editAssetControl,
+  relocateAssetControl,
+  retireAssetControl,
+} from '../api/workflow';
+import RowActions, { EditRowAction, MoveRowAction, RetireRowAction } from '../components/RowActions';
+import { assetStatusTone, formatDate, humaniseCode } from '../components/facilitiesFormat';
+import { LifecycleDialog } from '../dialogs/common';
+import {
+  EditAssetDialog,
+  RegisterAssetDialog,
+  RelocateAssetDialog,
+} from '../dialogs/assetDialogs';
 
 /**
  * The facility asset register.
  *
- * Fixed plant - the chillers, lifts, generators and panels S153 will raise work orders against. Not
- * AVAMP-Lite's asset references, which carry cross-programme identity for movable things; the two
- * are linked by value and answer different questions.
+ * Fixed plant - the chillers, lifts, generators and panels S153 raises work orders against. Not the
+ * asset references that carry cross-programme identity for movable things; the two are linked by
+ * value and answer different questions.
  *
  * Criticality and condition sit next to each other because their combination is what matters: a low
  * asset out of service is a note, a critical one out of service has blocked a hall.
  */
 const AssetRegisterPage = () => {
   const navigate = useNavigate();
+  const notify = useNotifier();
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
   const [category, setCategory] = useState<string>('');
   const [criticality, setCriticality] = useState<string>('');
   const [status, setStatus] = useState<string>('');
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(25);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<FacilityAsset | null>(null);
+  const [moving, setMoving] = useState<FacilityAsset | null>(null);
+  const [retiring, setRetiring] = useState<FacilityAsset | null>(null);
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -119,6 +141,31 @@ const AssetRegisterPage = () => {
           <StatusChip value="BLOCKING" label="Impairs space" tone="blocked" />
         ) : null,
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 150,
+      align: 'right',
+      cell: (asset) => (
+        <RowActions>
+          <EditRowAction
+            state={editAssetControl(asset)}
+            onClick={() => setEditing(asset)}
+            label={`Edit ${asset.assetCode}`}
+          />
+          <MoveRowAction
+            state={relocateAssetControl(asset)}
+            onClick={() => setMoving(asset)}
+            label={`Move ${asset.assetCode}`}
+          />
+          <RetireRowAction
+            state={retireAssetControl(asset)}
+            onClick={() => setRetiring(asset)}
+            label={`Retire ${asset.assetCode}`}
+          />
+        </RowActions>
+      ),
+    },
   ];
 
   return (
@@ -126,8 +173,24 @@ const AssetRegisterPage = () => {
       <PageHeader
         title="Facility assets"
         subtitle="Fixed plant and equipment, and what its condition does to the estate"
+        actions={
+          <ControlButton
+            state={createAssetControl()}
+            variant="primary"
+            startIcon="plus"
+            onClick={() => setAdding(true)}
+          >
+            Register an asset
+          </ControlButton>
+        }
       />
 
+      {/*
+        Every control here carries a label. They were bare `Select`s with only a placeholder, and
+        `FilterBar` aligns its children at the top - so the three unlabelled ones sat a label's height
+        above the site select and the row read as broken. A label is the better fix than a spacer
+        because an operator should not have to open a dropdown to learn what it filters.
+      */}
       <FilterBar>
         <SiteSelect
           value={siteCode}
@@ -135,32 +198,29 @@ const AssetRegisterPage = () => {
           allowEmpty
           emptyLabel="All sites"
         />
-        <Select
+        <SelectInput
+          label="Category"
           value={category}
           onChange={(v) => changeFilter(() => setCategory(v))}
-          placeholder="Any category"
-          options={[
-            { value: '', label: 'Any category' },
-            ...assetCategories.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          allowEmpty
+          emptyLabel="Any category"
+          options={assetCategories.map((value) => ({ value, label: humaniseCode(value) }))}
         />
-        <Select
+        <SelectInput
+          label="Criticality"
           value={criticality}
           onChange={(v) => changeFilter(() => setCriticality(v))}
-          placeholder="Any criticality"
-          options={[
-            { value: '', label: 'Any criticality' },
-            ...assetCriticalities.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          allowEmpty
+          emptyLabel="Any criticality"
+          options={assetCriticalities.map((value) => ({ value, label: humaniseCode(value) }))}
         />
-        <Select
+        <SelectInput
+          label="Condition"
           value={status}
           onChange={(v) => changeFilter(() => setStatus(v))}
-          placeholder="Any condition"
-          options={[
-            { value: '', label: 'Any condition' },
-            ...assetOperationalStatuses.map((value) => ({ value, label: humaniseCode(value) })),
-          ]}
+          allowEmpty
+          emptyLabel="Any condition"
+          options={assetOperationalStatuses.map((value) => ({ value, label: humaniseCode(value) }))}
         />
       </FilterBar>
 
@@ -187,6 +247,63 @@ const AssetRegisterPage = () => {
           />
         )}
       </DataState>
+
+      {adding && (
+        <RegisterAssetDialog
+          siteCode={siteCode || defaultSite}
+          onClose={() => setAdding(false)}
+          onSubmit={async (request) => {
+            const created = await registerAsset(request);
+            setAdding(false);
+            notify.notifySuccess(`${created.assetCode} registered at ${created.siteCode}.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {editing && (
+        <EditAssetDialog
+          asset={editing}
+          onClose={() => setEditing(null)}
+          onSubmit={async (request) => {
+            const saved = await updateAsset(editing.id, request);
+            setEditing(null);
+            notify.notifySuccess(`${saved.assetCode} updated.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {moving && (
+        <RelocateAssetDialog
+          asset={moving}
+          onClose={() => setMoving(null)}
+          onSubmit={async (request) => {
+            const saved = await relocateAsset(moving.id, request);
+            setMoving(null);
+            notify.notifySuccess(`${saved.assetCode} moved.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="asset"
+          label={retiring.assetCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeAssetLifecycle(retiring.id, { status, expectedVersion });
+            setRetiring(null);
+            notify.notifySuccess(
+              `${saved.assetCode} is now ${status.toLowerCase()}. Readiness has been re-derived.`,
+            );
+            refetch();
+          }}
+        />
+      )}
     </>
   );
 };

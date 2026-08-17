@@ -6,9 +6,9 @@ import DataTable, { Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
-import Select from 'shared/components/Select';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { AuditChainVerification, AuditEvent } from '../api/dto';
@@ -173,16 +173,16 @@ const FacilitiesAuditPage = () => {
           </Alert>
         )}
 
+        {/* Both controls labelled, so they sit on one line - see the note on the asset register. */}
         <FilterBar>
           <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-          <Select
+          <SelectInput
+            label="Action"
             value={action}
             onChange={setAction}
-            placeholder="Any action"
-            options={[
-              { value: '', label: 'Any action' },
-              ...auditActions.map((value) => ({ value, label: humaniseCode(value) })),
-            ]}
+            allowEmpty
+            emptyLabel="Any action"
+            options={auditActions.map((value) => ({ value, label: humaniseCode(value) }))}
           />
         </FilterBar>
 

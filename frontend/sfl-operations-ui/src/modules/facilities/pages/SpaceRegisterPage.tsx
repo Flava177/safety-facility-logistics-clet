@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
 import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
@@ -7,18 +8,27 @@ import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { SelectInput } from 'shared/components/fields';
+import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { Space } from '../api/dto';
 import { readinessStatuses, spaceTypes } from '../api/enums';
 import type { LocationReadinessStatus, SpaceType } from '../api/enums';
-import { searchSpaces } from '../api/facilitiesApi';
+import { changeSpaceLifecycle, createSpace, searchSpaces, updateSpace } from '../api/facilitiesApi';
+import {
+  changeSpaceLifecycleControl,
+  createSpaceControl,
+  editSpaceControl,
+} from '../api/workflow';
+import RowActions, { EditRowAction, RetireRowAction } from '../components/RowActions';
 import {
   humaniseCode,
   orDash,
   readinessTone,
   relativeTime,
 } from '../components/facilitiesFormat';
+import { LifecycleDialog } from '../dialogs/common';
+import { CreateSpaceDialog, EditSpaceDialog } from '../dialogs/spaceDialogs';
 
 /**
  * The space register.
@@ -30,11 +40,15 @@ import {
  */
 const SpaceRegisterPage = () => {
   const navigate = useNavigate();
+  const notify = useNotifier();
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
   const [spaceType, setSpaceType] = useState<string>('');
   const [readiness, setReadiness] = useState<string>('');
   const [page, setPage] = useState(0);
   const [size, setSize] = useState(25);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<Space | null>(null);
+  const [retiring, setRetiring] = useState<Space | null>(null);
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -171,6 +185,26 @@ const SpaceRegisterPage = () => {
         </div>
       ),
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 150,
+      align: 'right',
+      cell: (space) => (
+        <RowActions>
+          <EditRowAction
+            state={editSpaceControl(space)}
+            onClick={() => setEditing(space)}
+            label={`Edit ${space.roomCode}`}
+          />
+          <RetireRowAction
+            state={changeSpaceLifecycleControl(space)}
+            onClick={() => setRetiring(space)}
+            label={`Retire ${space.roomCode}`}
+          />
+        </RowActions>
+      ),
+    },
   ];
 
   return (
@@ -178,6 +212,16 @@ const SpaceRegisterPage = () => {
       <PageHeader
         title="Spaces"
         subtitle="Rooms, halls and courtrooms, with the readiness of each"
+        actions={
+          <ControlButton
+            state={createSpaceControl()}
+            variant="primary"
+            startIcon="plus"
+            onClick={() => setAdding(true)}
+          >
+            Add a space
+          </ControlButton>
+        }
       />
 
       <FilterBar active={activeFilters} onReset={resetFilters}>
@@ -231,6 +275,48 @@ const SpaceRegisterPage = () => {
           />
         )}
       </DataState>
+
+      {adding && (
+        <CreateSpaceDialog
+          siteCode={siteCode || defaultSite}
+          onClose={() => setAdding(false)}
+          onSubmit={async (request) => {
+            const created = await createSpace(request);
+            setAdding(false);
+            notify.notifySuccess(`${created.roomCode} added to ${created.siteCode}.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {editing && (
+        <EditSpaceDialog
+          space={editing}
+          onClose={() => setEditing(null)}
+          onSubmit={async (request) => {
+            const saved = await updateSpace(editing.id, request);
+            setEditing(null);
+            notify.notifySuccess(`${saved.roomCode} updated.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="space"
+          label={retiring.roomCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeSpaceLifecycle(retiring.id, { status, expectedVersion });
+            setRetiring(null);
+            notify.notifySuccess(`${saved.roomCode} is now ${status.toLowerCase()}.`);
+            refetch();
+          }}
+        />
+      )}
     </>
   );
 };

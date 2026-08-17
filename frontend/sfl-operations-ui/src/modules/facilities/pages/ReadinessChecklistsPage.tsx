@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router';
+import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
+import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { ReadinessChecklist } from '../api/dto';
-import { listChecklists } from '../api/facilitiesApi';
+import { createChecklist, listChecklists, updateChecklist } from '../api/facilitiesApi';
+import { createChecklistControl, editChecklistControl } from '../api/workflow';
+import RowActions, { EditRowAction } from '../components/RowActions';
 import { humaniseCode } from '../components/facilitiesFormat';
+import { CreateChecklistDialog, EditChecklistDialog } from '../dialogs/checklistDialogs';
 
 /**
  * The readiness checklists configured for a site.
@@ -21,7 +26,10 @@ import { humaniseCode } from '../components/facilitiesFormat';
  */
 const ReadinessChecklistsPage = () => {
   const navigate = useNavigate();
+  const notify = useNotifier();
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
+  const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<ReadinessChecklist | null>(null);
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) => listChecklists(siteCode || undefined, signal),
@@ -75,6 +83,21 @@ const ReadinessChecklistsPage = () => {
       width: 100,
       cell: (checklist) => <span className="text-gray-600">v{checklist.version}</span>,
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 100,
+      align: 'right',
+      cell: (checklist) => (
+        <RowActions>
+          <EditRowAction
+            state={editChecklistControl(checklist)}
+            onClick={() => setEditing(checklist)}
+            label={`Edit ${checklist.checklistCode}`}
+          />
+        </RowActions>
+      ),
+    },
   ];
 
   return (
@@ -82,6 +105,16 @@ const ReadinessChecklistsPage = () => {
       <PageHeader
         title="Readiness checklists"
         subtitle="What an assessment asks, and what a failure costs"
+        actions={
+          <ControlButton
+            state={createChecklistControl()}
+            variant="primary"
+            startIcon="plus"
+            onClick={() => setAdding(true)}
+          >
+            Add a checklist
+          </ControlButton>
+        }
       />
 
       <FilterBar>
@@ -106,6 +139,32 @@ const ReadinessChecklistsPage = () => {
           />
         )}
       </DataState>
+
+      {adding && (
+        <CreateChecklistDialog
+          siteCode={siteCode || defaultSite}
+          onClose={() => setAdding(false)}
+          onSubmit={async (request) => {
+            const created = await createChecklist(request);
+            setAdding(false);
+            notify.notifySuccess(`${created.checklistCode} added to ${created.siteCode}.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {editing && (
+        <EditChecklistDialog
+          checklist={editing}
+          onClose={() => setEditing(null)}
+          onSubmit={async (request) => {
+            const saved = await updateChecklist(editing.id, request);
+            setEditing(null);
+            notify.notifySuccess(`${saved.checklistCode} saved at version ${saved.version}.`);
+            refetch();
+          }}
+        />
+      )}
     </>
   );
 };

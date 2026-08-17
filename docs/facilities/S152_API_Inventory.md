@@ -50,9 +50,19 @@ is refused, because an empty result would misrepresent the estate.
 | `C` | `POST` | `/buildings` | `FACILITIES_SPACE_MANAGE` |
 | | `GET` | `/buildings?siteCode=` | `FACILITIES_SPACE_READ` |
 | | `GET` | `/buildings/{buildingId}` | `FACILITIES_SPACE_READ` |
+| | `PATCH` | `/buildings/{buildingId}` | `FACILITIES_SPACE_MANAGE` |
+| | `PATCH` | `/buildings/{buildingId}/lifecycle` | `FACILITIES_SPACE_MANAGE` |
 | `C` | `POST` | `/floors` | `FACILITIES_SPACE_MANAGE` |
 | | `GET` | `/buildings/{buildingId}/floors` | `FACILITIES_SPACE_READ` |
 | | `GET` | `/floors/{floorId}` | `FACILITIES_SPACE_READ` |
+| | `PATCH` | `/floors/{floorId}` | `FACILITIES_SPACE_MANAGE` |
+| | `PATCH` | `/floors/{floorId}/lifecycle` | `FACILITIES_SPACE_MANAGE` |
+
+The four `PATCH`es above were added on **17 August 2026**. Until then a building or a floor could be
+created and never corrected or retired, which `S152_UI_Gap_Report` §3 recorded as a known gap. Each
+takes `expectedVersion`, is authorised against the record's own site, and is hash-chained into the
+audit trail as `BUILDING_UPDATED`, `BUILDING_LIFECYCLE_CHANGED`, `FLOOR_UPDATED` or
+`FLOOR_LIFECYCLE_CHANGED`.
 
 ## Spaces - `SRS-SFL-S152-01`
 
@@ -90,6 +100,7 @@ critical-blocker rule - `422 READINESS_BLOCKED`.
 | | `GET` | `/zones/{zoneId}/members` | `FACILITIES_ZONE_READ` |
 | | `POST` | `/zones/{zoneId}/members` | `FACILITIES_ZONE_MANAGE` |
 | | `DELETE` | `/zones/{zoneId}/members/{memberType}/{memberId}` | `FACILITIES_ZONE_MANAGE` |
+| | `PATCH` | `/zones/{zoneId}/lifecycle` | `FACILITIES_ZONE_MANAGE` |
 
 A member must belong to the zone's own site. Without that rule a zone could reach across sites, and an
 evacuation broadcast addressed to it would page a building three hundred kilometres from the fire.
@@ -101,6 +112,14 @@ evacuation broadcast addressed to it would page a building three hundred kilomet
 | `C` | `POST` | `/device-references` | `FACILITIES_DEVICE_REFERENCE_REGISTER` |
 | | `GET` | `/device-references?siteCode=&type=&roomId=` | `FACILITIES_DEVICE_REFERENCE_READ` |
 | | `GET` | `/device-references/{deviceId}` | `FACILITIES_DEVICE_REFERENCE_READ` |
+| | `PATCH` | `/device-references/{deviceId}` | `FACILITIES_DEVICE_REFERENCE_REGISTER` |
+| | `PATCH` | `/device-references/{deviceId}/lifecycle` | `FACILITIES_DEVICE_REFERENCE_REGISTER` |
+
+`PATCH /device-references/{deviceId}` was added on **17 August 2026** and carries name, type, vendor
+and vendor reference - **not** the status. The status is what a vendor feed reports, and a request
+field for it would let this service assert an observation it has not made. It takes the *register*
+permission rather than a new one: whoever may put a device on the estate map is who has to fix it
+when the vendor renames it.
 
 ## Facility assets - `SRS-SFL-S152-01`, §21.1
 
@@ -112,6 +131,7 @@ evacuation broadcast addressed to it would page a building three hundred kilomet
 | | `PATCH` | `/assets/{assetId}` | `FACILITIES_ASSET_MANAGE` |
 | | `PATCH` | `/assets/{assetId}/status` | `FACILITIES_ASSET_MANAGE` |
 | | `PATCH` | `/assets/{assetId}/location` | `FACILITIES_ASSET_MANAGE` |
+| | `PATCH` | `/assets/{assetId}/lifecycle` | `FACILITIES_ASSET_MANAGE` |
 
 `PATCH /assets/{id}/status` **recomputes the readiness of the space the asset sits in**. An impaired
 asset raises a blocker at a severity derived from its criticality; a recovered one resolves the blocker

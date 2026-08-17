@@ -69,11 +69,37 @@ export const scoreTone = (score: number): Tone => {
   return 'blocked';
 };
 
-/** `EXAMINATION_HALL` → `Examination hall`. */
+/**
+ * The acronyms in these enumerations, which sentence case would otherwise mangle.
+ *
+ * `HVAC` became "Hvac" and `CCTV_CAMERA` became "Cctv camera" in every dropdown, register cell and
+ * chip that renders an enum - which is most of them. An acronym is not a word, and lower-casing one
+ * reads as a typo rather than as a style. Kept as an explicit list rather than a "three or more
+ * capitals" rule, because that rule would also catch a legitimately capitalised word and there is no
+ * way to tell them apart from the string alone.
+ */
+const ACRONYMS = new Set([
+  'HVAC',
+  'UPS',
+  'IT',
+  'CCTV',
+  'RFID',
+  'IOT',
+  'SLA',
+  'AV',
+]);
+
+/** `EXAMINATION_HALL` → `Examination hall`; `CCTV_CAMERA` → `CCTV camera`. */
 export const humaniseCode = (value: string | null | undefined): string => {
   if (!value) return '-';
-  const words = value.replace(/_/g, ' ').toLowerCase();
-  return words.charAt(0).toUpperCase() + words.slice(1);
+  const words = value.split('_').map((word, index) => {
+    if (ACRONYMS.has(word)) {
+      return word;
+    }
+    const lower = word.toLowerCase();
+    return index === 0 ? lower.charAt(0).toUpperCase() + lower.slice(1) : lower;
+  });
+  return words.join(' ');
 };
 
 /**
