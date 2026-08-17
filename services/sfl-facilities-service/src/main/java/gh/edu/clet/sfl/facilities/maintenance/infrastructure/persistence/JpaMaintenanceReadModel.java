@@ -28,21 +28,24 @@ public class JpaMaintenanceReadModel implements MaintenanceReadModel {
         this.workOrders = workOrders;
     }
 
+    /**
+     * The two counts the dashboard reports.
+     *
+     * <p>A null site means the estate, not nothing. This used to return {@code (0, 0)} without a site
+     * code, so the estate-wide dashboard - which is what an actor scoped to every site sees - reported
+     * no open faults and no open work orders beside eighteen open blockers and three impaired assets.
+     * Every other summary on that screen aggregates across sites when none is named, and a card that
+     * silently says zero is worse than one that says nothing.
+     */
     @Override
     public OpenWork openWorkFor(String siteCode) {
         String site = normalize(siteCode);
-        if (site == null) {
-            return new OpenWork(0, 0);
-        }
         return new OpenWork((int) faults.countOpenForSite(site), (int) workOrders.countOpenForSite(site));
     }
 
     @Override
     public Set<String> locationCodesWithOpenWork(String siteCode) {
         String site = normalize(siteCode);
-        if (site == null) {
-            return Set.of();
-        }
         Set<String> codes = new LinkedHashSet<>();
         faults.search(site, null, null, null, Boolean.TRUE, org.springframework.data.domain.PageRequest.of(0, 500))
                 .stream()
