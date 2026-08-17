@@ -70,6 +70,28 @@ public record DeviceReference(
                 metadata.modifiedBy(actorId, at, channel, correlationId));
     }
 
+    /**
+     * Corrects what this service owns about the device.
+     *
+     * <p>Deliberately not the status: that is the vendor feed's to report, and a hand-edited status
+     * would be this service asserting something only the vendor system can observe. Nor the code or
+     * the site - both are how other records refer to this one. What is left is the descriptive half
+     * the estate owns, which is exactly the half that gets typed wrong on registration.
+     *
+     * <p>A null argument leaves its field alone, so a caller correcting one word does not have to
+     * resend the rest and cannot blank a field by omission.
+     */
+    public DeviceReference update(String newName, DeviceReferenceType newType, String newVendor,
+            String newExternalReference, String actorId, Instant at, SourceChannel channel,
+            String correlationId) {
+        return new DeviceReference(id, siteCode, deviceCode,
+                newName == null || newName.isBlank() ? name : newName.strip(),
+                newType == null ? type : newType, status, roomId, locationCode,
+                newVendor == null ? vendor : Site.blankToNull(newVendor),
+                newExternalReference == null ? externalReference : Site.blankToNull(newExternalReference),
+                statusReportedAt, lifecycleStatus, metadata.modifiedBy(actorId, at, channel, correlationId));
+    }
+
     /** Moves the device to another space, or off the estate map when {@code newRoomId} is null. */
     public DeviceReference relocate(UUID newRoomId, String newLocationCode, String actorId, Instant at,
             SourceChannel channel, String correlationId) {

@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
@@ -5,10 +6,14 @@ import KeyValueGrid from 'shared/components/KeyValueGrid';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatusChip from 'shared/components/StatusChip';
+import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { ChecklistItem } from '../api/dto';
-import { getChecklist } from '../api/facilitiesApi';
+import { getChecklist, updateChecklist } from '../api/facilitiesApi';
+import { editChecklistControl } from '../api/workflow';
+import { EditRowAction } from '../components/RowActions';
+import { EditChecklistDialog } from '../dialogs/checklistDialogs';
 import { formatDateTime, humaniseCode, orDash, severityTone } from '../components/facilitiesFormat';
 
 /**
@@ -21,6 +26,8 @@ import { formatDateTime, humaniseCode, orDash, severityTone } from '../component
  */
 const ReadinessChecklistDetailPage = () => {
   const { checklistId = '' } = useParams();
+  const notify = useNotifier();
+  const [editing, setEditing] = useState(false);
   const { data, loading, error, refetch } = useApiQuery(
     (signal) => getChecklist(checklistId, signal),
     [checklistId],
@@ -76,6 +83,14 @@ const ReadinessChecklistDetailPage = () => {
               { label: 'Checklists', to: facilitiesPaths.checklists },
               { label: data.checklistCode },
             ]}
+            actions={
+              <EditRowAction
+                size="md"
+                state={editChecklistControl(data)}
+                onClick={() => setEditing(true)}
+                label={`Edit ${data.checklistCode}`}
+              />
+            }
           />
 
           <div className="space-y-5">
@@ -122,6 +137,19 @@ const ReadinessChecklistDetailPage = () => {
               />
             </SectionCard>
           </div>
+
+          {editing && (
+            <EditChecklistDialog
+              checklist={data}
+              onClose={() => setEditing(false)}
+              onSubmit={async (request) => {
+                const saved = await updateChecklist(data.id, request);
+                setEditing(false);
+                notify.notifySuccess(`${saved.checklistCode} saved at version ${saved.version}.`);
+                refetch();
+              }}
+            />
+          )}
         </>
       )}
     </DataState>

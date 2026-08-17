@@ -14,10 +14,22 @@ import { facilitiesPaths } from 'shared/layout/navigation';
 import type { FacilityAsset } from '../api/dto';
 import { assetCategories, assetCriticalities, assetOperationalStatuses } from '../api/enums';
 import type { AssetCategory, AssetCriticality, AssetOperationalStatus } from '../api/enums';
-import { registerAsset, relocateAsset, searchAssets, updateAsset } from '../api/facilitiesApi';
-import { createAssetControl, editAssetControl, relocateAssetControl } from '../api/workflow';
-import RowActions from '../components/RowActions';
+import {
+  changeAssetLifecycle,
+  registerAsset,
+  relocateAsset,
+  searchAssets,
+  updateAsset,
+} from '../api/facilitiesApi';
+import {
+  createAssetControl,
+  editAssetControl,
+  relocateAssetControl,
+  retireAssetControl,
+} from '../api/workflow';
+import RowActions, { EditRowAction, MoveRowAction, RetireRowAction } from '../components/RowActions';
 import { assetStatusTone, formatDate, humaniseCode } from '../components/facilitiesFormat';
+import { LifecycleDialog } from '../dialogs/common';
 import {
   EditAssetDialog,
   RegisterAssetDialog,
@@ -46,6 +58,7 @@ const AssetRegisterPage = () => {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<FacilityAsset | null>(null);
   const [moving, setMoving] = useState<FacilityAsset | null>(null);
+  const [retiring, setRetiring] = useState<FacilityAsset | null>(null);
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -135,23 +148,21 @@ const AssetRegisterPage = () => {
       align: 'right',
       cell: (asset) => (
         <RowActions>
-          <ControlButton
+          <EditRowAction
             state={editAssetControl(asset)}
-            variant="ghost"
-            size="sm"
-            startIcon="edit"
             onClick={() => setEditing(asset)}
-          >
-            Edit
-          </ControlButton>
-          <ControlButton
+            label={`Edit ${asset.assetCode}`}
+          />
+          <MoveRowAction
             state={relocateAssetControl(asset)}
-            variant="ghost"
-            size="sm"
             onClick={() => setMoving(asset)}
-          >
-            Move
-          </ControlButton>
+            label={`Move ${asset.assetCode}`}
+          />
+          <RetireRowAction
+            state={retireAssetControl(asset)}
+            onClick={() => setRetiring(asset)}
+            label={`Retire ${asset.assetCode}`}
+          />
         </RowActions>
       ),
     },
@@ -271,6 +282,24 @@ const AssetRegisterPage = () => {
             const saved = await relocateAsset(moving.id, request);
             setMoving(null);
             notify.notifySuccess(`${saved.assetCode} moved.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="asset"
+          label={retiring.assetCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeAssetLifecycle(retiring.id, { status, expectedVersion });
+            setRetiring(null);
+            notify.notifySuccess(
+              `${saved.assetCode} is now ${status.toLowerCase()}. Readiness has been re-derived.`,
+            );
             refetch();
           }}
         />

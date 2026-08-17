@@ -1,14 +1,18 @@
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { SelectInput, TextInput } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
 import { compose, maxLength, required } from 'shared/validation/validators';
-import type { RegisterDeviceReferenceRequest } from '../api/dto';
+import type {
+  DeviceReference,
+  RegisterDeviceReferenceRequest,
+  UpdateDeviceReferenceRequest,
+} from '../api/dto';
 import { deviceReferenceTypes } from '../api/enums';
 import type { DeviceReferenceType } from '../api/enums';
 import { SpacePicker } from '../components/estatePickers';
 import { humaniseCode } from '../components/facilitiesFormat';
+import { StaleWriteNotice } from './common';
 
 /**
  * Registering a device reference.
@@ -160,13 +164,99 @@ export const RegisterDeviceDialog = ({
           />
         </div>
 
-        <Alert variant="info" title="The status comes from the vendor, not from here">
-          <p className="text-theme-sm">
-            A device starts as unknown and stays there until its vendor system reports on it. The
-            facilities register holds the reference and the location; whether the device is online is
-            the feed&rsquo;s answer to give.
-          </p>
-        </Alert>
+      </div>
+    </FormDialog>
+  );
+};
+
+interface EditDeviceDialogProps {
+  device: DeviceReference;
+  onClose: () => void;
+  onSubmit: (request: UpdateDeviceReferenceRequest) => Promise<void>;
+}
+
+/**
+ * Correcting a device reference.
+ *
+ * <p>The code and the site are not offered - other records refer to this one by them - and neither is
+ * the status, which belongs to the vendor feed. What is left is the descriptive half this service
+ * owns, which is exactly the half that gets typed wrong on registration and had no way to be fixed
+ * until `PATCH /device-references/{deviceId}` existed.
+ *
+ * <p>The location is also absent: it is a relocation, with its own consequence, and it is reached
+ * from the register rather than folded into a name correction.
+ */
+export const EditDeviceDialog = ({ device, onClose, onSubmit }: EditDeviceDialogProps) => {
+  const form = useFleetForm({
+    initialValues: {
+      name: device.name,
+      type: device.type,
+      vendor: device.vendor ?? '',
+      externalReference: device.externalReference ?? '',
+    },
+    schema: {
+      name: compose(required('Name'), maxLength('Name', 160)),
+      vendor: maxLength('Vendor', 160),
+      externalReference: maxLength('Vendor reference', 160),
+    },
+    onSubmit: (values) =>
+      onSubmit({
+        name: values.name.trim(),
+        type: values.type,
+        vendor: values.vendor.trim() || null,
+        externalReference: values.externalReference.trim() || null,
+        expectedVersion: device.metadata.version,
+      }),
+  });
+
+  return (
+    <FormDialog
+      open
+      title={`Edit ${device.deviceCode}`}
+      description={`On ${device.siteCode}. Its reported status comes from the vendor feed.`}
+      submitLabel="Save changes"
+      submitting={form.submitting}
+      formError={form.formError}
+      onClose={onClose}
+      onSubmit={() => void form.submit()}
+    >
+      <div className="space-y-4">
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Name"
+            value={form.values.name}
+            onChange={(value) => form.setValue('name', value)}
+            required
+            maxLength={160}
+            {...form.fieldProps('name')}
+          />
+          <SelectInput
+            label="Device type"
+            value={form.values.type}
+            onChange={(value) => form.setValue('type', value as DeviceReferenceType)}
+            required
+            options={deviceReferenceTypes.map((value) => ({ value, label: humaniseCode(value) }))}
+          />
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-2">
+          <TextInput
+            label="Vendor"
+            value={form.values.vendor}
+            onChange={(value) => form.setValue('vendor', value)}
+            maxLength={160}
+            {...form.fieldProps('vendor')}
+          />
+          <TextInput
+            label="Vendor reference"
+            value={form.values.externalReference}
+            onChange={(value) => form.setValue('externalReference', value)}
+            maxLength={160}
+            {...form.fieldProps('externalReference')}
+          />
+        </div>
+
+        <StaleWriteNotice error={form.formError} />
       </div>
     </FormDialog>
   );

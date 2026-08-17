@@ -12,6 +12,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { Zone, ZoneMember } from '../api/dto';
 import {
   addZoneMember,
+  changeZoneLifecycle,
   createZone,
   listBuildings,
   listDeviceReferences,
@@ -20,9 +21,10 @@ import {
   listZones,
   removeZoneMember,
 } from '../api/facilitiesApi';
-import { createZoneControl, manageZoneMembersControl } from '../api/workflow';
-import RowActions from '../components/RowActions';
+import { createZoneControl, manageZoneMembersControl, retireZoneControl } from '../api/workflow';
+import RowActions, { RemoveRowAction, RetireRowAction } from '../components/RowActions';
 import { formatDateTime, orDash } from '../components/facilitiesFormat';
+import { LifecycleDialog } from '../dialogs/common';
 import { AddZoneMemberDialog, CreateZoneDialog } from '../dialogs/zoneDialogs';
 
 /**
@@ -42,6 +44,7 @@ const ZonesPage = () => {
   const [selected, setSelected] = useState<Zone | null>(null);
   const [adding, setAdding] = useState(false);
   const [addingMember, setAddingMember] = useState(false);
+  const [retiring, setRetiring] = useState<Zone | null>(null);
 
   const zones = useApiQuery((signal) => listZones(siteCode || undefined, signal), [siteCode]);
   const members = useApiQuery(
@@ -108,6 +111,21 @@ const ZonesPage = () => {
       cell: (zone) =>
         zone.parentZoneId ? <StatusChip value="NESTED" label="Nested" tone="neutral" /> : null,
     },
+    {
+      key: 'actions',
+      header: '',
+      width: 110,
+      align: 'right',
+      cell: (zone) => (
+        <RowActions>
+          <RetireRowAction
+            state={retireZoneControl(zone)}
+            onClick={() => setRetiring(zone)}
+            label={`Retire ${zone.zoneCode}`}
+          />
+        </RowActions>
+      ),
+    },
   ];
 
   const memberColumns: Column<ZoneMember>[] = [
@@ -150,14 +168,11 @@ const ZonesPage = () => {
       align: 'right',
       cell: (member) => (
         <RowActions>
-          <ControlButton
+          <RemoveRowAction
             state={selected ? manageZoneMembersControl(selected) : { kind: 'hidden' }}
-            variant="ghost"
-            size="sm"
             onClick={() => void removeMember(member)}
-          >
-            Remove
-          </ControlButton>
+            label="Remove from this zone"
+          />
         </RowActions>
       ),
     },
@@ -296,6 +311,25 @@ const ZonesPage = () => {
             setAddingMember(false);
             notify.notifySuccess(`Added to ${selected.zoneCode}.`);
             members.refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="zone"
+          label={retiring.zoneCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeZoneLifecycle(retiring.id, { status, expectedVersion });
+            setRetiring(null);
+            if (selected?.id === saved.id) {
+              setSelected(saved);
+            }
+            notify.notifySuccess(`${saved.zoneCode} is now ${status.toLowerCase()}.`);
+            zones.refetch();
           }}
         />
       )}

@@ -1,6 +1,5 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
-import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import PageHeader from 'shared/components/PageHeader';
@@ -192,11 +191,6 @@ const AvailabilitySearchPage = () => {
           />
         </div>
       </SectionCard>
-
-      <Alert variant="info" title="Looking does not hold a space" className="mb-5">
-        Two people can both be told the same hall is free and both ask for it. The first request wins;
-        the second is refused rather than confirming two bookings into one room.
-      </Alert>
 
       <DataState
         loading={spaces.loading}

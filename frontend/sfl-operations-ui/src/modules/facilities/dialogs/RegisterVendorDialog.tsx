@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { DateField } from 'shared/components/DateField';
 import { NumberInput, TextInput } from 'shared/components/fields';
@@ -168,12 +167,6 @@ const RegisterVendorDialog = ({ siteCode, onClose, onSubmit }: RegisterVendorDia
           />
         </div>
 
-        <Alert variant="info" title="This is a local reference">
-          <p className="text-theme-sm">
-            Enough to assign work and track a response time. Supplier master data stays in
-            procurement - the ID above is how the two are matched up.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

@@ -38,7 +38,10 @@ import type {
   SpaceSearchParams,
   SubmitAssessmentRequest,
   UpdateAssetRequest,
+  UpdateBuildingRequest,
   UpdateChecklistRequest,
+  UpdateDeviceReferenceRequest,
+  UpdateFloorRequest,
   UpdateSiteRequest,
   UpdateSpaceReadinessRequest,
   UpdateSpaceRequest,
@@ -141,6 +144,18 @@ export const getFloor = (floorId: string, signal?: AbortSignal) =>
 
 export const createFloor = (request: CreateFloorRequest) => post<Floor>('/floors', request, true);
 
+export const updateBuilding = (buildingId: string, request: UpdateBuildingRequest) =>
+  patch<Building>(`/buildings/${buildingId}`, request);
+
+export const changeBuildingLifecycle = (buildingId: string, request: ChangeLifecycleRequest) =>
+  patch<Building>(`/buildings/${buildingId}/lifecycle`, request);
+
+export const updateFloor = (floorId: string, request: UpdateFloorRequest) =>
+  patch<Floor>(`/floors/${floorId}`, request);
+
+export const changeFloorLifecycle = (floorId: string, request: ChangeLifecycleRequest) =>
+  patch<Floor>(`/floors/${floorId}/lifecycle`, request);
+
 // ---- spaces -----------------------------------------------------------------------------------
 
 /** The plain list. Kept because the pre-S152 facilities page reads this shape. */
@@ -189,6 +204,9 @@ export const addZoneMember = (zoneId: string, request: AddZoneMemberRequest) =>
 export const removeZoneMember = (zoneId: string, memberType: string, memberId: string) =>
   apiClient.delete<void>(`${base}/zones/${zoneId}/members/${memberType}/${memberId}`, { service });
 
+export const changeZoneLifecycle = (zoneId: string, request: ChangeLifecycleRequest) =>
+  patch<Zone>(`/zones/${zoneId}/lifecycle`, request);
+
 // ---- device references ------------------------------------------------------------------------
 
 export const listDeviceReferences = (
@@ -201,6 +219,13 @@ export const getDeviceReference = (deviceId: string, signal?: AbortSignal) =>
 
 export const registerDeviceReference = (request: RegisterDeviceReferenceRequest) =>
   post<DeviceReference>('/device-references', request, true);
+
+/** Name, type, vendor and vendor reference. The status belongs to the vendor feed. */
+export const updateDeviceReference = (deviceId: string, request: UpdateDeviceReferenceRequest) =>
+  patch<DeviceReference>(`/device-references/${deviceId}`, request);
+
+export const changeDeviceReferenceLifecycle = (deviceId: string, request: ChangeLifecycleRequest) =>
+  patch<DeviceReference>(`/device-references/${deviceId}/lifecycle`, request);
 
 // ---- facility assets --------------------------------------------------------------------------
 
@@ -222,6 +247,10 @@ export const changeAssetStatus = (assetId: string, request: ChangeAssetStatusReq
 
 export const relocateAsset = (assetId: string, request: RelocateAssetRequest) =>
   patch<FacilityAsset>(`/assets/${assetId}/location`, request);
+
+/** Retiring plant. Any readiness blocker the asset was holding open is reconciled by the service. */
+export const changeAssetLifecycle = (assetId: string, request: ChangeLifecycleRequest) =>
+  patch<FacilityAsset>(`/assets/${assetId}/lifecycle`, request);
 
 // ---- readiness --------------------------------------------------------------------------------
 

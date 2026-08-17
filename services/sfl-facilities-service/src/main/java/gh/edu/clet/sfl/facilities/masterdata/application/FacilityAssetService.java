@@ -173,6 +173,37 @@ public class FacilityAssetService {
         return saved;
     }
 
+    /**
+     * Retires an asset, or brings one back.
+     *
+     * <p>The register had no way out of it. A decommissioned chiller stayed in the list of plant the
+     * estate was answerable for, and the only alternative was deleting a row - which would take the
+     * asset's service history and its readiness blockers with it, and break the audit chain that
+     * proves the rest was not altered.
+     *
+     * <p>Readiness is reconciled afterwards for the same reason a status change reconciles it: an
+     * archived asset is no longer plant this estate operates, so a blocker it was holding open on a
+     * space has to be released rather than left standing against a record nobody will look at again.
+     */
+    @Transactional
+    public FacilityAsset changeLifecycle(FacilitiesCommands.ChangeAssetLifecycle command) {
+        ActorContext actor = command.actor();
+        FacilityAsset asset = requireAsset(command.assetId());
+        authorization.require(actor, SflPermission.FACILITIES_ASSET_MANAGE, asset.siteCode(), command.channel(),
+                "FacilityAsset", asset.id().toString());
+        asset.metadata().requireVersion(command.expectedVersion(), "Asset", asset.id());
+
+        FacilityAsset saved = facilities.saveAsset(asset.changeLifecycle(command.status(), actor.actorId(),
+                now(), command.channel(), actor.correlationId()));
+
+        audit.record(actor, command.channel(), AuditAction.FACILITY_ASSET_LIFECYCLE_CHANGED, "FacilityAsset",
+                saved.id().toString(), saved.siteCode(), asset.lifecycleStatus(), saved.lifecycleStatus());
+        publish("sfl.ifimp.facility-asset-lifecycle-changed.v1", saved, actor);
+
+        spaceReadiness.reconcileAssetBlockers(saved, actor, command.channel());
+        return saved;
+    }
+
     @Transactional(readOnly = true)
     public FacilitiesRepository.Page<FacilityAsset> search(FacilitiesRepository.AssetQuery query,
             ActorContext actor, SourceChannel channel) {

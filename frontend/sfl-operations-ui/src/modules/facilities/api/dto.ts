@@ -480,6 +480,27 @@ export interface RegisterDeviceReferenceRequest {
   externalReference?: string | null;
 }
 
+export interface UpdateBuildingRequest {
+  name?: string | null;
+  description?: string | null;
+  expectedVersion?: number | null;
+}
+
+export interface UpdateFloorRequest {
+  name?: string | null;
+  levelNumber?: number | null;
+  expectedVersion?: number | null;
+}
+
+/** No status field: the vendor feed reports that, and this service must not assert it. */
+export interface UpdateDeviceReferenceRequest {
+  name?: string | null;
+  type?: DeviceReferenceType | null;
+  vendor?: string | null;
+  externalReference?: string | null;
+  expectedVersion?: number | null;
+}
+
 export interface RegisterAssetRequest {
   siteCode: string;
   assetCode: string;

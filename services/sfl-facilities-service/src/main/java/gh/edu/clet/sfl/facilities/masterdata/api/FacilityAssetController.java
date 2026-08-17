@@ -105,6 +105,17 @@ public class FacilityAssetController {
                 channel(http)))));
     }
 
+    @PatchMapping("/{assetId}/lifecycle")
+    @Operation(summary = "Move an asset through its lifecycle",
+            description = "Retiring plant the estate no longer operates. Any readiness blocker it was "
+                    + "holding open is reconciled. ARCHIVED is terminal.")
+    public ApiResponse<AssetResponse> changeLifecycle(@PathVariable UUID assetId,
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+        return ApiResponse.ok(AssetResponse.from(service.changeLifecycle(
+                new FacilitiesCommands.ChangeAssetLifecycle(assetId, request.status(),
+                        request.expectedVersion(), actor(http), channel(http)))));
+    }
+
     @PatchMapping("/{assetId}/location")
     @Operation(summary = "Move a facility asset to another space",
             description = "Recomputes readiness for both the space it left and the space it joined.")

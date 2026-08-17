@@ -103,20 +103,12 @@ const DecideBookingDialog = ({ booking, onClose, onSubmit }: DecideBookingDialog
           }
         />
 
-        {rejecting ? (
+        {rejecting && (
           <Alert variant="warning" title="What rejecting does">
             <p className="text-theme-sm">
               The space and every resource this booking holds are released immediately, and its setup
               tasks are marked skipped with your reason. {formatWindow(booking.startsAt, booking.endsAt)}{' '}
               becomes free for the next requester.
-            </p>
-          </Alert>
-        ) : (
-          <Alert variant="info" title="Checked again on approval">
-            <p className="text-theme-sm">
-              The space is re-tested for a clash now, not only when it was requested - a hall free on
-              Monday can be taken before Thursday&rsquo;s decision. If it has gone, this will be
-              refused rather than confirming two bookings into one room.
             </p>
           </Alert>
         )}

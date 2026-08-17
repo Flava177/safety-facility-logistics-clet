@@ -295,13 +295,6 @@ const AttachEvidenceDialog = ({ onClose, onSubmit }: AttachEvidenceDialogProps) 
           placeholder="Anything a reviewer would need to make sense of it."
         />
 
-        <Alert variant="info" title="The file is not uploaded from here">
-          <p className="text-theme-sm">
-            This service stores references and hashes, never the bytes. Choosing a file lets the
-            browser read its digest so it cannot be mistyped - you still upload to document storage
-            yourself and record the reference it gives back.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

@@ -20,7 +20,7 @@ import {
   createSpaceControl,
   editSpaceControl,
 } from '../api/workflow';
-import RowActions from '../components/RowActions';
+import RowActions, { EditRowAction, RetireRowAction } from '../components/RowActions';
 import {
   humaniseCode,
   orDash,
@@ -192,23 +192,16 @@ const SpaceRegisterPage = () => {
       align: 'right',
       cell: (space) => (
         <RowActions>
-          <ControlButton
+          <EditRowAction
             state={editSpaceControl(space)}
-            variant="ghost"
-            size="sm"
-            startIcon="edit"
             onClick={() => setEditing(space)}
-          >
-            Edit
-          </ControlButton>
-          <ControlButton
+            label={`Edit ${space.roomCode}`}
+          />
+          <RetireRowAction
             state={changeSpaceLifecycleControl(space)}
-            variant="ghost"
-            size="sm"
             onClick={() => setRetiring(space)}
-          >
-            Retire
-          </ControlButton>
+            label={`Retire ${space.roomCode}`}
+          />
         </RowActions>
       ),
     },

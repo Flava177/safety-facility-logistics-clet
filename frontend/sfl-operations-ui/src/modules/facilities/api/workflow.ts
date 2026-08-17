@@ -517,14 +517,34 @@ export const registerDeviceControl = (): ControlState =>
 /**
  * Editing a device reference.
  *
- * Disabled with the reason rather than hidden, and the reason is that the endpoint does not exist
- * yet - `PATCH /device-references/{deviceId}` is a recorded gap, not a permission the actor lacks.
- * Saying so is the honest version: hiding it would present a missing endpoint as an authorisation
- * decision, and the operator would have no way to tell the two apart.
+ * Takes the registration permission rather than a separate one, mirroring the service: whoever may
+ * put a device on the estate map is the one who has to fix it when the vendor renames it.
  */
 export const editDeviceControl = (device: DeviceReference): ControlState =>
   gated('FACILITIES_DEVICE_REFERENCE_REGISTER', () =>
     editableLifecycle(device.lifecycleStatus, 'device reference'),
+  );
+
+export const retireDeviceControl = (device: DeviceReference): ControlState =>
+  gated('FACILITIES_DEVICE_REFERENCE_REGISTER', () =>
+    device.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This device reference is already archived.')
+      : controlAllowed,
+  );
+
+/** Retiring plant. The service reconciles any readiness blocker the asset was holding open. */
+export const retireAssetControl = (asset: FacilityAsset): ControlState =>
+  gated('FACILITIES_ASSET_MANAGE', () =>
+    asset.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This asset is already archived.')
+      : controlAllowed,
+  );
+
+export const retireZoneControl = (zone: Zone): ControlState =>
+  gated('FACILITIES_ZONE_MANAGE', () =>
+    zone.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This zone is already archived.')
+      : controlAllowed,
   );
 
 // ---- zones --------------------------------------------------------------------------------------

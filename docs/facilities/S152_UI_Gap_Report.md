@@ -103,9 +103,9 @@ matters because a blank cell reads as missing data rather than as the answer.
 
 | Where | What | Why it was left |
 | --- | --- | --- |
-| Space detail, blocker list | An asset-sourced blocker shows the asset's UUID in its source line (`Asset · c8f166ae-…`) | The description beside it already names the asset (`GEN-01 (GENERATOR) is OUT_OF_SERVICE`), so the identifier is redundant rather than misleading. Resolving it to a code means a second fetch per blocker. |
+| Space detail, blocker list | An asset-sourced blocker shows the asset's UUID in its source line (`Asset · c8f166ae-…`) | The description beside it already names the asset (`GEN-01 (GENERATOR) is OUT_OF_SERVICE`), so the identifier is redundant rather than misleading. Resolving it to a code means a second fetch per blocker. The zone member list had the same shape and *was* fixed on 17 August, because there the identifier was the only thing in the column - see below. |
 | Registers | Only the code cell is clickable, not the whole row | Consistent with the fleet registers, which is why it was left. It is a discoverability cost and worth revisiting across all of them at once, not in one module. |
-| Buildings | No register, and no edit or retire | A building is only ever reached from the site that owns it - nobody searches an estate for one - so a fourth register would be a sidebar entry whose whole content is "choose a site first". `PATCH` on a building or a floor has no endpoint at all. |
+| Buildings | ~~No register, and no edit or retire~~ **Half closed, 17 August 2026** | The register is still deliberately absent, for the reason given: a building is only ever reached from the site that owns it, so a fourth register would be a sidebar entry whose whole content is "choose a site first". The *endpoints* are no longer missing - `PATCH /buildings/{id}`, `/buildings/{id}/lifecycle`, `PATCH /floors/{id}` and `/floors/{id}/lifecycle` were added with the estate CRUD round and are covered by `EstateEditAndRetireTest`. |
 | Assessment history | Fixed at the ten most recent | The full history is at `/facilities/assessments?roomId=…`, which the page links to. |
 | Duplicate floor code | The service refuses with `An active floor with identifier 'GF' already exists for site CLET-HQ` | Confirmed against the database: floor codes are unique **per building**, not per site - `GF` was accepted in a second building on the same site. The message uses the shared `DUPLICATE_IDENTIFIER` wording, which names the site scope rather than the true key, so it reads as a stricter rule than the one being enforced. The wording is the SRS's and is not rewritten here. |
 
@@ -151,3 +151,26 @@ Neither is cosmetic and both would have failed in a browser while passing every 
    those screens do not yet do - chiefly that evidence cannot be uploaded from the dashboard alone.
 2. **S159 (room and resource booking)** - against the booking flags this module already surfaces.
 3. **Add every new module to `SOURCES`** in `shared/layout/actorPermissions.ts`. See §1.
+
+---
+
+## 4. Closed by the estate CRUD round, 17 August 2026
+
+Recorded here rather than deleted, because what a gap report is *for* is the trail from "this does
+not work" to "this is why it now does".
+
+| Gap | Closed by |
+| --- | --- |
+| **Every estate register was read-only.** Sites, spaces, facility assets, zones, device references and readiness checklists had no create action; nothing in the module had an edit. Sixteen write functions were wired in `facilitiesApi.ts` and called from no screen. | A create dialog, a row edit and, where the aggregate has a lifecycle, a retire on each register - plus the same controls on the site, space, asset and checklist detail screens. Every edit sends `expectedVersion`. |
+| **The configuration screen could not change anything**, and listed raw dotted keys as its primary column. | An edit per row through `PUT /configuration/{key}`, with a platform-default-or-site-override choice, the version being superseded stated before it is written, and a human label and one-line effect per key from `S152_Operations_And_Verification_Guide` §6 and `S153_CMMS_Design` §3. The raw key is kept as secondary text. |
+| **`PATCH /device-references/{deviceId}` did not exist**, so a device reference could be registered and never corrected. | Added, with `/lifecycle` beside it. The status stays out of the request body - it belongs to the vendor feed. |
+| **No lifecycle transition for assets, zones or device references.** Each had a `changeLifecycle` on the domain record that no endpoint reached, so the only ways out of a register were leaving a decommissioned record in it forever or deleting a row, which this estate does not do. | `PATCH /assets/{id}/lifecycle`, `PATCH /zones/{id}/lifecycle`, `PATCH /device-references/{id}/lifecycle`. Retiring an asset reconciles any readiness blocker it was holding open. |
+| **Zone membership could be read and not changed**, and the member column showed a bare UUID - the one column somebody checking what an evacuation zone covers actually reads. | Add and remove controls, with the picker scoped to the zone's own site so the service's same-site refusal cannot be reached from the screen. Members now show the record's own name with the identifier beneath. |
+| **`X-SFL-Sites: *` was read as a site code.** Every register filtered with `siteCode=*`, which matches no row, so the whole application rendered empty for a wildcard-scoped actor - and a create dialog offered `*` as the only site, which the service accepted, filing records against a site that does not exist. | `shared/layout/actorSites.ts`. A filter default is empty for a wildcard scope; a form resolves the wildcard against the site register at boot and makes the operator pick. |
+
+### Still open after this round
+
+| Gap | Why |
+| --- | --- |
+| A floor cannot be chosen as a zone member from the dashboard | The service accepts `FLOOR` as a `memberType`, and there is no endpoint that lists the floors of a *site* without first naming a building. The dialog offers the type and says plainly that it has nothing to offer, rather than hiding a member type the service supports. A `GET /floors?siteCode=` would close it. |
+| `FACILITIES_CONFIG_MANAGE` is held only by `SFL_ADMIN` and `INTEGRATION_ENGINEER` | So the facilities director - the role that reads as the owner of these thresholds - cannot change one. That is the matrix's decision and is left alone here; it is recorded because the configuration screen now has an edit control that the director will never see, and somebody will ask why. |

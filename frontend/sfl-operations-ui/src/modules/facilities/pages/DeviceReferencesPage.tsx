@@ -13,10 +13,17 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { DeviceReference } from '../api/dto';
 import { deviceReferenceTypes } from '../api/enums';
 import type { DeviceReferenceType } from '../api/enums';
-import { listDeviceReferences, registerDeviceReference } from '../api/facilitiesApi';
-import { registerDeviceControl } from '../api/workflow';
+import {
+  changeDeviceReferenceLifecycle,
+  listDeviceReferences,
+  registerDeviceReference,
+  updateDeviceReference,
+} from '../api/facilitiesApi';
+import { editDeviceControl, registerDeviceControl, retireDeviceControl } from '../api/workflow';
+import RowActions, { EditRowAction, RetireRowAction } from '../components/RowActions';
 import { humaniseCode, orDash, relativeTime } from '../components/facilitiesFormat';
-import { RegisterDeviceDialog } from '../dialogs/deviceDialogs';
+import { LifecycleDialog } from '../dialogs/common';
+import { EditDeviceDialog, RegisterDeviceDialog } from '../dialogs/deviceDialogs';
 
 /**
  * Device references - the identity and location of devices vendor systems operate.
@@ -33,6 +40,8 @@ const DeviceReferencesPage = () => {
   const [siteCode, setSiteCode] = useState<string>(defaultSite);
   const [type, setType] = useState<string>('');
   const [adding, setAdding] = useState(false);
+  const [editing, setEditing] = useState<DeviceReference | null>(null);
+  const [retiring, setRetiring] = useState<DeviceReference | null>(null);
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -93,6 +102,26 @@ const DeviceReferencesPage = () => {
       align: 'right',
       cell: (device) => (
         <span className="text-gray-600">{relativeTime(device.statusReportedAt)}</span>
+      ),
+    },
+    {
+      key: 'actions',
+      header: '',
+      width: 150,
+      align: 'right',
+      cell: (device) => (
+        <RowActions>
+          <EditRowAction
+            state={editDeviceControl(device)}
+            onClick={() => setEditing(device)}
+            label={`Edit ${device.deviceCode}`}
+          />
+          <RetireRowAction
+            state={retireDeviceControl(device)}
+            onClick={() => setRetiring(device)}
+            label={`Retire ${device.deviceCode}`}
+          />
+        </RowActions>
       ),
     },
   ];
@@ -161,6 +190,38 @@ const DeviceReferencesPage = () => {
             const created = await registerDeviceReference(request);
             setAdding(false);
             notify.notifySuccess(`${created.deviceCode} registered at ${created.siteCode}.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {editing && (
+        <EditDeviceDialog
+          device={editing}
+          onClose={() => setEditing(null)}
+          onSubmit={async (request) => {
+            const saved = await updateDeviceReference(editing.id, request);
+            setEditing(null);
+            notify.notifySuccess(`${saved.deviceCode} updated.`);
+            refetch();
+          }}
+        />
+      )}
+
+      {retiring && (
+        <LifecycleDialog
+          noun="device reference"
+          label={retiring.deviceCode}
+          current={retiring.lifecycleStatus}
+          expectedVersion={retiring.metadata.version}
+          onClose={() => setRetiring(null)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeDeviceReferenceLifecycle(retiring.id, {
+              status,
+              expectedVersion,
+            });
+            setRetiring(null);
+            notify.notifySuccess(`${saved.deviceCode} is now ${status.toLowerCase()}.`);
             refetch();
           }}
         />

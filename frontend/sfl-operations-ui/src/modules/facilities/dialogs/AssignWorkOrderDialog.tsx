@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { SelectInput, TextInput } from 'shared/components/fields';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
@@ -111,23 +110,6 @@ const AssignWorkOrderDialog = ({ order, onClose, onSubmit }: AssignWorkOrderDial
           }
         />
 
-        {vendor?.assignable && vendor.responseHours && (
-          <Alert variant="info" title="Contracted response">
-            <p className="text-theme-sm">
-              {vendor.name} is contracted to respond within {vendor.responseHours} hours. Where that
-              is tighter than the priority&rsquo;s own SLA, it is the deadline that applies.
-            </p>
-          </Alert>
-        )}
-
-        {order.status === 'ON_HOLD' && (
-          <Alert variant="info" title="This releases the hold">
-            <p className="text-theme-sm">
-              Handing work to somebody while telling them it is blocked is not an assignment anybody
-              can act on, so assigning clears the hold.
-            </p>
-          </Alert>
-        )}
       </div>
     </FormDialog>
   );

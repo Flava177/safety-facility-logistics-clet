@@ -54,8 +54,8 @@ const CentreReceiptsPage = () => {
     'A dispatch records its destination centre as free text, with nothing tying it to your account, '
     + 'so the platform cannot yet tell which consignments are yours. Everything at '
     + site
-    + ' is shown. Narrowing needs a schema change owned by the Transportation and Logistics Unit - '
-    + 'see C-16 in the S166 gap report.';
+    + ' is shown. Narrowing to your own consignments needs a change owned by the Transportation '
+    + 'and Logistics Unit, and is not yet scheduled.';
 
   return (
     <div className="space-y-8">

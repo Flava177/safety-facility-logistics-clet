@@ -97,11 +97,11 @@ const RequireEntitlement = ({
       <p className="mt-2 max-w-lg text-theme-sm text-gray-600">
         {programmeRefused ? (
           <>
-            This screen belongs to SFL.{programme.code} - {programme.scope.toLowerCase()}.
+            This screen belongs to {programme.label} - {programme.scope.toLowerCase()}.
           </>
         ) : (
           <>
-            This screen belongs to {target.code}, one of the {programme.label} systems.
+            This screen belongs to {target.label}, one of the {programme.label} systems.
           </>
         )}{' '}
         Your roles cover{' '}

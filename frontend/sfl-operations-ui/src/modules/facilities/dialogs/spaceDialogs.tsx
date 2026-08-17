@@ -1,4 +1,3 @@
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect from 'shared/components/SiteSelect';
 import { Checkbox, NumberInput, SelectInput, TextInput } from 'shared/components/fields';
@@ -135,13 +134,6 @@ export const CreateSpaceDialog = ({ siteCode, onClose, onSubmit }: CreateSpaceDi
           fieldProps={(field, hint) => form.fieldProps(field as never, hint)}
         />
 
-        <Alert variant="info" title="Capable is not the same as available">
-          <p className="text-theme-sm">
-            These two flags say what the room is for. Whether it can actually take a booking or an
-            examination today is worked out by the service from its readiness and its lifecycle, and
-            is shown on the register rather than set here.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

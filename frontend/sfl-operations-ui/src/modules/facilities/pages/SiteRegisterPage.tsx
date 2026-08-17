@@ -15,7 +15,7 @@ import {
   createSiteControl,
   editSiteControl,
 } from '../api/workflow';
-import RowActions from '../components/RowActions';
+import RowActions, { EditRowAction, RetireRowAction } from '../components/RowActions';
 import { formatDateTime, orDash } from '../components/facilitiesFormat';
 import { LifecycleDialog } from '../dialogs/common';
 import { EditSiteDialog, RegisterSiteDialog } from '../dialogs/siteDialogs';
@@ -89,23 +89,16 @@ const SiteRegisterPage = () => {
       align: 'right',
       cell: (site) => (
         <RowActions>
-          <ControlButton
+          <EditRowAction
             state={editSiteControl(site)}
-            variant="ghost"
-            size="sm"
-            startIcon="edit"
             onClick={() => setEditing(site)}
-          >
-            Edit
-          </ControlButton>
-          <ControlButton
+            label={`Edit ${site.siteCode}`}
+          />
+          <RetireRowAction
             state={changeSiteLifecycleControl(site)}
-            variant="ghost"
-            size="sm"
             onClick={() => setRetiring(site)}
-          >
-            Retire
-          </ControlButton>
+            label={`Retire ${site.siteCode}`}
+          />
         </RowActions>
       ),
     },

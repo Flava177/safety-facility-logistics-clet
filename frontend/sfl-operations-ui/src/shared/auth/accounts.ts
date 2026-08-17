@@ -126,7 +126,7 @@ export const seededAccounts: SeededAccount[] = [
     displayName: 'Facilities Director',
     roles: ['FACILITIES_DIRECTOR'],
     sites: ['*'],
-    description: 'All of IFIMP, every site, including overrides',
+    description: 'All of facilities, maintenance and booking, every site',
   },
   {
     email: 'maintenancesupervisor@clet.gh',

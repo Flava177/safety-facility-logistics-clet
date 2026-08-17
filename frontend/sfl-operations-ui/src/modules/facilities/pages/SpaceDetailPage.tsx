@@ -14,6 +14,7 @@ import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
 import type { FacilityAsset, ReadinessAssessment, ReadinessBlocker } from '../api/dto';
 import {
+  changeSpaceLifecycle,
   getSpace,
   getSpaceReadiness,
   listAssessments,
@@ -21,10 +22,20 @@ import {
   resolveBlocker,
   searchAssets,
   unlockSpaceReadiness,
+  updateSpace,
   updateSpaceReadiness,
 } from '../api/facilitiesApi';
-import { lockAction, unlockAction, canAssessReadiness } from '../api/workflow';
+import {
+  canAssessReadiness,
+  changeSpaceLifecycleControl,
+  editSpaceControl,
+  lockAction,
+  unlockAction,
+} from '../api/workflow';
+import { LifecycleDialog } from '../dialogs/common';
+import { EditSpaceDialog } from '../dialogs/spaceDialogs';
 import ReadinessBlockerList from '../components/ReadinessBlockerList';
+import { EditRowAction, RetireRowAction } from '../components/RowActions';
 import ResolveBlockerDialog from '../dialogs/ResolveBlockerDialog';
 import SetReadinessDialog from '../dialogs/SetReadinessDialog';
 import {
@@ -51,6 +62,8 @@ const SpaceDetailPage = () => {
   const notify = useNotifier();
   const [resolving, setResolving] = useState<ReadinessBlocker | null>(null);
   const [settingReadiness, setSettingReadiness] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [retiring, setRetiring] = useState(false);
 
   const space = useApiQuery((signal) => getSpace(roomId, signal), [roomId]);
   const readiness = useApiQuery((signal) => getSpaceReadiness(roomId, signal), [roomId]);
@@ -164,6 +177,18 @@ const SpaceDetailPage = () => {
               ]}
               actions={
                 <div className="flex flex-wrap gap-2">
+                  <EditRowAction
+                    size="md"
+                    state={editSpaceControl(space.data)}
+                    onClick={() => setEditing(true)}
+                    label={`Edit ${space.data.roomCode}`}
+                  />
+                  <RetireRowAction
+                    size="md"
+                    state={changeSpaceLifecycleControl(space.data)}
+                    onClick={() => setRetiring(true)}
+                    label={`Retire ${space.data.roomCode}`}
+                  />
                   {canAssessReadiness() && (
                     <Button
                       variant="primary"
@@ -354,6 +379,35 @@ const SpaceDetailPage = () => {
           </>
         )}
       </DataState>
+
+      {editing && space.data && (
+        <EditSpaceDialog
+          space={space.data}
+          onClose={() => setEditing(false)}
+          onSubmit={async (request) => {
+            const saved = await updateSpace(space.data!.id, request);
+            setEditing(false);
+            notify.notifySuccess(`${saved.roomCode} updated.`);
+            space.refetch();
+          }}
+        />
+      )}
+
+      {retiring && space.data && (
+        <LifecycleDialog
+          noun="space"
+          label={space.data.roomCode}
+          current={space.data.lifecycleStatus}
+          expectedVersion={space.data.metadata.version}
+          onClose={() => setRetiring(false)}
+          onSubmit={async (status, expectedVersion) => {
+            const saved = await changeSpaceLifecycle(space.data!.id, { status, expectedVersion });
+            setRetiring(false);
+            notify.notifySuccess(`${saved.roomCode} is now ${status.toLowerCase()}.`);
+            space.refetch();
+          }}
+        />
+      )}
 
       {resolving && (
         <ResolveBlockerDialog

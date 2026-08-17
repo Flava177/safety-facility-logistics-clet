@@ -111,19 +111,12 @@ export const LifecycleDialog = ({
           options={targets.map((value) => ({ value, label: humaniseCode(value) }))}
         />
 
-        {terminal ? (
+        {terminal && (
           <Alert variant="warning" title="Archiving cannot be undone">
             <p className="text-theme-sm">
               An archived {noun} cannot be brought back into use, edited, or moved to another state.
               Everything it holds stays readable and its audit trail is untouched - but this is the
               end of the line. If it is only out of use for a while, choose inactive or suspended.
-            </p>
-          </Alert>
-        ) : (
-          <Alert variant="info" title="This is reversible">
-            <p className="text-theme-sm">
-              Nothing is deleted. The {noun} and everything it holds stay readable, and it can be
-              brought back into use later.
             </p>
           </Alert>
         )}

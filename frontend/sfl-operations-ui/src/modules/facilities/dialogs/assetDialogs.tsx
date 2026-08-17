@@ -207,13 +207,6 @@ export const RegisterAssetDialog = ({ siteCode, onClose, onSubmit }: RegisterAss
           {...form.fieldProps('custodian', 'Who is answerable for it day to day.')}
         />
 
-        <Alert variant="info" title="This is not a bookable resource">
-          <p className="text-theme-sm">
-            An asset is fixed plant whose condition feeds a space&rsquo;s readiness - a chiller, a
-            lift, a generator. Something portable that is booked alongside a room belongs in bookable
-            resources instead.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

@@ -129,12 +129,6 @@ export const CreateZoneDialog = ({ siteCode, onClose, onSubmit }: CreateZoneDial
           helperText="A larger zone this one sits inside, if any."
         />
 
-        <Alert variant="info" title="An empty zone reaches nobody">
-          <p className="text-theme-sm">
-            A zone with no members resolves to nothing, so an alarm or a broadcast against it would
-            reach no one. Add what it covers once it exists.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );
@@ -257,12 +251,6 @@ export const AddZoneMemberDialog = ({ zone, onClose, onSubmit }: AddZoneMemberDi
           />
         )}
 
-        <Alert variant="info" title="This is what an alarm resolves to">
-          <p className="text-theme-sm">
-            Adding a record here puts it inside every life-safety event and every emergency broadcast
-            addressed to {zone.zoneCode}.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

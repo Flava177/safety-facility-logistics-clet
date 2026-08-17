@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { TextAreaInput } from 'shared/components/fields';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
@@ -63,13 +62,6 @@ const CompleteBookingDialog = ({ booking, onClose, onSubmit }: CompleteBookingDi
           helperText="Optional, and recorded on the booking."
         />
 
-        <Alert variant="info" title="What completing does">
-          <p className="text-theme-sm">
-            Every resource this booking holds is released, and the space stops being held{' '}
-            <strong>at once</strong> rather than at the end of its window. A completed booking no
-            longer occupies its room, so finishing early genuinely frees it for somebody else.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

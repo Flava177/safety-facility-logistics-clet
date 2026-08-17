@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { DateField } from 'shared/components/DateField';
 import { NumberInput, SelectInput, TextAreaInput, TextInput } from 'shared/components/fields';
@@ -223,14 +222,6 @@ const CreateScheduleDialog = ({ siteCode, onClose, onSubmit }: CreateScheduleDia
           }
         />
 
-        {workOrderType === 'INSPECTION' && (
-          <Alert variant="info" title="An inspection is not a service">
-            <p className="text-theme-sm">
-              Closing an inspection does not move the asset&rsquo;s last-serviced date. Use it for a
-              statutory check or a survey, and a preventive schedule for actual servicing.
-            </p>
-          </Alert>
-        )}
       </div>
     </FormDialog>
   );

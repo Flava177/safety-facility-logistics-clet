@@ -225,9 +225,9 @@ const DriverDayPage = () => {
         <h2 className="text-lg font-semibold text-slate-800">My fuel</h2>
         {/*
           This said "Not filtered to you… this is every fill recorded at {site}", which was accurate
-          and is no longer: S168 now narrows fuel transactions to the signed-in driver, server-side.
-          The caption is replaced rather than deleted because a list that used to be site-wide and is
-          now personal looks like missing data to whoever was reading it yesterday.
+          and is no longer: the fuel service now narrows transactions to the signed-in driver,
+          server-side. The caption is replaced rather than deleted because a list that used to be
+          site-wide and is now personal looks like missing data to whoever was reading it yesterday.
         */}
         <p className="text-sm text-slate-600">
           Fills recorded against you at {site}.

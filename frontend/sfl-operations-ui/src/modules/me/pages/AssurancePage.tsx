@@ -45,7 +45,7 @@ const AssurancePage = () => (
     </Alert>
 
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-slate-800">IFIMP - facilities, maintenance and booking</h2>
+      <h2 className="text-lg font-semibold text-slate-800">Facilities, maintenance and booking</h2>
       <ul className="space-y-2 text-sm">
         <li>
           <Link className="text-teal-700 underline" to={facilitiesPaths.audit}>
@@ -61,7 +61,7 @@ const AssurancePage = () => (
     </section>
 
     <section className="space-y-3">
-      <h2 className="text-lg font-semibold text-slate-800">FTLMP - fleet, fuel and dispatch</h2>
+      <h2 className="text-lg font-semibold text-slate-800">Fleet, fuel and dispatch</h2>
       <ul className="space-y-2 text-sm">
         <li>
           <Link className="text-teal-700 underline" to={fleetPaths.governance}>

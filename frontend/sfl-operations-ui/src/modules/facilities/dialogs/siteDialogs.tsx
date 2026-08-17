@@ -1,4 +1,3 @@
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import { TextAreaInput, TextInput } from 'shared/components/fields';
 import { useFleetForm } from 'shared/validation/useFleetForm';
@@ -83,12 +82,6 @@ export const RegisterSiteDialog = ({ onClose, onSubmit }: RegisterSiteDialogProp
           {...form.fieldProps('description')}
         />
 
-        <Alert variant="info" title="The code cannot be changed later">
-          <p className="text-theme-sm">
-            Every space, asset, zone, device and readiness record refers to this site by its code, so
-            it is fixed once the site exists. The name is free to change.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );

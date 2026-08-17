@@ -13,7 +13,7 @@ import { facilitiesPaths } from 'shared/layout/navigation';
 import type { ReadinessChecklist } from '../api/dto';
 import { createChecklist, listChecklists, updateChecklist } from '../api/facilitiesApi';
 import { createChecklistControl, editChecklistControl } from '../api/workflow';
-import RowActions from '../components/RowActions';
+import RowActions, { EditRowAction } from '../components/RowActions';
 import { humaniseCode } from '../components/facilitiesFormat';
 import { CreateChecklistDialog, EditChecklistDialog } from '../dialogs/checklistDialogs';
 
@@ -90,15 +90,11 @@ const ReadinessChecklistsPage = () => {
       align: 'right',
       cell: (checklist) => (
         <RowActions>
-          <ControlButton
+          <EditRowAction
             state={editChecklistControl(checklist)}
-            variant="ghost"
-            size="sm"
-            startIcon="edit"
             onClick={() => setEditing(checklist)}
-          >
-            Edit
-          </ControlButton>
+            label={`Edit ${checklist.checklistCode}`}
+          />
         </RowActions>
       ),
     },

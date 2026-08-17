@@ -102,6 +102,40 @@ public final class FacilitiesCommands {
         }
     }
 
+    public record UpdateBuilding(
+            UUID buildingId,
+            String name,
+            String description,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record ChangeBuildingLifecycle(
+            UUID buildingId,
+            RecordLifecycleStatus status,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record UpdateFloor(
+            UUID floorId,
+            String name,
+            Integer levelNumber,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record ChangeFloorLifecycle(
+            UUID floorId,
+            RecordLifecycleStatus status,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
     // ---- spaces -------------------------------------------------------------------------------
 
     public record CreateRoom(
@@ -280,5 +314,47 @@ public final class FacilitiesCommands {
 
     private static String nullSafe(String value) {
         return value == null ? "" : value.strip().toUpperCase(java.util.Locale.ROOT);
+    }
+
+    // ---- lifecycle transitions added for the estate registers ---------------------------------
+    //
+    // Assets, zones and device references had a `changeLifecycle` on the domain record and no way to
+    // reach it. Every one of them is a record an operator eventually finishes with, and without these
+    // the only ways out of the register were leaving a decommissioned chiller in it forever or
+    // deleting a row, which this estate does not do.
+
+    public record ChangeZoneLifecycle(
+            UUID zoneId,
+            RecordLifecycleStatus status,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record UpdateDeviceReference(
+            UUID deviceId,
+            String name,
+            DeviceReferenceType type,
+            String vendor,
+            String externalReference,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record ChangeDeviceReferenceLifecycle(
+            UUID deviceId,
+            RecordLifecycleStatus status,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
+    }
+
+    public record ChangeAssetLifecycle(
+            UUID assetId,
+            RecordLifecycleStatus status,
+            Long expectedVersion,
+            ActorContext actor,
+            SourceChannel channel) {
     }
 }

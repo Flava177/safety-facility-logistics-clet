@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import Alert from 'shared/components/Alert';
 import FormDialog from 'shared/components/FormDialog';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import { NumberInput, SelectInput, TextAreaInput, TextInput } from 'shared/components/fields';
@@ -153,13 +152,6 @@ const RegisterResourceDialog = ({ onClose, onSubmit }: RegisterResourceDialogPro
           placeholder="Where it lives, what it needs, anything the setup crew should know."
         />
 
-        <Alert variant="info" title="This is not the asset register">
-          <p className="text-theme-sm">
-            An asset is fixed plant whose condition feeds a space&rsquo;s readiness. A resource is
-            portable, and its scarcity is the point. A projector bolted into a hall belongs in
-            facility assets; one wheeled between halls belongs here.
-          </p>
-        </Alert>
       </div>
     </FormDialog>
   );
