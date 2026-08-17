@@ -53,9 +53,18 @@ public interface JpaFacilityFaultRepository extends JpaRepository<FacilityFaultR
             """)
     List<FacilityFaultRecord> findOverdue(@Param("asOf") Instant asOf, Pageable pageable);
 
+    /**
+     * Open faults, for one site or for every site the estate has.
+     *
+     * <p>A null {@code siteCode} means "everywhere" rather than "nowhere". The dashboard asks for the
+     * estate-wide figure whenever no site is chosen, and every other summary on it - spaces,
+     * blockers, assets - already aggregates that way; this one returned zero and made a dashboard
+     * with eighteen open blockers claim no open faults, which reads as a broken screen rather than as
+     * a filter.
+     */
     @Query("""
             select count(f) from FacilityFaultRecord f
-            where f.siteCode = :siteCode
+            where (:siteCode is null or f.siteCode = :siteCode)
               and f.status in (gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.REPORTED,
                               gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.TRIAGED,
                               gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.WORK_ORDER_CREATED)

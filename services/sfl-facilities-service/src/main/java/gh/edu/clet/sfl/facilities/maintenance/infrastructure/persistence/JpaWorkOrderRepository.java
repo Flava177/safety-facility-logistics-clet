@@ -74,9 +74,10 @@ public interface JpaWorkOrderRepository extends JpaRepository<WorkOrderRecord, U
             """)
     List<WorkOrderRecord> findResponseBreaches(@Param("asOf") Instant asOf, Pageable pageable);
 
+    /** Open work orders, for one site or for every site. See the fault repository's equivalent. */
     @Query("""
             select count(w) from WorkOrderRecord w
-            where w.siteCode = :siteCode
+            where (:siteCode is null or w.siteCode = :siteCode)
               and w.status not in (gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CLOSED,
                                    gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CANCELLED)
             """)
