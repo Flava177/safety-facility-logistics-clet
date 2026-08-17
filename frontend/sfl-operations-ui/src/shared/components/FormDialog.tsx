@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { FleetApiError, errorLabel } from 'shared/errors/FleetApiError';
+import { FleetApiError, errorDetail, errorLabel } from 'shared/errors/FleetApiError';
 import Alert from './Alert';
 import Button from './Button';
 import Modal, { ModalCloseButton, ModalSize } from './Modal';
@@ -81,9 +81,7 @@ const FormDialog = ({
           <Alert
             variant={formError.isForbidden ? 'warning' : 'error'}
             title={errorLabel(formError)}
-            footnote={
-              formError.correlationId ? `Correlation ID: ${formError.correlationId}` : undefined
-            }
+            footnote={errorDetail(formError)}
           >
             {formError.message}
           </Alert>
