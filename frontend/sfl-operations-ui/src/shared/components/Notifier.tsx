@@ -7,7 +7,7 @@ import {
   useMemo,
   useState,
 } from 'react';
-import { describeError, isFleetApiError } from 'shared/errors/FleetApiError';
+import { describeError, isFleetApiError, errorDetail } from 'shared/errors/FleetApiError';
 import Icon, { IconName } from './Icon';
 import { cn } from './cn';
 
@@ -67,11 +67,7 @@ export const NotifierProvider = ({ children }: PropsWithChildren) => {
       notifyInfo: (message, detail) => push('info', message, detail),
       notifyError: (error, fallback) => {
         const message = fallback ?? describeError(error);
-        const detail = isFleetApiError(error)
-          ? [error.code, error.correlationId ? `Correlation ID ${error.correlationId}` : null]
-              .filter(Boolean)
-              .join(' · ')
-          : undefined;
+        const detail = isFleetApiError(error) ? errorDetail(error) : undefined;
         push(isFleetApiError(error) && error.isForbidden ? 'warning' : 'error', message, detail);
       },
     }),

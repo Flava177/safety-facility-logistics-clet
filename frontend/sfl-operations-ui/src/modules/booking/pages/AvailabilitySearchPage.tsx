@@ -69,13 +69,28 @@ const AvailabilitySearchPage = () => {
   const problem = windowProblem(startsLocal, endsLocal);
 
   /*
+    Availability is asked of one site, never of the estate.
+
+    `GET /booking-availability/spaces` takes `siteCode` as a **required** parameter, and rightly:
+    "what is free on Tuesday" has no answer across three centres somebody would act on. An actor whose
+    scope is every site therefore opens this screen with no site chosen, and the query must wait for
+    one rather than be sent without it - `buildQueryString` drops an empty value, so the request went
+    out with the parameter missing and came back as a bare 400 naming the endpoint.
+
+    Every other screen in this module treats an empty site as "all sites", which is the right reading
+    for a register and the wrong one here. Stated as its own condition rather than folded into
+    `problem`, because "choose a site" and "that window is backwards" are different instructions.
+  */
+  const needsSite = !siteCode;
+
+  /*
     Both queries run against the same instants, so the resource counts on the request dialog belong to
     the window its verdict was given for. Derived once rather than at each call site: `new Date()` on
     a `datetime-local` value is local-to-UTC, and doing it twice invites the two halves to drift.
   */
   const window = useMemo(
     () =>
-      problem
+      problem || needsSite
         ? null
         : {
             siteCode,
@@ -84,7 +99,7 @@ const AvailabilitySearchPage = () => {
             setupMinutes: Number(setupMinutes) || 0,
             teardownMinutes: Number(teardownMinutes) || 0,
           },
-    [problem, siteCode, startsLocal, endsLocal, setupMinutes, teardownMinutes],
+    [problem, needsSite, siteCode, startsLocal, endsLocal, setupMinutes, teardownMinutes],
   );
 
   const spaces = useApiQuery(
@@ -140,7 +155,13 @@ const AvailabilitySearchPage = () => {
 
       <SectionCard title="The window" className="mb-5">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <SiteSelect value={siteCode} onChange={setSiteCode} required />
+          <SiteSelect
+            value={siteCode}
+            onChange={setSiteCode}
+            required
+            error={needsSite}
+            helperText={needsSite ? 'Availability is asked of one site at a time.' : undefined}
+          />
           <DateTimeField label="Starts" value={startsLocal} onChange={setStartsLocal} required />
           <DateTimeField
             label="Ends"
@@ -196,9 +217,17 @@ const AvailabilitySearchPage = () => {
         loading={spaces.loading}
         error={spaces.error}
         empty={rows.length === 0}
-        emptyTitle={problem ? 'Give a valid window' : 'No spaces at this site match'}
+        emptyTitle={
+          needsSite
+            ? 'Choose a site'
+            : problem
+              ? 'Give a valid window'
+              : 'No spaces at this site match'
+        }
         emptyHint={
-          problem ?? 'Widen the type, drop the capacity, or try a different window.'
+          needsSite
+            ? 'Availability is worked out one site at a time, so this needs a centre before it can answer.'
+            : (problem ?? 'Widen the type, drop the capacity, or try a different window.')
         }
         onRetry={spaces.refetch}
       >

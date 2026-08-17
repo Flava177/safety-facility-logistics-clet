@@ -1,5 +1,5 @@
 import { ReactNode } from 'react';
-import { FleetApiError, errorLabel } from 'shared/errors/FleetApiError';
+import { FleetApiError, errorDetail, errorLabel } from 'shared/errors/FleetApiError';
 import Alert from './Alert';
 import Button from './Button';
 import Icon from './Icon';
@@ -65,7 +65,7 @@ const DataState = ({
         <Alert
           variant={error.isForbidden ? 'warning' : 'error'}
           title={errorLabel(error)}
-          footnote={error.correlationId ? `Correlation ID: ${error.correlationId}` : undefined}
+          footnote={errorDetail(error)}
           action={
             onRetry ? (
               <Button size="sm" variant="outline" startIcon="refresh" onClick={onRetry}>

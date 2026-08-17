@@ -15,6 +15,8 @@ import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
+import org.springframework.web.bind.MissingServletRequestParameterException;
+import org.springframework.web.bind.ServletRequestBindingException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
@@ -115,6 +117,40 @@ class FacilitiesApiExceptionHandler {
             HttpServletRequest request) {
         return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED,
                 exception.getName() + " is not a valid value", null, request);
+    }
+
+    /**
+     * A required query parameter that never arrived.
+     *
+     * <p>Unhandled, this is the one failure that escapes the envelope entirely. Spring answers with its
+     * own body - {@code {timestamp, status, error, path}} - which carries no error code, so the
+     * dashboard's client cannot recognise it and falls back to reporting the raw HTTP status and the
+     * request path to whoever is looking at the screen. An operator asking "what is free on Tuesday"
+     * was shown "The service could not complete /api/v1/facilities/booking-availability/spaces: Bad
+     * Request", which names neither the problem nor anything they can do about it.
+     *
+     * <p>The parameter is named because that is the actionable part: the caller omitted something, and
+     * which something is the whole answer.
+     */
+    @ExceptionHandler(MissingServletRequestParameterException.class)
+    ResponseEntity<ApiResponse<Object>> missingParameter(MissingServletRequestParameterException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED,
+                exception.getParameterName() + " is required", null, request);
+    }
+
+    /**
+     * Anything else Spring refused while binding the request.
+     *
+     * <p>A catch-all beneath the two specific handlers above, and deliberately last of the binding
+     * family: whatever new shape of malformed request arrives, it leaves through the envelope rather
+     * than as a bare Spring error the client has to guess at.
+     */
+    @ExceptionHandler(ServletRequestBindingException.class)
+    ResponseEntity<ApiResponse<Object>> bindingFailure(ServletRequestBindingException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.BAD_REQUEST, FacilitiesErrorCode.VALIDATION_FAILED,
+                "The request could not be read: " + exception.getMessage(), null, request);
     }
 
     /**
