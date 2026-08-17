@@ -1,19 +1,26 @@
+import { allowed as controlAllowed, disabled as controlDisabled, hidden as controlHidden } from 'shared/components/ControlButton';
+import type { ControlState } from 'shared/components/ControlButton';
 import { permits } from 'shared/layout/actorPermissions';
 import type {
+  DeviceReference,
   FacilityAsset,
   FacilityFault,
   MaintenanceVendor,
   ReadinessBlocker,
+  ReadinessChecklist,
   Site,
   Space,
   WorkOrder,
+  Zone,
 } from './dto';
 import type {
   BlockerSeverity,
   FaultPriority,
   LocationReadinessStatus,
+  RecordLifecycleStatus,
   WorkOrderStatus,
 } from './enums';
+import type { SflPermission } from 'shared/layout/permissions';
 import { faultPriorities } from './enums';
 
 /**
@@ -396,3 +403,164 @@ const transition = (order: WorkOrder, to: WorkOrderStatus, verb: string): Action
 
 const humanStatus = (status: WorkOrderStatus): string =>
   status.toLowerCase().replace(/_/g, ' ');
+
+// =================================================================================================
+// Estate registers - create, edit and retire
+//
+// These return `ControlState` rather than {@link Action}, because a register control has a third
+// answer the older type cannot express. `Action` collapses "you will never be allowed to" and "not
+// while this record is archived" into one disabled button, and the first of those is clutter that
+// never goes away. The distinction and the reasoning are in `shared/components/ControlButton`.
+//
+// The two are left side by side deliberately rather than converted in one sweep: every existing
+// caller of `Action` still behaves exactly as it did, and the S153 screens that use it are outside
+// this round's scope. New controls use `ControlState`.
+// =================================================================================================
+
+/**
+ * Whether a record in this lifecycle may still be edited.
+ *
+ * `ARCHIVED` is terminal in `RecordLifecycleStatus` and the service refuses any move out of it, so an
+ * archived record refuses an edit as well. Every other state is editable: an inactive site is out of
+ * use, not out of reach, and correcting its name is exactly what somebody does before bringing it
+ * back.
+ */
+const editableLifecycle = (lifecycleStatus: RecordLifecycleStatus, noun: string): ControlState =>
+  lifecycleStatus === 'ARCHIVED'
+    ? controlDisabled(`This ${noun} is archived. Archiving is terminal, so it cannot be edited.`)
+    : controlAllowed;
+
+const gated = (permission: SflPermission, then: () => ControlState): ControlState =>
+  permits(permission) ? then() : controlHidden;
+
+// ---- sites --------------------------------------------------------------------------------------
+
+export const createSiteControl = (): ControlState =>
+  permits('FACILITIES_SITE_MANAGE') ? controlAllowed : controlHidden;
+
+export const editSiteControl = (site: Site): ControlState =>
+  gated('FACILITIES_SITE_MANAGE', () => editableLifecycle(site.lifecycleStatus, 'site'));
+
+/**
+ * Retiring a site rather than deleting one.
+ *
+ * Nothing in this estate is hard-deleted - a site holds buildings, spaces, assets and an audit trail,
+ * and removing the row would orphan all four and break the hash chain that proves the rest. So the
+ * control moves the record along `ACTIVE → INACTIVE → SUSPENDED → ARCHIVED` and the record stays
+ * readable at every step.
+ */
+export const changeSiteLifecycleControl = (site: Site): ControlState =>
+  gated('FACILITIES_SITE_MANAGE', () =>
+    site.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This site is already archived, which is the end of the line.')
+      : controlAllowed,
+  );
+
+// ---- spaces -------------------------------------------------------------------------------------
+
+export const createSpaceControl = (): ControlState =>
+  permits('FACILITIES_SPACE_MANAGE') ? controlAllowed : controlHidden;
+
+/**
+ * Editing a space's attributes.
+ *
+ * The readiness lock is the interesting case and the reason this cannot simply test the permission:
+ * while the lock is engaged the service refuses the edit outright, and the way through is to release
+ * the lock - an audited act with a named holder - rather than to edit around it. Mirrors
+ * {@link updateSpaceAction}, which the S152 detail screen already uses.
+ */
+export const editSpaceControl = (space: Space): ControlState =>
+  gated('FACILITIES_SPACE_MANAGE', () => {
+    if (space.readinessLocked) {
+      return controlDisabled(
+        `Locked for examination use by ${space.readinessLockedBy ?? 'an officer'}. Release the lock first.`,
+      );
+    }
+    return editableLifecycle(space.lifecycleStatus, 'space');
+  });
+
+export const changeSpaceLifecycleControl = (space: Space): ControlState =>
+  gated('FACILITIES_SPACE_MANAGE', () => {
+    if (space.readinessLocked) {
+      return controlDisabled(
+        `Locked for examination use by ${space.readinessLockedBy ?? 'an officer'}. Release the lock first.`,
+      );
+    }
+    return space.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This space is already archived, which is the end of the line.')
+      : controlAllowed;
+  });
+
+// ---- assets -------------------------------------------------------------------------------------
+
+export const createAssetControl = (): ControlState =>
+  permits('FACILITIES_ASSET_MANAGE') ? controlAllowed : controlHidden;
+
+export const editAssetControl = (asset: FacilityAsset): ControlState =>
+  gated('FACILITIES_ASSET_MANAGE', () => editableLifecycle(asset.lifecycleStatus, 'asset'));
+
+/**
+ * Moving an asset to another space.
+ *
+ * Separate from editing its attributes because it recomputes the readiness of both the space it
+ * leaves and the space it arrives in - `PATCH /assets/{id}/location` exists precisely so that
+ * consequence is a deliberate act rather than a side effect of correcting a serial number.
+ */
+export const relocateAssetControl = (asset: FacilityAsset): ControlState =>
+  gated('FACILITIES_ASSET_MANAGE', () => editableLifecycle(asset.lifecycleStatus, 'asset'));
+
+// ---- device references --------------------------------------------------------------------------
+
+export const registerDeviceControl = (): ControlState =>
+  permits('FACILITIES_DEVICE_REFERENCE_REGISTER') ? controlAllowed : controlHidden;
+
+/**
+ * Editing a device reference.
+ *
+ * Disabled with the reason rather than hidden, and the reason is that the endpoint does not exist
+ * yet - `PATCH /device-references/{deviceId}` is a recorded gap, not a permission the actor lacks.
+ * Saying so is the honest version: hiding it would present a missing endpoint as an authorisation
+ * decision, and the operator would have no way to tell the two apart.
+ */
+export const editDeviceControl = (device: DeviceReference): ControlState =>
+  gated('FACILITIES_DEVICE_REFERENCE_REGISTER', () =>
+    editableLifecycle(device.lifecycleStatus, 'device reference'),
+  );
+
+// ---- zones --------------------------------------------------------------------------------------
+
+export const createZoneControl = (): ControlState =>
+  permits('FACILITIES_ZONE_MANAGE') ? controlAllowed : controlHidden;
+
+/**
+ * Adding a record to a zone.
+ *
+ * The same-site rule is the one that matters: `FacilitiesMasterDataService` refuses a member whose
+ * site differs from the zone's, because a zone is how one centre's alarms and broadcasts are
+ * addressed and a member from another centre would put a neighbouring building inside an evacuation.
+ * The dialog therefore only offers records from the zone's own site, so the refusal cannot be
+ * reached from here - this control only has to answer whether the zone itself is still in use.
+ */
+export const manageZoneMembersControl = (zone: Zone): ControlState =>
+  gated('FACILITIES_ZONE_MANAGE', () =>
+    zone.lifecycleStatus === 'ARCHIVED'
+      ? controlDisabled('This zone is archived, so what it covers can no longer change.')
+      : controlAllowed,
+  );
+
+// ---- readiness checklists -----------------------------------------------------------------------
+
+export const createChecklistControl = (): ControlState =>
+  permits('FACILITIES_READINESS_CHECKLIST_MANAGE') ? controlAllowed : controlHidden;
+
+/**
+ * Editing a checklist.
+ *
+ * Supplying items at all replaces every one of them and bumps the version, which is why the dialog
+ * says so before it submits: an assessment taken yesterday keeps the version it was taken at, so an
+ * edit changes what is asked next rather than rewriting what was answered.
+ */
+export const editChecklistControl = (checklist: ReadinessChecklist): ControlState =>
+  gated('FACILITIES_READINESS_CHECKLIST_MANAGE', () =>
+    editableLifecycle(checklist.lifecycleStatus, 'checklist'),
+  );

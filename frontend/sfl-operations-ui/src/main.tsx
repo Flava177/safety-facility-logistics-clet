@@ -2,6 +2,7 @@ import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import { loadActorPermissions } from 'shared/layout/actorPermissions';
+import { loadActorSites } from 'shared/layout/actorSites';
 import { loadServingPlatform } from 'shared/platform';
 import './index.css';
 
@@ -31,7 +32,13 @@ const render = () =>
  * bug rather than a permission. Neither call rejects and both carry their own timeout, so a hung or
  * missing service delays the paint briefly and then gets out of the way. When permissions cannot be
  * answered nothing is offered and the shell says so; see `actorPermissions.ts`.
+ *
+ * `loadActorSites` joins them for the same reason and resolves against the same platform answer: a
+ * `*` site scope has to become real site codes before a filter or a create dialog reads it, and both
+ * are synchronous. It is a no-op for the actors whose scope is already a list, which is most of them.
+ * Run alongside the permission load rather than after it - neither needs the other's answer, and
+ * two round trips in series would double the delay before the first paint for no gain.
  */
 loadServingPlatform()
-  .then(loadActorPermissions)
+  .then(() => Promise.all([loadActorPermissions(), loadActorSites()]))
   .finally(render);

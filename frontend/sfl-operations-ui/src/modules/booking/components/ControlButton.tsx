@@ -1,33 +1,9 @@
-import Button, { ButtonProps } from 'shared/components/Button';
-import type { ControlState } from '../api/workflow';
-
-interface ControlButtonProps extends Omit<ButtonProps, 'disabled' | 'title'> {
-  state: ControlState;
-}
-
 /**
- * Renders a {@link ControlState} as the button it describes.
+ * The booking module's binding of the shared control button.
  *
- * The distinction this exists to keep: **a permission denial hides the control, a state shortfall
- * disables it and says why.** Spelling that out at each of the eleven call sites would eventually get
- * it wrong at one of them, and the one that got it wrong would be the one showing a technician a
- * button they can never press.
+ * The component moved to `shared/components/ControlButton` when facilities became its second caller.
+ * This file stays so the eleven booking call sites keep their import, which is the promotion shape
+ * the playbook records for `useClientWindow`: promote the component, leave a thin file behind, touch
+ * nothing that was already working.
  */
-const ControlButton = ({ state, children, ...rest }: ControlButtonProps) => {
-  if (state.kind === 'hidden') {
-    return null;
-  }
-  return (
-    <Button
-      {...rest}
-      disabled={state.kind === 'disabled'}
-      // The reason travels on the control itself, so it is readable where the operator is looking
-      // rather than in a notice further up the page.
-      title={state.kind === 'disabled' ? state.reason : undefined}
-    >
-      {children}
-    </Button>
-  );
-};
-
-export default ControlButton;
+export { default } from 'shared/components/ControlButton';

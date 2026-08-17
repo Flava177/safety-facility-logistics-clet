@@ -360,6 +360,29 @@ export const navSections: NavSection[] = [
       },
     ],
   },
+  /*
+    The IFIMP sections below are ordered by the sequence an operator actually works in, not by which
+    screen was built first.
+
+    Nothing in this programme can be done out of order: there is no space without a building, no
+    assessment without a checklist and a space to assess, no fault against a space that does not
+    exist, and nothing to book until all of that is true. The sidebar used to open with the dashboard
+    and readiness, then maintenance, then booking, and put the registers everything depends on
+    fourth - so somebody setting a centre up read the menu top to bottom and hit the first thing they
+    could not yet do. Read in this order it is a sequence:
+
+      operations  - what is the state of the estate           (the landing)
+      registers   - build the estate                          sites, spaces, assets, zones, devices
+      readiness   - define the standard, then assess against it
+      maintenance - fix what the assessment found
+      booking     - use what is now ready
+      governance  - prove what happened, and tune the thresholds
+
+    `landingPath()` returns the first item of the first entitled section, so the dashboard staying
+    first is what keeps an operator opening on the overview rather than on the site register. That
+    is the one thing this ordering must not break, and it is why the dashboard sits alone rather than
+    being folded into the registers below it.
+  */
   {
     // S152 leads the list because IFIMP is the first programme in `allProgrammes`, and an actor
     // entitled to both lands on their facilities dashboard rather than on fleet's.
@@ -375,6 +398,84 @@ export const navSections: NavSection[] = [
         // Enforced by FacilityDashboardService.
         permission: 'FACILITIES_DASHBOARD_READ',
         capability: 'FACILITIES_DASHBOARD_DRILLDOWN',
+      },
+    ],
+  },
+  {
+    // Second, because everything after it needs these records to exist. Within the section the same
+    // rule applies: a space needs a site, an asset or a device needs somewhere to be, a zone needs
+    // members to cover.
+    heading: 'Estate registers',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Sites',
+        to: facilitiesPaths.sites,
+        icon: 'map-pin',
+        matchPrefix: facilitiesPaths.sites,
+        description: 'Centres, and the operating mode each is in',
+        permission: 'FACILITIES_SITE_READ',
+        capability: 'FACILITIES_SITE_MANAGE',
+      },
+      {
+        label: 'Spaces',
+        to: facilitiesPaths.spaces,
+        icon: 'building',
+        matchPrefix: facilitiesPaths.spaces,
+        description: 'Rooms, halls and courtrooms with their readiness',
+        permission: 'FACILITIES_SPACE_READ',
+        capability: 'FACILITIES_SPACE_MANAGE',
+      },
+      {
+        label: 'Facility assets',
+        to: facilitiesPaths.assets,
+        icon: 'wrench',
+        matchPrefix: facilitiesPaths.assets,
+        description: 'Fixed plant, its condition and what it serves',
+        permission: 'FACILITIES_ASSET_READ',
+        capability: 'FACILITIES_ASSET_MANAGE',
+      },
+      {
+        label: 'Zones',
+        to: facilitiesPaths.zones,
+        icon: 'layers',
+        description: 'What each zone covers, for safety and emergency',
+        permission: 'FACILITIES_ZONE_READ',
+        capability: 'FACILITIES_ZONE_MANAGE',
+      },
+      {
+        label: 'Device references',
+        to: facilitiesPaths.devices,
+        icon: 'activity',
+        description: 'Cameras, readers and panels, and where they sit',
+        permission: 'FACILITIES_DEVICE_REFERENCE_READ',
+        capability: 'FACILITIES_DEVICE_REFERENCE_REGISTER',
+      },
+    ],
+  },
+  {
+    /*
+      Checklists sit above assessments, and that is the whole reason this section exists.
+
+      They were on opposite sides of the sidebar - the checklist register under assurance at the
+      bottom, the assessment screen under operations at the top - and an assessment against a site
+      with no checklist records no answers and leaves the space UNKNOWN. The assessment screen's own
+      empty state says so. Putting the two together, in the order they have to be done, makes the
+      dependency something an operator reads rather than something they discover.
+    */
+    heading: 'Readiness',
+    programme: 'IFIMP',
+    system: 'S152',
+    items: [
+      {
+        label: 'Readiness checklists',
+        to: facilitiesPaths.checklists,
+        icon: 'clipboard-list',
+        matchPrefix: facilitiesPaths.checklists,
+        description: 'The questions an assessment asks, and what a failure costs',
+        permission: 'FACILITIES_READINESS_READ',
+        capability: 'FACILITIES_READINESS_CHECKLIST_MANAGE',
       },
       {
         label: 'Readiness assessments',
@@ -505,69 +606,12 @@ export const navSections: NavSection[] = [
     ],
   },
   {
-    heading: 'Estate registers',
+    // Last, because neither answers "what do I do next" - one proves what was already done and the
+    // other tunes the thresholds the rest of the programme is measured against.
+    heading: 'Governance',
     programme: 'IFIMP',
     system: 'S152',
     items: [
-      {
-        label: 'Sites',
-        to: facilitiesPaths.sites,
-        icon: 'map-pin',
-        matchPrefix: facilitiesPaths.sites,
-        description: 'Centres, and the operating mode each is in',
-        permission: 'FACILITIES_SITE_READ',
-        capability: 'FACILITIES_SITE_MANAGE',
-      },
-      {
-        label: 'Spaces',
-        to: facilitiesPaths.spaces,
-        icon: 'building',
-        matchPrefix: facilitiesPaths.spaces,
-        description: 'Rooms, halls and courtrooms with their readiness',
-        permission: 'FACILITIES_SPACE_READ',
-        capability: 'FACILITIES_SPACE_MANAGE',
-      },
-      {
-        label: 'Facility assets',
-        to: facilitiesPaths.assets,
-        icon: 'wrench',
-        matchPrefix: facilitiesPaths.assets,
-        description: 'Fixed plant, its condition and what it serves',
-        permission: 'FACILITIES_ASSET_READ',
-        capability: 'FACILITIES_ASSET_MANAGE',
-      },
-      {
-        label: 'Zones',
-        to: facilitiesPaths.zones,
-        icon: 'layers',
-        description: 'What each zone covers, for safety and emergency',
-        permission: 'FACILITIES_ZONE_READ',
-        capability: 'FACILITIES_ZONE_MANAGE',
-      },
-      {
-        label: 'Device references',
-        to: facilitiesPaths.devices,
-        icon: 'activity',
-        description: 'Cameras, readers and panels, and where they sit',
-        permission: 'FACILITIES_DEVICE_REFERENCE_READ',
-        capability: 'FACILITIES_DEVICE_REFERENCE_REGISTER',
-      },
-    ],
-  },
-  {
-    heading: 'Facility assurance',
-    programme: 'IFIMP',
-    system: 'S152',
-    items: [
-      {
-        label: 'Readiness checklists',
-        to: facilitiesPaths.checklists,
-        icon: 'clipboard-list',
-        matchPrefix: facilitiesPaths.checklists,
-        description: 'The questions an assessment asks, and what a failure costs',
-        permission: 'FACILITIES_READINESS_READ',
-        capability: 'FACILITIES_READINESS_CHECKLIST_MANAGE',
-      },
       {
         label: 'Audit & integrity',
         to: facilitiesPaths.audit,
