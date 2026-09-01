@@ -1,0 +1,23 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    Starts the Postgres + RabbitMQ containers and waits until each is accepting connections, then
+    exits. Wired as a "Before launch: Run Another Configuration" step on the three solo Spring Boot
+    configs (IFIMP/SSEMP/FTLMP), so running any one service by itself still brings its database up
+    first instead of failing on the first Flyway migration. Not needed on "SFL all services" - that
+    script already does this itself.
+  -->
+  <configuration folderName="SFL" default="false" name="SFL infrastructure" type="ShConfigurationType">
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/../scripts/dev/ensure-infra.sh" />
+    <option name="SCRIPT_OPTIONS" value="" />
+    <option name="INDEPENDENT_SCRIPT_PATH" value="false" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
+    <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="false" />
+    <option name="INTERPRETER_PATH" value="/bin/bash" />
+    <option name="INTERPRETER_OPTIONS" value="" />
+    <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />
+    <option name="EXECUTE_IN_TERMINAL" value="false" />
+    <option name="EXECUTE_SCRIPT_FILE" value="true" />
+    <envs />
+    <method v="2" />
+  </configuration>
+</component>

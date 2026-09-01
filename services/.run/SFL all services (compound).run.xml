@@ -1,0 +1,27 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    The Stop-button-doesn't-work complaint only ever applied to "SFL all services": that one runs as
+    a Shell Script in a real terminal so it can sequence infra -> build -> tests -> three services
+    with readable Maven output, and IntelliJ regularly loses track of the three java processes it
+    backgrounds as a result (see scripts/dev/stop-all.sh for the full story). The three Spring Boot
+    configs below it were never affected - IntelliJ launches those directly as its own child
+    processes, so their Stop buttons are always reliable.
+
+    This compound exists for "I want all three up, launched as real IntelliJ child processes, each
+    independently stoppable" - one click starts IFIMP + SSEMP + FTLMP together, each keeps its own
+    console tab and its own working Stop button, and each already brings its own database up first
+    via its "SFL infrastructure" before-launch step (added on each of the three individually), so
+    there's nothing left for the compound itself to sequence.
+
+    It does not build, run tests, or verify a green build first the way "SFL all services" does -
+    for that, or for running everything from a real shell, "SFL all services" is still there
+    unchanged and is exactly what running "in shell" means: pick whichever suits what you're doing
+    right now, both work.
+  -->
+  <configuration folderName="SFL" name="SFL all services (compound)" type="CompoundRunConfigurationType">
+    <toRun name="IFIMP facilities 8091" type="SpringBootApplicationConfigurationType" />
+    <toRun name="SSEMP safety security 8092" type="SpringBootApplicationConfigurationType" />
+    <toRun name="FTLMP fleet logistics 8093" type="SpringBootApplicationConfigurationType" />
+    <method v="2" />
+  </configuration>
+</component>

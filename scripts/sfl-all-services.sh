@@ -63,8 +63,8 @@ JAVA_VERSION="$(java_major "${JAVA_HOME:-}" 2>/dev/null || true)"
 [ "$JAVA_VERSION" = "17" ]   || die "JAVA_HOME is Java ${JAVA_VERSION:-unset}, not 17. Correct it in use-sfl-env.sh."
 ok "JAVA_HOME $JAVA_HOME (Java $JAVA_VERSION)"
 
-command -v docker >/dev/null 2>&1 || die "Docker is not on PATH. Start Docker Desktop and try again."
-docker info >/dev/null 2>&1 || die "Docker is not responding. Start Docker Desktop and try again."
+command -v docker >/dev/null 2>&1 || die "Docker is not on PATH. Start Docker Desktop or OrbStack and try again."
+docker info >/dev/null 2>&1 || die "Docker is not responding. Start Docker Desktop or OrbStack and try again."
 
 # ------------------------------------------------------------- a previous run, still running
 
@@ -253,10 +253,10 @@ if [ "$SKIP_BUILD" -eq 0 ]; then
   if [ "$SKIP_TESTS" -eq 0 ]; then
     step "Build and test - all modules, dashboard included"
     reset_test_databases
-    (cd services && ../mvnw.cmd -Pui install) || die "Build or tests failed. Nothing was started."
+    (cd services && ../mvnw -Pui install) || die "Build or tests failed. Nothing was started."
   else
     step "Build - tests skipped by request"
-    (cd services && ../mvnw.cmd -Pui install -DskipTests) || die "Build failed. Nothing was started."
+    (cd services && ../mvnw -Pui install -DskipTests) || die "Build failed. Nothing was started."
   fi
   ok "Build green"
 else

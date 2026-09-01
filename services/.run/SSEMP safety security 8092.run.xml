@@ -1,14 +1,5 @@
 <component name="ProjectRunConfigurationManager">
-  <!--
-    Java 17, named rather than inherited. The machine default is Zulu 11 and other projects need it
-    to stay that way, so the JDK is chosen here instead of being taken from whatever the IDE happens
-    to have as its default. Spring Boot 4.1 does not run on 11 and says so as a class-version error
-    hundreds of classes into the boot sequence, not at launch. `.idea/misc.xml` holds the same answer
-    for the project as a whole but is not in the repository; this file is.
-  -->
   <configuration default="false" name="SSEMP safety security 8092" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
-    <module name="sfl-safety-security-service" />
-    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.safetysecurity.SafetySecurityServiceApplication" />
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
     <envs>
@@ -18,7 +9,11 @@
       <env name="SFL_DB_PASSWORD" value="sfl" />
       <env name="SFL_SECURITY_ENABLED" value="false" />
     </envs>
+    <module name="sfl-safety-security-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.safetysecurity.SafetySecurityServiceApplication" />
+    <option name="VM_PARAMETERS" value="-Xlog:gc*:file=logs/gc.log:time,uptime,level,tags:filecount=5,filesize=20m" />
     <method v="2">
+      <option name="RunConfigurationTask" enabled="true" run_configuration_name="SFL infrastructure" run_configuration_type="ShConfigurationType" />
       <option name="Make" enabled="true" />
     </method>
   </configuration>

@@ -16,13 +16,13 @@
     debugging a single service - breakpoints, hot swap, the usual. This one is for "bring the whole
     thing up and let me look at it".
   -->
-  <configuration default="false" name="SFL all services" type="ShConfigurationType">
-    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/scripts/sfl-all-services.sh" />
+  <configuration folderName="SFL" default="false" name="SFL all services" type="ShConfigurationType">
+    <option name="SCRIPT_PATH" value="$PROJECT_DIR$/../scripts/sfl-all-services.sh" />
     <option name="SCRIPT_OPTIONS" value="" />
     <option name="INDEPENDENT_SCRIPT_PATH" value="false" />
-    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$" />
+    <option name="SCRIPT_WORKING_DIRECTORY" value="$PROJECT_DIR$/.." />
     <option name="INDEPENDENT_SCRIPT_WORKING_DIRECTORY" value="false" />
-    <option name="INTERPRETER_PATH" value="bash" />
+    <option name="INTERPRETER_PATH" value="/bin/bash" />
     <option name="INTERPRETER_OPTIONS" value="" />
     <option name="INDEPENDENT_INTERPRETER_PATH" value="false" />
     <!--

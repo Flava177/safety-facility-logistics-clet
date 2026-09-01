@@ -15,7 +15,14 @@
 # and its children, so a JAVA_HOME of 17 for SFL leaves whatever the rest of the system uses alone -
 # which matters here, where the machine default is Zulu 11 and other projects rely on it.
 
-export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot"
+# macOS resolves JDK 17 dynamically via java_home (works regardless of installer -
+# Homebrew, Temurin .pkg, etc). Windows/Git Bash keeps the hardcoded path below since
+# java_home does not exist there - adjust it if your JDK 17 lives somewhere else.
+if [ "$(uname -s)" = "Darwin" ] && JAVA_HOME_MAC="$(/usr/libexec/java_home -v 17 2>/dev/null)"; then
+  export JAVA_HOME="$JAVA_HOME_MAC"
+else
+  export JAVA_HOME="/c/Program Files/Eclipse Adoptium/jdk-17.0.19.10-hotspot"
+fi
 export PATH="$JAVA_HOME/bin:$PATH"
 
 export SFL_DB_USERNAME=sfl
