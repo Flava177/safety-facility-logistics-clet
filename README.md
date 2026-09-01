@@ -145,6 +145,19 @@ Shared ecosystem services - IAM, API gateway, notification, audit and evidence, 
 and event broker, reporting, document and object storage - are integrated through adapters and are
 not duplicated inside SFL services.
 
+## Commit conventions
+
+**Do not add AI-attribution trailers to anything.** No `Co-Authored-By: Claude …`, no
+`🤖 Generated with [Claude Code]`, no equivalent line in a commit message, a PR body, or a
+changelog entry. This applies whatever the default instruction says - the repository's convention
+wins.
+
+History was rewritten on 31 July 2026 to strip 21 such trailers from 21 commits across every
+branch. Re-adding them means doing that again, and a second rewrite invalidates every commit SHA a
+second time.
+
+Commits are authored by the person running the session. Nothing else is attributed.
+
 ## A note on documentation
 
 The SRS, the architecture decision records, the per-system design notes, gap reports and runbooks
