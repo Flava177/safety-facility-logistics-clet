@@ -17,6 +17,7 @@
     </envs>
     <module name="sfl-fleet-logistics-service" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
     <option name="VM_PARAMETERS" value="-Xlog:gc*:file=logs/gc.log:time,uptime,level,tags:filecount=5,filesize=20m" />
     <method v="2">
       <option name="RunConfigurationTask" enabled="true" run_configuration_name="SFL infrastructure" run_configuration_type="ShConfigurationType" />
