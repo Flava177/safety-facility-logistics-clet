@@ -1,4 +1,4 @@
-package gh.edu.clet.sfl.safetysecurity.emergency.e2e;
+package gh.edu.clet.sfl.safetysecurity.e2e;
 
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
@@ -6,11 +6,15 @@ import org.testcontainers.DockerClientFactory;
 import org.testcontainers.containers.PostgreSQLContainer;
 
 /**
- * Resolves a real PostgreSQL for the end-to-end suite: an externally supplied database
- * ({@code SFL_SAFETY_SECURITY_TEST_DB_URL}, falling back to {@code SFL_TEST_DB_URL}) takes precedence,
- * else Testcontainers, else the class is skipped with a reason.
+ * Resolves a real PostgreSQL for the end-to-end suites of every module in this deployable: an
+ * externally supplied database ({@code SFL_SAFETY_SECURITY_TEST_DB_URL}, falling back to {@code
+ * SFL_TEST_DB_URL}) takes precedence, else Testcontainers, else the class is skipped with a reason.
+ *
+ * <p>Promoted out of {@code emergency.e2e} (formerly {@code EmergencyPostgresSupport}) when S160's
+ * e2e suite needed the same database resolution and it was already platform-wide, not
+ * emergency-specific - the env var name has always been the service's, not S174's.
  */
-public abstract class EmergencyPostgresSupport {
+public abstract class SafetySecurityPostgresSupport {
 
     static final String URL_PROPERTY = "SFL_SAFETY_SECURITY_TEST_DB_URL";
     static final String FALLBACK_URL_PROPERTY = "SFL_TEST_DB_URL";

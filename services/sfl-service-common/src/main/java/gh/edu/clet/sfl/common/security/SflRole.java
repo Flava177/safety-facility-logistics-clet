@@ -35,5 +35,10 @@ public enum SflRole {
     EMERGENCY_COORDINATOR,
     SOC_OPERATOR,
     SECURITY_DIRECTOR,
-    HSE_MANAGER
+    HSE_MANAGER,
+
+    // Visitor Management user classes (SRS S160). Added for the S160 slice; adding enum
+    // constants changes no existing signature and no existing service behaviour.
+    VISITOR_HOST,
+    RECEPTION_OFFICER
 }

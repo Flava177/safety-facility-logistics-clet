@@ -9,7 +9,17 @@ import io.swagger.v3.oas.models.tags.Tag;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/** OpenAPI documentation for S174 Emergency Mass Notification. */
+/**
+ * OpenAPI documentation for this deployable. Named for S174 because that was the only module here
+ * when it was written; also covers S160 now.
+ *
+ * <p>One {@code OpenAPI} bean, not one per module - springdoc's {@code SpringDocConfiguration}
+ * autowires a single {@code OpenAPI} instance and fails to start with more than one in the context
+ * (a S160 {@code VisitorOpenApiConfiguration} tried exactly that and broke every end-to-end test that
+ * loads the full context). A module adding its own screens adds its own {@code addTagsItem(...)} here
+ * instead, the way the S160 tag below does; the {@code X-SFL-*} header schemes are already
+ * deployable-wide; nothing module-specific belongs in them.
+ */
 @Configuration(proxyBeanMethods = false)
 class EmergencyOpenApiConfiguration {
 
@@ -63,7 +73,9 @@ class EmergencyOpenApiConfiguration {
                 .addTagsItem(tag("Delivery and Acknowledgements", "Provider delivery-status and acknowledgement callbacks"))
                 .addTagsItem(tag("Drills", "Notification drill runs and performance"))
                 .addTagsItem(tag("Integrations", "Secure inbox, outbox health and privileged replay"))
-                .addTagsItem(tag("Dashboards and Reports", "Emergency indicators, freshness and CSV exports"));
+                .addTagsItem(tag("Dashboards and Reports", "Emergency indicators, freshness and CSV exports"))
+                .addTagsItem(tag("S160 Visitor Visits",
+                        "Pre-registration, host approval, badge, check-in/out, roll-call"));
     }
 
     private static Tag tag(String name, String description) {
