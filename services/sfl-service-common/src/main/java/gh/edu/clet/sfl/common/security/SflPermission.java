@@ -223,5 +223,18 @@ public enum SflPermission {
     VISITOR_CANCEL,
     VISITOR_ROLLCALL_READ,
     VISITOR_WATCHLIST_OVERRIDE,
-    VISITOR_REPORT_READ
+    VISITOR_REPORT_READ,
+
+    // HSE Incident / Near-Miss Reporting permissions (SRS S163). Additive only. The role -> permission
+    // mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.incident.domain.policy.IncidentPermissionMatrix).
+    INCIDENT_REPORT_CREATE,
+    INCIDENT_REPORT_READ,
+    INCIDENT_TRIAGE,
+    INCIDENT_INVESTIGATE,
+    INCIDENT_EVIDENCE_MANAGE,
+    INCIDENT_CAPA_MANAGE,
+    INCIDENT_CAPA_VERIFY,
+    INCIDENT_CLOSE,
+    INCIDENT_REPORT_EXPORT
 }

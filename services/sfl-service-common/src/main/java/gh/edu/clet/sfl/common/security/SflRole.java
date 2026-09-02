@@ -40,5 +40,11 @@ public enum SflRole {
     // Visitor Management user classes (SRS S160). Added for the S160 slice; adding enum
     // constants changes no existing signature and no existing service behaviour.
     VISITOR_HOST,
-    RECEPTION_OFFICER
+    RECEPTION_OFFICER,
+
+    // HSE Incident / Near-Miss Reporting user classes (SRS S163). Added for the S163 slice; adding
+    // enum constants changes no existing signature and no existing service behaviour. HSE_MANAGER,
+    // COMPLIANCE_OFFICER, SECURITY_DIRECTOR, AUDITOR and SFL_ADMIN already exist and are reused rather
+    // than duplicated - see IncidentPermissionMatrix.
+    INCIDENT_INVESTIGATOR
 }
