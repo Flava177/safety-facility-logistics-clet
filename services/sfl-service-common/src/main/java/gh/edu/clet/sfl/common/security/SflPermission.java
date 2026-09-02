@@ -210,5 +210,18 @@ public enum SflPermission {
     EMERGENCY_REPORT_READ,
     EMERGENCY_REPORT_EXPORT,
     EMERGENCY_INTEGRATION_INGEST,
-    EMERGENCY_INTEGRATION_REPLAY
+    EMERGENCY_INTEGRATION_REPLAY,
+
+    // Visitor Management permissions (SRS S160). Additive only. The role -> permission mapping lives
+    // in the safety-security service (gh.edu.clet.sfl.safetysecurity.visitor.domain.policy.VisitorPermissionMatrix).
+    VISITOR_VISIT_READ,
+    VISITOR_VISIT_CREATE,
+    VISITOR_VISIT_APPROVE,
+    VISITOR_BADGE_ASSIGN,
+    VISITOR_CHECKIN,
+    VISITOR_CHECKOUT,
+    VISITOR_CANCEL,
+    VISITOR_ROLLCALL_READ,
+    VISITOR_WATCHLIST_OVERRIDE,
+    VISITOR_REPORT_READ
 }

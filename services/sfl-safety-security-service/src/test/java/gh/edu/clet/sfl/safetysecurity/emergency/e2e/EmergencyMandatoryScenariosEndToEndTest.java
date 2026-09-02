@@ -20,6 +20,7 @@ import gh.edu.clet.sfl.safetysecurity.emergency.domain.exception.EmergencyExcept
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.AudienceGroup;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.ChannelType;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.EmergencyScenario;
+import gh.edu.clet.sfl.safetysecurity.e2e.SafetySecurityPostgresSupport;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.NotificationActivation;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.NotificationTemplate;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.Priority;
@@ -48,9 +49,9 @@ import tools.jackson.databind.ObjectMapper;
  */
 @SpringBootTest(properties = {"sfl.security.enabled=false", "sfl.emergency.scheduling.enabled=false",
         "sfl.emergency.messaging.drainer-enabled=false"})
-@EnabledIf(value = "gh.edu.clet.sfl.safetysecurity.emergency.e2e.EmergencyPostgresSupport#databaseAvailable",
+@EnabledIf(value = "gh.edu.clet.sfl.safetysecurity.e2e.SafetySecurityPostgresSupport#databaseAvailable",
         disabledReason = "No PostgreSQL available")
-class EmergencyMandatoryScenariosEndToEndTest extends EmergencyPostgresSupport {
+class EmergencyMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSupport {
 
     private static final String SECRET = "sfl-emergency-simulator-secret";
 
