@@ -643,6 +643,27 @@ public class JdbcDispatchRepository implements DispatchRepository {
     }
 
     @Override
+    public void saveScanRows(List<ScanImportRow> rows) {
+        if (rows.isEmpty()) return;
+        jdbc.batchUpdate("""
+                INSERT INTO fleet_logistics.scan_import_rows (id,batch_id,site_code,row_reference,scanned_code,
+                    courier_item_id,outcome,message,created_at)
+                VALUES (?,?,?,?,?,?,?,?,?)
+                ON CONFLICT (batch_id,row_reference) DO NOTHING
+                """, rows, rows.size(), (ps, r) -> {
+                    ps.setObject(1, r.id());
+                    ps.setObject(2, r.batchId());
+                    ps.setString(3, r.siteCode().value());
+                    ps.setString(4, r.rowReference());
+                    ps.setString(5, r.scannedCode());
+                    ps.setObject(6, r.courierItemId());
+                    ps.setString(7, r.outcome().name());
+                    ps.setString(8, r.message());
+                    ps.setObject(9, ts(r.createdAt()));
+                });
+    }
+
+    @Override
     public List<ScanImportRow> findScanRows(UUID batchId) {
         return jdbc.query("SELECT * FROM fleet_logistics.scan_import_rows WHERE batch_id=? ORDER BY row_reference",
                 this::scanRow, batchId);

@@ -22,15 +22,15 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * Forecourt prices, and the vendors a site allows.
  *
- * <p>Two reads and one write, serving one purpose: making the price per litre something the platform
- * knows rather than something the driver types. The capture form asks for the vendor list, then for
- * the price in force, and fills the field in. Reconciliation asks the same question again later and
- * judges what was recorded against it.
+ * <p>Two reads and one write, serving one purpose: making the price per litre something the
+ * platform knows rather than something the driver types. The capture form asks for the vendor list,
+ * then for the price in force, and fills the field in. Reconciliation asks the same question again
+ * later and judges what was recorded against it.
  *
- * <p>Reading needs only {@code FUEL_TRANSACTION_READ} - anyone who may capture a transaction must be
- * able to see the price they will be held to, and a control nobody can see before they are judged by
- * it is a trap rather than a control. Writing needs {@code FUEL_POLICY_MANAGE}, because a price is a
- * rule and setting your own would defeat the entire mechanism.
+ * <p>Reading needs only {@code FUEL_TRANSACTION_READ} - anyone who may capture a transaction must
+ * be able to see the price they will be held to, and a control nobody can see before they are
+ * judged by it is a trap rather than a control. Writing needs {@code FUEL_POLICY_MANAGE}, because a
+ * price is a rule and setting your own would defeat the entire mechanism.
  */
 @RestController
 @RequestMapping("/api/v1/fuel")
@@ -48,15 +48,25 @@ public class FuelPostedPriceController {
     /**
      * The vendors the site's policy approves right now.
      *
-     * <p>An empty list means the in-force policy approves any vendor, or that no policy is in force.
-     * Both are worth distinguishing from "no vendors exist", and the caller renders them differently -
-     * see the capture dialog.
+     * <p>An empty list means the in-force policy approves any vendor, or that no policy is in
+     * force. Both are worth distinguishing from "no vendors exist", and the caller renders them
+     * differently - see the capture dialog.
      */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Lists the vendors a site's in-force policy currently approves")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_TRANSACTION_READ for the site")
     @GetMapping("/providers")
-    public ApiResponse<List<String>> providers(@RequestParam String siteCode, HttpServletRequest request) {
+    public ApiResponse<List<String>> providers(
+            @RequestParam String siteCode, HttpServletRequest request) {
         return ApiResponse.ok(service.approvedVendors(siteCode, actors.resolve(request)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists forecourt prices on file for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_TRANSACTION_READ for the site")
     @GetMapping("/posted-prices")
     public ApiResponse<List<FuelPostedPrice>> postedPrices(
             @RequestParam String siteCode,
@@ -64,17 +74,36 @@ public class FuelPostedPriceController {
             @RequestParam(required = false) String fuelProduct,
             @RequestParam(defaultValue = "true") boolean inForceOnly,
             HttpServletRequest request) {
-        return ApiResponse.ok(service.postedPrices(siteCode, vendor, fuelProduct, inForceOnly,
-                actors.resolve(request)));
+        return ApiResponse.ok(
+                service.postedPrices(
+                        siteCode, vendor, fuelProduct, inForceOnly, actors.resolve(request)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Records a new posted price, closing whatever open price it supersedes")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description =
+                    "Request failed bean validation, or the new price does not start after the currently open one")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_POLICY_MANAGE for the site")
     @PostMapping("/posted-prices")
-    public ApiResponse<FuelPostedPrice> record(@Valid @RequestBody PostedPriceRequest body,
-            HttpServletRequest request) {
-        return ApiResponse.ok(service.recordPostedPrice(new FuelApplicationService.RecordPostedPrice(
-                body.siteCode(), body.vendor(), body.fuelProduct(), body.unitPrice(), body.currency(),
-                body.effectiveFrom(), body.source(), body.notes(), actors.resolve(request),
-                actors.resolveSourceChannel(request))));
+    public ApiResponse<FuelPostedPrice> record(
+            @Valid @RequestBody PostedPriceRequest body, HttpServletRequest request) {
+        return ApiResponse.ok(
+                service.recordPostedPrice(
+                        new FuelApplicationService.RecordPostedPrice(
+                                body.siteCode(),
+                                body.vendor(),
+                                body.fuelProduct(),
+                                body.unitPrice(),
+                                body.currency(),
+                                body.effectiveFrom(),
+                                body.source(),
+                                body.notes(),
+                                actors.resolve(request),
+                                actors.resolveSourceChannel(request))));
     }
 
     /** {@code effectiveFrom} defaults to now, which is what "the price changed today" means. */
@@ -86,6 +115,5 @@ public class FuelPostedPriceController {
             @NotBlank String currency,
             Instant effectiveFrom,
             FuelPostedPrice.Source source,
-            String notes) {
-    }
+            String notes) {}
 }

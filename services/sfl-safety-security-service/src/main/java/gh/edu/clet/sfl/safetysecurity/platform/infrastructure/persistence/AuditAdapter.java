@@ -86,10 +86,30 @@ public class AuditAdapter implements AuditPort {
         return new AuditVerification(true, checked, null, null);
     }
 
+    /**
+     * Hands out the next sequence number from {@code audit_log_sequence_no_seq} (see the V13
+     * migration) rather than the {@code SELECT MAX(sequence_no)+1} this replaced. The old read-then-
+     * insert had no lock spanning the read and the write, so two concurrent audit writes from
+     * different subdomains sharing this one table could compute the same "next" value; the
+     * {@code UNIQUE(sequence_no)} constraint then let the second insert fail with a constraint
+     * violation, aborting an otherwise-valid business transaction. {@code nextval()} is a single
+     * atomic operation on Postgres - every caller gets a distinct value with no shared window to race
+     * in, even under heavy concurrency.
+     *
+     * <p>One residual, accepted trade-off: {@code nextval()} is not transactional (a value handed out
+     * to a transaction that later rolls back is never reused, and a value can be committed out of
+     * numeric order relative to when it was drawn). {@link #record} still looks up
+     * {@code previous_hash} for {@code sequence - 1} at insert time, so if two audit writes are ever
+     * truly concurrent enough to commit out of sequence order, the later-committing row's hash link
+     * can point at a {@code previous_hash} of {@code null} instead of the row that ends up before it.
+     * {@link #verifyChain()} exists precisely to surface that kind of anomaly for investigation; in
+     * practice, audit writes are triggered by already-serialized business transactions per aggregate,
+     * so true concurrent commits across unrelated aggregates racing to adjacent sequence numbers are
+     * rare, and no longer cost the business transaction itself a failure.
+     */
     private long nextSequence() {
-        Long max = jdbc.queryForObject("SELECT COALESCE(MAX(sequence_no),0) FROM safety_security.audit_log",
-                Long.class);
-        return (max == null ? 0L : max) + 1;
+        Long next = jdbc.queryForObject("SELECT nextval('safety_security.audit_log_sequence_no_seq')", Long.class);
+        return next;
     }
 
     private String hash(long sequence, String actor, String action, String resourceType, String resourceId,

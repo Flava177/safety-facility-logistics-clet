@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.NoShowRecord;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceAllocation;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTask;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
 import java.time.Duration;
 import java.time.Instant;
@@ -19,6 +20,7 @@ import java.util.UUID;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -149,12 +151,12 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
     }
 
     @Override
-    public List<Booking> findBookings(BookingQuery query) {
-        return bookings.search(normalize(query.siteCode()), query.roomId(), query.status(), query.purpose(),
-                        query.requestedBy(), from(query.from()), to(query.to()), query.liveOnly(),
-                        query.onReadinessHold(), page(query.limit())).stream()
-                .map(BookingRecord::toDomain)
-                .toList();
+    public RepositoryPage<Booking> findBookings(BookingQuery query) {
+        Page<BookingRecord> result = bookings.search(normalize(query.siteCode()), query.roomId(), query.status(),
+                query.purpose(), query.requestedBy(), from(query.from()), to(query.to()), query.liveOnly(),
+                query.onReadinessHold(), PageRequest.of(query.page(), clampSize(query.size())));
+        return RepositoryPage.of(result.getContent().stream().map(BookingRecord::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     @Override
@@ -317,10 +319,12 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
     }
 
     @Override
-    public List<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int limit) {
-        return setupTasks.findPending(normalize(siteCode), dueBefore, page(limit)).stream()
-                .map(SetupTaskRecord::toDomain)
-                .toList();
+    public RepositoryPage<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int page,
+            int size) {
+        Page<SetupTaskRecord> result = setupTasks.findPending(normalize(siteCode), dueBefore,
+                PageRequest.of(page, clampSize(size)));
+        return RepositoryPage.of(result.getContent().stream().map(SetupTaskRecord::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     // ---- no-shows -----------------------------------------------------------------------------
@@ -401,5 +405,9 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
 
     private static PageRequest page(int limit) {
         return PageRequest.of(0, Math.max(1, Math.min(limit, 500)));
+    }
+
+    private static int clampSize(int size) {
+        return Math.max(1, Math.min(size, 500));
     }
 }

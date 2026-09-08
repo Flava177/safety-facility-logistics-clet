@@ -33,6 +33,8 @@ class FleetDashboardController {
         this.actorResolver = actorResolver;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns the operations dashboard snapshot, filtered and scoped to the actor")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor has no site scope, or a named site is outside their scope")
     @GetMapping("/dashboards/operations")
     ApiResponse<OperationsDashboardSnapshot> operations(
             @RequestParam(required = false) String siteCode,
@@ -48,6 +50,8 @@ class FleetDashboardController {
                 operatingMode, from, to), actorResolver.resolve(httpRequest), requireFresh));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns the underlying records behind one dashboard indicator")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor has no site scope, or lacks permission to view the underlying records")
     @GetMapping("/dashboards/operations/drilldowns/{indicator}")
     ApiResponse<List<DashboardDrilldownRow>> drilldown(@PathVariable String indicator,
             @RequestParam(required = false) String siteCode,
@@ -61,6 +65,8 @@ class FleetDashboardController {
                 actorResolver.resolve(httpRequest)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns dashboard-vs-source reconciliation counts for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor has no site scope, or a named site is outside their scope")
     @GetMapping("/dashboards/operations/reconciliation")
     ApiResponse<DashboardReconciliation> reconciliation(@RequestParam(required = false) String siteCode,
             HttpServletRequest httpRequest) {
@@ -68,6 +74,8 @@ class FleetDashboardController {
                 null, null), actorResolver.resolve(httpRequest), false).reconciliation());
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns the go-live readiness report for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor has no site scope, or a named site is outside their scope")
     @GetMapping("/reports/go-live-readiness")
     ApiResponse<GoLiveReadinessReport> goLiveReadiness(@RequestParam(required = false) String siteCode,
             HttpServletRequest httpRequest) {

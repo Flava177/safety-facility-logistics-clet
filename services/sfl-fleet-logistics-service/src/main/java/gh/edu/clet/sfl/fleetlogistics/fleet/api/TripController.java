@@ -62,6 +62,11 @@ class TripController {
         this.actorResolver = actorResolver;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Creates a trip, optionally pre-assigned to a vehicle and driver")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The vehicle or driver is already assigned during the requested period")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "The vehicle is not ready, or the driver is not eligible, for this assignment")
     @PostMapping
     ResponseEntity<ApiResponse<TripResponse>> create(@Valid @RequestBody FleetTripRequests.CreateTrip request,
             HttpServletRequest httpRequest) {
@@ -77,6 +82,8 @@ class TripController {
                 .body(ApiResponse.ok(mapper.toResponse(trip)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches trips, narrowed to the actor's own trips if they are a driver")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "A named site is outside the actor's scope")
     @GetMapping
     ApiResponse<PageResponse<TripResponse>> search(
             @RequestParam(required = false) String siteCode,
@@ -112,6 +119,11 @@ class TripController {
      * requires {@code FLEET_TRIP_ASSIGN} and changes who the trip belongs to, which is the opposite of
      * what this does.
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "The assigned driver confirms or defers a trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor is not the trip's assigned driver")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or is not in a state that can be acknowledged")
     @PatchMapping("/{tripId}/acknowledgement")
     ApiResponse<TripResponse> acknowledge(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.AcknowledgeTrip request, HttpServletRequest httpRequest) {
@@ -121,12 +133,21 @@ class TripController {
                 actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one trip by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The trip's site is outside the actor's scope, or a driver may not read another driver's trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
     @GetMapping("/{tripId}")
     ApiResponse<TripResponse> findById(@PathVariable UUID tripId, HttpServletRequest httpRequest) {
         return ApiResponse.ok(mapper.toResponse(
                 tripQueries.findById(tripId, actorResolver.resolve(httpRequest))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Assigns or reassigns a trip's vehicle and driver")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks FLEET_TRIP_ASSIGN")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or the vehicle/driver is already assigned in this period")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "The vehicle is not ready, or the driver is not eligible, for this assignment")
     @PatchMapping("/{tripId}/assignment")
     ApiResponse<TripResponse> assign(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.AssignTrip request, HttpServletRequest httpRequest) {
@@ -136,6 +157,12 @@ class TripController {
                 actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Starts a trip, recording the starting odometer")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or is not in a startable status")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "The odometer reading is lower than the vehicle's last recorded reading")
     @PatchMapping("/{tripId}/start")
     ApiResponse<TripResponse> start(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.StartTrip request, HttpServletRequest httpRequest) {
@@ -145,6 +172,11 @@ class TripController {
                 actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Holds or resumes a trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or the transition is not permitted from its current status")
     @PatchMapping("/{tripId}/hold")
     ApiResponse<TripResponse> holdOrResume(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.HoldTrip request, HttpServletRequest httpRequest) {
@@ -158,6 +190,11 @@ class TripController {
                 actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Cancels a trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or is not in a cancellable status")
     @PatchMapping("/{tripId}/cancel")
     ApiResponse<TripResponse> cancel(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.CancelTrip request, HttpServletRequest httpRequest) {
@@ -167,6 +204,12 @@ class TripController {
                 actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Closes a trip, recording the ending odometer and closure evidence")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The trip was changed by another user, or is not in a closable status")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Required closure evidence is missing, or the odometer reading regresses")
     @PatchMapping("/{tripId}/closure")
     ApiResponse<TripResponse> close(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.CloseTrip request, HttpServletRequest httpRequest) {
@@ -176,6 +219,10 @@ class TripController {
                 request.expectedVersion(), actor, actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Records a vehicle inspection against a trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required trip/inspection permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
     @PostMapping("/{tripId}/inspections")
     ResponseEntity<ApiResponse<InspectionResponse>> recordInspection(@PathVariable UUID tripId,
             @Valid @RequestBody FleetTripRequests.RecordInspection request, HttpServletRequest httpRequest) {
@@ -197,6 +244,9 @@ class TripController {
                 .body(ApiResponse.ok(mapper.toResponse(inspection)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists inspections recorded against a trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The trip's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No trip exists with this id")
     @GetMapping("/{tripId}/inspections")
     ApiResponse<List<InspectionResponse>> inspections(@PathVariable UUID tripId,
             HttpServletRequest httpRequest) {
@@ -211,6 +261,8 @@ class TripController {
      * <p>Deliberately the same policy and inputs the assignment itself will use, so the preview and the
      * outcome cannot disagree.
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Previews vehicle/driver readiness for an assignment before committing to it")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
     @GetMapping("/assignment-preview")
     ApiResponse<ReadinessResponse> previewAssignment(
             @RequestParam UUID vehicleId,

@@ -19,13 +19,19 @@ public class FuelImportAlreadyProcessedException extends FleetDomainException {
         super(FleetErrorCode.FUEL_IMPORT_ALREADY_PROCESSED, details);
     }
 
-    public static FuelImportAlreadyProcessedException of(String siteCode, String sourceSystem,
-            String fileName, String fileHash, UUID existingBatchId) {
-        return new FuelImportAlreadyProcessedException(Map.of(
-                "siteCode", siteCode,
-                "sourceSystem", sourceSystem,
-                "fileName", fileName == null ? "" : fileName,
-                "fileHash", fileHash,
-                "existingBatchId", existingBatchId == null ? "" : existingBatchId.toString()));
+    public static FuelImportAlreadyProcessedException of(
+            String siteCode,
+            String sourceSystem,
+            String fileName,
+            String fileHash,
+            UUID existingBatchId) {
+        return new FuelImportAlreadyProcessedException(
+                Map.of(
+                        "siteCode", siteCode,
+                        "sourceSystem", sourceSystem,
+                        "fileName", fileName == null ? "" : fileName,
+                        "fileHash", fileHash,
+                        "existingBatchId",
+                                existingBatchId == null ? "" : existingBatchId.toString()));
     }
 }

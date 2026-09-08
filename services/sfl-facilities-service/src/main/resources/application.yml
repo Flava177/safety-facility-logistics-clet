@@ -3,6 +3,8 @@ spring:
     name: sfl-facilities-service
   datasource:
     url: ${SFL_FACILITIES_DB_URL:${SFL_DB_URL:jdbc:postgresql://localhost:5441/sfl_facilities_service}}
+    # `sfl`/`sfl` is the local-dev-only fallback below every env var here; every real deployment
+    # overrides both.
     username: ${SFL_FACILITIES_DB_USERNAME:${SFL_DB_USERNAME:sfl}}
     password: ${SFL_FACILITIES_DB_PASSWORD:${SFL_DB_PASSWORD:sfl}}
   jpa:
@@ -25,8 +27,15 @@ spring:
     # asks for one - which is why a default `local` deployment needs no broker running.
     host: ${SFL_RABBITMQ_HOST:localhost}
     port: ${SFL_RABBITMQ_PORT:5672}
+    # `sfl`/`sfl` is the local-dev-only fallback below every env var here; every real deployment
+    # overrides both.
     username: ${SFL_RABBITMQ_USERNAME:sfl}
     password: ${SFL_RABBITMQ_PASSWORD:sfl}
+    # Correlated confirms and mandatory returns, both required for the drainer to know a publish
+    # actually reached the broker rather than just the local socket buffer - see
+    # AmqpFacilitiesEventTransport, which waits on the per-message CorrelationData future.
+    publisher-confirm-type: correlated
+    publisher-returns: true
     listener:
       simple:
         # Concurrency stays at one: the ordering that matters here is per vehicle, and one consumer is
@@ -99,6 +108,9 @@ sfl:
       # startup rather than dropping events quietly, which is the failure this drainer exists to end.
       transport: ${SFL_FACILITIES_EVENT_TRANSPORT:local}
       exchange: ${SFL_FACILITIES_EVENT_EXCHANGE:sfl.events}
+      # How long the rabbitmq transport waits for the broker's publisher confirm before treating the
+      # publish as failed and handing it back to the drainer's retry/backoff.
+      confirm-timeout: PT5S
       drainer-enabled: ${SFL_FACILITIES_DRAINER_ENABLED:true}
       drain-delay: PT10S
       drain-initial-delay: PT15S

@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -72,7 +73,7 @@ public interface JpaBookingJpaRepository extends JpaRepository<BookingRecord, UU
      * {@code JpaBookingRepositoryAdapter.UNBOUNDED_FROM}. Found by running the service against real
      * PostgreSQL; no unit test can see it, because it is the driver and the planner disagreeing.
      */
-    @Query("""
+    @Query(value = """
             select b from BookingRecord b
             where (:siteCode is null or b.siteCode = :siteCode)
               and (:roomId is null or b.roomId = :roomId)
@@ -89,8 +90,25 @@ public interface JpaBookingJpaRepository extends JpaRepository<BookingRecord, UU
                    or (:onHold = true and b.readinessHoldReason is not null)
                    or (:onHold = false and b.readinessHoldReason is null))
             order by b.startsAt asc
+            """,
+            countQuery = """
+            select count(b) from BookingRecord b
+            where (:siteCode is null or b.siteCode = :siteCode)
+              and (:roomId is null or b.roomId = :roomId)
+              and (:status is null or b.status = :status)
+              and (:purpose is null or b.purpose = :purpose)
+              and (:requestedBy is null or b.requestedBy = :requestedBy)
+              and b.occupiedTo > :from
+              and b.occupiedFrom < :to
+              and (:liveOnly is null or :liveOnly = false
+                   or b.status in (gh.edu.clet.sfl.facilities.booking.domain.BookingStatus.REQUESTED,
+                                   gh.edu.clet.sfl.facilities.booking.domain.BookingStatus.CONFIRMED,
+                                   gh.edu.clet.sfl.facilities.booking.domain.BookingStatus.IN_USE))
+              and (:onHold is null
+                   or (:onHold = true and b.readinessHoldReason is not null)
+                   or (:onHold = false and b.readinessHoldReason is null))
             """)
-    List<BookingRecord> search(@Param("siteCode") String siteCode,
+    Page<BookingRecord> search(@Param("siteCode") String siteCode,
             @Param("roomId") UUID roomId,
             @Param("status") BookingStatus status,
             @Param("purpose") BookingPurpose purpose,

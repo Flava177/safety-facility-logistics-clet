@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.shared.application;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.application.port.RuntimeConfigurationPort;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditChainVerification;
@@ -37,16 +38,24 @@ public class FacilitiesGovernanceService {
     }
 
     @Transactional(readOnly = true)
-    public List<AuditEvent> search(String siteCode, String resourceType, String resourceId, String actorId,
-            AuditAction action, Instant from, Instant to, int limit, ActorContext actor, SourceChannel channel) {
+    public RepositoryPage<AuditEvent> search(String siteCode, String resourceType, String resourceId,
+            String actorId, AuditAction action, Instant from, Instant to, int page, int size, ActorContext actor,
+            SourceChannel channel) {
         authorization.require(actor, SflPermission.FACILITIES_AUDIT_READ, channel, "Audit", "search", siteCode);
         authorization.requireRequestedSite(actor, siteCode, channel, "Audit");
-        return audit.search(siteCode, resourceType, resourceId, actorId, action, from, to, limit).stream()
-                // Platform-wide records (site scope "*") are visible to anyone who may read the audit at
-                // all; site-scoped ones follow the actor's scopes like every other record.
+        RepositoryPage<AuditEvent> found = audit.search(siteCode, resourceType, resourceId, actorId, action, from,
+                to, page, size);
+        // Platform-wide records (site scope "*") are visible to anyone who may read the audit at all;
+        // site-scoped ones follow the actor's scopes like every other record.
+        List<AuditEvent> visible = found.items().stream()
                 .filter(event -> "*".equals(event.siteScope())
                         || authorization.canAccessSite(actor, event.siteScope()))
                 .toList();
+        // When filtering removed rows, the total is reported as what remains: a total counting records
+        // the caller may not see would let them infer another site's activity.
+        return visible.size() == found.items().size()
+                ? found
+                : RepositoryPage.of(visible, visible.size(), found.page(), found.size());
     }
 
     /**

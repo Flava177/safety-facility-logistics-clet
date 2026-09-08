@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSeverity;
 import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSource;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -21,15 +22,22 @@ interface ReadinessBlockerJpaRepository extends JpaRepository<ReadinessBlockerEn
     List<ReadinessBlockerEntity> findBySourceAndSourceReferenceAndResolvedFalse(BlockerSource source,
             String sourceReference);
 
-    @Query("""
+    @Query(value = """
             select b from ReadinessBlockerEntity b
             where (:siteCode is null or b.siteCode = :siteCode)
               and (:roomId is null or b.roomId = :roomId)
               and (:severity is null or b.severity = :severity)
               and (:resolved is null or b.resolved = :resolved)
             order by b.resolved asc, b.severity asc, b.raisedAt asc
+            """,
+            countQuery = """
+            select count(b) from ReadinessBlockerEntity b
+            where (:siteCode is null or b.siteCode = :siteCode)
+              and (:roomId is null or b.roomId = :roomId)
+              and (:severity is null or b.severity = :severity)
+              and (:resolved is null or b.resolved = :resolved)
             """)
-    List<ReadinessBlockerEntity> search(
+    Page<ReadinessBlockerEntity> search(
             @Param("siteCode") String siteCode,
             @Param("roomId") UUID roomId,
             @Param("severity") BlockerSeverity severity,

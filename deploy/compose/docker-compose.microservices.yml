@@ -9,6 +9,11 @@ services:
       - "5441:5432"
     volumes:
       - sfl_facilities_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SFL_FACILITIES_POSTGRES_USER:-sfl}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   safety-security-postgres:
     image: postgres:16-bookworm
@@ -20,6 +25,11 @@ services:
       - "5442:5432"
     volumes:
       - sfl_safety_security_postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SFL_SAFETY_SECURITY_POSTGRES_USER:-sfl}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   fleet-vehicle-postgres:
     image: postgres:16-bookworm
@@ -31,8 +41,11 @@ services:
       - "5443:5432"
     volumes:
       - sfl_fleet_vehicle_postgres_data:/var/lib/postgresql/data
-
-
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${SFL_FLEET_LOGISTICS_POSTGRES_USER:-sfl}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   redis:
     image: redis:7-alpine
@@ -60,8 +73,13 @@ services:
       KEYCLOAK_ADMIN: ${SFL_KEYCLOAK_ADMIN:-admin}
       KEYCLOAK_ADMIN_PASSWORD: ${SFL_KEYCLOAK_ADMIN_PASSWORD:-change-me}
       KC_HEALTH_ENABLED: "true"
+    # The realm export lives in deploy/idp (see sfl-realm.json), not deploy/keycloak - that directory
+    # does not exist. Mounting the wrong path meant --import-realm silently imported nothing, the
+    # `sfl` realm was never created, this healthcheck could never pass, and every app container below
+    # (which waits on service_healthy) blocked forever. Every credential in that file is a seeded
+    # dev/demo persona, not a real secret; do not point this compose file at a shared environment.
     volumes:
-      - ../keycloak:/opt/keycloak/data/import:ro
+      - ../idp:/opt/keycloak/data/import:ro
     ports:
       - "8080:8080"
     healthcheck:
@@ -89,9 +107,20 @@ Connection: close
       - "8091:8080"
     depends_on:
       facilities-postgres:
-        condition: service_started
+        condition: service_healthy
       keycloak:
         condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
 
   sfl-safety-security-service:
     build:
@@ -106,8 +135,21 @@ Connection: close
     ports:
       - "8092:8080"
     depends_on:
-      - safety-security-postgres
-      - keycloak
+      safety-security-postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
 
   sfl-fleet-logistics-service:
     build:
@@ -122,8 +164,44 @@ Connection: close
     ports:
       - "8093:8080"
     depends_on:
-      - fleet-vehicle-postgres
-      - keycloak
+      fleet-vehicle-postgres:
+        condition: service_healthy
+      keycloak:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: "1.0"
+          memory: 768M
+
+  # The one dashboard bundle for all three platforms (see sfl-portal-service/pom.xml). It was absent
+  # from this file entirely - present in the Maven reactor and in the module docs, but with no
+  # deployment path in the topology it actually describes.
+  sfl-portal-service:
+    build:
+      context: ../..
+      dockerfile: services/sfl-portal-service/Dockerfile
+    environment:
+      SFL_PORTAL_PORT: 8080
+    ports:
+      - "8090:8080"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/v1/system/info"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 384M
 
 volumes:
   sfl_facilities_postgres_data:

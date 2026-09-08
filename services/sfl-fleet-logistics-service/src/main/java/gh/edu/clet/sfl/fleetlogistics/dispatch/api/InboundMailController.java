@@ -30,6 +30,9 @@ public class InboundMailController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a new inbound mail/courier item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item permission for the site")
     @PostMapping
     public ResponseEntity<ApiResponse<CourierItem>> register(@Valid @RequestBody RegisterInboundRequest r,
             HttpServletRequest h) {
@@ -39,6 +42,8 @@ public class InboundMailController {
         return ResponseEntity.created(URI.create("/api/v1/dispatch/inbound/" + item.id())).body(ApiResponse.ok(item));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists inbound mail items for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item read permission for the site")
     @GetMapping
     public ApiResponse<DispatchPageResponse<CourierItem>> list(@RequestParam String siteCode,
             @RequestParam(required = false) CourierItem.Status status,
@@ -54,6 +59,11 @@ public class InboundMailController {
                 actors.resolve(h))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Distributes an inbound item internally with a recorded acknowledgement")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation, or neither an evidence id nor a reference was supplied")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No courier item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Only a RECEIVED or STAGED inbound item can be distributed")
     @PostMapping("/{id}/distribute")
     public ApiResponse<CourierItem> distribute(@PathVariable UUID id, @Valid @RequestBody DistributeRequest r,
             HttpServletRequest h) {

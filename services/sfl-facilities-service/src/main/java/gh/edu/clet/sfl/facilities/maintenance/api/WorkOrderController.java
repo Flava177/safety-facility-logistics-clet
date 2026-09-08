@@ -6,11 +6,11 @@ import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceCommands;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceEvidenceService;
 import gh.edu.clet.sfl.facilities.maintenance.application.WorkOrderApplicationService;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.api.IdempotencyKey;
+import gh.edu.clet.sfl.facilities.shared.api.PageResponse;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.Clock;
@@ -45,14 +45,12 @@ public class WorkOrderController {
 
     private final WorkOrderApplicationService service;
     private final MaintenanceEvidenceService evidence;
-    private final FacilitiesActorResolver actorResolver;
     private final Clock clock;
 
     public WorkOrderController(WorkOrderApplicationService service, MaintenanceEvidenceService evidence,
-            FacilitiesActorResolver actorResolver, Clock clock) {
+            Clock clock) {
         this.service = service;
         this.evidence = evidence;
-        this.actorResolver = actorResolver;
         this.clock = clock;
     }
 
@@ -64,11 +62,12 @@ public class WorkOrderController {
                     + "operating mode and - where a vendor is named - the contracted response time, "
                     + "whichever is tighter.")
     public ResponseEntity<ApiResponse<MaintenanceResponses.WorkOrderResponse>> createFromFault(
-            @Valid @RequestBody MaintenanceRequests.CreateWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.CreateWorkOrder request, ActorContext actor,
+            SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         MaintenanceResponses.WorkOrderResponse result = MaintenanceResponses.WorkOrderResponse.from(
                 service.createFromFault(new MaintenanceCommands.CreateWorkOrderFromFault(
-                        request.facilityFaultId(), request.vendorId(), request.assignTo(), actor(http),
-                        channel(http), idempotencyKey(http), request)),
+                        request.facilityFaultId(), request.vendorId(), request.assignTo(), actor,
+                        channel, idempotencyKey, request)),
                 clock);
         return ResponseEntity.created(URI.create("/api/v1/facilities/work-orders/" + result.id()))
                 .body(ApiResponse.ok(result));
@@ -79,18 +78,20 @@ public class WorkOrderController {
             description = "Reassignment is the same move. Assigning an order that is on hold releases "
                     + "the hold, because handing over blocked work is not an assignment anybody can act on.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> assign(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.AssignWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.AssignWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return respond(service.assign(new MaintenanceCommands.AssignWorkOrder(workOrderId,
-                request.assignedTo(), request.vendorId(), request.expectedVersion(), actor(http),
-                channel(http))));
+                request.assignedTo(), request.vendorId(), request.expectedVersion(), actor,
+                channel)));
     }
 
     @PatchMapping("/{workOrderId}/start")
     @Operation(summary = "The assignee has started work")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> start(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.START, request,
-                http);
+                actor, channel);
     }
 
     @PatchMapping("/{workOrderId}/hold")
@@ -99,17 +100,20 @@ public class WorkOrderController {
                     + "vendor. The reason is required. Time on hold is accumulated but does not stop "
                     + "the SLA clock: a hall is no less unusable because the reason is a supplier.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> hold(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
-        return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.HOLD, request, http);
+            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
+        return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.HOLD, request,
+                actor, channel);
     }
 
     @PatchMapping("/{workOrderId}/completion")
     @Operation(summary = "The assignee says the work is done",
             description = "Not yet accepted. Closure is a separate, authorised act - see /closure.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> complete(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.COMPLETE, request,
-                http);
+                actor, channel);
     }
 
     @PatchMapping("/{workOrderId}/reopen")
@@ -117,9 +121,10 @@ public class WorkOrderController {
             description = "Takes the closing permission, not the updating one: reopening reverses "
                     + "somebody's judgement that the work was finished. SRS-SFL-S153-02.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> reopen(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.TransitionWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return transition(workOrderId, MaintenanceCommands.TransitionWorkOrder.Transition.REOPEN, request,
-                http);
+                actor, channel);
     }
 
     @PatchMapping("/{workOrderId}/closure")
@@ -128,17 +133,19 @@ public class WorkOrderController {
                     + "the configuration required when the order was raised. Closing resolves the fault "
                     + "behind it, and a preventive order records the service against its asset.")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> close(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.CloseWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.CloseWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return respond(service.close(new MaintenanceCommands.CloseWorkOrder(workOrderId,
-                request.closureNotes(), request.expectedVersion(), actor(http), channel(http))));
+                request.closureNotes(), request.expectedVersion(), actor, channel)));
     }
 
     @PatchMapping("/{workOrderId}/cancellation")
     @Operation(summary = "Abandon a work order, with a reason")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> cancel(@PathVariable UUID workOrderId,
-            @Valid @RequestBody MaintenanceRequests.CancelWorkOrder request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.CancelWorkOrder request, ActorContext actor,
+            SourceChannel channel) {
         return respond(service.cancel(new MaintenanceCommands.CancelWorkOrder(workOrderId, request.reason(),
-                request.expectedVersion(), actor(http), channel(http))));
+                request.expectedVersion(), actor, channel)));
     }
 
     // ---- queries ------------------------------------------------------------------------------
@@ -147,7 +154,7 @@ public class WorkOrderController {
     @Operation(summary = "Search work orders",
             description = "A vendor technician sees only the orders assigned to them, whatever the "
                     + "filters say. Site scope is not a sufficient boundary for a contractor.")
-    public ApiResponse<List<MaintenanceResponses.WorkOrderResponse>> search(
+    public ApiResponse<PageResponse<MaintenanceResponses.WorkOrderResponse>> search(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false) UUID assetId,
@@ -155,19 +162,20 @@ public class WorkOrderController {
             @RequestParam(required = false) String assignedTo,
             @RequestParam(required = false) UUID vendorId,
             @RequestParam(required = false) Boolean openOnly,
-            @RequestParam(defaultValue = "100") int limit,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.search(siteCode, roomId, assetId, status, assignedTo, vendorId,
-                        openOnly, limit, actor(http), channel(http)).stream()
-                .map(order -> MaintenanceResponses.WorkOrderResponse.from(order, clock))
-                .toList());
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(PageResponse.from(
+                service.search(siteCode, roomId, assetId, status, assignedTo, vendorId, openOnly, page, size,
+                        actor, channel),
+                order -> MaintenanceResponses.WorkOrderResponse.from(order, clock)));
     }
 
     @GetMapping("/{workOrderId}")
     @Operation(summary = "Read one work order")
     public ApiResponse<MaintenanceResponses.WorkOrderResponse> findById(@PathVariable UUID workOrderId,
-            HttpServletRequest http) {
-        return respond(service.findById(workOrderId, actor(http), channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        return respond(service.findById(workOrderId, actor, channel));
     }
 
     // ---- parts --------------------------------------------------------------------------------
@@ -175,8 +183,8 @@ public class WorkOrderController {
     @GetMapping("/{workOrderId}/parts")
     @Operation(summary = "Parts consumed on a work order")
     public ApiResponse<List<MaintenanceResponses.PartResponse>> parts(@PathVariable UUID workOrderId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.parts(workOrderId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.parts(workOrderId, actor, channel).stream()
                 .map(MaintenanceResponses.PartResponse::from)
                 .toList());
     }
@@ -187,11 +195,11 @@ public class WorkOrderController {
                     + "optional, because a technician fitting from the van often does not know it.")
     public ResponseEntity<ApiResponse<MaintenanceResponses.PartResponse>> recordPart(
             @PathVariable UUID workOrderId, @Valid @RequestBody MaintenanceRequests.RecordPart request,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         MaintenanceResponses.PartResponse result = MaintenanceResponses.PartResponse.from(
                 service.recordPart(new MaintenanceCommands.RecordPart(workOrderId, request.partCode(),
                         request.description(), request.quantity(), request.unitCost(), request.currency(),
-                        request.supplier(), actor(http), channel(http))));
+                        request.supplier(), actor, channel)));
         return ResponseEntity
                 .created(URI.create("/api/v1/facilities/work-orders/" + workOrderId + "/parts/" + result.id()))
                 .body(ApiResponse.ok(result));
@@ -200,9 +208,9 @@ public class WorkOrderController {
     @DeleteMapping("/{workOrderId}/parts/{partId}")
     @Operation(summary = "Remove a part recorded in error")
     public ApiResponse<Void> removePart(@PathVariable UUID workOrderId, @PathVariable UUID partId,
-            HttpServletRequest http) {
-        service.removePart(new MaintenanceCommands.RemovePart(workOrderId, partId, actor(http),
-                channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        service.removePart(new MaintenanceCommands.RemovePart(workOrderId, partId, actor,
+                channel));
         return ApiResponse.ok(null);
     }
 
@@ -211,8 +219,8 @@ public class WorkOrderController {
     @GetMapping("/{workOrderId}/evidence")
     @Operation(summary = "Evidence attached to a work order")
     public ApiResponse<List<MaintenanceResponses.EvidenceResponse>> evidence(@PathVariable UUID workOrderId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(evidence.forWorkOrder(workOrderId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(evidence.forWorkOrder(workOrderId, actor, channel).stream()
                 .map(MaintenanceResponses.EvidenceResponse::from)
                 .toList());
     }
@@ -224,12 +232,12 @@ public class WorkOrderController {
                     + "is mandatory.")
     public ResponseEntity<ApiResponse<MaintenanceResponses.EvidenceResponse>> attachEvidence(
             @PathVariable UUID workOrderId, @Valid @RequestBody MaintenanceRequests.AttachEvidence request,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         MaintenanceResponses.EvidenceResponse result = MaintenanceResponses.EvidenceResponse.from(
                 evidence.attach(new MaintenanceCommands.AttachEvidence(workOrderId, request.evidenceType(),
                         request.fileReference(), request.fileName(), request.mediaType(), request.sizeBytes(),
-                        request.contentHash(), request.retentionClass(), request.notes(), actor(http),
-                        channel(http), idempotencyKey(http), request)));
+                        request.contentHash(), request.retentionClass(), request.notes(), actor,
+                        channel, idempotencyKey, request)));
         return ResponseEntity
                 .created(URI.create("/api/v1/facilities/maintenance-evidence/" + result.id()))
                 .body(ApiResponse.ok(result));
@@ -239,25 +247,13 @@ public class WorkOrderController {
 
     private ApiResponse<MaintenanceResponses.WorkOrderResponse> transition(UUID workOrderId,
             MaintenanceCommands.TransitionWorkOrder.Transition transition,
-            MaintenanceRequests.TransitionWorkOrder request, HttpServletRequest http) {
+            MaintenanceRequests.TransitionWorkOrder request, ActorContext actor, SourceChannel channel) {
         return respond(service.transition(new MaintenanceCommands.TransitionWorkOrder(workOrderId,
-                transition, request.notes(), request.expectedVersion(), actor(http), channel(http))));
+                transition, request.notes(), request.expectedVersion(), actor, channel)));
     }
 
     private ApiResponse<MaintenanceResponses.WorkOrderResponse> respond(
             gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder order) {
         return ApiResponse.ok(MaintenanceResponses.WorkOrderResponse.from(order, clock));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
-    }
-
-    private String idempotencyKey(HttpServletRequest http) {
-        return actorResolver.resolveIdempotencyKey(http);
     }
 }

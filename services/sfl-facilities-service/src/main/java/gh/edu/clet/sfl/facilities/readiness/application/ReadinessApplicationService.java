@@ -24,6 +24,7 @@ import gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization;
 import gh.edu.clet.sfl.facilities.shared.application.ServiceOutbox;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
 import gh.edu.clet.sfl.facilities.shared.application.port.IdempotencyPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
@@ -61,6 +62,8 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     private final IdempotencyPort idempotency;
     private final FacilitiesAuthorization authorization;
     private final Clock clock;
+    private final ReadinessAssessmentCommands assessmentCommands;
+    private final ReadinessBlockerOperations blockerOperations;
 
     public ReadinessApplicationService(ReadinessRepository readiness, FacilitiesRepository facilities,
             ServiceOutbox outbox, AuditPort audit, IdempotencyPort idempotency,
@@ -72,6 +75,10 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         this.idempotency = idempotency;
         this.authorization = authorization;
         this.clock = clock;
+        this.assessmentCommands = new ReadinessAssessmentCommands(this, readiness, authorization, audit,
+                idempotency);
+        this.blockerOperations = new ReadinessBlockerOperations(this, readiness, facilities, authorization,
+                audit);
     }
 
     // =========================================================================================
@@ -183,94 +190,23 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      */
     @Transactional
     public ReadinessAssessment submitAssessment(ReadinessCommands.SubmitAssessment command) {
-        ActorContext actor = command.actor();
-        FacilityRoom room = requireRoom(command.roomId());
-        authorization.require(actor, SflPermission.FACILITIES_READINESS_ASSESS, room.siteCode(),
-                command.channel(), "ReadinessAssessment", room.id().toString());
-
-        if (command.idempotencyKey() != null && !command.idempotencyKey().isBlank()) {
-            Optional<ReadinessAssessment> replayed = idempotency
-                    .findExistingResult("submit-readiness-assessment", command.idempotencyKey(),
-                            idempotency.fingerprint(command.idempotencyPayload()))
-                    .flatMap(readiness::findAssessment);
-            if (replayed.isPresent()) {
-                return replayed.get();
-            }
-        }
-
-        OperatingMode mode = operatingModeOf(room.siteCode());
-        ReadinessChecklist checklist = resolveChecklist(command.checklistId(), room, mode);
-
-        UUID assessmentId = UUID.randomUUID();
-        List<ReadinessAssessmentItem> items = answerItems(assessmentId, checklist, command.answers());
-        int score = ReadinessPolicy.score(items);
-
-        // Close the previous assessment's checklist blockers first: this assessment supersedes it, and
-        // leaving them open would double-count a fault that has just been re-inspected.
-        Instant at = now();
-        readiness.findLatestAssessment(room.id()).ifPresent(previous ->
-                readiness.findOpenBlockers(room.id()).stream()
-                        .filter(blocker -> blocker.source() == BlockerSource.CHECKLIST_ITEM)
-                        .filter(blocker -> previous.id().equals(blocker.assessmentId()))
-                        .forEach(blocker -> readiness.saveBlocker(blocker.resolve(
-                                "Superseded by assessment " + assessmentId, actor.actorId(), at))));
-
-        // Build the new blockers in memory before persisting anything. They carry a foreign key to the
-        // assessment, so the assessment row has to exist first - but the assessment's own outcome is
-        // derived from these very blockers. Constructing them, evaluating, saving the assessment and
-        // only then saving the blockers is what satisfies both.
-        List<ReadinessBlocker> raised = new ArrayList<>();
-        for (ReadinessAssessmentItem item : items) {
-            if (!item.passed()) {
-                raised.add(ReadinessBlocker.raise(room.id(), room.siteCode(), assessmentId,
-                        BlockerSource.CHECKLIST_ITEM, item.itemCode(), item.severityIfFailed(),
-                        item.description(), actor.actorId(), at));
-            }
-        }
-
-        // Evaluated against the blockers that will be open once this assessment lands: the ones already
-        // open from other sources, plus the ones it is about to raise. `everAssessed` is true because
-        // this *is* an assessment - asking the store would report a first-ever inspection as UNKNOWN,
-        // so one that passed every item would come back as never inspected.
-        List<ReadinessBlocker> openAfter = new ArrayList<>(readiness.findOpenBlockers(room.id()));
-        openAfter.addAll(raised);
-        ReadinessOutcome outcome = ReadinessPolicy.evaluate(openAfter, score, true);
-
-        ReadinessAssessment assessment = readiness.saveAssessment(new ReadinessAssessment(assessmentId,
-                room.id(), room.siteCode(), checklist == null ? null : checklist.id(),
-                checklist == null ? null : checklist.checklistCode(),
-                checklist == null ? 0 : checklist.version(), mode, outcome.status(), score, items,
-                command.notes(), actor.actorId(), at));
-
-        raised.forEach(blocker -> {
-            readiness.saveBlocker(blocker);
-            audit.record(actor, command.channel(), AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
-                    blocker.id().toString(), room.siteCode(), null, blocker);
-        });
-
-        applyOutcome(room, outcome, actor, command.channel(), at);
-
-        audit.record(actor, command.channel(), AuditAction.READINESS_ASSESSMENT_SUBMITTED, "ReadinessAssessment",
-                assessment.id().toString(), room.siteCode(), null, assessment);
-        publish("sfl.ifimp.readiness-assessment-submitted.v1", "ReadinessAssessment", assessment.id(),
-                room.siteCode(), actor, assessment);
-        raised.forEach(blocker -> publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(),
-                room.siteCode(), actor, blocker));
-
-        idempotency.recordResult("submit-readiness-assessment", command.idempotencyKey(),
-                idempotency.fingerprint(command.idempotencyPayload()), assessment.id(), room.siteCode(),
-                actor.actorId());
-        return assessment;
+        return assessmentCommands.submit(command);
     }
 
     @Transactional(readOnly = true)
-    public List<ReadinessAssessment> assessments(String siteCode, UUID roomId, int limit, ActorContext actor,
-            SourceChannel channel) {
+    public RepositoryPage<ReadinessAssessment> assessments(String siteCode, UUID roomId, int page, int size,
+            ActorContext actor, SourceChannel channel) {
         authorization.require(actor, SflPermission.FACILITIES_READINESS_READ, channel, "ReadinessAssessment",
                 "list", siteCode);
         authorization.requireRequestedSite(actor, siteCode, channel, "ReadinessAssessment");
-        return authorization.filterBySite(actor, readiness.findAssessments(siteCode, roomId, limit),
+        RepositoryPage<ReadinessAssessment> found = readiness.findAssessments(siteCode, roomId, page, size);
+        List<ReadinessAssessment> visible = authorization.filterBySite(actor, found.items(),
                 ReadinessAssessment::siteCode);
+        // When filtering removed rows, the total is reported as what remains: a total counting records
+        // the caller may not see would let them infer another site's estate size.
+        return visible.size() == found.items().size()
+                ? found
+                : RepositoryPage.of(visible, visible.size(), found.page(), found.size());
     }
 
     @Transactional(readOnly = true)
@@ -288,22 +224,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
 
     @Transactional
     public ReadinessBlocker raiseBlocker(ReadinessCommands.RaiseBlocker command) {
-        ActorContext actor = command.actor();
-        FacilityRoom room = requireRoom(command.roomId());
-        authorization.require(actor, SflPermission.FACILITIES_READINESS_ASSESS, room.siteCode(),
-                command.channel(), "ReadinessBlocker", room.id().toString());
-
-        Instant at = now();
-        ReadinessBlocker blocker = readiness.saveBlocker(ReadinessBlocker.raise(room.id(), room.siteCode(), null,
-                BlockerSource.MANUAL, null, command.severity(), command.description(), actor.actorId(), at));
-
-        applyOutcome(room, evaluate(room.id()), actor, command.channel(), at);
-
-        audit.record(actor, command.channel(), AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
-                blocker.id().toString(), room.siteCode(), null, blocker);
-        publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(), room.siteCode(), actor,
-                blocker);
-        return blocker;
+        return blockerOperations.raise(command);
     }
 
     /**
@@ -314,35 +235,24 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      */
     @Transactional
     public ReadinessBlocker resolveBlocker(ReadinessCommands.ResolveBlocker command) {
-        ActorContext actor = command.actor();
-        ReadinessBlocker blocker = readiness.findBlocker(command.blockerId())
-                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Readiness blocker",
-                        command.blockerId()));
-        authorization.require(actor, SflPermission.FACILITIES_READINESS_ASSESS, blocker.siteCode(),
-                command.channel(), "ReadinessBlocker", blocker.id().toString());
-
-        Instant at = now();
-        ReadinessBlocker resolved = readiness.saveBlocker(
-                blocker.resolve(command.resolutionNotes(), actor.actorId(), at));
-
-        FacilityRoom room = requireRoom(resolved.roomId());
-        applyOutcome(room, evaluate(room.id()), actor, command.channel(), at);
-
-        audit.record(actor, command.channel(), AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
-                resolved.id().toString(), resolved.siteCode(), blocker, resolved);
-        publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
-                actor, resolved);
-        return resolved;
+        return blockerOperations.resolve(command);
     }
 
     @Transactional(readOnly = true)
-    public List<ReadinessBlocker> blockers(String siteCode, UUID roomId, BlockerSeverity severity, Boolean open,
-            int limit, ActorContext actor, SourceChannel channel) {
+    public RepositoryPage<ReadinessBlocker> blockers(String siteCode, UUID roomId, BlockerSeverity severity,
+            Boolean open, int page, int size, ActorContext actor, SourceChannel channel) {
         authorization.require(actor, SflPermission.FACILITIES_READINESS_READ, channel, "ReadinessBlocker",
                 "list", siteCode);
         authorization.requireRequestedSite(actor, siteCode, channel, "ReadinessBlocker");
-        return authorization.filterBySite(actor, readiness.findBlockers(siteCode, roomId, severity, open, limit),
+        RepositoryPage<ReadinessBlocker> found = readiness.findBlockers(siteCode, roomId, severity, open, page,
+                size);
+        List<ReadinessBlocker> visible = authorization.filterBySite(actor, found.items(),
                 ReadinessBlocker::siteCode);
+        // When filtering removed rows, the total is reported as what remains: a total counting records
+        // the caller may not see would let them infer another site's estate size.
+        return visible.size() == found.items().size()
+                ? found
+                : RepositoryPage.of(visible, visible.size(), found.page(), found.size());
     }
 
     // =========================================================================================
@@ -425,49 +335,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     @Override
     @Transactional
     public void reconcileAssetBlockers(FacilityAsset asset, ActorContext actor, SourceChannel channel) {
-        if (asset == null || asset.roomId() == null) {
-            return;
-        }
-        Optional<FacilityRoom> maybeRoom = facilities.findRoom(asset.roomId());
-        if (maybeRoom.isEmpty()) {
-            return;
-        }
-        FacilityRoom room = maybeRoom.get();
-        Instant at = now();
-        String reference = asset.id().toString();
-        List<ReadinessBlocker> existing = readiness.findOpenBlockersBySource(BlockerSource.ASSET, reference);
-
-        if (asset.impairsReadiness()) {
-            BlockerSeverity severity = severityFor(asset);
-            boolean alreadyRaised = existing.stream().anyMatch(blocker -> blocker.severity() == severity);
-            // Severity may have changed with the asset's criticality or status; close what no longer fits.
-            existing.stream()
-                    .filter(blocker -> blocker.severity() != severity)
-                    .forEach(blocker -> readiness.saveBlocker(blocker.resolve(
-                            "Superseded: asset severity is now " + severity, actor.actorId(), at)));
-            if (!alreadyRaised) {
-                ReadinessBlocker blocker = readiness.saveBlocker(ReadinessBlocker.raise(room.id(),
-                        room.siteCode(), null, BlockerSource.ASSET, reference, severity,
-                        asset.assetCode() + " (" + asset.category() + ") is " + asset.operationalStatus(),
-                        actor.actorId(), at));
-                audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
-                        blocker.id().toString(), room.siteCode(), null, blocker);
-                publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", blocker.id(), room.siteCode(),
-                        actor, blocker);
-            }
-        } else {
-            existing.forEach(blocker -> {
-                ReadinessBlocker resolved = readiness.saveBlocker(blocker.resolve(
-                        "Asset " + asset.assetCode() + " returned to " + asset.operationalStatus(),
-                        actor.actorId(), at));
-                audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
-                        resolved.id().toString(), room.siteCode(), blocker, resolved);
-                publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), room.siteCode(),
-                        actor, resolved);
-            });
-        }
-
-        applyOutcome(room, evaluate(room.id()), actor, channel, at);
+        blockerOperations.reconcileAssetBlockers(asset, actor, channel);
     }
 
     // =========================================================================================
@@ -487,91 +355,15 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     @Transactional
     public UUID raiseExternalBlocker(UUID roomId, BlockerSource source, String sourceReference,
             BlockerSeverity severity, String description, ActorContext actor, SourceChannel channel) {
-        if (roomId == null || severity == null) {
-            return null;
-        }
-        Optional<FacilityRoom> maybeRoom = facilities.findRoom(roomId);
-        if (maybeRoom.isEmpty()) {
-            // A caller may legitimately reference a location the estate has no room for - a corridor,
-            // a car park. Silently doing nothing is correct: there is no space whose readiness could
-            // change, and refusing would make the caller's own write fail for a reason it cannot fix.
-            return null;
-        }
-        FacilityRoom room = maybeRoom.get();
-        Instant at = now();
-        List<ReadinessBlocker> existing = readiness.findOpenBlockersBySource(source, sourceReference);
-
-        Optional<ReadinessBlocker> alreadyRight = existing.stream()
-                .filter(blocker -> blocker.severity() == severity)
-                .findFirst();
-        existing.stream()
-                .filter(blocker -> blocker.severity() != severity)
-                .forEach(blocker -> readiness.saveBlocker(blocker.resolve(
-                        "Superseded: severity is now " + severity, actor.actorId(), at)));
-
-        UUID blockerId;
-        if (alreadyRight.isPresent()) {
-            blockerId = alreadyRight.get().id();
-        } else {
-            ReadinessBlocker raised = readiness.saveBlocker(ReadinessBlocker.raise(room.id(), room.siteCode(),
-                    null, source, sourceReference, severity, description, actor.actorId(), at));
-            audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RAISED, "ReadinessBlocker",
-                    raised.id().toString(), room.siteCode(), null, raised);
-            publish("sfl.ifimp.readiness-blocker-created.v1", "ReadinessBlocker", raised.id(), room.siteCode(), actor,
-                    raised);
-            blockerId = raised.id();
-        }
-
-        applyOutcome(room, evaluate(room.id()), actor, channel, at);
-        return blockerId;
+        return blockerOperations.raiseExternal(roomId, source, sourceReference, severity, description, actor,
+                channel);
     }
 
     @Override
     @Transactional
     public int resolveExternalBlockers(BlockerSource source, String sourceReference, String resolutionNotes,
             ActorContext actor, SourceChannel channel) {
-        List<ReadinessBlocker> open = readiness.findOpenBlockersBySource(source, sourceReference);
-        if (open.isEmpty()) {
-            return 0;
-        }
-        Instant at = now();
-        // One source can hold blockers on more than one space only if the caller reuses a reference
-        // across rooms, which nothing does today - but re-deriving per distinct room rather than per
-        // blocker costs nothing and does not assume it.
-        java.util.Set<UUID> touched = new java.util.LinkedHashSet<>();
-        for (ReadinessBlocker blocker : open) {
-            ReadinessBlocker resolved = readiness.saveBlocker(
-                    blocker.resolve(resolutionNotes, actor.actorId(), at));
-            audit.record(actor, channel, AuditAction.READINESS_BLOCKER_RESOLVED, "ReadinessBlocker",
-                    resolved.id().toString(), resolved.siteCode(), blocker, resolved);
-            publish("sfl.ifimp.readiness-blocker-resolved.v1", "ReadinessBlocker", resolved.id(), resolved.siteCode(),
-                    actor, resolved);
-            touched.add(blocker.roomId());
-        }
-        touched.forEach(roomId -> facilities.findRoom(roomId)
-                .ifPresent(room -> applyOutcome(room, evaluate(room.id()), actor, channel, at)));
-        return open.size();
-    }
-
-    /**
-     * The blocker severity an impaired asset earns.
-     *
-     * <p>Criticality sets the ceiling and status sets how much of it applies: a critical asset that is
-     * out of service blocks the space, the same asset merely degraded impairs it. A low-criticality
-     * asset never rises above advisory however broken it is - a failed noticeboard light does not stop
-     * an examination.
-     */
-    private static BlockerSeverity severityFor(FacilityAsset asset) {
-        return switch (asset.criticality()) {
-            case CRITICAL -> asset.operationalStatus().isTotalFailure()
-                    ? BlockerSeverity.CRITICAL
-                    : BlockerSeverity.MAJOR;
-            case HIGH -> asset.operationalStatus().isTotalFailure()
-                    ? BlockerSeverity.MAJOR
-                    : BlockerSeverity.MINOR;
-            case MEDIUM -> BlockerSeverity.MINOR;
-            case LOW -> BlockerSeverity.ADVISORY;
-        };
+        return blockerOperations.resolveExternal(source, sourceReference, resolutionNotes, actor, channel);
     }
 
     // =========================================================================================
@@ -618,7 +410,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     }
 
     /** Writes a derived outcome back onto the space, unless nothing changed. */
-    private void applyOutcome(FacilityRoom room, ReadinessOutcome outcome, ActorContext actor,
+    void applyOutcome(FacilityRoom room, ReadinessOutcome outcome, ActorContext actor,
             SourceChannel channel, Instant at) {
         FacilityRoom current = facilities.findRoom(room.id()).orElse(room);
         LocationReadinessStatus previous = current.readinessStatus();
@@ -639,7 +431,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
      * with no configured checklist can still carry manual blockers, and refusing the whole operation
      * would make an unconfigured site look broken rather than unconfigured.
      */
-    private ReadinessChecklist resolveChecklist(UUID checklistId, FacilityRoom room, OperatingMode mode) {
+    ReadinessChecklist resolveChecklist(UUID checklistId, FacilityRoom room, OperatingMode mode) {
         if (checklistId != null) {
             ReadinessChecklist checklist = requireChecklist(checklistId);
             if (!checklist.siteCode().equals(room.siteCode())) {
@@ -653,7 +445,7 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
     }
 
     /** Snapshots each answer against the checklist item as it is worded today. */
-    private List<ReadinessAssessmentItem> answerItems(UUID assessmentId, ReadinessChecklist checklist,
+    List<ReadinessAssessmentItem> answerItems(UUID assessmentId, ReadinessChecklist checklist,
             List<ReadinessCommands.AssessmentAnswer> answers) {
         if (checklist == null) {
             return List.of();
@@ -697,27 +489,27 @@ public class ReadinessApplicationService implements SpaceReadinessPort, External
         return items;
     }
 
-    private OperatingMode operatingModeOf(String siteCode) {
+    OperatingMode operatingModeOf(String siteCode) {
         return facilities.findSiteByCode(siteCode).map(Site::operatingMode).orElse(OperatingMode.ROUTINE);
     }
 
-    private ReadinessChecklist requireChecklist(UUID id) {
+    ReadinessChecklist requireChecklist(UUID id) {
         return readiness.findChecklist(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Readiness checklist", id));
     }
 
-    private FacilityRoom requireRoom(UUID id) {
+    FacilityRoom requireRoom(UUID id) {
         return facilities.findRoom(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Space", id));
     }
 
-    private void publish(String eventType, String aggregateType, UUID aggregateId, String siteScope,
+    void publish(String eventType, String aggregateType, UUID aggregateId, String siteScope,
             ActorContext actor, Object payload) {
         outbox.record(eventType, 1, aggregateType, aggregateId, siteScope, actor.correlationId(),
                 actor.actorId(), payload);
     }
 
-    private Instant now() {
+    Instant now() {
         return clock.instant();
     }
 

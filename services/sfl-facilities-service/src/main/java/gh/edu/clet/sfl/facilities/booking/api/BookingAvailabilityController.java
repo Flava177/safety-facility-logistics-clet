@@ -7,11 +7,9 @@ import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingWindow;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.masterdata.domain.SpaceType;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import java.time.Clock;
 import java.time.Instant;
 import java.util.List;
@@ -38,13 +36,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookingAvailabilityController {
 
     private final BookingAvailabilityService availability;
-    private final FacilitiesActorResolver actorResolver;
     private final Clock clock;
 
-    public BookingAvailabilityController(BookingAvailabilityService availability,
-            FacilitiesActorResolver actorResolver, Clock clock) {
+    public BookingAvailabilityController(BookingAvailabilityService availability, Clock clock) {
         this.availability = availability;
-        this.actorResolver = actorResolver;
         this.clock = clock;
     }
 
@@ -61,10 +56,10 @@ public class BookingAvailabilityController {
             @RequestParam(required = false) Integer minimumCapacity,
             @RequestParam(defaultValue = "0") int setupMinutes,
             @RequestParam(defaultValue = "0") int teardownMinutes,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         BookingWindow window = new BookingWindow(from, to, setupMinutes, teardownMinutes);
         return ApiResponse.ok(availability.spaces(siteCode, window, purpose, spaceType, minimumCapacity,
-                        actor(http), channel(http)).stream()
+                        actor, channel).stream()
                 .map(space -> BookingResponses.SpaceAvailabilityResponse.from(space, clock))
                 .toList());
     }
@@ -78,10 +73,9 @@ public class BookingAvailabilityController {
             @RequestParam(required = false) ResourceCategory category,
             @RequestParam(defaultValue = "0") int setupMinutes,
             @RequestParam(defaultValue = "0") int teardownMinutes,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         BookingWindow window = new BookingWindow(from, to, setupMinutes, teardownMinutes);
-        return ApiResponse.ok(availability.resources(siteCode, window, category, actor(http),
-                        channel(http)).stream()
+        return ApiResponse.ok(availability.resources(siteCode, window, category, actor, channel).stream()
                 .map(BookingResponses.ResourceAvailabilityResponse::from)
                 .toList());
     }
@@ -89,18 +83,9 @@ public class BookingAvailabilityController {
     @GetMapping("/calendar")
     @Operation(summary = "Everything holding one space between two instants")
     public ApiResponse<List<BookingResponses.BookingResponse>> calendar(@RequestParam UUID roomId,
-            @RequestParam Instant from, @RequestParam Instant to, HttpServletRequest http) {
-        return ApiResponse.ok(availability.calendar(roomId, BookingWindow.of(from, to), actor(http),
-                        channel(http)).stream()
+            @RequestParam Instant from, @RequestParam Instant to, ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(availability.calendar(roomId, BookingWindow.of(from, to), actor, channel).stream()
                 .map(booking -> BookingResponses.BookingResponse.from(booking, clock))
                 .toList());
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
     }
 }

@@ -58,6 +58,10 @@ class DriverController {
         this.clock = clock;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a new driver profile reference")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation, or the site scope is invalid")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required driver-management permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "An active driver with this staff reference or licence number already exists at the site")
     @PostMapping
     ResponseEntity<ApiResponse<DriverResponse>> register(@Valid @RequestBody RegisterDriverRequest request,
             HttpServletRequest httpRequest) {
@@ -82,6 +86,11 @@ class DriverController {
      * list is empty. Separate from the profile update because it is a different authority - see
      * {@code DriverApplicationService.bindPrincipal}.
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Links or unlinks a driver profile to its sign-in principal subject")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required driver-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No driver exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The driver was changed by another user (expectedVersion conflict)")
     @PatchMapping("/{driverId}/principal")
     ApiResponse<DriverResponse> bindPrincipal(@PathVariable UUID driverId,
             @Valid @RequestBody BindDriverPrincipalRequest request, HttpServletRequest httpRequest) {
@@ -93,6 +102,8 @@ class DriverController {
         return ApiResponse.ok(mapper.toResponse(driver, driverQueries.canReadSensitive(actor), clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches driver profiles, narrowed to the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "A named site is outside the actor's scope")
     @GetMapping
     ApiResponse<PageResponse<DriverResponse>> search(
             @RequestParam(required = false) String siteCode,
@@ -121,6 +132,9 @@ class DriverController {
                 result.page() == 0, result.page() >= result.totalPages() - 1, result.sort()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one driver profile by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The driver's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No driver exists with this id")
     @GetMapping("/{driverId}")
     ApiResponse<DriverResponse> findById(@PathVariable UUID driverId, HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);
@@ -128,6 +142,11 @@ class DriverController {
         return ApiResponse.ok(mapper.toResponse(driver, driverQueries.canReadSensitive(actor), clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Updates a driver profile's editable fields and optionally its lifecycle status")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required driver-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No driver exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The driver was changed by another user, or the lifecycle transition is not permitted")
     @PatchMapping("/{driverId}")
     ApiResponse<DriverResponse> update(@PathVariable UUID driverId,
             @Valid @RequestBody UpdateDriverRequest request, HttpServletRequest httpRequest) {
@@ -145,6 +164,9 @@ class DriverController {
      *
      * <p>Passing {@code until} is what catches a licence that is valid today but lapses mid-trip.
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Assesses a driver's eligibility, optionally against a vehicle category and period end")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The driver's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No driver exists with this id")
     @GetMapping("/{driverId}/eligibility")
     ApiResponse<EligibilityResponse> eligibility(@PathVariable UUID driverId,
             @RequestParam(required = false) VehicleCategory vehicleCategory,

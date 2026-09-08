@@ -9,6 +9,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.NoShowRecord;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceAllocation;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTask;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
@@ -39,7 +40,8 @@ public interface BookingRepository {
             Instant to,
             Boolean liveOnly,
             Boolean onReadinessHold,
-            int limit) {
+            int page,
+            int size) {
     }
 
     /** The counts the dashboard and the booking landing page read. */
@@ -79,7 +81,7 @@ public interface BookingRepository {
 
     Optional<Booking> findBookingByReference(String bookingReference);
 
-    List<Booking> findBookings(BookingQuery query);
+    RepositoryPage<Booking> findBookings(BookingQuery query);
 
     /**
      * Bookings that hold {@code roomId} and overlap {@code [from, to)}.
@@ -152,7 +154,7 @@ public interface BookingRepository {
     List<SetupTask> findSetupTasksForBooking(UUID bookingId);
 
     /** Pending setup tasks due before {@code dueBefore}, oldest first. The turnaround queue. */
-    List<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int limit);
+    RepositoryPage<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int page, int size);
 
     // ---- no-shows -----------------------------------------------------------------------------
 

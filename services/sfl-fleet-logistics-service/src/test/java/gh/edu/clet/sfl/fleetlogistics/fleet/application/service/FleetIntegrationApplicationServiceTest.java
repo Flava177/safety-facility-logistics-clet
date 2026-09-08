@@ -90,6 +90,24 @@ class FleetIntegrationApplicationServiceTest {
     }
 
     @Test
+    @DisplayName("verifySignature accepts a correctly signed, allowlisted request without touching the inbox")
+    void verifySignature_accepts_a_correctly_signed_request() {
+        service.verifySignature("telematics", "ACCRA", NOW, RAW, signature(RAW));
+
+        assertThat(inbox.store).isEmpty();
+    }
+
+    @Test
+    @DisplayName("verifySignature rejects an unsigned or badly-signed request the same way receive() does")
+    void verifySignature_rejects_an_invalid_signature() {
+        assertThatThrownBy(() -> service.verifySignature("telematics", "ACCRA", NOW, RAW, "not-the-signature"))
+                .isInstanceOf(InvalidSignatureException.class);
+
+        assertThatThrownBy(() -> service.verifySignature("telematics", "ACCRA", NOW, RAW, null))
+                .isInstanceOf(InvalidSignatureException.class);
+    }
+
+    @Test
     @DisplayName("schema validation rejects malformed integration payloads")
     void schema_validation_rejects_missing_required_fields() {
         Map<String, Object> invalidPayload = new LinkedHashMap<>(payload());

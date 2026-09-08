@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.portal.api;
 
+import gh.edu.clet.sfl.common.api.ApiResponse;
 import java.util.Map;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,10 +15,11 @@ import org.springframework.web.bind.annotation.RestController;
  * and every seeded account, while on 8091 it offers only IFIMP. One fact, one place, no port numbers
  * anywhere in the front end.
  *
- * <p>The shape mirrors the platform services' {@code /api/v1/system/info} deliberately - the
- * dashboard has one reader for it and must not need a special case for the portal. It returns a bare
- * map rather than {@code ApiResponse} only because this module has no dependency on the API envelope
- * and adding one to serve a single route would be the wrong trade.
+ * <p>The shape mirrors the platform services' {@code /api/v1/system/info} exactly - both return
+ * {@code ApiResponse.ok(...)}, so the dashboard has one reader for it and never needs a special case
+ * for the portal. This module already depends on {@code sfl-service-common} (for the shared
+ * dashboard auto-configuration), so wrapping the response the same way the platform services'
+ * {@code SystemController} does costs nothing extra.
  */
 @RestController
 @RequestMapping("/api/v1/system")
@@ -30,8 +32,8 @@ public class SystemController {
     }
 
     @GetMapping("/info")
-    public Map<String, Object> info() {
-        return Map.of("data", Map.of(
+    public ApiResponse<Map<String, String>> info() {
+        return ApiResponse.ok(Map.of(
                 "platform", "ALL",
                 "service", applicationName,
                 "architecture", "sfl-phase-1-microservice",

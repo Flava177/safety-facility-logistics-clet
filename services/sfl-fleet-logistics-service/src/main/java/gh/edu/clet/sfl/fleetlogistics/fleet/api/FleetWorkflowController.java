@@ -57,6 +57,9 @@ class FleetWorkflowController {
         this.clock = clock;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Raises a new workflow item against a record")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission for the site")
     @PostMapping
     ResponseEntity<ApiResponse<WorkflowItemResponse>> raise(
             @Valid @RequestBody FleetWorkflowRequests.RaiseItem request, HttpServletRequest httpRequest) {
@@ -74,6 +77,8 @@ class FleetWorkflowController {
                 .body(ApiResponse.ok(mapper.toResponse(item, clock.instant())));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches workflow items, narrowed to the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "A named site is outside the actor's scope")
     @GetMapping
     ApiResponse<PageResponse<WorkflowItemResponse>> search(
             @RequestParam(required = false) String siteCode,
@@ -106,12 +111,20 @@ class FleetWorkflowController {
                 result.page() == 0, result.page() >= result.totalPages() - 1, result.sort()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one workflow item by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The item's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
     @GetMapping("/{itemId}")
     ApiResponse<WorkflowItemResponse> findById(@PathVariable UUID itemId, HttpServletRequest httpRequest) {
         return ApiResponse.ok(mapper.toResponse(
                 workflowQueries.findById(itemId, actorResolver.resolve(httpRequest)), clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Assigns or reassigns a workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The item was changed by another user (expectedVersion conflict)")
     @PatchMapping("/{itemId}/assignment")
     ApiResponse<WorkflowItemResponse> assign(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.AssignItem request, HttpServletRequest httpRequest) {
@@ -122,6 +135,10 @@ class FleetWorkflowController {
                 clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Starts progress on an assigned workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
     @PatchMapping("/{itemId}/progress")
     ApiResponse<WorkflowItemResponse> start(@PathVariable UUID itemId,
             @RequestBody(required = false) FleetWorkflowRequests.StartItem request,
@@ -133,6 +150,11 @@ class FleetWorkflowController {
                         actorResolver.resolveSourceChannel(httpRequest))), clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Holds or resumes a workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
     @PatchMapping("/{itemId}/hold")
     ApiResponse<WorkflowItemResponse> holdOrResume(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.HoldItem request, HttpServletRequest httpRequest) {
@@ -143,6 +165,11 @@ class FleetWorkflowController {
                 clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Escalates a workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow escalation permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
     @PatchMapping("/{itemId}/escalation")
     ApiResponse<WorkflowItemResponse> escalate(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.EscalateItem request, HttpServletRequest httpRequest) {
@@ -153,6 +180,11 @@ class FleetWorkflowController {
                 clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Cancels a workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
     @PatchMapping("/{itemId}/cancel")
     ApiResponse<WorkflowItemResponse> cancel(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.CancelItem request, HttpServletRequest httpRequest) {
@@ -163,6 +195,12 @@ class FleetWorkflowController {
                 clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Closes a workflow item with a reason and optional closure evidence")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow closure/approval permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "Required closure evidence is missing")
     @PatchMapping("/{itemId}/closure")
     ApiResponse<WorkflowItemResponse> close(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.CloseItem request, HttpServletRequest httpRequest) {
@@ -173,6 +211,11 @@ class FleetWorkflowController {
                         actorResolver.resolveSourceChannel(httpRequest))), clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reopens a closed or cancelled workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status, or a version conflict")
     @PatchMapping("/{itemId}/reopen")
     ApiResponse<WorkflowItemResponse> reopen(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.ReopenItem request, HttpServletRequest httpRequest) {
@@ -183,6 +226,10 @@ class FleetWorkflowController {
                 clock.instant()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Adds a comment to a workflow item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required workflow permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
     @PostMapping("/{itemId}/comments")
     ResponseEntity<ApiResponse<CommentResponse>> comment(@PathVariable UUID itemId,
             @Valid @RequestBody FleetWorkflowRequests.AddComment request, HttpServletRequest httpRequest) {
@@ -196,6 +243,9 @@ class FleetWorkflowController {
     }
 
     /** The full immutable history: every transition and every comment (SRS-SFL-S166-02). */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads a workflow item's full history: every transition and comment")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The item's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No workflow item exists with this id")
     @GetMapping("/{itemId}/transitions")
     ApiResponse<WorkflowHistoryResponse> history(@PathVariable UUID itemId, HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);

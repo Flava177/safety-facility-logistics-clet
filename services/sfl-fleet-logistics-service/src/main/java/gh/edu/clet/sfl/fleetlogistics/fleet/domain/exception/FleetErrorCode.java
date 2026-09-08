@@ -40,6 +40,16 @@ public enum FleetErrorCode {
 
     // --- Service-defined ------------------------------------------------------------------
     FLEET_VALIDATION_FAILED("The request could not be validated.", false),
+    /**
+     * A request value that is syntactically well-formed JSON but not a valid instance of the type
+     * it names - an unparsable {@code UUID} or {@code Instant} in an integration payload, say. Kept
+     * distinct from {@link #FLEET_VALIDATION_FAILED} so a controller can route a specific, known
+     * parsing call site to a 400 deliberately, rather than depend on it falling into the blanket
+     * {@code IllegalArgumentException} handler alongside exceptions that were never meant to be a
+     * client-facing status - the two look identical to a caller but mean different things to an
+     * operator watching for the second one to alert.
+     */
+    FLEET_MALFORMED_REQUEST_VALUE("The request contains a value that could not be parsed.", false),
     FLEET_RECORD_NOT_FOUND("The requested fleet record was not found.", false),
     FLEET_RECORD_VERSION_CONFLICT("This record was changed by another user. Reload the record and try again.", false),
     FLEET_INVALID_STATE_TRANSITION("This transition is not permitted from the current status.", false),

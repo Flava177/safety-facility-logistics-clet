@@ -24,6 +24,8 @@ public class DispatchDashboardController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns the dispatch operational dashboard snapshot for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch report read permission for the site")
     @GetMapping
     public ApiResponse<Map<String, Object>> dashboard(@RequestParam String siteCode, HttpServletRequest h) {
         return ApiResponse.ok(service.dashboard(siteCode, actors.resolve(h)));

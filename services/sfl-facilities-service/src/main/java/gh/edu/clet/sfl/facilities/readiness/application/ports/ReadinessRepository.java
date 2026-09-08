@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSource;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessAssessment;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessBlocker;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessChecklist;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import java.util.List;
 import java.util.Optional;
@@ -42,7 +43,7 @@ public interface ReadinessRepository {
 
     List<ReadinessAssessment> findAssessmentsForRoom(UUID roomId, int limit);
 
-    List<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int limit);
+    RepositoryPage<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int page, int size);
 
     /** The most recent assessment of a space, which is what its current readiness was derived from. */
     Optional<ReadinessAssessment> findLatestAssessment(UUID roomId);
@@ -56,8 +57,8 @@ public interface ReadinessRepository {
     /** Every unresolved blocker for a space. The input to {@code ReadinessPolicy.evaluate}. */
     List<ReadinessBlocker> findOpenBlockers(UUID roomId);
 
-    List<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity, Boolean open,
-            int limit);
+    RepositoryPage<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity,
+            Boolean open, int page, int size);
 
     /** Open blockers raised from one source reference - how an asset's recovery clears its own blockers. */
     List<ReadinessBlocker> findOpenBlockersBySource(BlockerSource source, String sourceReference);

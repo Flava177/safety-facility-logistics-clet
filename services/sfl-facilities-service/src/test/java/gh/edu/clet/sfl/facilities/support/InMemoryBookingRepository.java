@@ -11,6 +11,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.ResourceAllocation;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTask;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTaskStatus;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
@@ -89,8 +90,8 @@ public class InMemoryBookingRepository implements BookingRepository {
     }
 
     @Override
-    public List<Booking> findBookings(BookingQuery query) {
-        return bookings.values().stream()
+    public RepositoryPage<Booking> findBookings(BookingQuery query) {
+        List<Booking> matching = bookings.values().stream()
                 .filter(booking -> query.siteCode() == null
                         || booking.siteCode().equals(normalize(query.siteCode())))
                 .filter(booking -> query.roomId() == null || booking.roomId().equals(query.roomId()))
@@ -106,8 +107,8 @@ public class InMemoryBookingRepository implements BookingRepository {
                 .filter(booking -> query.onReadinessHold() == null
                         || query.onReadinessHold() == (booking.readinessHoldReason() != null))
                 .sorted(Comparator.comparing(booking -> booking.window().start()))
-                .limit(Math.max(1, query.limit()))
                 .toList();
+        return paginate(matching, query.page(), Math.max(1, query.size()));
     }
 
     @Override
@@ -290,14 +291,15 @@ public class InMemoryBookingRepository implements BookingRepository {
     }
 
     @Override
-    public List<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int limit) {
-        return setupTasks.values().stream()
+    public RepositoryPage<SetupTask> findPendingSetupTasks(String siteCode, Instant dueBefore, int page,
+            int size) {
+        List<SetupTask> matching = setupTasks.values().stream()
                 .filter(task -> task.status() == SetupTaskStatus.PENDING)
                 .filter(task -> siteCode == null || task.siteCode().equals(normalize(siteCode)))
                 .filter(task -> task.dueBy().isBefore(dueBefore))
                 .sorted(Comparator.comparing(SetupTask::dueBy))
-                .limit(Math.max(1, limit))
                 .toList();
+        return paginate(matching, page, Math.max(1, size));
     }
 
     // ---- no-shows -----------------------------------------------------------------------------
@@ -324,5 +326,11 @@ public class InMemoryBookingRepository implements BookingRepository {
 
     private static String normalize(String value) {
         return value == null || value.isBlank() ? null : value.strip().toUpperCase(Locale.ROOT);
+    }
+
+    private static <T> RepositoryPage<T> paginate(List<T> matching, int page, int size) {
+        int from = Math.min(page * size, matching.size());
+        int to = Math.min(from + size, matching.size());
+        return RepositoryPage.of(matching.subList(from, to), matching.size(), page, size);
     }
 }

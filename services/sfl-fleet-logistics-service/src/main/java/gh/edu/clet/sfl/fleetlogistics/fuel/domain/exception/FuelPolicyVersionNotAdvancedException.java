@@ -18,12 +18,12 @@ import java.util.UUID;
  * and no record distinguishes them.
  *
  * <p>This is refused rather than corrected automatically. The version is the operator's own
- * numbering - it appears on their paperwork and in their reports - so the service is not entitled to
- * increment it behind them. It says what is wrong and lets them choose the number.
+ * numbering - it appears on their paperwork and in their reports - so the service is not entitled
+ * to increment it behind them. It says what is wrong and lets them choose the number.
  *
  * <p>Only the fields that decide an outcome count; see {@link
- * gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy#hasSameRulesAs}. Renaming a policy, or
- * correcting a date, needs no new version.
+ * gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelPolicy#hasSameRulesAs}. Renaming a policy,
+ * or correcting a date, needs no new version.
  */
 public class FuelPolicyVersionNotAdvancedException extends FleetDomainException {
 
@@ -32,10 +32,15 @@ public class FuelPolicyVersionNotAdvancedException extends FleetDomainException 
     }
 
     public static FuelPolicyVersionNotAdvancedException of(UUID policyId, int currentVersion) {
-        return new FuelPolicyVersionNotAdvancedException(Map.of(
-                "policyId", policyId.toString(),
-                "policyVersion", currentVersion,
-                // Named so the dashboard can offer it rather than making the operator work it out.
-                "nextPolicyVersion", currentVersion + 1));
+        return new FuelPolicyVersionNotAdvancedException(
+                Map.of(
+                        "policyId",
+                        policyId.toString(),
+                        "policyVersion",
+                        currentVersion,
+                        // Named so the dashboard can offer it rather than making the operator work
+                        // it out.
+                        "nextPolicyVersion",
+                        currentVersion + 1));
     }
 }

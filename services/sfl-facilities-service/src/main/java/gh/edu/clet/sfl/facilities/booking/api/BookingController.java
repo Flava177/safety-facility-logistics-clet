@@ -10,11 +10,11 @@ import gh.edu.clet.sfl.facilities.booking.application.ports.BookingRepository;
 import gh.edu.clet.sfl.facilities.booking.domain.Booking;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingStatus;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.api.IdempotencyKey;
+import gh.edu.clet.sfl.facilities.shared.api.PageResponse;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.Clock;
@@ -52,15 +52,13 @@ public class BookingController {
     private final BookingApplicationService service;
     private final BookableResourceService resources;
     private final BookingSetupService setup;
-    private final FacilitiesActorResolver actorResolver;
     private final Clock clock;
 
     public BookingController(BookingApplicationService service, BookableResourceService resources,
-            BookingSetupService setup, FacilitiesActorResolver actorResolver, Clock clock) {
+            BookingSetupService setup, Clock clock) {
         this.service = service;
         this.resources = resources;
         this.setup = setup;
-        this.actorResolver = actorResolver;
         this.clock = clock;
     }
 
@@ -72,13 +70,14 @@ public class BookingController {
                     + "rather than the approver being handed a clash. Confirmed at once where the "
                     + "site's configuration requires no approval.")
     public ResponseEntity<ApiResponse<BookingResponses.BookingResponse>> request(
-            @Valid @RequestBody BookingRequests.RequestBooking request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.RequestBooking request, ActorContext actor,
+            SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         BookingResponses.BookingResponse result = BookingResponses.BookingResponse.from(
                 service.request(new BookingCommands.RequestBooking(request.roomId(), request.purpose(),
                         request.title(), request.description(), request.startsAt(), request.endsAt(),
                         request.setupMinutes(), request.teardownMinutes(), request.expectedAttendees(),
-                        request.requestedFor(), request.resources(), request.overrideReason(), actor(http),
-                        channel(http), idempotencyKey(http), request)),
+                        request.requestedFor(), request.resources(), request.overrideReason(), actor,
+                        channel, idempotencyKey, request)),
                 clock);
         return ResponseEntity.created(URI.create("/api/v1/facilities/bookings/" + result.id()))
                 .body(ApiResponse.ok(result));
@@ -89,9 +88,9 @@ public class BookingController {
             description = "SRS-SFL-S159-02. A rejection must carry a reason. An actor may not decide "
                     + "on their own request, administrators included.")
     public ApiResponse<BookingResponses.BookingResponse> decide(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.DecideBooking request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.DecideBooking request, ActorContext actor, SourceChannel channel) {
         return respond(service.decide(new BookingCommands.DecideBooking(bookingId, request.approve(),
-                request.reason(), request.expectedVersion(), actor(http), channel(http))));
+                request.reason(), request.expectedVersion(), actor, channel)));
     }
 
     @PatchMapping("/{bookingId}/schedule")
@@ -99,26 +98,30 @@ public class BookingController {
             description = "Its resource allocations move with it, in one transaction. Refused once "
                     + "the booking is in use: complete it and raise a new one.")
     public ApiResponse<BookingResponses.BookingResponse> reschedule(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.RescheduleBooking request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.RescheduleBooking request, ActorContext actor,
+            SourceChannel channel) {
         return respond(service.reschedule(new BookingCommands.RescheduleBooking(bookingId,
                 request.startsAt(), request.endsAt(), request.setupMinutes(), request.teardownMinutes(),
-                request.overrideReason(), request.expectedVersion(), actor(http), channel(http))));
+                request.overrideReason(), request.expectedVersion(), actor, channel)));
     }
 
     @PatchMapping("/{bookingId}/start")
     @Operation(summary = "Somebody has arrived and taken the room",
             description = "Also what stops the no-show sweep releasing the space.")
     public ApiResponse<BookingResponses.BookingResponse> start(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.TransitionBooking request, HttpServletRequest http) {
-        return transition(bookingId, BookingCommands.TransitionBooking.Transition.START, request, http);
+            @Valid @RequestBody BookingRequests.TransitionBooking request, ActorContext actor,
+            SourceChannel channel) {
+        return transition(bookingId, BookingCommands.TransitionBooking.Transition.START, request, actor, channel);
     }
 
     @PatchMapping("/{bookingId}/completion")
     @Operation(summary = "The booking ran and has finished",
             description = "Releases every resource it was holding.")
     public ApiResponse<BookingResponses.BookingResponse> complete(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.TransitionBooking request, HttpServletRequest http) {
-        return transition(bookingId, BookingCommands.TransitionBooking.Transition.COMPLETE, request, http);
+            @Valid @RequestBody BookingRequests.TransitionBooking request, ActorContext actor,
+            SourceChannel channel) {
+        return transition(bookingId, BookingCommands.TransitionBooking.Transition.COMPLETE, request, actor,
+                channel);
     }
 
     @PatchMapping("/{bookingId}/cancellation")
@@ -126,9 +129,9 @@ public class BookingController {
             description = "Cancelling your own needs only the permission to request; cancelling "
                     + "somebody else's needs FACILITIES_BOOKING_CANCEL.")
     public ApiResponse<BookingResponses.BookingResponse> cancel(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.CancelBooking request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.CancelBooking request, ActorContext actor, SourceChannel channel) {
         return respond(service.cancel(new BookingCommands.CancelBooking(bookingId, request.reason(),
-                request.expectedVersion(), actor(http), channel(http))));
+                request.expectedVersion(), actor, channel)));
     }
 
     // ---- queries ------------------------------------------------------------------------------
@@ -137,7 +140,7 @@ public class BookingController {
     @Operation(summary = "Search bookings",
             description = "An actor holding only the requester role sees the bookings they requested "
                     + "and no others, whatever the filters say.")
-    public ApiResponse<List<BookingResponses.BookingResponse>> search(
+    public ApiResponse<PageResponse<BookingResponses.BookingResponse>> search(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false) BookingStatus status,
@@ -147,28 +150,28 @@ public class BookingController {
             @RequestParam(required = false) Instant to,
             @RequestParam(required = false) Boolean liveOnly,
             @RequestParam(required = false) Boolean onReadinessHold,
-            @RequestParam(defaultValue = "100") int limit,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.search(new BookingRepository.BookingQuery(siteCode, roomId, status,
-                        purpose, requestedBy, from, to, liveOnly, onReadinessHold, limit), actor(http),
-                        channel(http)).stream()
-                .map(booking -> BookingResponses.BookingResponse.from(booking, clock))
-                .toList());
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(PageResponse.from(
+                service.search(new BookingRepository.BookingQuery(siteCode, roomId, status, purpose,
+                        requestedBy, from, to, liveOnly, onReadinessHold, page, size), actor, channel),
+                booking -> BookingResponses.BookingResponse.from(booking, clock)));
     }
 
     @GetMapping("/counts")
     @Operation(summary = "Booking counts for a site, for the dashboard")
     public ApiResponse<BookingResponses.BookingCountsResponse> counts(@RequestParam String siteCode,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(BookingResponses.BookingCountsResponse.from(
-                service.counts(siteCode, actor(http), channel(http))));
+                service.counts(siteCode, actor, channel)));
     }
 
     @GetMapping("/{bookingId}")
     @Operation(summary = "Read one booking")
     public ApiResponse<BookingResponses.BookingResponse> findById(@PathVariable UUID bookingId,
-            HttpServletRequest http) {
-        return respond(service.findById(bookingId, actor(http), channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        return respond(service.findById(bookingId, actor, channel));
     }
 
     @GetMapping("/{bookingId}/approvals")
@@ -176,8 +179,8 @@ public class BookingController {
             description = "Empty for a booking that needed none, which is what says so - there is no "
                     + "separate flag to fall out of step.")
     public ApiResponse<List<BookingResponses.ApprovalResponse>> approvals(@PathVariable UUID bookingId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.approvals(bookingId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.approvals(bookingId, actor, channel).stream()
                 .map(BookingResponses.ApprovalResponse::from)
                 .toList());
     }
@@ -187,8 +190,8 @@ public class BookingController {
     @GetMapping("/{bookingId}/resources")
     @Operation(summary = "Resources allocated to a booking")
     public ApiResponse<List<BookingResponses.AllocationResponse>> allocations(@PathVariable UUID bookingId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.allocations(bookingId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.allocations(bookingId, actor, channel).stream()
                 .map(BookingResponses.AllocationResponse::from)
                 .toList());
     }
@@ -198,9 +201,10 @@ public class BookingController {
             description = "Re-runs the availability arithmetic against everything else committed for "
                     + "the window.")
     public ApiResponse<List<BookingResponses.AllocationResponse>> allocate(@PathVariable UUID bookingId,
-            @Valid @RequestBody BookingRequests.AllocateResources request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.AllocateResources request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(resources.allocate(new BookingCommands.AllocateResources(bookingId,
-                        request.resources(), actor(http), channel(http))).stream()
+                        request.resources(), actor, channel)).stream()
                 .map(BookingResponses.AllocationResponse::from)
                 .toList());
     }
@@ -208,9 +212,8 @@ public class BookingController {
     @DeleteMapping("/{bookingId}/resources/{allocationId}")
     @Operation(summary = "Release one resource from a booking")
     public ApiResponse<Void> release(@PathVariable UUID bookingId, @PathVariable UUID allocationId,
-            HttpServletRequest http) {
-        resources.release(new BookingCommands.ReleaseAllocation(bookingId, allocationId, actor(http),
-                channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        resources.release(new BookingCommands.ReleaseAllocation(bookingId, allocationId, actor, channel));
         return ApiResponse.ok(null);
     }
 
@@ -219,8 +222,8 @@ public class BookingController {
     @GetMapping("/{bookingId}/setup-tasks")
     @Operation(summary = "Turnaround work for a booking")
     public ApiResponse<List<BookingResponses.SetupTaskResponse>> setupTasks(@PathVariable UUID bookingId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.setupTasks(bookingId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.setupTasks(bookingId, actor, channel).stream()
                 .map(task -> BookingResponses.SetupTaskResponse.from(task, clock))
                 .toList());
     }
@@ -231,13 +234,13 @@ public class BookingController {
                     + "not belong in the same queue as a failed generator.")
     public ApiResponse<List<BookingResponses.SetupTaskResponse>> createSetupTasks(
             @PathVariable UUID bookingId, @Valid @RequestBody BookingRequests.CreateSetupTasks request,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(setup.create(new BookingCommands.CreateSetupTasks(bookingId,
                         request.tasks().stream()
                                 .map(task -> new BookingCommands.CreateSetupTasks.NewSetupTask(
                                         task.description(), task.dueBy(), task.assignedTo()))
                                 .toList(),
-                        actor(http), channel(http))).stream()
+                        actor, channel)).stream()
                 .map(task -> BookingResponses.SetupTaskResponse.from(task, clock))
                 .toList());
     }
@@ -246,24 +249,12 @@ public class BookingController {
 
     private ApiResponse<BookingResponses.BookingResponse> transition(UUID bookingId,
             BookingCommands.TransitionBooking.Transition transition,
-            BookingRequests.TransitionBooking request, HttpServletRequest http) {
+            BookingRequests.TransitionBooking request, ActorContext actor, SourceChannel channel) {
         return respond(service.transition(new BookingCommands.TransitionBooking(bookingId, transition,
-                request.notes(), request.expectedVersion(), actor(http), channel(http))));
+                request.notes(), request.expectedVersion(), actor, channel)));
     }
 
     private ApiResponse<BookingResponses.BookingResponse> respond(Booking booking) {
         return ApiResponse.ok(BookingResponses.BookingResponse.from(booking, clock));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
-    }
-
-    private String idempotencyKey(HttpServletRequest http) {
-        return actorResolver.resolveIdempotencyKey(http);
     }
 }

@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.PreventiveMaintenanceSchedu
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderPart;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
@@ -37,8 +38,8 @@ public interface MaintenanceRepository {
     Optional<FacilityFault> findFaultByNumber(String faultNumber);
 
     /** Filtered search. Null filters are ignored; the caller applies its own site-scope filter. */
-    List<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status, Boolean openOnly,
-            String reportedBy, int limit);
+    RepositoryPage<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status,
+            Boolean openOnly, String reportedBy, int page, int size);
 
     /** Open faults whose SLA has passed, for the escalation evaluator. */
     List<FacilityFault> findOverdueFaults(Instant asOf, int limit);
@@ -54,8 +55,8 @@ public interface MaintenanceRepository {
 
     Optional<WorkOrder> findWorkOrderForFault(UUID faultId);
 
-    List<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId, WorkOrderStatus status,
-            String assignedTo, UUID vendorId, Boolean openOnly, int limit);
+    RepositoryPage<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId, WorkOrderStatus status,
+            String assignedTo, UUID vendorId, Boolean openOnly, int page, int size);
 
     List<WorkOrder> findOverdueWorkOrders(Instant asOf, int limit);
 

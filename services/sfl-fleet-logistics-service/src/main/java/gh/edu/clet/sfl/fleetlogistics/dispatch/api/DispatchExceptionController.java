@@ -25,6 +25,8 @@ public class DispatchExceptionController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists dispatch exception cases for a site, filtered by status/type/assignment")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch exception read permission for the site")
     @GetMapping
     public ApiResponse<DispatchPageResponse<DispatchExceptionCase>> list(@RequestParam String siteCode,
             @RequestParam(required = false) DispatchExceptionCase.Type type,
@@ -45,16 +47,27 @@ public class DispatchExceptionController {
     }
 
     /** The case's transition history: assignment, review, explanation, decision, escalation, closure. */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads the transition history of one exception case")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch exception read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No exception case exists with this id")
     @GetMapping("/{id}/history")
     public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one dispatch exception case by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch exception read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No exception case exists with this id")
     @GetMapping("/{id}")
     public ApiResponse<DispatchExceptionCase> detail(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.exceptionCase(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Applies a workflow transition (assign, escalate, close, etc.) to an exception case")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Unknown transition action")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the permission required for this transition")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No exception case exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the case's current status")
     @PostMapping("/{id}/{action:assign|reassign|review|request-explanation|explain|approve|reject|escalate|hold|resume|cancel|close|reopen}")
     public ApiResponse<DispatchExceptionCase> transition(@PathVariable UUID id, @PathVariable String action,
             @RequestBody(required = false) ActionRequest r, HttpServletRequest h) {

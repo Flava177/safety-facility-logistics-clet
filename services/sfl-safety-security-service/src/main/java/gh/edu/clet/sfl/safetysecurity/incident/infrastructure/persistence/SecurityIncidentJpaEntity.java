@@ -15,6 +15,7 @@ import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import java.time.Instant;
 import java.util.UUID;
 
@@ -25,6 +26,24 @@ import java.util.UUID;
  * <p>{@link RiskRating}'s two axes are flattened into two nullable columns rather than an embedded
  * type, since the rating does not exist until triage - both are null together or set together, which
  * a nullable embeddable cannot express as cleanly as two plain nullable enum columns can.
+ *
+ * <h2>{@code record_version} is a real JPA {@code @Version}, and {@code apply} never assigns it</h2>
+ *
+ * <p>{@link RecordMetadata#modifiedBy} still owns the business-meaningful number - every domain
+ * transition bumps it by exactly one, and that is the value {@link #toDomain()} returns and the value
+ * {@link RecordMetadata#requireVersion} checks a request's claimed version against. What changed is
+ * who writes the column: {@code apply} used to copy {@code metadata.version()} onto this field
+ * directly, which made the number Hibernate's flush would compute purely cosmetic - a plain
+ * {@code @Column} has no WHERE-clause guard, so two requests loading the same row and both calling
+ * {@code modifiedBy} would both write successfully, each overwriting the other's change with no error
+ * to either caller. {@code @Version} makes Hibernate include {@code AND record_version = <loaded
+ * value>} on the UPDATE and throw {@link org.springframework.dao.OptimisticLockingFailureException}
+ * (already handled by {@code IncidentApiExceptionHandler}, mapped to the same
+ * {@code INCIDENT_RECORD_VERSION_CONFLICT} the pre-check throws) the moment a second writer loses the
+ * race - a real compare-and-swap, not just an in-memory number. Because {@code modifiedBy} always
+ * computes loaded-version-plus-one and Hibernate's own flush computes the identical loaded-value-
+ * plus-one, the two numbers coincide in every normal path; the field simply stops being one this
+ * class can get out of sync with the database.
  */
 @Entity
 @Table(name = "security_incidents", schema = "safety_security")
@@ -83,6 +102,7 @@ public class SecurityIncidentJpaEntity {
     private String lastModifiedBy;
     @Column(name = "last_modified_at", nullable = false)
     private Instant lastModifiedAt;
+    @Version
     @Column(name = "record_version", nullable = false)
     private long recordVersion;
     @Enumerated(EnumType.STRING)
@@ -127,7 +147,9 @@ public class SecurityIncidentJpaEntity {
         createdAt = metadata.createdAt();
         lastModifiedBy = metadata.lastModifiedBy();
         lastModifiedAt = metadata.lastModifiedAt();
-        recordVersion = metadata.version();
+        // recordVersion is deliberately not assigned here - see the class Javadoc. It is a JPA
+        // @Version field; Hibernate owns it exclusively, and an application write to it would defeat
+        // the compare-and-swap this field exists to provide.
         sourceChannel = metadata.sourceChannel();
         correlationId = metadata.correlationId();
     }

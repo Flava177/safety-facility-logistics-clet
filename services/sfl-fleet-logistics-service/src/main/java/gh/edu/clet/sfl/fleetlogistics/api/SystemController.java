@@ -18,6 +18,7 @@ public class SystemController {
         this.applicationName = applicationName;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns basic service identity and platform metadata")
     @GetMapping("/info")
     public ApiResponse<Map<String, String>> info() {
         return ApiResponse.ok(Map.of(

@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSource;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessAssessment;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessBlocker;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessChecklist;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
@@ -84,13 +85,13 @@ public class InMemoryReadinessRepository implements ReadinessRepository {
     }
 
     @Override
-    public List<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int limit) {
-        return assessments.values().stream()
+    public RepositoryPage<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int page, int size) {
+        List<ReadinessAssessment> matching = assessments.values().stream()
                 .filter(assessment -> siteCode == null || assessment.siteCode().equals(upper(siteCode)))
                 .filter(assessment -> roomId == null || assessment.roomId().equals(roomId))
                 .sorted(Comparator.comparing(ReadinessAssessment::assessedAt).reversed())
-                .limit(Math.max(1, limit))
                 .toList();
+        return paginate(matching, page, Math.max(1, size));
     }
 
     @Override
@@ -122,15 +123,15 @@ public class InMemoryReadinessRepository implements ReadinessRepository {
     }
 
     @Override
-    public List<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity,
-            Boolean open, int limit) {
-        return blockers.values().stream()
+    public RepositoryPage<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity,
+            Boolean open, int page, int size) {
+        List<ReadinessBlocker> matching = blockers.values().stream()
                 .filter(blocker -> siteCode == null || blocker.siteCode().equals(upper(siteCode)))
                 .filter(blocker -> roomId == null || blocker.roomId().equals(roomId))
                 .filter(blocker -> severity == null || blocker.severity() == severity)
                 .filter(blocker -> open == null || blocker.isOpen() == open)
-                .limit(Math.max(1, limit))
                 .toList();
+        return paginate(matching, page, Math.max(1, size));
     }
 
     @Override
@@ -155,5 +156,11 @@ public class InMemoryReadinessRepository implements ReadinessRepository {
 
     private static String upper(String value) {
         return value == null ? null : value.strip().toUpperCase(Locale.ROOT);
+    }
+
+    private static <T> RepositoryPage<T> paginate(List<T> matching, int page, int size) {
+        int from = Math.min(page * size, matching.size());
+        int to = Math.min(from + size, matching.size());
+        return RepositoryPage.of(matching.subList(from, to), matching.size(), page, size);
     }
 }

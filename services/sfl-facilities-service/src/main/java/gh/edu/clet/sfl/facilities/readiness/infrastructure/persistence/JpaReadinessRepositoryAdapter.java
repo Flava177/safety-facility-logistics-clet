@@ -7,12 +7,18 @@ import gh.edu.clet.sfl.facilities.readiness.domain.BlockerSource;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessAssessment;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessBlocker;
 import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessChecklist;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -98,22 +104,38 @@ class JpaReadinessRepositoryAdapter implements ReadinessRepository {
 
     @Override
     public List<ReadinessAssessment> findAssessmentsForRoom(UUID roomId, int limit) {
-        return assessments.findByRoomIdOrderByAssessedAtDesc(roomId, PageRequest.of(0, clamp(limit))).stream()
-                .map(ReadinessAssessmentEntity::toDomain).toList();
+        List<UUID> ids = assessments.findIdsByRoomIdOrderByAssessedAtDesc(roomId, PageRequest.of(0, clamp(limit)));
+        return loadAssessmentsInOrder(ids);
     }
 
     @Override
-    public List<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int limit) {
-        return assessments.search(blank(siteCode) ? null : normalize(siteCode), roomId,
-                        PageRequest.of(0, clamp(limit))).stream()
-                .map(ReadinessAssessmentEntity::toDomain).toList();
+    public RepositoryPage<ReadinessAssessment> findAssessments(String siteCode, UUID roomId, int page, int size) {
+        Page<UUID> ids = assessments.searchIds(blank(siteCode) ? null : normalize(siteCode), roomId,
+                PageRequest.of(page, clampSize(size)));
+        return RepositoryPage.of(loadAssessmentsInOrder(ids.getContent()), ids.getTotalElements(),
+                ids.getNumber(), ids.getSize());
     }
 
     @Override
     public Optional<ReadinessAssessment> findLatestAssessment(UUID roomId) {
-        return assessments.findByRoomIdOrderByAssessedAtDesc(roomId, PageRequest.of(0, 1)).stream()
-                .findFirst()
-                .map(ReadinessAssessmentEntity::toDomain);
+        List<UUID> ids = assessments.findIdsByRoomIdOrderByAssessedAtDesc(roomId, PageRequest.of(0, 1));
+        return loadAssessmentsInOrder(ids).stream().findFirst();
+    }
+
+    /**
+     * Pages the ids first, then loads the page with items joined in - a JOIN FETCH straight on the
+     * paged query would make Hibernate page the collection join in memory instead of in SQL.
+     * {@code findByIdIn} does not preserve order, so the id order chosen by the page query is
+     * re-applied here.
+     */
+    private List<ReadinessAssessment> loadAssessmentsInOrder(List<UUID> orderedIds) {
+        if (orderedIds.isEmpty()) {
+            return List.of();
+        }
+        Map<UUID, ReadinessAssessment> byId = assessments.findByIdIn(orderedIds).stream()
+                .map(ReadinessAssessmentEntity::toDomain)
+                .collect(Collectors.toMap(ReadinessAssessment::id, Function.identity()));
+        return orderedIds.stream().map(byId::get).filter(Objects::nonNull).toList();
     }
 
     // ---- blockers -----------------------------------------------------------------------------
@@ -135,13 +157,14 @@ class JpaReadinessRepositoryAdapter implements ReadinessRepository {
     }
 
     @Override
-    public List<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity,
-            Boolean open, int limit) {
+    public RepositoryPage<ReadinessBlocker> findBlockers(String siteCode, UUID roomId, BlockerSeverity severity,
+            Boolean open, int page, int size) {
         // `open` is the API's word; the column stores its inverse.
         Boolean resolved = open == null ? null : !open;
-        return blockers.search(blank(siteCode) ? null : normalize(siteCode), roomId, severity, resolved,
-                        PageRequest.of(0, clamp(limit))).stream()
-                .map(ReadinessBlockerEntity::toDomain).toList();
+        Page<ReadinessBlockerEntity> result = blockers.search(blank(siteCode) ? null : normalize(siteCode),
+                roomId, severity, resolved, PageRequest.of(page, clampSize(size)));
+        return RepositoryPage.of(result.getContent().stream().map(ReadinessBlockerEntity::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     @Override
@@ -163,6 +186,10 @@ class JpaReadinessRepositoryAdapter implements ReadinessRepository {
 
     private static int clamp(int limit) {
         return limit <= 0 ? 50 : Math.min(limit, MAX_LIMIT);
+    }
+
+    private static int clampSize(int size) {
+        return Math.max(1, Math.min(size, MAX_LIMIT));
     }
 
     private static boolean blank(String value) {

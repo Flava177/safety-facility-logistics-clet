@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.e2e.SafetySecurityPostgresSupport;
+import gh.edu.clet.sfl.safetysecurity.emergency.application.port.EmergencyRepository.Paging;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.port.VisitorRepository;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.service.VisitorCheckInOutService;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.service.VisitorDecisionService;
@@ -145,5 +146,18 @@ class VisitorMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSuppor
                 new VisitorRepository.VisitQuery(SITE, VisitStatus.PRE_REGISTERED, hostId, null, null, 50),
                 actor("soc-e2e", SflRole.SOC_OPERATOR));
         assertThat(found).extracting(VisitorVisit::id).contains(registered.id());
+    }
+
+    @Test
+    void searchPage_reports_a_total_count_and_page_size_a_bare_list_never_could() {
+        String hostId = "host-" + UUID.randomUUID();
+        VisitorVisit registered = preRegister(VisitPurpose.EVENT, hostId);
+
+        var page = registration.searchPage(SITE, VisitStatus.PRE_REGISTERED, hostId, null, null,
+                new Paging(0, 25, null), actor("soc-e2e", SflRole.SOC_OPERATOR));
+        assertThat(page.content()).extracting(VisitorVisit::id).contains(registered.id());
+        assertThat(page.size()).isEqualTo(25);
+        assertThat(page.page()).isZero();
+        assertThat(page.totalElements()).isGreaterThanOrEqualTo(1L);
     }
 }

@@ -91,6 +91,24 @@ public class FleetIntegrationApplicationService {
         return process(saved, command.payload(), command.actor());
     }
 
+    /**
+     * Verifies the transport signature and site allowlist only - not schema, idempotency, or inbox
+     * persistence.
+     *
+     * <p>For a caller that needs to prove it holds the shared secret without going through the full
+     * inbound-message pipeline: {@code DispatchIntegrationController#carrierStatus} is the first of
+     * these. That endpoint has no inbox entry to persist against - {@code RecordedCarrierStatusAdapter}
+     * only logs today - so wiring it through {@link #receive} would mean inventing inbox rows for
+     * writes that go nowhere. Reusing {@link #requireAllowlisted} and {@link #requireValidSignature}
+     * closes the actual gap (an unsigned or forged request being accepted) without that.
+     */
+    public void verifySignature(String sourceSystem, String siteCode, Instant signedAt, String rawPayload,
+            String signature) {
+        String source = normaliseSource(sourceSystem);
+        requireAllowlisted(source, siteCode);
+        requireValidSignature(source, siteCode, signedAt, rawPayload, signature);
+    }
+
     @Transactional(readOnly = true)
     public IntegrationHealth health(ActorContext actor) {
         accessPolicy.requirePermission(actor, SflPermission.FLEET_INTEGRATION_HEALTH_READ, "IntegrationHealth");

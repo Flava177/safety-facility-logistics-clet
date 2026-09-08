@@ -4,11 +4,9 @@ import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.dashboard.application.FacilityDashboardService;
 import gh.edu.clet.sfl.facilities.dashboard.domain.FacilityDashboard;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -28,12 +26,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class FacilityDashboardController {
 
     private final FacilityDashboardService service;
-    private final FacilitiesActorResolver actorResolver;
 
-    public FacilityDashboardController(FacilityDashboardService service,
-            FacilitiesActorResolver actorResolver) {
+    public FacilityDashboardController(FacilityDashboardService service) {
         this.service = service;
-        this.actorResolver = actorResolver;
     }
 
     @GetMapping
@@ -41,36 +36,28 @@ public class FacilityDashboardController {
             description = "SRS-SFL-S152-05. Computed live from the source records, with a stale-data "
                     + "warning when readiness is older than the configured freshness threshold.")
     public ApiResponse<FacilityDashboard> dashboard(@RequestParam(required = false) String siteCode,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.dashboard(siteCode, actor(http), channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.dashboard(siteCode, actor, channel));
     }
 
     @GetMapping("/blockers")
     @Operation(summary = "Open readiness blockers behind the dashboard counts, worst and oldest first")
     public ApiResponse<List<FacilityDashboard.ExceptionRow>> blockers(@RequestParam(required = false) String siteCode,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.blockerRows(siteCode, actor(http), channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.blockerRows(siteCode, actor, channel));
     }
 
     @GetMapping("/unavailable")
     @Operation(summary = "Bookable spaces that are not currently available")
     public ApiResponse<List<FacilityDashboard.ExceptionRow>> unavailable(@RequestParam(required = false) String siteCode,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.unavailableRows(siteCode, actor(http), channel(http)));
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.unavailableRows(siteCode, actor, channel));
     }
 
     @GetMapping("/stale")
     @Operation(summary = "Spaces whose readiness is older than the configured threshold, or never assessed")
     public ApiResponse<List<FacilityDashboard.ExceptionRow>> stale(@RequestParam(required = false) String siteCode,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.staleRows(siteCode, actor(http), channel(http)));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.staleRows(siteCode, actor, channel));
     }
 }

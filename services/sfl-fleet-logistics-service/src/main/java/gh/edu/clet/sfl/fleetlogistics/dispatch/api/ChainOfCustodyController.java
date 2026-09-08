@@ -30,6 +30,10 @@ public class ChainOfCustodyController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Records a chain-of-custody handover for a dispatch")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch custody permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @PostMapping
     public ApiResponse<CustodyHandover> record(@Valid @RequestBody RecordHandoverRequest r, HttpServletRequest h) {
         EvidenceMeta evidence = r.evidenceStorageReference() == null || r.evidenceStorageReference().isBlank() ? null
@@ -48,6 +52,9 @@ public class ChainOfCustodyController {
       * like "every handover this custodian touched last week" unanswerable without knowing each
       * manifest in advance.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists custody handovers, either for one dispatch or site-wide")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Neither dispatchId nor siteCode was supplied")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch custody read permission")
     @GetMapping
     public ApiResponse<?> handovers(@RequestParam(required = false) UUID dispatchId,
             @RequestParam(required = false) String siteCode,
@@ -68,6 +75,9 @@ public class ChainOfCustodyController {
         return ApiResponse.ok(service.handovers(dispatchId, actor));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reports unresolved custody gaps for a dispatch")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch custody read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @GetMapping("/{dispatchId}/gaps")
     public ApiResponse<DispatchCustodyService.CustodyGaps> gaps(@PathVariable UUID dispatchId, HttpServletRequest h) {
         return ApiResponse.ok(service.gaps(dispatchId, actors.resolve(h)));

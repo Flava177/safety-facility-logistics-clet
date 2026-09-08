@@ -26,6 +26,9 @@ public class DispatchScanController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Imports a CSV of scanned codes, classifying each against the manifest")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "The file is missing a header/row, or exceeds the bulk-import size limit")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks DISPATCH_INTEGRATION_INGEST for the site")
     @PostMapping(value = "/imports", consumes = "multipart/form-data")
     public ApiResponse<ScanImportBatch> importCsv(@RequestParam String siteCode, @RequestParam String sourceSystem,
             @RequestParam(required = false) String batchReference, @RequestParam(required = false) UUID dispatchId,
@@ -35,6 +38,8 @@ public class DispatchScanController {
     }
 
     /** The site's scan batches, newest first. Closes gap 3. */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists scan import batches for a site, newest first")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission for the site")
     @GetMapping("/imports")
     public ApiResponse<DispatchPageResponse<ScanImportBatch>> batches(@RequestParam String siteCode,
             @RequestParam(required = false) String sourceSystem,
@@ -46,11 +51,17 @@ public class DispatchScanController {
                 DispatchPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one scan import batch by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No scan import batch exists with this id")
     @GetMapping("/imports/{id}")
     public ApiResponse<ScanImportBatch> batch(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.batch(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists a scan import batch's individual row outcomes")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No scan import batch exists with this id")
     @GetMapping("/imports/{id}/rows")
     public ApiResponse<List<ScanImportRow>> rows(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.rows(id, actors.resolve(h)));

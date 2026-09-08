@@ -523,7 +523,7 @@ class S159MandatoryScenariosTest {
             book(requester, hall, BookingPurpose.LECTURE, TWELVE, ONE, Map.of(chairs.id(), 10));
             book(otherRequester, meetingRoom, BookingPurpose.MEETING, NINE, TEN, Map.of(chairs.id(), 10));
 
-            assertThat(setup.queue("MAIN", ONE, 50, manager, SourceChannel.WEB))
+            assertThat(setup.queue("MAIN", ONE, 0, 50, manager, SourceChannel.WEB).items())
                     .extracting(SetupTask::dueBy)
                     .containsExactly(NINE, TWELVE);
         }
@@ -773,7 +773,7 @@ class S159MandatoryScenariosTest {
             Booking mine = book(requester, hall, BookingPurpose.LECTURE, NINE, TEN);
             book(otherRequester, meetingRoom, BookingPurpose.MEETING, NINE, TEN);
 
-            assertThat(bookings.search(query("MAIN"), requester, SourceChannel.WEB))
+            assertThat(bookings.search(query("MAIN"), requester, SourceChannel.WEB).items())
                     .extracting(Booking::id)
                     .containsExactly(mine.id());
         }
@@ -793,7 +793,7 @@ class S159MandatoryScenariosTest {
             book(requester, hall, BookingPurpose.LECTURE, NINE, TEN);
             book(otherRequester, meetingRoom, BookingPurpose.MEETING, NINE, TEN);
 
-            assertThat(bookings.search(query("MAIN"), manager, SourceChannel.WEB)).hasSize(2);
+            assertThat(bookings.search(query("MAIN"), manager, SourceChannel.WEB).items()).hasSize(2);
         }
 
         @Test
@@ -821,8 +821,8 @@ class S159MandatoryScenariosTest {
             ActorContext kumasi = TestDoubles.actor("kumasi.manager", Set.of(SflRole.FACILITIES_MANAGER),
                     "KUMASI");
 
-            assertThat(bookings.search(query(null), kumasi, SourceChannel.WEB)).isEmpty();
-            assertThat(bookings.search(query(null), manager, SourceChannel.WEB)).hasSize(1);
+            assertThat(bookings.search(query(null), kumasi, SourceChannel.WEB).items()).isEmpty();
+            assertThat(bookings.search(query(null), manager, SourceChannel.WEB).items()).hasSize(1);
         }
 
         @Test
@@ -951,7 +951,7 @@ class S159MandatoryScenariosTest {
 
     private static BookingRepository.BookingQuery query(String siteCode) {
         return new BookingRepository.BookingQuery(siteCode, null, null, null, null, null, null, null, null,
-                50);
+                0, 50);
     }
 
     /** Applies a readiness outcome directly, standing in for an assessment the readiness module made. */

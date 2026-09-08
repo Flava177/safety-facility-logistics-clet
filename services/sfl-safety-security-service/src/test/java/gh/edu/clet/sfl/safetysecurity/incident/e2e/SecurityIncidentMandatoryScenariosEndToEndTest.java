@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.e2e.SafetySecurityPostgresSupport;
+import gh.edu.clet.sfl.safetysecurity.emergency.application.port.EmergencyRepository.Paging;
 import gh.edu.clet.sfl.safetysecurity.incident.application.port.SecurityIncidentRepository;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.CorrectiveActionService;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentClosureService;
@@ -153,6 +154,23 @@ class SecurityIncidentMandatoryScenariosEndToEndTest extends SafetySecurityPostg
                 new SecurityIncidentRepository.IncidentQuery(SITE, IncidentStatus.TRIAGE, null, 50),
                 actor("hse-e2e", SflRole.HSE_MANAGER));
         assertThat(found).extracting(SecurityIncident::id).contains(reported.id());
+    }
+
+    @Test
+    void searchPage_reports_a_total_count_and_page_size_a_bare_list_never_could() {
+        SecurityIncident reported = report(true);
+
+        var firstPage = reporting.searchPage(SITE, IncidentStatus.TRIAGE, null, new Paging(0, 1, null),
+                actor("hse-e2e", SflRole.HSE_MANAGER));
+        assertThat(firstPage.content()).hasSize(1);
+        assertThat(firstPage.size()).isEqualTo(1);
+        assertThat(firstPage.page()).isZero();
+        assertThat(firstPage.totalElements()).isGreaterThanOrEqualTo(1L);
+        assertThat(firstPage.totalPages()).isGreaterThanOrEqualTo(firstPage.content().size());
+
+        var allOfThem = reporting.searchPage(SITE, IncidentStatus.TRIAGE, null, new Paging(0, 50, null),
+                actor("hse-e2e", SflRole.HSE_MANAGER));
+        assertThat(allOfThem.content()).extracting(SecurityIncident::id).contains(reported.id());
     }
 
     @Test

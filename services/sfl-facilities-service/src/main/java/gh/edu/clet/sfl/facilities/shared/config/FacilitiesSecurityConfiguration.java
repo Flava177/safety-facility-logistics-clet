@@ -47,7 +47,6 @@ class FacilitiesSecurityConfiguration {
                         .requestMatchers("/", "/index.html", "/actuator/health/**", "/api/v1/system/info").permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakConverter())))
-                .httpBasic(Customizer.withDefaults())
                 .build();
     }
 

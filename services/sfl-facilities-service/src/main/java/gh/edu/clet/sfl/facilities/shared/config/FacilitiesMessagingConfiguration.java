@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.facilities.shared.config;
 
 import gh.edu.clet.sfl.facilities.shared.infrastructure.messaging.FacilitiesEventTransport;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.messaging.FacilitiesEventTransports;
+import java.time.Duration;
 import java.util.Locale;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.ObjectProvider;
@@ -25,6 +26,7 @@ class FacilitiesMessagingConfiguration {
     FacilitiesEventTransport facilitiesEventTransport(
             @Value("${sfl.facilities.messaging.transport:local}") String transport,
             @Value("${sfl.facilities.messaging.exchange:sfl.events}") String exchange,
+            @Value("${sfl.facilities.messaging.confirm-timeout:PT5S}") Duration confirmTimeout,
             ObjectProvider<RabbitTemplate> rabbitTemplate) {
         String selected = transport == null ? "" : transport.strip().toLowerCase(Locale.ROOT);
         return switch (selected) {
@@ -35,7 +37,7 @@ class FacilitiesMessagingConfiguration {
                             "sfl.facilities.messaging.transport=rabbitmq but no RabbitTemplate is available. "
                                     + "Configure spring.rabbitmq.* or select the local transport deliberately.");
                 }
-                yield FacilitiesEventTransports.rabbitMq(template, exchange);
+                yield FacilitiesEventTransports.rabbitMq(template, exchange, confirmTimeout);
             }
             case "local" -> FacilitiesEventTransports.local();
             default -> throw new IllegalStateException("Unknown sfl.facilities.messaging.transport '" + transport

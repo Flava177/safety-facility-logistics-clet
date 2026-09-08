@@ -1,7 +1,7 @@
 package gh.edu.clet.sfl.safetysecurity.incident.api;
 
 import gh.edu.clet.sfl.common.api.ApiResponse;
-import gh.edu.clet.sfl.safetysecurity.incident.application.port.SecurityIncidentRepository;
+import gh.edu.clet.sfl.safetysecurity.emergency.api.EmergencyPageResponse;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.CorrectiveActionService;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentClosureService;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentInvestigationService;
@@ -27,7 +27,6 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.LocalDate;
-import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -168,13 +167,17 @@ public class SecurityIncidentController {
     }
 
     @GetMapping
-    @Operation(summary = "Search incidents")
-    public ApiResponse<List<SecurityIncident>> search(@RequestParam(required = false) String siteCode,
-            @RequestParam(required = false) IncidentStatus status, @RequestParam(required = false) Severity severity,
-            @RequestParam(defaultValue = "100") int limit, HttpServletRequest http) {
-        return ApiResponse.ok(reporting.search(
-                new SecurityIncidentRepository.IncidentQuery(siteCode, status, severity, limit),
-                actors.resolve(http)));
+    @Operation(summary = "Search incidents",
+            description = "Paginated the same way every other SFL collection is - see EmergencyPageResponse. "
+                    + "sort accepts \"createdAt\" or \"createdAt,desc\" (the default); any other value falls "
+                    + "back to the default rather than being rejected.")
+    public ApiResponse<EmergencyPageResponse<SecurityIncident>> search(
+            @RequestParam(required = false) String siteCode, @RequestParam(required = false) IncidentStatus status,
+            @RequestParam(required = false) Severity severity, @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "25") int size, @RequestParam(required = false) String sort,
+            HttpServletRequest http) {
+        return ApiResponse.ok(EmergencyPageResponse.of(reporting.searchPage(siteCode, status, severity,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(http))));
     }
 
     @GetMapping("/{incidentId}")

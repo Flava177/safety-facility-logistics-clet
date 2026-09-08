@@ -9,13 +9,13 @@ import java.util.UUID;
 /**
  * A CSV import, file-level, with its retained row outcomes.
  *
- * <p>Written on every upload since S168 shipped and, until now, readable only in the response to the
- * upload itself - so an operator who navigated away lost the record of which rows were rejected and
- * why. The rows are the point: a batch is never rejected as a whole for one bad row, and
- * {@code rejectedRows} is a count of individual failures each carrying its own reason.
+ * <p>Written on every upload since S168 shipped and, until now, readable only in the response to
+ * the upload itself - so an operator who navigated away lost the record of which rows were rejected
+ * and why. The rows are the point: a batch is never rejected as a whole for one bad row, and {@code
+ * rejectedRows} is a count of individual failures each carrying its own reason.
  *
- * <p>{@code fileHash} is what makes a re-import detectable, and it is why
- * {@code uq_fuel_import_file} exists on {@code (site_code, source_system, file_hash)}.
+ * <p>{@code fileHash} is what makes a re-import detectable, and it is why {@code
+ * uq_fuel_import_file} exists on {@code (site_code, source_system, file_hash)}.
  */
 public record FuelImportBatch(
         UUID id,
@@ -33,7 +33,10 @@ public record FuelImportBatch(
         /** Empty on a list read; populated on a detail read. */
         List<FuelImportRow> rows) {
 
-    public enum Status { COMPLETED, COMPLETED_WITH_ERRORS }
+    public enum Status {
+        COMPLETED,
+        COMPLETED_WITH_ERRORS
+    }
 
     public FuelImportBatch {
         Objects.requireNonNull(id, "id is required");

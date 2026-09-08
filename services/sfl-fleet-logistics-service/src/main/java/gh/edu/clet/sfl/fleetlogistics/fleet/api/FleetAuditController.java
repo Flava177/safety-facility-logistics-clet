@@ -41,6 +41,8 @@ class FleetAuditController {
         this.actorResolver = actorResolver;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches the audit trail, narrowed to the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks FLEET_AUDIT_READ, or has no site scope assigned")
     @GetMapping("/records")
     ApiResponse<List<AuditEvent>> search(
             @RequestParam(required = false) String resourceType,
@@ -60,6 +62,8 @@ class FleetAuditController {
                 : List.copyOf(scope.sites()), resourceType, resourceId, actorId, action, from, to, page, size)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Verifies the integrity of the audit hash chain")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required audit permission")
     @GetMapping("/chain/verification")
     ApiResponse<AuditChainVerificationResponse> verify(HttpServletRequest httpRequest) {
         return ApiResponse.ok(mapper.toResponse(evidenceService.verifyAuditChain(actorResolver.resolve(httpRequest))));

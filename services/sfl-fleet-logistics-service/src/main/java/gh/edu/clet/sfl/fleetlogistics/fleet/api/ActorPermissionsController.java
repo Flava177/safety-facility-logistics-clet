@@ -51,6 +51,7 @@ public class ActorPermissionsController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Returns every permission granted to the calling actor across fleet, fuel, dispatch and assets")
     @GetMapping("/permissions")
     public ApiResponse<List<String>> permissions(HttpServletRequest request) {
         ActorContext actor = actors.resolve(request);

@@ -215,8 +215,8 @@ class S153MandatoryScenariosTest {
             ActorContext kumasi = TestDoubles.actor("kumasi.manager", Set.of(SflRole.FACILITIES_MANAGER),
                     "KUMASI");
 
-            assertThat(faults.search(null, null, null, null, 50, kumasi, SourceChannel.WEB)).isEmpty();
-            assertThat(faults.search(null, null, null, null, 50, manager, SourceChannel.WEB)).hasSize(1);
+            assertThat(faults.search(null, null, null, null, 0, 50, kumasi, SourceChannel.WEB).items()).isEmpty();
+            assertThat(faults.search(null, null, null, null, 0, 50, manager, SourceChannel.WEB).items()).hasSize(1);
         }
 
         @Test
@@ -226,7 +226,7 @@ class S153MandatoryScenariosTest {
                     SourceChannel.WEB, null, null));
             report(FaultPriority.LOW);
 
-            assertThat(faults.search(null, null, null, null, 50, requester, SourceChannel.WEB))
+            assertThat(faults.search(null, null, null, null, 0, 50, requester, SourceChannel.WEB).items())
                     .extracting(FacilityFault::id)
                     .containsExactly(mine.id());
         }
@@ -897,8 +897,8 @@ class S153MandatoryScenariosTest {
                     "acme.tech");
             assign(createWorkOrder(triage(report(FaultPriority.LOW), FaultPriority.LOW)), "other.tech");
 
-            assertThat(workOrders.search(null, null, null, null, null, null, null, 50, vendorTechnician,
-                    SourceChannel.MOBILE))
+            assertThat(workOrders.search(null, null, null, null, null, null, null, 0, 50, vendorTechnician,
+                    SourceChannel.MOBILE).items())
                     .extracting(WorkOrder::id)
                     .containsExactly(mine.id());
         }
@@ -929,8 +929,8 @@ class S153MandatoryScenariosTest {
             assign(createWorkOrder(triage(report(FaultPriority.LOW), FaultPriority.LOW)), "acme.tech");
             assign(createWorkOrder(triage(report(FaultPriority.LOW), FaultPriority.LOW)), "other.tech");
 
-            assertThat(workOrders.search(null, null, null, null, null, null, null, 50, technician,
-                    SourceChannel.WEB)).hasSize(2);
+            assertThat(workOrders.search(null, null, null, null, null, null, null, 0, 50, technician,
+                    SourceChannel.WEB).items()).hasSize(2);
         }
 
         @Test
