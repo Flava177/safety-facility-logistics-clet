@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.BookableResource;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -16,7 +17,7 @@ import java.util.UUID;
 /** JPA mapping for {@link BookableResource}. Column names match V10 exactly. */
 @Entity
 @Table(name = "bookable_resources", schema = "facilities")
-public class BookableResourceRecord {
+public class BookableResourceRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -65,6 +66,6 @@ public class BookableResourceRecord {
 
     public BookableResource toDomain() {
         return new BookableResource(id, siteCode, resourceCode, name, category, description, quantity,
-                homeRoomId, assetId, requiresSetup, lifecycleStatus, metadata.toDomain());
+                homeRoomId, assetId, requiresSetup, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }

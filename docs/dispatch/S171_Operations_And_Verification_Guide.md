@@ -20,8 +20,11 @@ docker run -d --name sfl-fleet-vehicle-db -p 5443:5432 \
 
 ```bash
 cd services
-SFL_SECURITY_ENABLED=false mvn -pl sfl-fleet-logistics-service -am spring-boot:run
+SFL_SECURITY_ENABLED=false SPRING_PROFILES_ACTIVE=local mvn -pl sfl-fleet-logistics-service -am spring-boot:run
 ```
+
+Both variables are required together - the open filter chain is gated behind
+`@Profile({"test","local","dev"})`, so `SFL_SECURITY_ENABLED=false` alone no longer opens it.
 
 Flyway applies `V16`–`V20` on top of the S166 (`V1`–`V9_1`) and S168 (`V10`–`V15`) migrations. With
 `SFL_SECURITY_ENABLED=false` the service uses the `X-SFL-*` development actor headers; production uses the

@@ -60,7 +60,9 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
 
     @Override
     public FacilityFault saveFault(FacilityFault fault) {
-        FacilityFaultRecord record = faults.findById(fault.id()).orElseGet(FacilityFaultRecord::new);
+        Optional<FacilityFaultRecord> existing = faults.findById(fault.id());
+        existing.ifPresent(record -> record.requireNotStale(fault.metadata().version()));
+        FacilityFaultRecord record = existing.orElseGet(FacilityFaultRecord::new);
         record.apply(fault);
         return faults.save(record).toDomain();
     }
@@ -98,7 +100,9 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
 
     @Override
     public WorkOrder saveWorkOrder(WorkOrder workOrder) {
-        WorkOrderRecord record = workOrders.findById(workOrder.id()).orElseGet(WorkOrderRecord::new);
+        Optional<WorkOrderRecord> existing = workOrders.findById(workOrder.id());
+        existing.ifPresent(record -> record.requireNotStale(workOrder.metadata().version()));
+        WorkOrderRecord record = existing.orElseGet(WorkOrderRecord::new);
         record.apply(workOrder);
         return workOrders.save(record).toDomain();
     }
@@ -193,8 +197,9 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
 
     @Override
     public MaintenanceVendor saveVendor(MaintenanceVendor vendor) {
-        MaintenanceVendorRecord record = vendors.findById(vendor.id())
-                .orElseGet(MaintenanceVendorRecord::new);
+        Optional<MaintenanceVendorRecord> existing = vendors.findById(vendor.id());
+        existing.ifPresent(record -> record.requireNotStale(vendor.metadata().version()));
+        MaintenanceVendorRecord record = existing.orElseGet(MaintenanceVendorRecord::new);
         record.apply(vendor);
         return vendors.save(record).toDomain();
     }
@@ -219,8 +224,9 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
 
     @Override
     public PreventiveMaintenanceSchedule saveSchedule(PreventiveMaintenanceSchedule schedule) {
-        PreventiveScheduleRecord record = schedules.findById(schedule.id())
-                .orElseGet(PreventiveScheduleRecord::new);
+        Optional<PreventiveScheduleRecord> existing = schedules.findById(schedule.id());
+        existing.ifPresent(record -> record.requireNotStale(schedule.metadata().version()));
+        PreventiveScheduleRecord record = existing.orElseGet(PreventiveScheduleRecord::new);
         record.apply(schedule);
         return schedules.save(record).toDomain();
     }

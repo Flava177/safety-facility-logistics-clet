@@ -54,6 +54,7 @@ Write-Host "==> Starting the Fleet service on http://localhost:8093" -Foreground
 $backend = @"
 . '$repoRoot\use-sfl-env.ps1'
 `$env:SFL_SECURITY_ENABLED = 'false'
+`$env:SPRING_PROFILES_ACTIVE = 'local'
 Set-Location '$repoRoot\services'
 & '$repoRoot\mvnw.cmd' -pl sfl-fleet-logistics-service spring-boot:run
 "@

@@ -53,37 +53,86 @@ class JpaFacilitiesRepositoryAdapter implements FacilitiesRepository {
 
     @Override
     public Site saveSite(Site site) {
-        return sites.save(SiteRecord.from(site)).toDomain();
+        SiteRecord record = sites.findById(site.id())
+                .map(existing -> {
+                    existing.requireNotStale(site.metadata().version());
+                    existing.apply(site);
+                    return existing;
+                })
+                .orElseGet(() -> SiteRecord.from(site));
+        return sites.save(record).toDomain();
     }
 
     @Override
     public Building saveBuilding(Building building) {
-        return buildings.save(BuildingRecord.from(building)).toDomain();
+        BuildingRecord record = buildings.findById(building.id())
+                .map(existing -> {
+                    existing.requireNotStale(building.metadata().version());
+                    existing.apply(building);
+                    return existing;
+                })
+                .orElseGet(() -> BuildingRecord.from(building));
+        return buildings.save(record).toDomain();
     }
 
     @Override
     public FacilityFloor saveFloor(FacilityFloor floor) {
-        return floors.save(FacilityFloorRecord.from(floor)).toDomain();
+        FacilityFloorRecord record = floors.findById(floor.id())
+                .map(existing -> {
+                    existing.requireNotStale(floor.metadata().version());
+                    existing.apply(floor);
+                    return existing;
+                })
+                .orElseGet(() -> FacilityFloorRecord.from(floor));
+        return floors.save(record).toDomain();
     }
 
     @Override
     public FacilityRoom saveRoom(FacilityRoom room) {
-        return rooms.save(FacilityRoomRecord.from(room)).toDomain();
+        FacilityRoomRecord record = rooms.findById(room.id())
+                .map(existing -> {
+                    existing.requireNotStale(room.metadata().version());
+                    existing.apply(room);
+                    return existing;
+                })
+                .orElseGet(() -> FacilityRoomRecord.from(room));
+        return rooms.save(record).toDomain();
     }
 
     @Override
     public Zone saveZone(Zone zone) {
-        return zones.save(ZoneRecord.from(zone)).toDomain();
+        ZoneRecord record = zones.findById(zone.id())
+                .map(existing -> {
+                    existing.requireNotStale(zone.metadata().version());
+                    existing.apply(zone);
+                    return existing;
+                })
+                .orElseGet(() -> ZoneRecord.from(zone));
+        return zones.save(record).toDomain();
     }
 
     @Override
     public DeviceReference saveDeviceReference(DeviceReference deviceReference) {
-        return deviceReferences.save(DeviceReferenceRecord.from(deviceReference)).toDomain();
+        DeviceReferenceRecord record = deviceReferences.findById(deviceReference.id())
+                .map(existing -> {
+                    existing.requireNotStale(deviceReference.metadata().version());
+                    existing.apply(deviceReference);
+                    return existing;
+                })
+                .orElseGet(() -> DeviceReferenceRecord.from(deviceReference));
+        return deviceReferences.save(record).toDomain();
     }
 
     @Override
     public FacilityAsset saveAsset(FacilityAsset asset) {
-        return assets.save(FacilityAssetRecord.from(asset)).toDomain();
+        FacilityAssetRecord record = assets.findById(asset.id())
+                .map(existing -> {
+                    existing.requireNotStale(asset.metadata().version());
+                    existing.apply(asset);
+                    return existing;
+                })
+                .orElseGet(() -> FacilityAssetRecord.from(asset));
+        return assets.save(record).toDomain();
     }
 
     @Override

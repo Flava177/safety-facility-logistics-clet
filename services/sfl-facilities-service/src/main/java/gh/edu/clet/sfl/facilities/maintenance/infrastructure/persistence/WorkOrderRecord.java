@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderType;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ import java.util.UUID;
 /** JPA mapping for {@link WorkOrder}. Column names match V9 exactly. */
 @Entity
 @Table(name = "work_orders", schema = "facilities")
-public class WorkOrderRecord {
+public class WorkOrderRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -153,7 +154,7 @@ public class WorkOrderRecord {
                 vendorId, assignedAt, startedAt, holdReason, heldAt, totalHeldSeconds, slaDueAt,
                 responseDueAt, responseEscalatedAt,
                 escalationLevel, escalatedAt, evidenceRequired, completedAt, completionNotes, closureNotes,
-                closedBy, closedAt, cancellationReason, lifecycleStatus, metadata.toDomain());
+                closedBy, closedAt, cancellationReason, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 
     public UUID getId() {

@@ -11,15 +11,15 @@ import java.time.Instant;
 /**
  * The system-managed fields, mapped once and embedded in every estate entity.
  *
- * <p>Seven columns that SRS-SFL-S152-01 requires on every operational record. Declaring them in one
- * {@code @Embeddable} rather than copying them into seven entities is what stops the set drifting -
+ * <p>Six of the seven columns SRS-SFL-S152-01 requires on every operational record. Declaring them in
+ * one {@code @Embeddable} rather than copying them into every entity is what stops the set drifting -
  * an entity that forgot {@code correlation_id} would produce audit records nobody can trace, and the
  * omission would be invisible in review.
  *
- * <p>The column names match V6 exactly. {@code record_version} rather than {@code version} because
- * {@code version} is a reserved-ish word in enough tooling to be worth avoiding, and because this is
- * an application-managed optimistic lock rather than a JPA {@code @Version} - the domain increments
- * it through {@link RecordMetadata#modifiedBy}, so a change cannot happen without the version moving.
+ * <p>The seventh, {@code record_version}, is not here - JPA does not allow {@code @Version} on an
+ * embeddable's property, so it lives on {@link VersionedRecord}, a mapped superclass every entity that
+ * needs a real optimistic lock extends instead. This class stays the source of the other six; the
+ * split is a JPA mapping restriction, not a change in what SRS-SFL-S152-01 asks for.
  */
 @Embeddable
 public class RecordMetadataEmbeddable {
@@ -32,8 +32,6 @@ public class RecordMetadataEmbeddable {
     private String lastModifiedBy;
     @Column(name = "last_modified_at", nullable = false)
     private Instant lastModifiedAt;
-    @Column(name = "record_version", nullable = false)
-    private long recordVersion;
     @Enumerated(EnumType.STRING)
     @Column(name = "source_channel", nullable = false, length = 40)
     private SourceChannel sourceChannel;
@@ -49,15 +47,15 @@ public class RecordMetadataEmbeddable {
         embeddable.createdAt = metadata.createdAt();
         embeddable.lastModifiedBy = metadata.lastModifiedBy();
         embeddable.lastModifiedAt = metadata.lastModifiedAt();
-        embeddable.recordVersion = metadata.version();
         embeddable.sourceChannel = metadata.sourceChannel();
         embeddable.correlationId = metadata.correlationId();
         return embeddable;
     }
 
-    public RecordMetadata toDomain() {
-        return new RecordMetadata(createdBy, createdAt, lastModifiedBy, lastModifiedAt, recordVersion,
-                sourceChannel, correlationId);
+    /** {@code version} comes from the owning entity's {@link VersionedRecord#recordVersion()}. */
+    public RecordMetadata toDomain(long version) {
+        return new RecordMetadata(createdBy, createdAt, lastModifiedBy, lastModifiedAt, version, sourceChannel,
+                correlationId);
     }
 
     public Instant createdAt() {

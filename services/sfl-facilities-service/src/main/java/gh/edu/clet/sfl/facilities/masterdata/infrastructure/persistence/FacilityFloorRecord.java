@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.masterdata.infrastructure.persistence;
 import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityFloor;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "facility_floors", schema = "facilities")
-public class FacilityFloorRecord {
+public class FacilityFloorRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -37,7 +38,14 @@ public class FacilityFloorRecord {
     protected FacilityFloorRecord() {
     }
 
-    private FacilityFloorRecord(FacilityFloor floor) {
+    public static FacilityFloorRecord from(FacilityFloor floor) {
+        FacilityFloorRecord record = new FacilityFloorRecord();
+        record.apply(floor);
+        return record;
+    }
+
+    /** Copies the aggregate onto this row - deliberately not {@code record_version}; see VersionedRecord. */
+    public void apply(FacilityFloor floor) {
         id = floor.id();
         buildingId = floor.buildingId();
         siteCode = floor.siteCode();
@@ -48,12 +56,8 @@ public class FacilityFloorRecord {
         metadata = RecordMetadataEmbeddable.from(floor.metadata());
     }
 
-    public static FacilityFloorRecord from(FacilityFloor floor) {
-        return new FacilityFloorRecord(floor);
-    }
-
     public FacilityFloor toDomain() {
         return new FacilityFloor(id, buildingId, siteCode, floorCode, name, levelNumber, lifecycleStatus,
-                metadata.toDomain());
+                metadata.toDomain(recordVersion()));
     }
 }

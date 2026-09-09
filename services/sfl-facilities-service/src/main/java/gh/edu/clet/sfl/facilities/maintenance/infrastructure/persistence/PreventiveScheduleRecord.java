@@ -5,6 +5,7 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.PreventiveMaintenanceSchedu
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderType;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ import java.util.UUID;
 /** JPA mapping for {@link PreventiveMaintenanceSchedule}. */
 @Entity
 @Table(name = "preventive_schedules", schema = "facilities")
-public class PreventiveScheduleRecord {
+public class PreventiveScheduleRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -91,6 +92,6 @@ public class PreventiveScheduleRecord {
     public PreventiveMaintenanceSchedule toDomain() {
         return new PreventiveMaintenanceSchedule(id, siteCode, scheduleCode, name, description, assetId, roomId,
                 intervalDays, leadTimeDays, priority, workOrderType, nextDueOn, lastGeneratedFor,
-                lastGeneratedAt, lastWorkOrderId, lifecycleStatus, metadata.toDomain());
+                lastGeneratedAt, lastWorkOrderId, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }

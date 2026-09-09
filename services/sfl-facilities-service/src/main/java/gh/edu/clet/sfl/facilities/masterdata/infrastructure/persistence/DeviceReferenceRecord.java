@@ -5,6 +5,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.DeviceReference;
 import gh.edu.clet.sfl.facilities.masterdata.domain.DeviceReferenceType;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -17,7 +18,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "device_references", schema = "facilities")
-public class DeviceReferenceRecord {
+public class DeviceReferenceRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -52,7 +53,14 @@ public class DeviceReferenceRecord {
     protected DeviceReferenceRecord() {
     }
 
-    private DeviceReferenceRecord(DeviceReference deviceReference) {
+    public static DeviceReferenceRecord from(DeviceReference deviceReference) {
+        DeviceReferenceRecord record = new DeviceReferenceRecord();
+        record.apply(deviceReference);
+        return record;
+    }
+
+    /** Copies the aggregate onto this row - deliberately not {@code record_version}; see VersionedRecord. */
+    public void apply(DeviceReference deviceReference) {
         id = deviceReference.id();
         siteCode = deviceReference.siteCode();
         deviceCode = deviceReference.deviceCode();
@@ -68,12 +76,8 @@ public class DeviceReferenceRecord {
         metadata = RecordMetadataEmbeddable.from(deviceReference.metadata());
     }
 
-    public static DeviceReferenceRecord from(DeviceReference deviceReference) {
-        return new DeviceReferenceRecord(deviceReference);
-    }
-
     public DeviceReference toDomain() {
         return new DeviceReference(id, siteCode, deviceCode, name, type, status, roomId, locationCode, vendor,
-                externalReference, statusReportedAt, lifecycleStatus, metadata.toDomain());
+                externalReference, statusReportedAt, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }
