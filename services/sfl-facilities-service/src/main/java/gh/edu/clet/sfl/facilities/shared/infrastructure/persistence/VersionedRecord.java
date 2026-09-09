@@ -59,13 +59,18 @@ public abstract class VersionedRecord {
      * on its own, because reusing the row on its own just fetches whatever is current and would
      * silently apply a stale edit on top of it.
      *
-     * <p>{@code editBasisVersion} is the version already on the incoming domain object, which - see
-     * the class Javadoc - is one past what the edit actually read. That {@code - 1} is a real
-     * invariant of this codebase, not a guess: {@code RecordMetadata.modifiedBy} has exactly one
-     * implementation and it always increments by 1.
+     * <p>{@code editBasisVersion} is the version already on the incoming domain object, which is
+     * <em>usually</em> one past what the edit actually read - see the class Javadoc -
+     * because {@code RecordMetadata.modifiedBy} always increments by 1. A handful of mutators
+     * deliberately do not call {@code modifiedBy} at all (e.g. {@code Booking.withReadinessHold},
+     * {@code FacilityFault.withBlockerRaised}): they mirror a decision another module made rather than
+     * record an edit somebody performed, and bumping the version for them would make a routine
+     * reconciliation sweep collide with any concurrent, real edit of the same row. For those,
+     * {@code editBasisVersion} equals the version the row was actually read at, unchanged. Both shapes
+     * are accepted here; only a basis that matches neither is a genuinely stale write.
      */
     public void requireNotStale(long editBasisVersion) {
-        if (recordVersion != editBasisVersion - 1) {
+        if (recordVersion != editBasisVersion - 1 && recordVersion != editBasisVersion) {
             throw new ObjectOptimisticLockingFailureException(getClass(), null);
         }
     }
