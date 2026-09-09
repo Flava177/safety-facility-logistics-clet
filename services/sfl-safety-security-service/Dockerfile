@@ -12,7 +12,7 @@ COPY services/sfl-fleet-logistics-service/pom.xml services/sfl-fleet-logistics-s
 COPY services/sfl-portal-service/pom.xml services/sfl-portal-service/pom.xml
 RUN mvn -f services/pom.xml -pl sfl-safety-security-service -am package -DskipTests
 
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:25-jre
 RUN groupadd -r spring && useradd -r -g spring spring
 WORKDIR /app
 RUN mkdir -p /app/logs
