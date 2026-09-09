@@ -64,7 +64,8 @@ final class FleetHttpStatusMapper {
             case FLEET_INTEGRATION_DUPLICATE_MESSAGE,
                  FLEET_DASHBOARD_DATA_STALE -> HttpStatus.OK;
 
-            case FLEET_VALIDATION_FAILED -> HttpStatus.BAD_REQUEST;
+            case FLEET_VALIDATION_FAILED,
+                 FLEET_MALFORMED_REQUEST_VALUE -> HttpStatus.BAD_REQUEST;
         };
     }
 }

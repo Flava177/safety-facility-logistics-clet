@@ -19,7 +19,10 @@ public record FuelImportRow(
         String errorCode,
         String errorMessage) {
 
-    public enum Status { ACCEPTED, REJECTED }
+    public enum Status {
+        ACCEPTED,
+        REJECTED
+    }
 
     public FuelImportRow {
         Objects.requireNonNull(status, "status is required");

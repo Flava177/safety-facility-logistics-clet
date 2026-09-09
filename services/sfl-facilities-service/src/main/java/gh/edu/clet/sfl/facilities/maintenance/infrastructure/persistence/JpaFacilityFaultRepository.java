@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -22,7 +23,7 @@ public interface JpaFacilityFaultRepository extends JpaRepository<FacilityFaultR
      * because {@code FacilityFaultStatus.isOpen()} is the definition and duplicating it as a
      * parameter would let the two drift.
      */
-    @Query("""
+    @Query(value = """
             select f from FacilityFaultRecord f
             where (:siteCode is null or f.siteCode = :siteCode)
               and (:roomId is null or f.roomId = :roomId)
@@ -33,8 +34,19 @@ public interface JpaFacilityFaultRepository extends JpaRepository<FacilityFaultR
                                    gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.TRIAGED,
                                    gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.WORK_ORDER_CREATED))
             order by f.reportedAt desc
+            """,
+            countQuery = """
+            select count(f) from FacilityFaultRecord f
+            where (:siteCode is null or f.siteCode = :siteCode)
+              and (:roomId is null or f.roomId = :roomId)
+              and (:status is null or f.status = :status)
+              and (:reportedBy is null or f.reportedBy = :reportedBy)
+              and (:openOnly is null or :openOnly = false
+                   or f.status in (gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.REPORTED,
+                                   gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.TRIAGED,
+                                   gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus.WORK_ORDER_CREATED))
             """)
-    List<FacilityFaultRecord> search(@Param("siteCode") String siteCode,
+    Page<FacilityFaultRecord> search(@Param("siteCode") String siteCode,
             @Param("roomId") UUID roomId,
             @Param("status") FacilityFaultStatus status,
             @Param("reportedBy") String reportedBy,

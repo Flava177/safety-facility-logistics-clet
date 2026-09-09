@@ -14,67 +14,174 @@ import java.util.UUID;
  *
  * <h2>The two evidence fields, and why there are two</h2>
  *
- * <p>{@code receiptEvidenceId} is what the vendor was willing to put in writing.
- * {@code pumpEvidenceId} is a photograph of the pump meter: what the pump actually dispensed. They
- * are separate because they are separate witnesses, and the fraud this platform is most exposed to -
- * a driver and an attendant agreeing on a receipt larger than the sale - is invisible to either one
+ * <p>{@code receiptEvidenceId} is what the vendor was willing to put in writing. {@code
+ * pumpEvidenceId} is a photograph of the pump meter: what the pump actually dispensed. They are
+ * separate because they are separate witnesses, and the fraud this platform is most exposed to - a
+ * driver and an attendant agreeing on a receipt larger than the sale - is invisible to either one
  * alone and obvious when the two are put side by side.
  *
  * <p>Neither is mandatory in the record itself. Whether one is required is a policy question
- * ({@code receiptRequired}, and its grace window), not an invariant of the aggregate: a provider feed
- * legitimately delivers transactions with no images at all, and refusing them here would mean
+ * ({@code receiptRequired}, and its grace window), not an invariant of the aggregate: a provider
+ * feed legitimately delivers transactions with no images at all, and refusing them here would mean
  * refusing the integration.
  */
-public record FuelTransaction(UUID id, SiteCode siteCode, String providerTransactionId, String sourceSystem,
-        UUID vehicleId, UUID driverId, UUID tripId, Instant occurredAt, String vendorReference,
-        String stationReference, String fuelProduct, BigDecimal quantity, String quantityUnit,
-        BigDecimal unitPrice, BigDecimal totalCost, Currency currency, String maskedCardReference,
-        long odometerReading, UUID receiptEvidenceId, UUID pumpEvidenceId, String comments, Status status,
-        Lifecycle lifecycle, Instant ingestionTimestamp, String idempotencyKey, RecordMetadata metadata) {
+public record FuelTransaction(
+        UUID id,
+        SiteCode siteCode,
+        String providerTransactionId,
+        String sourceSystem,
+        UUID vehicleId,
+        UUID driverId,
+        UUID tripId,
+        Instant occurredAt,
+        String vendorReference,
+        String stationReference,
+        String fuelProduct,
+        BigDecimal quantity,
+        String quantityUnit,
+        BigDecimal unitPrice,
+        BigDecimal totalCost,
+        Currency currency,
+        String maskedCardReference,
+        long odometerReading,
+        UUID receiptEvidenceId,
+        UUID pumpEvidenceId,
+        String comments,
+        Status status,
+        Lifecycle lifecycle,
+        Instant ingestionTimestamp,
+        String idempotencyKey,
+        RecordMetadata metadata) {
 
-    public enum Status { RECEIVED, VALIDATING, MATCHED, RECONCILED, EXCEPTION, REJECTED, VOIDED }
-    public enum Lifecycle { ACTIVE, VOIDED, ARCHIVED }
+    public enum Status {
+        RECEIVED,
+        VALIDATING,
+        MATCHED,
+        RECONCILED,
+        EXCEPTION,
+        REJECTED,
+        VOIDED
+    }
+
+    public enum Lifecycle {
+        ACTIVE,
+        VOIDED,
+        ARCHIVED
+    }
 
     public FuelTransaction {
-        Objects.requireNonNull(id); Objects.requireNonNull(siteCode); Objects.requireNonNull(vehicleId);
-        Objects.requireNonNull(driverId); Objects.requireNonNull(occurredAt); Objects.requireNonNull(currency);
-        Objects.requireNonNull(ingestionTimestamp); Objects.requireNonNull(status); Objects.requireNonNull(lifecycle);
+        Objects.requireNonNull(id);
+        Objects.requireNonNull(siteCode);
+        Objects.requireNonNull(vehicleId);
+        Objects.requireNonNull(driverId);
+        Objects.requireNonNull(occurredAt);
+        Objects.requireNonNull(currency);
+        Objects.requireNonNull(ingestionTimestamp);
+        Objects.requireNonNull(status);
+        Objects.requireNonNull(lifecycle);
         Objects.requireNonNull(metadata);
-        sourceSystem = require(sourceSystem, "sourceSystem"); vendorReference = require(vendorReference, "vendorReference");
-        fuelProduct = require(fuelProduct, "fuelProduct").toUpperCase(); quantityUnit = require(quantityUnit, "quantityUnit").toUpperCase();
-        if (quantity == null || quantity.signum() <= 0 || unitPrice == null || unitPrice.signum() < 0 || odometerReading < 0) {
+        sourceSystem = require(sourceSystem, "sourceSystem");
+        vendorReference = require(vendorReference, "vendorReference");
+        fuelProduct = require(fuelProduct, "fuelProduct").toUpperCase();
+        quantityUnit = require(quantityUnit, "quantityUnit").toUpperCase();
+        if (quantity == null
+                || quantity.signum() <= 0
+                || unitPrice == null
+                || unitPrice.signum() < 0
+                || odometerReading < 0) {
             throw new IllegalArgumentException("fuel quantity, price or odometer is invalid");
         }
         quantity = quantity.setScale(3, RoundingMode.HALF_UP);
         unitPrice = unitPrice.setScale(4, RoundingMode.HALF_UP);
         BigDecimal calculated = quantity.multiply(unitPrice).setScale(2, RoundingMode.HALF_UP);
         totalCost = totalCost == null ? calculated : totalCost.setScale(2, RoundingMode.HALF_UP);
-        if (totalCost.compareTo(calculated) != 0) throw new IllegalArgumentException("totalCost must equal quantity multiplied by unitPrice");
-        providerTransactionId = trim(providerTransactionId); stationReference = trim(stationReference);
-        maskedCardReference = mask(maskedCardReference); comments = trim(comments); idempotencyKey = trim(idempotencyKey);
+        if (totalCost.compareTo(calculated) != 0)
+            throw new IllegalArgumentException(
+                    "totalCost must equal quantity multiplied by unitPrice");
+        providerTransactionId = trim(providerTransactionId);
+        stationReference = trim(stationReference);
+        maskedCardReference = mask(maskedCardReference);
+        comments = trim(comments);
+        idempotencyKey = trim(idempotencyKey);
     }
 
     public FuelTransaction withStatus(Status next, RecordMetadata changed) {
-        if (status == Status.VOIDED || lifecycle != Lifecycle.ACTIVE) throw new IllegalStateException("fuel transaction is immutable");
-        return new FuelTransaction(id, siteCode, providerTransactionId, sourceSystem, vehicleId, driverId, tripId,
-                occurredAt, vendorReference, stationReference, fuelProduct, quantity, quantityUnit, unitPrice,
-                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, pumpEvidenceId,
-                comments, next, lifecycle, ingestionTimestamp, idempotencyKey, changed);
+        if (status == Status.VOIDED || lifecycle != Lifecycle.ACTIVE)
+            throw new IllegalStateException("fuel transaction is immutable");
+        return new FuelTransaction(
+                id,
+                siteCode,
+                providerTransactionId,
+                sourceSystem,
+                vehicleId,
+                driverId,
+                tripId,
+                occurredAt,
+                vendorReference,
+                stationReference,
+                fuelProduct,
+                quantity,
+                quantityUnit,
+                unitPrice,
+                totalCost,
+                currency,
+                maskedCardReference,
+                odometerReading,
+                receiptEvidenceId,
+                pumpEvidenceId,
+                comments,
+                next,
+                lifecycle,
+                ingestionTimestamp,
+                idempotencyKey,
+                changed);
     }
 
     public FuelTransaction voided(String reason, RecordMetadata changed) {
         require(reason, "void reason");
-        return new FuelTransaction(id, siteCode, providerTransactionId, sourceSystem, vehicleId, driverId, tripId,
-                occurredAt, vendorReference, stationReference, fuelProduct, quantity, quantityUnit, unitPrice,
-                totalCost, currency, maskedCardReference, odometerReading, receiptEvidenceId, pumpEvidenceId,
-                reason, Status.VOIDED, Lifecycle.VOIDED, ingestionTimestamp, idempotencyKey, changed);
+        return new FuelTransaction(
+                id,
+                siteCode,
+                providerTransactionId,
+                sourceSystem,
+                vehicleId,
+                driverId,
+                tripId,
+                occurredAt,
+                vendorReference,
+                stationReference,
+                fuelProduct,
+                quantity,
+                quantityUnit,
+                unitPrice,
+                totalCost,
+                currency,
+                maskedCardReference,
+                odometerReading,
+                receiptEvidenceId,
+                pumpEvidenceId,
+                reason,
+                Status.VOIDED,
+                Lifecycle.VOIDED,
+                ingestionTimestamp,
+                idempotencyKey,
+                changed);
     }
 
     private static String mask(String value) {
-        value = trim(value); if (value == null || value.startsWith("****")) return value;
+        value = trim(value);
+        if (value == null || value.startsWith("****")) return value;
         String last = value.length() <= 4 ? value : value.substring(value.length() - 4);
         return "****" + last;
     }
-    private static String trim(String value) { return value == null || value.isBlank() ? null : value.strip(); }
-    private static String require(String value, String field) { if (value == null || value.isBlank()) throw new IllegalArgumentException(field + " is required"); return value.strip(); }
+
+    private static String trim(String value) {
+        return value == null || value.isBlank() ? null : value.strip();
+    }
+
+    private static String require(String value, String field) {
+        if (value == null || value.isBlank())
+            throw new IllegalArgumentException(field + " is required");
+        return value.strip();
+    }
 }

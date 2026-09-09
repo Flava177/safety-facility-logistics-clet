@@ -30,6 +30,10 @@ public class DispatchReceiptController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Confirms destination receipt of a dispatch, recording any variance")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch receipt permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @PostMapping
     public ApiResponse<DispatchReceipt> confirm(@Valid @RequestBody ConfirmReceiptRequest r, HttpServletRequest h) {
         EvidenceMeta signature = r.signatureStorageReference() == null || r.signatureStorageReference().isBlank() ? null
@@ -48,6 +52,9 @@ public class DispatchReceiptController {
       * them - closing gap 7, so "every variance this month" is a query rather than a manifest-by-
       * manifest hunt.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists destination receipts, either for one dispatch or site-wide")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Neither dispatchId nor siteCode was supplied")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch receipt read permission")
     @GetMapping
     public ApiResponse<?> receipts(@RequestParam(required = false) UUID dispatchId,
             @RequestParam(required = false) String siteCode,
@@ -68,6 +75,9 @@ public class DispatchReceiptController {
         return ApiResponse.ok(service.receipts(dispatchId, actor));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one destination receipt by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch receipt read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No receipt exists with this id")
     @GetMapping("/{id}")
     public ApiResponse<DispatchReceipt> detail(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.receipt(id, actors.resolve(h)));

@@ -10,10 +10,10 @@ import java.util.Map;
 import org.springframework.stereotype.Component;
 
 /**
- * Recorded Finance/Audit visibility adapter. It publishes a material fuel exception
- * through the transactional outbox ({@link IntegrationEventPublisher}) rather than
- * writing to any Finance system, keeping visibility atomic with the domain change and
- * observable/replayable through the existing outbox delivery pipeline.
+ * Recorded Finance/Audit visibility adapter. It publishes a material fuel exception through the
+ * transactional outbox ({@link IntegrationEventPublisher}) rather than writing to any Finance
+ * system, keeping visibility atomic with the domain change and observable/replayable through the
+ * existing outbox delivery pipeline.
  */
 @Component
 public class RecordedFinanceAuditAdapter implements FinanceAuditVisibilityPort {
@@ -36,7 +36,13 @@ public class RecordedFinanceAuditAdapter implements FinanceAuditVisibilityPort {
         payload.put("vehicleId", anomaly.vehicleId());
         payload.put("driverId", anomaly.driverId());
         payload.put("visibility", "FINANCE_AUDIT");
-        events.publish(FleetEventType.FUEL_EXCEPTION_DETECTED, "FuelAnomalyCase", anomaly.id().toString(),
-                anomaly.siteCode(), actor, anomaly.id().toString(), payload);
+        events.publish(
+                FleetEventType.FUEL_EXCEPTION_DETECTED,
+                "FuelAnomalyCase",
+                anomaly.id().toString(),
+                anomaly.siteCode(),
+                actor,
+                anomaly.id().toString(),
+                payload);
     }
 }

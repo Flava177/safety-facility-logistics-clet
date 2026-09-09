@@ -9,12 +9,11 @@ import gh.edu.clet.sfl.facilities.masterdata.application.ports.FacilitiesReposit
 import gh.edu.clet.sfl.facilities.masterdata.domain.AssetCategory;
 import gh.edu.clet.sfl.facilities.masterdata.domain.AssetCriticality;
 import gh.edu.clet.sfl.facilities.masterdata.domain.AssetOperationalStatus;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.api.IdempotencyKey;
 import gh.edu.clet.sfl.facilities.shared.api.PageResponse;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.UUID;
@@ -41,24 +40,22 @@ import org.springframework.web.bind.annotation.RestController;
 public class FacilityAssetController {
 
     private final FacilityAssetService service;
-    private final FacilitiesActorResolver actorResolver;
 
-    public FacilityAssetController(FacilityAssetService service, FacilitiesActorResolver actorResolver) {
+    public FacilityAssetController(FacilityAssetService service) {
         this.service = service;
-        this.actorResolver = actorResolver;
     }
 
     @PostMapping
     @Operation(summary = "Register a facility asset", description = "Accepts an Idempotency-Key.")
     public ResponseEntity<ApiResponse<AssetResponse>> register(@Valid @RequestBody FacilitiesRequests.RegisterAsset request,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         AssetResponse result = AssetResponse.from(service.register(new FacilitiesCommands.RegisterAsset(
                 request.siteCode(), request.assetCode(), request.name(), request.category(),
                 request.criticality(), request.roomId(), request.locationCode(), request.manufacturer(),
                 request.modelNumber(), request.serialNumber(), request.installedOn(),
                 request.warrantyExpiresOn(), request.serviceIntervalDays(), request.custodian(),
-                request.deviceReferenceId(), request.assetReferenceId(), actor(http), channel(http),
-                idempotencyKey(http))));
+                request.deviceReferenceId(), request.assetReferenceId(), actor, channel,
+                idempotencyKey)));
         return ResponseEntity.created(URI.create("/api/v1/facilities/assets/" + result.id())).body(ApiResponse.ok(result));
     }
 
@@ -72,26 +69,26 @@ public class FacilityAssetController {
             @RequestParam(required = false) AssetOperationalStatus operationalStatus,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "50") int size,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         FacilitiesRepository.AssetQuery query = new FacilitiesRepository.AssetQuery(siteCode, roomId, category,
                 criticality, operationalStatus, page, size);
-        return ApiResponse.ok(PageResponse.from(service.search(query, actor(http), channel(http)), AssetResponse::from));
+        return ApiResponse.ok(PageResponse.from(service.search(query, actor, channel), AssetResponse::from));
     }
 
     @GetMapping("/{assetId}")
     @Operation(summary = "Read one facility asset")
-    public ApiResponse<AssetResponse> find(@PathVariable UUID assetId, HttpServletRequest http) {
-        return ApiResponse.ok(AssetResponse.from(service.find(assetId, actor(http), channel(http))));
+    public ApiResponse<AssetResponse> find(@PathVariable UUID assetId, ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(AssetResponse.from(service.find(assetId, actor, channel)));
     }
 
     @PatchMapping("/{assetId}")
     @Operation(summary = "Update a facility asset's attributes")
     public ApiResponse<AssetResponse> update(@PathVariable UUID assetId,
-            @Valid @RequestBody FacilitiesRequests.UpdateAsset request, HttpServletRequest http) {
+            @Valid @RequestBody FacilitiesRequests.UpdateAsset request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(AssetResponse.from(service.update(new FacilitiesCommands.UpdateAsset(assetId, request.name(),
                 request.category(), request.criticality(), request.manufacturer(), request.modelNumber(),
                 request.serialNumber(), request.warrantyExpiresOn(), request.serviceIntervalDays(),
-                request.custodian(), request.expectedVersion(), actor(http), channel(http)))));
+                request.custodian(), request.expectedVersion(), actor, channel))));
     }
 
     @PatchMapping("/{assetId}/status")
@@ -99,10 +96,11 @@ public class FacilityAssetController {
             description = "Recomputes the readiness of the space the asset sits in. An impaired asset raises "
                     + "a blocker at a severity derived from its criticality; a recovered one resolves it.")
     public ApiResponse<AssetResponse> changeStatus(@PathVariable UUID assetId,
-            @Valid @RequestBody FacilitiesRequests.ChangeAssetStatus request, HttpServletRequest http) {
+            @Valid @RequestBody FacilitiesRequests.ChangeAssetStatus request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(AssetResponse.from(service.changeStatus(new FacilitiesCommands.ChangeAssetStatus(assetId,
-                request.operationalStatus(), request.notes(), request.expectedVersion(), actor(http),
-                channel(http)))));
+                request.operationalStatus(), request.notes(), request.expectedVersion(), actor,
+                channel))));
     }
 
     @PatchMapping("/{assetId}/lifecycle")
@@ -110,31 +108,19 @@ public class FacilityAssetController {
             description = "Retiring plant the estate no longer operates. Any readiness blocker it was "
                     + "holding open is reconciled. ARCHIVED is terminal.")
     public ApiResponse<AssetResponse> changeLifecycle(@PathVariable UUID assetId,
-            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, HttpServletRequest http) {
+            @Valid @RequestBody FacilitiesRequests.ChangeLifecycle request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(AssetResponse.from(service.changeLifecycle(
                 new FacilitiesCommands.ChangeAssetLifecycle(assetId, request.status(),
-                        request.expectedVersion(), actor(http), channel(http)))));
+                        request.expectedVersion(), actor, channel))));
     }
 
     @PatchMapping("/{assetId}/location")
     @Operation(summary = "Move a facility asset to another space",
             description = "Recomputes readiness for both the space it left and the space it joined.")
     public ApiResponse<AssetResponse> relocate(@PathVariable UUID assetId,
-            @Valid @RequestBody FacilitiesRequests.RelocateAsset request, HttpServletRequest http) {
+            @Valid @RequestBody FacilitiesRequests.RelocateAsset request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(AssetResponse.from(service.relocate(new FacilitiesCommands.RelocateAsset(assetId,
-                request.roomId(), request.locationCode(), request.expectedVersion(), actor(http),
-                channel(http)))));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
-    }
-
-    private String idempotencyKey(HttpServletRequest http) {
-        return actorResolver.resolveIdempotencyKey(http);
+                request.roomId(), request.locationCode(), request.expectedVersion(), actor,
+                channel))));
     }
 }

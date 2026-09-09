@@ -10,6 +10,7 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.PreventiveMaintenanceSchedu
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderPart;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.Comparator;
@@ -63,18 +64,18 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
     }
 
     @Override
-    public List<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status,
-            Boolean openOnly, String reportedBy, int limit) {
+    public RepositoryPage<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status,
+            Boolean openOnly, String reportedBy, int page, int size) {
         String site = normalize(siteCode);
-        return faults.values().stream()
+        List<FacilityFault> matching = faults.values().stream()
                 .filter(f -> site == null || f.siteCode().equals(site))
                 .filter(f -> roomId == null || roomId.equals(f.roomId()))
                 .filter(f -> status == null || f.status() == status)
                 .filter(f -> reportedBy == null || reportedBy.equals(f.reportedBy()))
                 .filter(f -> !Boolean.TRUE.equals(openOnly) || f.status().isOpen())
                 .sorted(Comparator.comparing(FacilityFault::reportedAt).reversed())
-                .limit(limit)
                 .toList();
+        return paginate(matching, page, size);
     }
 
     @Override
@@ -112,10 +113,10 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
     }
 
     @Override
-    public List<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId, WorkOrderStatus status,
-            String assignedTo, UUID vendorId, Boolean openOnly, int limit) {
+    public RepositoryPage<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId,
+            WorkOrderStatus status, String assignedTo, UUID vendorId, Boolean openOnly, int page, int size) {
         String site = normalize(siteCode);
-        return workOrders.values().stream()
+        List<WorkOrder> matching = workOrders.values().stream()
                 .filter(w -> site == null || w.siteCode().equals(site))
                 .filter(w -> roomId == null || roomId.equals(w.roomId()))
                 .filter(w -> assetId == null || assetId.equals(w.assetId()))
@@ -124,8 +125,8 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
                 .filter(w -> vendorId == null || vendorId.equals(w.vendorId()))
                 .filter(w -> !Boolean.TRUE.equals(openOnly) || w.status().isOpen())
                 .sorted(Comparator.comparing((WorkOrder w) -> w.metadata().createdAt()).reversed())
-                .limit(limit)
                 .toList();
+        return paginate(matching, page, size);
     }
 
     @Override
@@ -296,5 +297,11 @@ public class InMemoryMaintenanceRepository implements MaintenanceRepository {
 
     private static String normalize(String value) {
         return value == null || value.isBlank() ? null : value.strip().toUpperCase(Locale.ROOT);
+    }
+
+    private static <T> RepositoryPage<T> paginate(List<T> matching, int page, int size) {
+        int from = Math.min(page * size, matching.size());
+        int to = Math.min(from + size, matching.size());
+        return RepositoryPage.of(matching.subList(from, to), matching.size(), page, size);
     }
 }

@@ -152,6 +152,8 @@ public interface DispatchRepository {
     /** Lists scan batches. Closes gap 3 - a batch was previously reachable only by an id nobody kept. */
     DispatchPage<ScanImportBatch> findScanBatches(ScanBatchQuery query);
     ScanImportRow saveScanRow(ScanImportRow row);
+    /** As {@link #saveScanRow}, one round trip for the whole batch rather than one per row. */
+    void saveScanRows(List<ScanImportRow> rows);
     List<ScanImportRow> findScanRows(UUID batchId);
 
     // Dashboard read model

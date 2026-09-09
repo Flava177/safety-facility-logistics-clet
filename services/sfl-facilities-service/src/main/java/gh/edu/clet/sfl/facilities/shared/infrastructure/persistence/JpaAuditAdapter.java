@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.facilities.shared.infrastructure.persistence;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditChainVerification;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditEvent;
@@ -16,6 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
@@ -94,8 +96,8 @@ class JpaAuditAdapter implements AuditPort {
      */
     @Override
     @Transactional(readOnly = true)
-    public List<AuditEvent> search(String siteScope, String resourceType, String resourceId, String actorId,
-            AuditAction action, Instant from, Instant to, int limit) {
+    public RepositoryPage<AuditEvent> search(String siteScope, String resourceType, String resourceId,
+            String actorId, AuditAction action, Instant from, Instant to, int page, int size) {
         Specification<AuditRecordEntity> specification = (root, query, builder) -> {
             List<Predicate> predicates = new ArrayList<>();
             equalIfPresent(builder, predicates, root.get("siteScope"), blankToNull(siteScope));
@@ -113,12 +115,10 @@ class JpaAuditAdapter implements AuditPort {
                     : builder.and(predicates.toArray(new Predicate[0]));
         };
 
-        return records
-                .findAll(specification, PageRequest.of(0, Math.max(1, Math.min(limit, 500)),
-                        Sort.by(Sort.Direction.DESC, "sequenceNo")))
-                .stream()
-                .map(AuditRecordEntity::toDomain)
-                .toList();
+        Page<AuditRecordEntity> result = records.findAll(specification,
+                PageRequest.of(page, Math.max(1, Math.min(size, 500)), Sort.by(Sort.Direction.DESC, "sequenceNo")));
+        return RepositoryPage.of(result.getContent().stream().map(AuditRecordEntity::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     private static void equalIfPresent(CriteriaBuilder builder, List<Predicate> predicates,

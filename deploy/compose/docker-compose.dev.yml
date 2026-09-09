@@ -1,6 +1,9 @@
 ﻿services:
   postgres:
-    image: postgres:18-alpine
+    # Pinned to 16, matching CI (.github/workflows/backend.yml) and the deploy-representative
+    # docker-compose.microservices.yml. A dev stack on a different major version than CI risks
+    # version-specific SQL/behavior drift going undetected until it reaches CI or production.
+    image: postgres:16-alpine
     container_name: sfl-dev-postgres
     environment:
       POSTGRES_USER: ${SFL_POSTGRES_USER:-sfl}

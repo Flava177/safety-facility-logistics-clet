@@ -34,7 +34,13 @@ public class SecurityIncidentRepositoryAdapter implements SecurityIncidentReposi
         SecurityIncidentJpaEntity entity = incidents.findById(incident.id())
                 .orElseGet(SecurityIncidentJpaEntity::new);
         entity.apply(incident);
-        return incidents.save(entity).toDomain();
+        // saveAndFlush, not save: recordVersion is a JPA @Version field Hibernate only increments at
+        // flush time. A plain save() defers the flush to transaction commit, so toDomain() below would
+        // read the pre-increment value and hand the caller a version number the database has already
+        // moved past - the next command's requireVersion check would then fail against its own,
+        // correctly-persisted change. Flushing here makes the returned aggregate's version match what
+        // is actually committed.
+        return incidents.saveAndFlush(entity).toDomain();
     }
 
     @Override

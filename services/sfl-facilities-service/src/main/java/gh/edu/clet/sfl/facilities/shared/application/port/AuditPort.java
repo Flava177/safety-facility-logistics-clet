@@ -34,8 +34,8 @@ public interface AuditPort {
             String siteScope, String reason);
 
     /** Records ordered by sequence, filtered by whatever the caller supplied. */
-    List<AuditEvent> search(String siteScope, String resourceType, String resourceId, String actorId,
-            AuditAction action, Instant from, Instant to, int limit);
+    RepositoryPage<AuditEvent> search(String siteScope, String resourceType, String resourceId, String actorId,
+            AuditAction action, Instant from, Instant to, int page, int size);
 
     /** Replays the whole chain and reports whether it is intact. */
     AuditChainVerification verifyChain();

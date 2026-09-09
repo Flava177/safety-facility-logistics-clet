@@ -10,7 +10,6 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityFloor;
 import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityRoom;
 import gh.edu.clet.sfl.facilities.masterdata.domain.Site;
 import gh.edu.clet.sfl.facilities.masterdata.domain.Zone;
-import gh.edu.clet.sfl.facilities.masterdata.domain.ZoneMemberType;
 import gh.edu.clet.sfl.facilities.masterdata.domain.ZoneMembership;
 import gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization;
 import gh.edu.clet.sfl.facilities.shared.application.ServiceOutbox;
@@ -54,6 +53,11 @@ public class FacilitiesMasterDataService {
     private final IdempotencyPort idempotency;
     private final FacilitiesAuthorization authorization;
     private final Clock clock;
+    private final SiteCommands siteCommands;
+    private final BuildingFloorCommands buildingFloorCommands;
+    private final RoomCommands roomCommands;
+    private final ZoneCommands zoneCommands;
+    private final DeviceReferenceCommands deviceReferenceCommands;
 
     public FacilitiesMasterDataService(FacilitiesRepository facilities, ServiceOutbox outbox, AuditPort audit,
             IdempotencyPort idempotency, FacilitiesAuthorization authorization, Clock clock) {
@@ -63,74 +67,36 @@ public class FacilitiesMasterDataService {
         this.idempotency = idempotency;
         this.authorization = authorization;
         this.clock = clock;
+        this.siteCommands = new SiteCommands(this, facilities, authorization, audit);
+        this.buildingFloorCommands = new BuildingFloorCommands(this, facilities, authorization, audit);
+        this.roomCommands = new RoomCommands(this, facilities, authorization, audit);
+        this.zoneCommands = new ZoneCommands(this, facilities, authorization, audit);
+        this.deviceReferenceCommands = new DeviceReferenceCommands(this, facilities, authorization, audit);
     }
 
     // =========================================================================================
-    // Sites
+    // Sites, buildings, floors, spaces, zones and device references
+    //
+    // Each command body lives in a collaborator - SiteCommands, BuildingFloorCommands,
+    // RoomCommands, ZoneCommands, DeviceReferenceCommands - split out for the reason given in this
+    // class's Javadoc. @Transactional stays here: it is this class's proxy Spring builds the
+    // transaction boundary from, and a plain call from an already-transactional method runs in the
+    // same transaction with no proxying of its own needed.
     // =========================================================================================
 
     @Transactional
     public Site createSite(FacilitiesCommands.CreateSite command) {
-        ActorContext actor = command.actor();
-        String siteCode = normalize(command.siteCode());
-        authorization.require(actor, SflPermission.FACILITIES_SITE_MANAGE, siteCode, command.channel(),
-                "Site", siteCode);
-
-        Optional<Site> replayed = replay("create-site", command.idempotencyKey(), command.idempotencyPayload(),
-                facilities::findSite);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        facilities.findSiteByCode(siteCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("site", siteCode, siteCode);
-            }
-        });
-
-        Site saved = facilities.saveSite(Site.create(UUID.randomUUID(), siteCode, command.name(),
-                command.description(), actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.SITE_CREATED, "Site", saved.id().toString(),
-                saved.siteCode(), null, saved);
-        publish("sfl.ifimp.site-created.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
-        remember("create-site", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
-                saved.siteCode(), actor);
-        return saved;
+        return siteCommands.create(command);
     }
 
     @Transactional
     public Site updateSite(FacilitiesCommands.UpdateSite command) {
-        ActorContext actor = command.actor();
-        Site site = requireSite(command.siteId());
-        authorization.require(actor, SflPermission.FACILITIES_SITE_MANAGE, site.siteCode(), command.channel(),
-                "Site", site.id().toString());
-        site.metadata().requireVersion(command.expectedVersion(), "Site", site.id());
-
-        Site saved = facilities.saveSite(site.update(command.name(), command.description(), actor.actorId(),
-                now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.SITE_UPDATED, "Site", saved.id().toString(),
-                saved.siteCode(), site, saved);
-        publish("sfl.ifimp.site-updated.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return siteCommands.update(command);
     }
 
     @Transactional
     public Site changeSiteLifecycle(FacilitiesCommands.ChangeSiteLifecycle command) {
-        ActorContext actor = command.actor();
-        Site site = requireSite(command.siteId());
-        authorization.require(actor, SflPermission.FACILITIES_SITE_MANAGE, site.siteCode(), command.channel(),
-                "Site", site.id().toString());
-        site.metadata().requireVersion(command.expectedVersion(), "Site", site.id());
-
-        Site saved = facilities.saveSite(site.changeLifecycle(command.status(), actor.actorId(), now(),
-                command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.SITE_LIFECYCLE_CHANGED, "Site",
-                saved.id().toString(), saved.siteCode(), site.lifecycleStatus(), saved.lifecycleStatus());
-        publish("sfl.ifimp.site-lifecycle-changed.v1", "Site", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return siteCommands.changeLifecycle(command);
     }
 
     /**
@@ -142,222 +108,37 @@ public class FacilitiesMasterDataService {
      */
     @Transactional
     public Site changeOperatingMode(FacilitiesCommands.ChangeOperatingMode command) {
-        ActorContext actor = command.actor();
-        Site site = requireSite(command.siteId());
-        authorization.require(actor, SflPermission.FACILITIES_OPERATING_MODE_CHANGE, site.siteCode(),
-                command.channel(), "Site", site.id().toString());
-
-        OperatingMode previous = site.operatingMode();
-        Site saved = facilities.saveSite(site.changeOperatingMode(command.operatingMode(), actor.actorId(),
-                now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.SITE_OPERATING_MODE_CHANGED, "Site",
-                saved.id().toString(), saved.siteCode(),
-                new ModeChange(previous, null), new ModeChange(saved.operatingMode(), command.reason()));
-        publish("sfl.ifimp.site-operating-mode-changed.v1", "Site", saved.id(), saved.siteCode(), actor,
-                new ModeChangeEvent(saved.siteCode(), previous, saved.operatingMode(), command.reason(),
-                        actor.actorId(), saved.operatingModeChangedAt()));
-        return saved;
+        return siteCommands.changeOperatingMode(command);
     }
-
-    private record ModeChange(OperatingMode operatingMode, String reason) {
-    }
-
-    private record ModeChangeEvent(String siteCode, OperatingMode from, OperatingMode to, String reason,
-            String changedBy, Instant changedAt) {
-    }
-
-    // =========================================================================================
-    // Buildings and floors
-    // =========================================================================================
 
     @Transactional
     public Building createBuilding(FacilitiesCommands.CreateBuilding command) {
-        ActorContext actor = command.actor();
-        Site site = facilities.findSite(command.siteId())
-                .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Site",
-                        command.siteId()));
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, site.siteCode(), command.channel(),
-                "Building", normalize(command.buildingCode()));
-
-        Optional<Building> replayed = replay("create-building", command.idempotencyKey(),
-                command.idempotencyPayload(), facilities::findBuilding);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        String buildingCode = normalize(command.buildingCode());
-        facilities.findBuildingByCode(site.siteCode(), buildingCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("building", buildingCode,
-                        site.siteCode());
-            }
-        });
-
-        Building saved = facilities.saveBuilding(Building.create(UUID.randomUUID(), site.id(), site.siteCode(),
-                buildingCode, command.name(), command.description(), actor.actorId(), now(), command.channel(),
-                actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.BUILDING_CREATED, "Building",
-                saved.id().toString(), saved.siteCode(), null, saved);
-        publish("sfl.ifimp.building-created.v1", "Building", saved.id(), saved.siteCode(), actor, saved);
-        remember("create-building", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
-                saved.siteCode(), actor);
-        return saved;
+        return buildingFloorCommands.createBuilding(command);
     }
 
     @Transactional
     public FacilityFloor createFloor(FacilitiesCommands.CreateFloor command) {
-        ActorContext actor = command.actor();
-        Building building = facilities.findBuilding(command.buildingId())
-                .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Building",
-                        command.buildingId()));
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, building.siteCode(),
-                command.channel(), "FacilityFloor", normalize(command.floorCode()));
-
-        Optional<FacilityFloor> replayed = replay("create-floor", command.idempotencyKey(),
-                command.idempotencyPayload(), facilities::findFloor);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        String floorCode = normalize(command.floorCode());
-        facilities.findFloorByCode(building.id(), floorCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("floor", floorCode,
-                        building.siteCode());
-            }
-        });
-
-        FacilityFloor saved = facilities.saveFloor(FacilityFloor.create(UUID.randomUUID(), building.id(),
-                building.siteCode(), floorCode, command.name(), command.levelNumber(), actor.actorId(), now(),
-                command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.FLOOR_CREATED, "FacilityFloor",
-                saved.id().toString(), saved.siteCode(), null, saved);
-        publish("sfl.ifimp.floor-created.v1", "FacilityFloor", saved.id(), saved.siteCode(), actor, saved);
-        remember("create-floor", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
-                saved.siteCode(), actor);
-        return saved;
+        return buildingFloorCommands.createFloor(command);
     }
-
-    // =========================================================================================
-    // Spaces
-    // =========================================================================================
 
     @Transactional
     public FacilityRoom createRoom(FacilitiesCommands.CreateRoom command) {
-        ActorContext actor = command.actor();
-        FacilityFloor floor = facilities.findFloor(command.floorId())
-                .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Floor",
-                        command.floorId()));
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, floor.siteCode(), command.channel(),
-                "FacilityRoom", normalize(command.roomCode()));
-
-        Optional<FacilityRoom> replayed = replay("create-room", command.idempotencyKey(),
-                command.idempotencyPayload(), facilities::findRoom);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        String roomCode = normalize(command.roomCode());
-        facilities.findRoomByCode(floor.siteCode(), roomCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("space", roomCode, floor.siteCode());
-            }
-        });
-
-        FacilityRoom saved = facilities.saveRoom(FacilityRoom.create(UUID.randomUUID(), floor.id(),
-                floor.siteCode(), roomCode, command.name(), command.spaceType(), command.capacity(),
-                command.areaSqm(), command.costCentre(), command.bookable(), command.examinationCapable(),
-                actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.ROOM_CREATED, "FacilityRoom",
-                saved.id().toString(), saved.siteCode(), null, saved);
-        publish("sfl.ifimp.room-created.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
-        remember("create-room", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
-                saved.siteCode(), actor);
-        return saved;
+        return roomCommands.create(command);
     }
 
     @Transactional
     public FacilityRoom updateRoom(FacilitiesCommands.UpdateRoom command) {
-        ActorContext actor = command.actor();
-        FacilityRoom room = requireRoom(command.roomId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, room.siteCode(), command.channel(),
-                "FacilityRoom", room.id().toString());
-        room.metadata().requireVersion(command.expectedVersion(), "Space", room.id());
-
-        FacilityRoom saved = facilities.saveRoom(room.update(command.name(), command.spaceType(),
-                command.capacity(), command.areaSqm(), command.costCentre(), command.bookable(),
-                command.examinationCapable(), actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.ROOM_UPDATED, "FacilityRoom", saved.id().toString(),
-                saved.siteCode(), room, saved);
-        publish("sfl.ifimp.room-updated.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return roomCommands.update(command);
     }
 
     @Transactional
     public FacilityRoom changeRoomLifecycle(FacilitiesCommands.ChangeRoomLifecycle command) {
-        ActorContext actor = command.actor();
-        FacilityRoom room = requireRoom(command.roomId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, room.siteCode(), command.channel(),
-                "FacilityRoom", room.id().toString());
-        room.metadata().requireVersion(command.expectedVersion(), "Space", room.id());
-
-        FacilityRoom saved = facilities.saveRoom(room.changeLifecycle(command.status(), actor.actorId(), now(),
-                command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.ROOM_LIFECYCLE_CHANGED, "FacilityRoom",
-                saved.id().toString(), saved.siteCode(), room.lifecycleStatus(), saved.lifecycleStatus());
-        publish("sfl.ifimp.room-lifecycle-changed.v1", "FacilityRoom", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return roomCommands.changeLifecycle(command);
     }
-
-    // =========================================================================================
-    // Zones
-    // =========================================================================================
 
     @Transactional
     public Zone createZone(FacilitiesCommands.CreateZone command) {
-        ActorContext actor = command.actor();
-        String siteCode = normalize(command.siteCode());
-        authorization.require(actor, SflPermission.FACILITIES_ZONE_MANAGE, siteCode, command.channel(),
-                "Zone", normalize(command.zoneCode()));
-
-        Optional<Zone> replayed = replay("create-zone", command.idempotencyKey(), command.idempotencyPayload(),
-                facilities::findZone);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        String zoneCode = normalize(command.zoneCode());
-        facilities.findZoneByCode(siteCode, zoneCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("zone", zoneCode, siteCode);
-            }
-        });
-        if (command.parentZoneId() != null) {
-            Zone parent = facilities.findZone(command.parentZoneId())
-                    .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Zone",
-                            command.parentZoneId()));
-            if (!parent.siteCode().equals(siteCode)) {
-                throw new FacilitiesException.ValidationFailedException(
-                        "A zone's parent must belong to the same site.");
-            }
-        }
-
-        Zone saved = facilities.saveZone(Zone.create(UUID.randomUUID(), siteCode, zoneCode, command.name(),
-                command.purpose(), command.parentZoneId(), actor.actorId(), now(), command.channel(),
-                actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.ZONE_CREATED, "Zone", saved.id().toString(),
-                saved.siteCode(), null, saved);
-        publish("sfl.ifimp.zone-created.v1", "Zone", saved.id(), saved.siteCode(), actor, saved);
-        remember("create-zone", command.idempotencyKey(), command.idempotencyPayload(), saved.id(),
-                saved.siteCode(), actor);
-        return saved;
+        return zoneCommands.create(command);
     }
 
     /**
@@ -369,86 +150,17 @@ public class FacilitiesMasterDataService {
      */
     @Transactional
     public ZoneMembership addZoneMember(FacilitiesCommands.AddZoneMember command) {
-        ActorContext actor = command.actor();
-        Zone zone = facilities.findZone(command.zoneId())
-                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Zone", command.zoneId()));
-        authorization.require(actor, SflPermission.FACILITIES_ZONE_MANAGE, zone.siteCode(), command.channel(),
-                "Zone", zone.id().toString());
-
-        String memberSite = resolveMemberSite(command.memberType(), command.memberId());
-        if (!zone.siteCode().equals(memberSite)) {
-            throw new FacilitiesException.ValidationFailedException(
-                    "A zone member must belong to the zone's site (" + zone.siteCode() + ").");
-        }
-
-        ZoneMembership saved = facilities.saveZoneMembership(ZoneMembership.of(zone.id(), command.memberType(),
-                command.memberId(), zone.siteCode(), actor.actorId(), now()));
-
-        audit.record(actor, command.channel(), AuditAction.ZONE_MEMBER_ADDED, "Zone", zone.id().toString(),
-                zone.siteCode(), null, saved);
-        publish("sfl.ifimp.zone-member-added.v1", "Zone", zone.id(), zone.siteCode(), actor, saved);
-        return saved;
+        return zoneCommands.addMember(command);
     }
 
     @Transactional
     public void removeZoneMember(FacilitiesCommands.RemoveZoneMember command) {
-        ActorContext actor = command.actor();
-        Zone zone = facilities.findZone(command.zoneId())
-                .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Zone", command.zoneId()));
-        authorization.require(actor, SflPermission.FACILITIES_ZONE_MANAGE, zone.siteCode(), command.channel(),
-                "Zone", zone.id().toString());
-
-        facilities.deleteZoneMembership(zone.id(), command.memberType(), command.memberId());
-
-        ZoneMemberRef removed = new ZoneMemberRef(command.memberType(), command.memberId());
-        audit.record(actor, command.channel(), AuditAction.ZONE_MEMBER_REMOVED, "Zone", zone.id().toString(),
-                zone.siteCode(), removed, null);
-        publish("sfl.ifimp.zone-member-removed.v1", "Zone", zone.id(), zone.siteCode(), actor, removed);
+        zoneCommands.removeMember(command);
     }
-
-    private record ZoneMemberRef(ZoneMemberType memberType, UUID memberId) {
-    }
-
-    // =========================================================================================
-    // Device references
-    // =========================================================================================
 
     @Transactional
     public DeviceReference registerDeviceReference(FacilitiesCommands.RegisterDeviceReference command) {
-        ActorContext actor = command.actor();
-        String siteCode = normalize(command.siteCode());
-        authorization.require(actor, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER, siteCode,
-                command.channel(), "DeviceReference", normalize(command.deviceCode()));
-
-        Optional<DeviceReference> replayed = replay("register-device-reference", command.idempotencyKey(),
-                command.idempotencyPayload(), facilities::findDeviceReference);
-        if (replayed.isPresent()) {
-            return replayed.get();
-        }
-
-        String deviceCode = normalize(command.deviceCode());
-        facilities.findDeviceReferenceByCode(siteCode, deviceCode).ifPresent(existing -> {
-            if (existing.lifecycleStatus().occupiesIdentifier()) {
-                throw new FacilitiesException.DuplicateIdentifierException("device reference", deviceCode,
-                        siteCode);
-            }
-        });
-        if (command.roomId() != null) {
-            requireRoomInSite(command.roomId(), siteCode);
-        }
-
-        DeviceReference saved = facilities.saveDeviceReference(DeviceReference.register(UUID.randomUUID(),
-                siteCode, deviceCode, command.name(), command.type(), command.roomId(), command.locationCode(),
-                command.vendor(), command.externalReference(), actor.actorId(), now(), command.channel(),
-                actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_REGISTERED, "DeviceReference",
-                saved.id().toString(), saved.siteCode(), null, saved);
-        publish("sfl.ifimp.device-reference-registered.v1", "DeviceReference", saved.id(), saved.siteCode(), actor,
-                saved);
-        remember("register-device-reference", command.idempotencyKey(), command.idempotencyPayload(),
-                saved.id(), saved.siteCode(), actor);
-        return saved;
+        return deviceReferenceCommands.register(command);
     }
 
     // =========================================================================================
@@ -591,88 +303,27 @@ public class FacilitiesMasterDataService {
 
     @Transactional
     public Building updateBuilding(FacilitiesCommands.UpdateBuilding command) {
-        ActorContext actor = command.actor();
-        Building building = requireBuilding(command.buildingId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, building.siteCode(),
-                command.channel(), "Building", building.id().toString());
-        building.metadata().requireVersion(command.expectedVersion(), "Building", building.id());
-
-        Building saved = facilities.saveBuilding(building.update(command.name(), command.description(),
-                actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.BUILDING_UPDATED, "Building",
-                saved.id().toString(), saved.siteCode(), building, saved);
-        publish("sfl.ifimp.building-updated.v1", "Building", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return buildingFloorCommands.updateBuilding(command);
     }
 
     @Transactional
     public Building changeBuildingLifecycle(FacilitiesCommands.ChangeBuildingLifecycle command) {
-        ActorContext actor = command.actor();
-        Building building = requireBuilding(command.buildingId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, building.siteCode(),
-                command.channel(), "Building", building.id().toString());
-        building.metadata().requireVersion(command.expectedVersion(), "Building", building.id());
-
-        Building saved = facilities.saveBuilding(building.changeLifecycle(command.status(), actor.actorId(),
-                now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.BUILDING_LIFECYCLE_CHANGED, "Building",
-                saved.id().toString(), saved.siteCode(), building.lifecycleStatus(), saved.lifecycleStatus());
-        publish("sfl.ifimp.building-lifecycle-changed.v1", "Building", saved.id(), saved.siteCode(), actor,
-                saved);
-        return saved;
+        return buildingFloorCommands.changeBuildingLifecycle(command);
     }
 
     @Transactional
     public FacilityFloor updateFloor(FacilitiesCommands.UpdateFloor command) {
-        ActorContext actor = command.actor();
-        FacilityFloor floor = requireFloor(command.floorId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, floor.siteCode(),
-                command.channel(), "Floor", floor.id().toString());
-        floor.metadata().requireVersion(command.expectedVersion(), "Floor", floor.id());
-
-        FacilityFloor saved = facilities.saveFloor(floor.update(command.name(), command.levelNumber(),
-                actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.FLOOR_UPDATED, "Floor", saved.id().toString(),
-                saved.siteCode(), floor, saved);
-        publish("sfl.ifimp.floor-updated.v1", "Floor", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return buildingFloorCommands.updateFloor(command);
     }
 
     @Transactional
     public FacilityFloor changeFloorLifecycle(FacilitiesCommands.ChangeFloorLifecycle command) {
-        ActorContext actor = command.actor();
-        FacilityFloor floor = requireFloor(command.floorId());
-        authorization.require(actor, SflPermission.FACILITIES_SPACE_MANAGE, floor.siteCode(),
-                command.channel(), "Floor", floor.id().toString());
-        floor.metadata().requireVersion(command.expectedVersion(), "Floor", floor.id());
-
-        FacilityFloor saved = facilities.saveFloor(floor.changeLifecycle(command.status(), actor.actorId(),
-                now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.FLOOR_LIFECYCLE_CHANGED, "Floor",
-                saved.id().toString(), saved.siteCode(), floor.lifecycleStatus(), saved.lifecycleStatus());
-        publish("sfl.ifimp.floor-lifecycle-changed.v1", "Floor", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return buildingFloorCommands.changeFloorLifecycle(command);
     }
 
     @Transactional
     public Zone changeZoneLifecycle(FacilitiesCommands.ChangeZoneLifecycle command) {
-        ActorContext actor = command.actor();
-        Zone zone = requireZone(command.zoneId());
-        authorization.require(actor, SflPermission.FACILITIES_ZONE_MANAGE, zone.siteCode(),
-                command.channel(), "Zone", zone.id().toString());
-        zone.metadata().requireVersion(command.expectedVersion(), "Zone", zone.id());
-
-        Zone saved = facilities.saveZone(zone.changeLifecycle(command.status(), actor.actorId(), now(),
-                command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.ZONE_LIFECYCLE_CHANGED, "Zone",
-                saved.id().toString(), saved.siteCode(), zone.lifecycleStatus(), saved.lifecycleStatus());
-        publish("sfl.ifimp.zone-lifecycle-changed.v1", "Zone", saved.id(), saved.siteCode(), actor, saved);
-        return saved;
+        return zoneCommands.changeLifecycle(command);
     }
 
     /**
@@ -688,59 +339,31 @@ public class FacilitiesMasterDataService {
      */
     @Transactional
     public DeviceReference updateDeviceReference(FacilitiesCommands.UpdateDeviceReference command) {
-        ActorContext actor = command.actor();
-        DeviceReference device = requireDeviceReference(command.deviceId());
-        authorization.require(actor, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER, device.siteCode(),
-                command.channel(), "DeviceReference", device.id().toString());
-        device.metadata().requireVersion(command.expectedVersion(), "DeviceReference", device.id());
-
-        DeviceReference saved = facilities.saveDeviceReference(device.update(command.name(), command.type(),
-                command.vendor(), command.externalReference(), actor.actorId(), now(), command.channel(),
-                actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_UPDATED, "DeviceReference",
-                saved.id().toString(), saved.siteCode(), device, saved);
-        publish("sfl.ifimp.device-reference-updated.v1", "DeviceReference", saved.id(), saved.siteCode(),
-                actor, saved);
-        return saved;
+        return deviceReferenceCommands.update(command);
     }
 
     @Transactional
     public DeviceReference changeDeviceReferenceLifecycle(
             FacilitiesCommands.ChangeDeviceReferenceLifecycle command) {
-        ActorContext actor = command.actor();
-        DeviceReference device = requireDeviceReference(command.deviceId());
-        authorization.require(actor, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER, device.siteCode(),
-                command.channel(), "DeviceReference", device.id().toString());
-        device.metadata().requireVersion(command.expectedVersion(), "DeviceReference", device.id());
-
-        DeviceReference saved = facilities.saveDeviceReference(device.changeLifecycle(command.status(),
-                actor.actorId(), now(), command.channel(), actor.correlationId()));
-
-        audit.record(actor, command.channel(), AuditAction.DEVICE_REFERENCE_LIFECYCLE_CHANGED,
-                "DeviceReference", saved.id().toString(), saved.siteCode(), device.lifecycleStatus(),
-                saved.lifecycleStatus());
-        publish("sfl.ifimp.device-reference-lifecycle-changed.v1", "DeviceReference", saved.id(),
-                saved.siteCode(), actor, saved);
-        return saved;
+        return deviceReferenceCommands.changeLifecycle(command);
     }
 
-    private Building requireBuilding(UUID id) {
+    Building requireBuilding(UUID id) {
         return facilities.findBuilding(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Building", id));
     }
 
-    private FacilityFloor requireFloor(UUID id) {
+    FacilityFloor requireFloor(UUID id) {
         return facilities.findFloor(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Floor", id));
     }
 
-    private Zone requireZone(UUID id) {
+    Zone requireZone(UUID id) {
         return facilities.findZone(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Zone", id));
     }
 
-    private DeviceReference requireDeviceReference(UUID id) {
+    DeviceReference requireDeviceReference(UUID id) {
         return facilities.findDeviceReference(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("DeviceReference", id));
     }
@@ -749,17 +372,17 @@ public class FacilitiesMasterDataService {
     // Internals
     // =========================================================================================
 
-    private Site requireSite(UUID id) {
+    Site requireSite(UUID id) {
         return facilities.findSite(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Site", id));
     }
 
-    private FacilityRoom requireRoom(UUID id) {
+    FacilityRoom requireRoom(UUID id) {
         return facilities.findRoom(id)
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Space", id));
     }
 
-    private void requireRoomInSite(UUID roomId, String siteCode) {
+    void requireRoomInSite(UUID roomId, String siteCode) {
         FacilityRoom room = requireRoom(roomId);
         if (!room.siteCode().equals(siteCode)) {
             throw new FacilitiesException.ValidationFailedException(
@@ -768,25 +391,7 @@ public class FacilitiesMasterDataService {
         }
     }
 
-    /** The site a zone member belongs to, which is what constrains it to the zone's own site. */
-    private String resolveMemberSite(ZoneMemberType memberType, UUID memberId) {
-        return switch (memberType) {
-            case BUILDING -> facilities.findBuilding(memberId)
-                    .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Building",
-                            memberId))
-                    .siteCode();
-            case FLOOR -> facilities.findFloor(memberId)
-                    .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException("Floor", memberId))
-                    .siteCode();
-            case ROOM -> requireRoom(memberId).siteCode();
-            case DEVICE -> facilities.findDeviceReference(memberId)
-                    .orElseThrow(() -> new FacilitiesException.InvalidParentReferenceException(
-                            "Device reference", memberId))
-                    .siteCode();
-        };
-    }
-
-    private <T> Optional<T> replay(String operation, String idempotencyKey, Object payload,
+    <T> Optional<T> replay(String operation, String idempotencyKey, Object payload,
             Function<UUID, Optional<T>> lookup) {
         if (idempotencyKey == null || idempotencyKey.isBlank()) {
             return Optional.empty();
@@ -795,19 +400,19 @@ public class FacilitiesMasterDataService {
                 .flatMap(lookup);
     }
 
-    private void remember(String operation, String idempotencyKey, Object payload, UUID resultId,
+    void remember(String operation, String idempotencyKey, Object payload, UUID resultId,
             String siteCode, ActorContext actor) {
         idempotency.recordResult(operation, idempotencyKey, idempotency.fingerprint(payload), resultId,
                 siteCode, actor.actorId());
     }
 
-    private void publish(String eventType, String aggregateType, UUID aggregateId, String siteScope,
+    void publish(String eventType, String aggregateType, UUID aggregateId, String siteScope,
             ActorContext actor, Object payload) {
         outbox.record(eventType, 1, aggregateType, aggregateId, siteScope, actor.correlationId(),
                 actor.actorId(), payload);
     }
 
-    private Instant now() {
+    Instant now() {
         return clock.instant();
     }
 
@@ -817,7 +422,7 @@ public class FacilitiesMasterDataService {
      * <p>A blank site code is {@code MISSING_SITE_SCOPE} rather than a validation failure, because
      * that is the SRS's own name for it: "Select a valid CLET site before saving this record."
      */
-    private static String normalize(String value) {
+    static String normalize(String value) {
         if (value == null || value.isBlank()) {
             throw new FacilitiesException.MissingSiteScopeException();
         }

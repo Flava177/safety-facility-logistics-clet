@@ -10,22 +10,8 @@
     <artifactId>sfl-safety-security-service</artifactId>
     <name>sfl-safety-security-service</name>
     <description>Safety, Security &amp; Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174</description>
-    <properties>
-        <archunit.version>1.3.0</archunit.version>
-        <springdoc-openapi.version>3.0.3</springdoc-openapi.version>
-        <testcontainers.version>1.21.3</testcontainers.version>
-    </properties>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.testcontainers</groupId>
-                <artifactId>testcontainers-bom</artifactId>
-                <version>${testcontainers.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
+    <!-- archunit.version, springdoc-openapi.version, testcontainers.version and the Testcontainers
+         BOM import are inherited from the parent reactor pom (services/pom.xml). -->
     <dependencies>
         <dependency>
             <groupId>gh.edu.clet.sfl</groupId>

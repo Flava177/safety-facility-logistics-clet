@@ -71,6 +71,10 @@ public class AssetReferenceController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a new asset reference at a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_MANAGE for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "An asset with this code is already registered")
     @PostMapping
     public ResponseEntity<ApiResponse<AssetReference>> register(@Valid @RequestBody RegisterAssetRequest request,
             HttpServletRequest http) {
@@ -85,6 +89,8 @@ public class AssetReferenceController {
                 .body(ApiResponse.ok(result));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists assets, narrowed to a named site or to the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "A named site is outside the actor's scope, or the actor lacks ASSET_REFERENCE_READ")
     @GetMapping
     public ApiResponse<List<AssetReference>> assets(@RequestParam(required = false) String siteCode,
             HttpServletRequest http) {
@@ -107,6 +113,9 @@ public class AssetReferenceController {
         return ApiResponse.ok(service.findAllInScope(actor.principal().siteScopes()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one asset reference by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_READ, or the asset's site is outside their scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No asset exists with this id")
     @GetMapping("/{assetId}")
     public ApiResponse<AssetReference> asset(@PathVariable UUID assetId, HttpServletRequest http) {
         ActorContext actor = actors.resolve(http);
@@ -119,6 +128,8 @@ public class AssetReferenceController {
         return ApiResponse.ok(asset);
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists assets at a specific location within a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_READ for the site")
     @GetMapping("/by-location")
     public ApiResponse<List<AssetReference>> byLocation(@RequestParam String siteCode,
             @RequestParam LocationType locationType, @RequestParam String locationReference,
@@ -128,6 +139,10 @@ public class AssetReferenceController {
         return ApiResponse.ok(service.findByLocation(siteCode, locationType, locationReference));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Moves an asset to a new location")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_MANAGE for the asset's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No asset exists with this id")
     @PatchMapping("/{assetId}/location")
     public ApiResponse<AssetReference> move(@PathVariable UUID assetId,
             @Valid @RequestBody MoveAssetRequest request, HttpServletRequest http) {
@@ -139,6 +154,9 @@ public class AssetReferenceController {
                 request.locationReference(), actor.actorId(), actor.correlationId())));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reassigns which custodian is responsible for an asset")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_MANAGE for the asset's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No asset exists with this id")
     @PatchMapping("/{assetId}/custody")
     public ApiResponse<AssetReference> assignCustody(@PathVariable UUID assetId,
             @Valid @RequestBody AssignCustodyRequest request, HttpServletRequest http) {
@@ -150,6 +168,10 @@ public class AssetReferenceController {
                 request.custodianReference(), actor.actorId(), actor.correlationId())));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Links an external evidence reference to an asset")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks ASSET_REFERENCE_MANAGE for the asset's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No asset exists with this id")
     @PatchMapping("/{assetId}/evidence")
     public ApiResponse<AssetReference> linkEvidence(@PathVariable UUID assetId,
             @Valid @RequestBody LinkEvidenceRequest request, HttpServletRequest http) {

@@ -5,11 +5,10 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.booking.application.BookableResourceService;
 import gh.edu.clet.sfl.facilities.booking.application.BookingCommands;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.api.IdempotencyKey;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.util.List;
@@ -38,12 +37,9 @@ import org.springframework.web.bind.annotation.RestController;
 public class BookableResourceController {
 
     private final BookableResourceService service;
-    private final FacilitiesActorResolver actorResolver;
 
-    public BookableResourceController(BookableResourceService service,
-            FacilitiesActorResolver actorResolver) {
+    public BookableResourceController(BookableResourceService service) {
         this.service = service;
-        this.actorResolver = actorResolver;
     }
 
     @PostMapping
@@ -52,12 +48,13 @@ public class BookableResourceController {
                     + "one makes the resource exclusive, which is what lets the database refuse a "
                     + "second booking of it under concurrency.")
     public ResponseEntity<ApiResponse<BookingResponses.ResourceResponse>> register(
-            @Valid @RequestBody BookingRequests.RegisterResource request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.RegisterResource request, ActorContext actor,
+            SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         BookingResponses.ResourceResponse result = BookingResponses.ResourceResponse.from(
                 service.register(new BookingCommands.RegisterResource(request.siteCode(),
                         request.resourceCode(), request.name(), request.category(), request.description(),
                         request.quantity(), request.homeRoomId(), request.assetId(), request.requiresSetup(),
-                        actor(http), channel(http), idempotencyKey(http), request)));
+                        actor, channel, idempotencyKey, request)));
         return ResponseEntity.created(URI.create("/api/v1/facilities/bookable-resources/" + result.id()))
                 .body(ApiResponse.ok(result));
     }
@@ -67,8 +64,8 @@ public class BookableResourceController {
     public ApiResponse<List<BookingResponses.ResourceResponse>> search(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) ResourceCategory category,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.search(siteCode, category, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.search(siteCode, category, actor, channel).stream()
                 .map(BookingResponses.ResourceResponse::from)
                 .toList());
     }
@@ -76,9 +73,9 @@ public class BookableResourceController {
     @GetMapping("/{resourceId}")
     @Operation(summary = "Read one bookable resource")
     public ApiResponse<BookingResponses.ResourceResponse> findById(@PathVariable UUID resourceId,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(BookingResponses.ResourceResponse.from(
-                service.findById(resourceId, actor(http), channel(http))));
+                service.findById(resourceId, actor, channel)));
     }
 
     @PatchMapping("/{resourceId}")
@@ -87,32 +84,20 @@ public class BookableResourceController {
                     + "are genuinely gone, and the oversubscription surfaces on the availability "
                     + "screen where a human can decide which booking loses out.")
     public ApiResponse<BookingResponses.ResourceResponse> update(@PathVariable UUID resourceId,
-            @Valid @RequestBody BookingRequests.UpdateResource request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.UpdateResource request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(BookingResponses.ResourceResponse.from(
                 service.update(new BookingCommands.UpdateResource(resourceId, request.name(),
                         request.description(), request.quantity(), request.homeRoomId(),
-                        request.requiresSetup(), request.expectedVersion(), actor(http), channel(http)))));
+                        request.requiresSetup(), request.expectedVersion(), actor, channel))));
     }
 
     @PatchMapping("/{resourceId}/lifecycle")
     @Operation(summary = "Retire or restore a bookable resource")
     public ApiResponse<BookingResponses.ResourceResponse> changeLifecycle(@PathVariable UUID resourceId,
-            @Valid @RequestBody BookingRequests.ChangeLifecycle request, HttpServletRequest http) {
+            @Valid @RequestBody BookingRequests.ChangeLifecycle request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(BookingResponses.ResourceResponse.from(
                 service.changeLifecycle(new BookingCommands.ChangeResourceLifecycle(resourceId,
-                        request.lifecycleStatus(), request.expectedVersion(), actor(http),
-                        channel(http)))));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
-    }
-
-    private String idempotencyKey(HttpServletRequest http) {
-        return actorResolver.resolveIdempotencyKey(http);
+                        request.lifecycleStatus(), request.expectedVersion(), actor, channel))));
     }
 }

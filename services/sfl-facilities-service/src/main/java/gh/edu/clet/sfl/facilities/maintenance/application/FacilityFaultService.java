@@ -19,6 +19,7 @@ import gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization;
 import gh.edu.clet.sfl.facilities.shared.application.ServiceOutbox;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
 import gh.edu.clet.sfl.facilities.shared.application.port.IdempotencyPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
@@ -241,14 +242,19 @@ public class FacilityFaultService {
     // =============================================================================================
 
     @Transactional(readOnly = true)
-    public List<FacilityFault> search(String siteCode, UUID roomId, FacilityFaultStatus status, Boolean openOnly,
-            int limit, ActorContext actor, SourceChannel channel) {
+    public RepositoryPage<FacilityFault> search(String siteCode, UUID roomId, FacilityFaultStatus status,
+            Boolean openOnly, int page, int size, ActorContext actor, SourceChannel channel) {
         authorization.require(actor, SflPermission.FACILITIES_FAULT_READ, channel, "FacilityFault", "list",
                 siteCode);
         authorization.requireRequestedSite(actor, siteCode, channel, "FacilityFault");
-        List<FacilityFault> found = maintenance.findFaults(siteCode, roomId, status, openOnly,
-                requesterFilter(actor), limit);
-        return authorization.filterBySite(actor, found, FacilityFault::siteCode);
+        RepositoryPage<FacilityFault> found = maintenance.findFaults(siteCode, roomId, status, openOnly,
+                requesterFilter(actor), page, size);
+        List<FacilityFault> visible = authorization.filterBySite(actor, found.items(), FacilityFault::siteCode);
+        // When filtering removed rows, the total is reported as what remains: a total counting records
+        // the caller may not see would let them infer another site's estate size.
+        return visible.size() == found.items().size()
+                ? found
+                : RepositoryPage.of(visible, visible.size(), found.page(), found.size());
     }
 
     @Transactional(readOnly = true)
@@ -275,7 +281,7 @@ public class FacilityFaultService {
                 .orElseThrow(() -> new FacilitiesException.RecordNotFoundException("Space", roomId));
         authorization.require(actor, SflPermission.FACILITIES_FAULT_READ, room.siteCode(), channel,
                 "FacilityFault", roomId.toString());
-        return maintenance.findFaults(room.siteCode(), roomId, null, true, requesterFilter(actor), 50);
+        return maintenance.findFaults(room.siteCode(), roomId, null, true, requesterFilter(actor), 0, 50).items();
     }
 
     // =============================================================================================

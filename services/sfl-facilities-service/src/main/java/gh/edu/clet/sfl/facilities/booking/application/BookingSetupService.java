@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.Booking;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTask;
 import gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import gh.edu.clet.sfl.facilities.shared.domain.error.FacilitiesException;
@@ -89,13 +90,18 @@ public class BookingSetupService {
 
     /** The turnaround queue: everything still to do before a room is needed, most urgent first. */
     @Transactional(readOnly = true)
-    public List<SetupTask> queue(String siteCode, Instant dueBefore, int limit, ActorContext actor,
-            SourceChannel channel) {
+    public RepositoryPage<SetupTask> queue(String siteCode, Instant dueBefore, int page, int size,
+            ActorContext actor, SourceChannel channel) {
         authorization.require(actor, SflPermission.FACILITIES_BOOKING_READ, channel, "SetupTask", "list",
                 siteCode);
         authorization.requireRequestedSite(actor, siteCode, channel, "SetupTask");
         Instant horizon = dueBefore == null ? clock.instant().plus(java.time.Duration.ofDays(2)) : dueBefore;
-        return authorization.filterBySite(actor,
-                bookings.findPendingSetupTasks(siteCode, horizon, limit), SetupTask::siteCode);
+        RepositoryPage<SetupTask> found = bookings.findPendingSetupTasks(siteCode, horizon, page, size);
+        List<SetupTask> visible = authorization.filterBySite(actor, found.items(), SetupTask::siteCode);
+        // When filtering removed rows, the total is reported as what remains: a total counting records
+        // the caller may not see would let them infer another site's estate size.
+        return visible.size() == found.items().size()
+                ? found
+                : RepositoryPage.of(visible, visible.size(), found.page(), found.size());
     }
 }

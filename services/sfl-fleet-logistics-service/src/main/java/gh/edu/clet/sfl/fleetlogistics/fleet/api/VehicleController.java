@@ -95,6 +95,10 @@ class VehicleController {
         this.clock = clock;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a new vehicle at a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "An active vehicle with this registration number or VIN already exists at the site")
     @PostMapping
     ResponseEntity<ApiResponse<VehicleResponse>> register(@Valid @RequestBody RegisterVehicleRequest request,
             HttpServletRequest httpRequest) {
@@ -113,6 +117,8 @@ class VehicleController {
                 .body(ApiResponse.ok(mapper.toResponse(vehicle, vehicleQueries.canReadSensitive(actor))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches vehicles, narrowed to the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "A named site is outside the actor's scope")
     @GetMapping
     ApiResponse<PageResponse<VehicleResponse>> search(
             @RequestParam(required = false) String siteCode,
@@ -140,6 +146,9 @@ class VehicleController {
                 result.page() == 0, result.page() >= result.totalPages() - 1, result.sort()));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one vehicle by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @GetMapping("/{vehicleId}")
     ApiResponse<VehicleResponse> findById(@PathVariable UUID vehicleId, HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);
@@ -147,6 +156,11 @@ class VehicleController {
         return ApiResponse.ok(mapper.toResponse(vehicle, vehicleQueries.canReadSensitive(actor)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Updates a vehicle's editable fields")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The vehicle was changed by another user (expectedVersion conflict)")
     @PatchMapping("/{vehicleId}")
     ApiResponse<VehicleResponse> update(@PathVariable UUID vehicleId,
             @Valid @RequestBody UpdateVehicleRequest request, HttpServletRequest httpRequest) {
@@ -159,6 +173,11 @@ class VehicleController {
         return ApiResponse.ok(mapper.toResponse(vehicle, vehicleQueries.canReadSensitive(actor)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Changes a vehicle's lifecycle status")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The vehicle was changed by another user, or the transition is not permitted from its current status")
     @PatchMapping("/{vehicleId}/lifecycle")
     ApiResponse<VehicleResponse> changeLifecycle(@PathVariable UUID vehicleId,
             @Valid @RequestBody ChangeVehicleLifecycleRequest request, HttpServletRequest httpRequest) {
@@ -169,6 +188,10 @@ class VehicleController {
         return ApiResponse.ok(mapper.toResponse(vehicle, vehicleQueries.canReadSensitive(actor)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a compliance document (licence, insurance, etc.) against a vehicle")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation, or no retention class was selected")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @PostMapping("/{vehicleId}/compliance-documents")
     ResponseEntity<ApiResponse<ComplianceDocumentResponse>> registerComplianceDocument(
             @PathVariable UUID vehicleId, @Valid @RequestBody RegisterComplianceDocumentRequest request,
@@ -192,6 +215,9 @@ class VehicleController {
       * <p>Closes gap 2. The same policy {@code trips/assignment-preview} runs, reached without
       * having to pretend a trip is involved.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Assesses a vehicle's readiness for assignment")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @GetMapping("/{vehicleId}/readiness")
     ApiResponse<ReadinessResponse> readiness(@PathVariable UUID vehicleId, HttpServletRequest httpRequest) {
         return ApiResponse.ok(assessmentMapper
@@ -207,6 +233,9 @@ class VehicleController {
       * {@code recordedAt}: this is a vendor projection, and how stale is too stale depends on the
       * question being asked.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists a vehicle's movement/location history, newest first")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @GetMapping("/{vehicleId}/movement")
     ApiResponse<List<VehicleLocationResponse>> movement(@PathVariable UUID vehicleId,
             @RequestParam(defaultValue = "50") int size, HttpServletRequest httpRequest) {
@@ -225,6 +254,10 @@ class VehicleController {
       * {@code TripApplicationService.recordInspection} accepts a null trip with an explicit vehicle -
       * and nothing mapped it.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Records a standalone (periodic) inspection against a vehicle with no open trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required inspection permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @PostMapping("/{vehicleId}/inspections")
     ResponseEntity<ApiResponse<InspectionResponse>> recordInspection(@PathVariable UUID vehicleId,
             @Valid @RequestBody FleetTripRequests.RecordStandaloneInspection request,
@@ -257,6 +290,8 @@ class VehicleController {
       * quietly wrong for any other. Mapped under {@code /vehicles} rather than at the root because
       * a compliance document belongs to a vehicle.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches compliance documents across the fleet in the actor's site scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor has no site scope")
     @GetMapping("/compliance-documents")
     ApiResponse<List<ComplianceDocumentResponse>> searchComplianceDocuments(
             @RequestParam(required = false) ComplianceDocumentType documentType,
@@ -272,6 +307,9 @@ class VehicleController {
                 .toList());
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists compliance documents registered against a vehicle")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @GetMapping("/{vehicleId}/compliance-documents")
     ApiResponse<List<ComplianceDocumentResponse>> complianceDocuments(@PathVariable UUID vehicleId,
             HttpServletRequest httpRequest) {
@@ -281,6 +319,10 @@ class VehicleController {
                 .toList());
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Records a maintenance/service event against a vehicle")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @PostMapping("/{vehicleId}/service-records")
     ResponseEntity<ApiResponse<ServiceRecordResponse>> recordService(@PathVariable UUID vehicleId,
             @Valid @RequestBody RecordVehicleServiceRequest request, HttpServletRequest httpRequest) {
@@ -296,6 +338,9 @@ class VehicleController {
                 .body(ApiResponse.ok(mapper.toResponse(record)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads a vehicle's full service history")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The vehicle's site is outside the actor's scope")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
     @GetMapping("/{vehicleId}/service-history")
     ApiResponse<ServiceHistoryResponse> serviceHistory(@PathVariable UUID vehicleId,
             HttpServletRequest httpRequest) {
@@ -305,6 +350,11 @@ class VehicleController {
                 vehicleQueries.findServiceHistory(vehicleId, actor)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Corrects a vehicle's odometer reading with a recorded reason and evidence")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required vehicle-management permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No vehicle exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The vehicle was changed by another user (expectedVersion conflict)")
     @PostMapping("/{vehicleId}/odometer-corrections")
     ApiResponse<VehicleResponse> correctOdometer(@PathVariable UUID vehicleId,
             @Valid @RequestBody CorrectOdometerRequest request, HttpServletRequest httpRequest) {

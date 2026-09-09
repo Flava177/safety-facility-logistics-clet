@@ -32,7 +32,30 @@
         -->
         <sfl.ui.dir>${project.basedir}/../../frontend/sfl-operations-ui</sfl.ui.dir>
         <sfl.ui.dist>${sfl.ui.dir}/dist</sfl.ui.dist>
+
+        <!--
+          Centralised here rather than redeclared identically in sfl-facilities-service,
+          sfl-fleet-logistics-service and sfl-safety-security-service's own <properties>: three
+          copies of the same version were consistent by coincidence, not by anything enforcing it, so
+          a routine bump in one module could silently diverge from its siblings. A fourth service
+          inherits these for free.
+        -->
+        <archunit.version>1.3.0</archunit.version>
+        <springdoc-openapi.version>3.0.3</springdoc-openapi.version>
+        <testcontainers.version>1.21.3</testcontainers.version>
     </properties>
+
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.testcontainers</groupId>
+                <artifactId>testcontainers-bom</artifactId>
+                <version>${testcontainers.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <profiles>
         <!--

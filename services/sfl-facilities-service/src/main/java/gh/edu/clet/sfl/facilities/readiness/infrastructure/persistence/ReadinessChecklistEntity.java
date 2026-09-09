@@ -58,7 +58,11 @@ class ReadinessChecklistEntity {
     @Embedded
     private RecordMetadataEmbeddable metadata;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    // LAZY: every current caller needs items, but the query methods on
+    // ReadinessChecklistJpaRepository fetch them explicitly (@EntityGraph) so the join happens once
+    // per query rather than once per row - a default EAGER @OneToMany still issues a separate SELECT
+    // per parent, it does not turn into a join by itself.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "checklist_id", nullable = false)
     @OrderBy("sortOrder asc")
     private List<ReadinessChecklistItemEntity> items = new ArrayList<>();

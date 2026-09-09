@@ -40,6 +40,9 @@ class FleetEvidenceController {
         this.actorResolver = actorResolver;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers evidence metadata for a file stored elsewhere")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation, or no retention class was selected")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence permission for the site")
     @PostMapping
     ResponseEntity<ApiResponse<EvidenceResponse>> register(
             @Valid @RequestBody FleetEvidenceRequests.RegisterEvidence request, HttpServletRequest httpRequest) {
@@ -65,6 +68,10 @@ class FleetEvidenceController {
      * changes what the caller gets back, which is what lets a form upload a receipt and use the
      * returned id in the same submission instead of asking a person to copy one.
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Uploads a file and registers it as evidence in one request")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "No retention class was selected")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence permission for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "422", description = "The uploaded file failed the content scanner (not a PDF/JPEG, or an unsafe payload)")
     @PostMapping(path = "/files", consumes = org.springframework.http.MediaType.MULTIPART_FORM_DATA_VALUE)
     ResponseEntity<ApiResponse<EvidenceResponse>> upload(
             @RequestParam String siteCode,
@@ -108,6 +115,9 @@ class FleetEvidenceController {
      *       file name is attacker-controlled text going into a response header.</li>
      * </ul>
      */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Serves the stored evidence file, as a download or an inline preview")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence permission for the record's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No evidence exists with this id, or no file is stored against it")
     @GetMapping("/{evidenceId}/content")
     ResponseEntity<byte[]> content(@PathVariable UUID evidenceId,
             @RequestParam(defaultValue = "attachment") String disposition, HttpServletRequest httpRequest) {
@@ -137,6 +147,8 @@ class FleetEvidenceController {
       * no search, every closure dialog asked an operator to paste a reference id from somewhere else.
       * A trip or workflow closure can offer a picker now.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists evidence attached to one record")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence read permission")
     @GetMapping
     public ApiResponse<List<EvidenceResponse>> search(@RequestParam String relatedRecordType,
             @RequestParam String relatedRecordId, HttpServletRequest httpRequest) {
@@ -148,12 +160,18 @@ class FleetEvidenceController {
                 .toList());
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one evidence record's metadata by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No evidence exists with this id")
     @GetMapping("/{evidenceId}")
     ApiResponse<EvidenceResponse> findById(@PathVariable UUID evidenceId, HttpServletRequest httpRequest) {
         return ApiResponse.ok(mapper.toResponse(evidenceService.findById(evidenceId,
                 actorResolver.resolve(httpRequest)), evidenceService.hasContent(evidenceId)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Records that an actor accessed a piece of evidence")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No evidence exists with this id")
     @PostMapping("/{evidenceId}/access")
     ApiResponse<EvidenceResponse> recordAccess(@PathVariable UUID evidenceId, HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);
@@ -161,6 +179,10 @@ class FleetEvidenceController {
                 actorResolver.resolveSourceChannel(httpRequest)), evidenceService.hasContent(evidenceId)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Requests export of a piece of evidence, pending approval")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No evidence exists with this id")
     @PostMapping("/{evidenceId}/export-requests")
     ResponseEntity<ApiResponse<ExportRequestResponse>> requestExport(@PathVariable UUID evidenceId,
             @Valid @RequestBody FleetEvidenceRequests.RequestExport request, HttpServletRequest httpRequest) {
@@ -172,6 +194,11 @@ class FleetEvidenceController {
                 .body(ApiResponse.ok(mapper.toResponse(exportRequest)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Approves or rejects a pending evidence export request")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required export-approval permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No export request exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The export request is not in a decidable state")
     @PatchMapping("/export-requests/{exportRequestId}/decision")
     ApiResponse<ExportRequestResponse> decideExport(@PathVariable UUID exportRequestId,
             @Valid @RequestBody FleetEvidenceRequests.DecideExport request, HttpServletRequest httpRequest) {
@@ -181,6 +208,10 @@ class FleetEvidenceController {
                         request.decisionReason(), actor, actorResolver.resolveSourceChannel(httpRequest)))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Performs the export for an approved export request")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required evidence export permission, or the request was not approved")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No export request exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The export request is not in an exportable state")
     @PostMapping("/export-requests/{exportRequestId}/export")
     ApiResponse<ExportRequestResponse> export(@PathVariable UUID exportRequestId, HttpServletRequest httpRequest) {
         ActorContext actor = actorResolver.resolve(httpRequest);

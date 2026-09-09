@@ -2,14 +2,18 @@ package gh.edu.clet.sfl.safetysecurity.visitor.application.service;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
+import gh.edu.clet.sfl.safetysecurity.emergency.application.port.EmergencyRepository.EmergencyPage;
+import gh.edu.clet.sfl.safetysecurity.emergency.application.port.EmergencyRepository.Paging;
 import gh.edu.clet.sfl.safetysecurity.platform.application.port.AuditPort;
 import gh.edu.clet.sfl.safetysecurity.platform.application.port.IntegrationEventPublisher;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.port.VisitorRepository;
+import gh.edu.clet.sfl.safetysecurity.visitor.application.port.VisitorSearchPageRepository;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.port.WatchlistCheckPort;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.event.VisitorEventType;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.exception.VisitorException;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.model.SourceChannel;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.model.VisitPurpose;
+import gh.edu.clet.sfl.safetysecurity.visitor.domain.model.VisitStatus;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.model.VisitorVisit;
 import java.time.Clock;
 import java.time.Instant;
@@ -24,15 +28,18 @@ import org.springframework.transaction.annotation.Transactional;
 public class VisitorRegistrationService {
 
     private final VisitorRepository repository;
+    private final VisitorSearchPageRepository searchPageRepository;
     private final WatchlistCheckPort watchlist;
     private final AuditPort audit;
     private final IntegrationEventPublisher events;
     private final VisitorAccessPolicy access;
     private final Clock clock;
 
-    public VisitorRegistrationService(VisitorRepository repository, WatchlistCheckPort watchlist, AuditPort audit,
+    public VisitorRegistrationService(VisitorRepository repository,
+            VisitorSearchPageRepository searchPageRepository, WatchlistCheckPort watchlist, AuditPort audit,
             IntegrationEventPublisher events, VisitorAccessPolicy access, Clock clock) {
         this.repository = repository;
+        this.searchPageRepository = searchPageRepository;
         this.watchlist = watchlist;
         this.audit = audit;
         this.events = events;
@@ -96,6 +103,17 @@ public class VisitorRegistrationService {
     public List<VisitorVisit> search(VisitorRepository.VisitQuery query, ActorContext actor) {
         access.require(actor, SflPermission.VISITOR_VISIT_READ, query.siteCode(), "VisitorVisit", null);
         return repository.search(query);
+    }
+
+    /**
+     * The paginated counterpart to {@link #search} - total count, page number and page size, not just
+     * a client-{@code limit}-capped list. See {@link VisitorSearchPageRepository}.
+     */
+    @Transactional(readOnly = true)
+    public EmergencyPage<VisitorVisit> searchPage(String siteCode, VisitStatus status, String hostId, Instant from,
+            Instant to, Paging paging, ActorContext actor) {
+        access.require(actor, SflPermission.VISITOR_VISIT_READ, siteCode, "VisitorVisit", null);
+        return searchPageRepository.searchPage(siteCode, status, hostId, from, to, paging);
     }
 
     VisitorVisit findOrThrow(UUID id) {

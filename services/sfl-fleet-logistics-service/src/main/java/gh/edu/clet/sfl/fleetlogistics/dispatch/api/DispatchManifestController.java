@@ -32,6 +32,9 @@ public class DispatchManifestController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Creates a draft dispatch manifest for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission for the site")
     @PostMapping
     public ResponseEntity<ApiResponse<Dispatch>> create(@Valid @RequestBody CreateManifestRequest r,
             HttpServletRequest h) {
@@ -42,6 +45,8 @@ public class DispatchManifestController {
                 .body(ApiResponse.ok(dispatch));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists dispatch manifests for a site, filtered by status/destination/trip")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission for the site")
     @GetMapping
     public ApiResponse<DispatchPageResponse<Dispatch>> list(@RequestParam String siteCode,
             @RequestParam(required = false) Dispatch.Status status,
@@ -54,6 +59,9 @@ public class DispatchManifestController {
                 handler, from, to, DispatchPageResponse.paging(page, size, sort), actors.resolve(h))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one dispatch manifest by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @GetMapping("/{id}")
     public ApiResponse<Dispatch> detail(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.dispatch(id, actors.resolve(h)));
@@ -67,6 +75,9 @@ public class DispatchManifestController {
       * response is the raw lines, which is what a caller wanting only sequence and return status
       * needs.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists a manifest's lines, optionally expanded with the courier item behind each")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @GetMapping("/{id}/items")
     public ApiResponse<?> items(@PathVariable UUID id,
             @RequestParam(required = false) String expand, HttpServletRequest h) {
@@ -78,11 +89,19 @@ public class DispatchManifestController {
     }
 
     /** The manifest's transition history: draft, seal, trip assignment, dispatch, transit, closure. */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads the transition history of one dispatch manifest")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
     @GetMapping("/{id}/history")
     public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Adds a courier item line to a draft manifest")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch or courier item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The manifest is no longer in DRAFT status")
     @PostMapping("/{id}/items")
     public ApiResponse<DispatchManifestItem> addItem(@PathVariable UUID id, @Valid @RequestBody AddItemRequest r,
             HttpServletRequest h) {
@@ -90,11 +109,20 @@ public class DispatchManifestController {
                 r.expectedSealId(), r.expectedQuantity(), actors.resolve(h), actors.resolveSourceChannel(h))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Seals a manifest, recording its seal identifiers")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The manifest cannot be sealed with no items, no seal ids, or from its current status")
     @PostMapping("/{id}/seal")
     public ApiResponse<Dispatch> seal(@PathVariable UUID id, @Valid @RequestBody SealRequest r, HttpServletRequest h) {
         return ApiResponse.ok(service.seal(id, r.sealIds(), actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Binds the carrying S166 trip/vehicle/driver to a manifest before sealing")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "A trip may only be assigned while the manifest is DRAFT or SEALED")
     @PostMapping("/{id}/assign-trip")
     public ApiResponse<Dispatch> assignTrip(@PathVariable UUID id, @RequestBody AssignTripRequest r,
             HttpServletRequest h) {
@@ -102,16 +130,29 @@ public class DispatchManifestController {
                 actors.resolveSourceChannel(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Marks a sealed manifest as dispatched")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The manifest is not in SEALED status")
     @PostMapping("/{id}/dispatch")
     public ApiResponse<Dispatch> dispatch(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.dispatch(id, actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Marks a dispatched manifest as in transit")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The manifest is not in DISPATCHED status")
     @PostMapping("/{id}/in-transit")
     public ApiResponse<Dispatch> inTransit(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.inTransit(id, actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Closes a manifest with a reason, blocked while an exception or custody gap is open")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch manifest permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No dispatch exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The manifest cannot be closed from its current status, or an exception/custody gap is still open")
     @PostMapping("/{id}/close")
     public ApiResponse<Dispatch> close(@PathVariable UUID id, @Valid @RequestBody CloseRequest r, HttpServletRequest h) {
         return ApiResponse.ok(service.close(id, r.reason(), actors.resolve(h), actors.resolveSourceChannel(h)));

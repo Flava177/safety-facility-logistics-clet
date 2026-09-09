@@ -25,11 +25,15 @@ public class DispatchReportController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Exports the courier item register for a site as CSV")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch report export permission for the site")
     @GetMapping(value = "/items.csv", produces = "text/csv")
     public ResponseEntity<String> items(@RequestParam String siteCode, HttpServletRequest h) {
         return csv("dispatch-items-" + siteCode + ".csv", service.itemsReportCsv(siteCode, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Exports the exception case queue for a site as CSV")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch report export permission for the site")
     @GetMapping(value = "/exceptions.csv", produces = "text/csv")
     public ResponseEntity<String> exceptions(@RequestParam String siteCode, HttpServletRequest h) {
         return csv("dispatch-exceptions-" + siteCode + ".csv",

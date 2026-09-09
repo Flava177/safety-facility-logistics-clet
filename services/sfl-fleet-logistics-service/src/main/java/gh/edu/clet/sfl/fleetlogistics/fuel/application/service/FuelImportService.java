@@ -3,8 +3,8 @@ package gh.edu.clet.sfl.fleetlogistics.fuel.application.service;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
-import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.BulkImportPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.policy.BulkImportPolicy;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.port.FuelRepository;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.exception.FuelImportAlreadyProcessedException;
 import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelImportBatch;
@@ -31,7 +31,10 @@ public class FuelImportService {
     private final FuelRepository repository;
     private final Clock clock;
 
-    public FuelImportService(FuelApplicationService fuel, FuelAccessPolicy access, FuelRepository repository,
+    public FuelImportService(
+            FuelApplicationService fuel,
+            FuelAccessPolicy access,
+            FuelRepository repository,
             Clock clock) {
         this.fuel = fuel;
         this.access = access;
@@ -42,13 +45,14 @@ public class FuelImportService {
     /**
      * Imports a CSV, one row at a time, and records the batch.
      *
-     * <p>A rejected row never fails the batch: each goes through the same idempotent capture command
-     * as a manual entry and carries its own outcome. The duplicate-file check happens **before** any
-     * row is processed - the unique constraint would have caught it either way, but only after every
-     * row had been captured, and the operator would have received an unmapped 500 with no indication
-     * that nothing had been duplicated.
+     * <p>A rejected row never fails the batch: each goes through the same idempotent capture
+     * command as a manual entry and carries its own outcome. The duplicate-file check happens
+     * **before** any row is processed - the unique constraint would have caught it either way, but
+     * only after every row had been captured, and the operator would have received an unmapped 500
+     * with no indication that nothing had been duplicated.
      */
-    public ImportResult importCsv(String site, String source, String fileName, byte[] content, ActorContext actor) {
+    public ImportResult importCsv(
+            String site, String source, String fileName, byte[] content, ActorContext actor) {
         access.require(actor, SflPermission.FUEL_TRANSACTION_IMPORT, site, "FuelImportBatch", null);
         // Before the digest, because hashing an unbounded array to find out it is unbounded is work
         // done for nothing - and before the batch row exists, so an oversized file leaves no record
@@ -57,11 +61,19 @@ public class FuelImportService {
         String siteCode = SiteCode.of(site).value();
         String hash = sha256(content);
 
-        repository.findImportBatchByHash(siteCode, source, hash).ifPresent(existing -> {
-            throw FuelImportAlreadyProcessedException.of(siteCode, source, fileName, hash, existing.id());
-        });
+        repository
+                .findImportBatchByHash(siteCode, source, hash)
+                .ifPresent(
+                        existing -> {
+                            throw FuelImportAlreadyProcessedException.of(
+                                    siteCode, source, fileName, hash, existing.id());
+                        });
 
-        List<String> lines = new String(content, StandardCharsets.UTF_8).lines().filter(l -> !l.isBlank()).toList();
+        List<String> lines =
+                new String(content, StandardCharsets.UTF_8)
+                        .lines()
+                        .filter(l -> !l.isBlank())
+                        .toList();
         if (lines.size() < 2) {
             throw new IllegalArgumentException("CSV must contain a header and at least one row");
         }
@@ -77,35 +89,79 @@ public class FuelImportService {
             int rowNumber = n + 1;
             try {
                 var tx = fuel.capture(toCommand(siteCode, source, row, batchId + "-" + n, actor));
-                rows.add(new FuelImportRow(UUID.randomUUID(), rowNumber, FuelImportRow.Status.ACCEPTED, tx.id(), null, null));
+                rows.add(
+                        new FuelImportRow(
+                                UUID.randomUUID(),
+                                rowNumber,
+                                FuelImportRow.Status.ACCEPTED,
+                                tx.id(),
+                                null,
+                                null));
                 accepted++;
             } catch (RuntimeException e) {
-                rows.add(new FuelImportRow(UUID.randomUUID(), rowNumber, FuelImportRow.Status.REJECTED, null,
-                        "FUEL_IMPORT_ROW_INVALID", e.getMessage()));
+                rows.add(
+                        new FuelImportRow(
+                                UUID.randomUUID(),
+                                rowNumber,
+                                FuelImportRow.Status.REJECTED,
+                                null,
+                                "FUEL_IMPORT_ROW_INVALID",
+                                e.getMessage()));
             }
         }
 
         int rejected = rows.size() - accepted;
-        var batch = new FuelImportBatch(batchId, SiteCode.of(siteCode), source, fileName == null ? "upload.csv" : fileName,
-                hash, rejected == 0 ? FuelImportBatch.Status.COMPLETED : FuelImportBatch.Status.COMPLETED_WITH_ERRORS,
-                rows.size(), accepted, rejected, actor.actorId(), clock.instant(), actor.correlationId(), rows);
+        var batch =
+                new FuelImportBatch(
+                        batchId,
+                        SiteCode.of(siteCode),
+                        source,
+                        fileName == null ? "upload.csv" : fileName,
+                        hash,
+                        rejected == 0
+                                ? FuelImportBatch.Status.COMPLETED
+                                : FuelImportBatch.Status.COMPLETED_WITH_ERRORS,
+                        rows.size(),
+                        accepted,
+                        rejected,
+                        actor.actorId(),
+                        clock.instant(),
+                        actor.correlationId(),
+                        rows);
 
         var saved = repository.saveImportBatch(batch);
         return ImportResult.of(saved);
     }
 
-    private FuelApplicationService.CaptureFuel toCommand(String site, String source, Map<String, String> r, String key,
-            ActorContext actor) {
-        return new FuelApplicationService.CaptureFuel(site, r.get("providerTransactionId"), source,
-                uuid(r, "vehicleId", true), uuid(r, "driverId", true), uuid(r, "tripId", false),
-                Instant.parse(required(r, "occurredAt")), required(r, "vendorReference"), r.get("stationReference"),
-                required(r, "fuelProduct"), new BigDecimal(required(r, "quantity")), required(r, "quantityUnit"),
-                new BigDecimal(required(r, "unitPrice")), decimal(r.get("totalCost")), required(r, "currency"),
-                r.get("cardReference"), Long.parseLong(required(r, "odometerReading")),
+    private FuelApplicationService.CaptureFuel toCommand(
+            String site, String source, Map<String, String> r, String key, ActorContext actor) {
+        return new FuelApplicationService.CaptureFuel(
+                site,
+                r.get("providerTransactionId"),
+                source,
+                uuid(r, "vehicleId", true),
+                uuid(r, "driverId", true),
+                uuid(r, "tripId", false),
+                Instant.parse(required(r, "occurredAt")),
+                required(r, "vendorReference"),
+                r.get("stationReference"),
+                required(r, "fuelProduct"),
+                new BigDecimal(required(r, "quantity")),
+                required(r, "quantityUnit"),
+                new BigDecimal(required(r, "unitPrice")),
+                decimal(r.get("totalCost")),
+                required(r, "currency"),
+                r.get("cardReference"),
+                Long.parseLong(required(r, "odometerReading")),
                 // A CSV import carries no pump photograph and never will: the file is a provider's
                 // ledger, not a driver's submission. The PUMP_IMAGE rule only applies to MANUAL
                 // captures for exactly this reason.
-                uuid(r, "receiptEvidenceId", false), null, r.get("comments"), key, actor, SourceChannel.IMPORT);
+                uuid(r, "receiptEvidenceId", false),
+                null,
+                r.get("comments"),
+                key,
+                actor,
+                SourceChannel.IMPORT);
     }
 
     private static List<String> parse(String line) {
@@ -115,17 +171,22 @@ public class FuelImportService {
         for (int i = 0; i < line.length(); i++) {
             char c = line.charAt(i);
             if (c == '"') {
-                if (quoted && i + 1 < line.length() && line.charAt(i + 1) == '"') { v.append('"'); i++; }
-                else quoted = !quoted;
-            } else if (c == ',' && !quoted) { out.add(v.toString().strip()); v.setLength(0); }
-            else v.append(c);
+                if (quoted && i + 1 < line.length() && line.charAt(i + 1) == '"') {
+                    v.append('"');
+                    i++;
+                } else quoted = !quoted;
+            } else if (c == ',' && !quoted) {
+                out.add(v.toString().strip());
+                v.setLength(0);
+            } else v.append(c);
         }
         out.add(v.toString().strip());
         return out;
     }
 
     private static Map<String, String> map(List<String> h, List<String> v) {
-        if (h.size() != v.size()) throw new IllegalArgumentException("CSV row column count does not match header");
+        if (h.size() != v.size())
+            throw new IllegalArgumentException("CSV row column count does not match header");
         Map<String, String> m = new LinkedHashMap<>();
         for (int i = 0; i < h.size(); i++) m.put(h.get(i), v.get(i).isBlank() ? null : v.get(i));
         return m;
@@ -146,7 +207,9 @@ public class FuelImportService {
         return UUID.fromString(v);
     }
 
-    private static BigDecimal decimal(String v) { return v == null || v.isBlank() ? null : new BigDecimal(v); }
+    private static BigDecimal decimal(String v) {
+        return v == null || v.isBlank() ? null : new BigDecimal(v);
+    }
 
     private static String sha256(byte[] bytes) {
         try {
@@ -159,21 +222,36 @@ public class FuelImportService {
     /**
      * The upload response.
      *
-     * <p>Kept as its own shape rather than returning the batch, because the response to an upload is
-     * where the caller most needs the rows inline; the batch read endpoint serves the same detail
-     * later.
+     * <p>Kept as its own shape rather than returning the batch, because the response to an upload
+     * is where the caller most needs the rows inline; the batch read endpoint serves the same
+     * detail later.
      */
-    public record ImportResult(UUID batchId, int totalRows, int acceptedRows, int rejectedRows, List<RowResult> rows) {
+    public record ImportResult(
+            UUID batchId, int totalRows, int acceptedRows, int rejectedRows, List<RowResult> rows) {
 
         static ImportResult of(FuelImportBatch batch) {
-            return new ImportResult(batch.id(), batch.totalRows(), batch.acceptedRows(), batch.rejectedRows(),
+            return new ImportResult(
+                    batch.id(),
+                    batch.totalRows(),
+                    batch.acceptedRows(),
+                    batch.rejectedRows(),
                     batch.rows().stream()
-                            .map(r -> new RowResult(r.rowNumber(), r.status().name(), r.transactionId(),
-                                    r.errorCode(), r.errorMessage()))
+                            .map(
+                                    r ->
+                                            new RowResult(
+                                                    r.rowNumber(),
+                                                    r.status().name(),
+                                                    r.transactionId(),
+                                                    r.errorCode(),
+                                                    r.errorMessage()))
                             .toList());
         }
     }
 
-    public record RowResult(int rowNumber, String status, UUID transactionId, String errorCode, String errorMessage) {
-    }
+    public record RowResult(
+            int rowNumber,
+            String status,
+            UUID transactionId,
+            String errorCode,
+            String errorMessage) {}
 }

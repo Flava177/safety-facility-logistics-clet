@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.facilities.support;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.shared.application.port.AuditPort;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditAction;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditChainVerification;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditEvent;
@@ -67,14 +68,17 @@ public class RecordingAuditPort implements AuditPort {
     }
 
     @Override
-    public List<AuditEvent> search(String siteScope, String resourceType, String resourceId, String actorId,
-            AuditAction action, Instant from, Instant to, int limit) {
-        return events.stream()
+    public RepositoryPage<AuditEvent> search(String siteScope, String resourceType, String resourceId,
+            String actorId, AuditAction action, Instant from, Instant to, int page, int size) {
+        List<AuditEvent> matching = events.stream()
                 .filter(event -> siteScope == null || siteScope.equals(event.siteScope()))
                 .filter(event -> resourceType == null || resourceType.equals(event.resourceType()))
                 .filter(event -> action == null || action == event.action())
-                .limit(Math.max(1, limit))
                 .toList();
+        int clampedSize = Math.max(1, size);
+        int from0 = Math.min(page * clampedSize, matching.size());
+        int to0 = Math.min(from0 + clampedSize, matching.size());
+        return RepositoryPage.of(matching.subList(from0, to0), matching.size(), page, clampedSize);
     }
 
     @Override

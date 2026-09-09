@@ -14,14 +14,14 @@ import org.springframework.transaction.annotation.Transactional;
  * Reads S166 evidence on behalf of the fuel reconciliation rules.
  *
  * <p>No permission check here, and that is intentional rather than an omission. Reconciliation has
- * already authorised its caller against the transaction's own site through
- * {@code FUEL_RECONCILIATION_RUN}, and the facts this returns - a digest and whether bytes exist -
- * are about the evidence the transaction itself points at. Re-checking a fleet evidence permission
+ * already authorised its caller against the transaction's own site through {@code
+ * FUEL_RECONCILIATION_RUN}, and the facts this returns - a digest and whether bytes exist - are
+ * about the evidence the transaction itself points at. Re-checking a fleet evidence permission
  * would mean a reconciliation run failing because the person running it cannot browse the evidence
  * register, which is a different question and the wrong one to ask here.
  *
- * <p>Nothing on this path returns file contents or a storage reference, so there is no route through
- * it to read a document the caller could not otherwise read.
+ * <p>Nothing on this path returns file contents or a storage reference, so there is no route
+ * through it to read a document the caller could not otherwise read.
  */
 @Component
 public class EvidenceLookupAdapter implements FuelEvidencePort {
@@ -50,16 +50,25 @@ public class EvidenceLookupAdapter implements FuelEvidencePort {
             return List.of();
         }
         return evidence.findById(evidenceId)
-                .map(reference -> evidence
-                        .findBySha256(reference.siteCode().value(), reference.sha256Hash(), reference.id())
-                        .stream()
-                        .map(this::facts)
-                        .toList())
+                .map(
+                        reference ->
+                                evidence
+                                        .findBySha256(
+                                                reference.siteCode().value(),
+                                                reference.sha256Hash(),
+                                                reference.id())
+                                        .stream()
+                                        .map(this::facts)
+                                        .toList())
                 .orElseGet(List::of);
     }
 
     private EvidenceFacts facts(EvidenceReference reference) {
-        return new EvidenceFacts(reference.id(), reference.siteCode().value(), reference.sha256Hash(),
-                reference.fileName(), files.exists(reference.id()));
+        return new EvidenceFacts(
+                reference.id(),
+                reference.siteCode().value(),
+                reference.sha256Hash(),
+                reference.fileName(),
+                files.exists(reference.id()));
     }
 }

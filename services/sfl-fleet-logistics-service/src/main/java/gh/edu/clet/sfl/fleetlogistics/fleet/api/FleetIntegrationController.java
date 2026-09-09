@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.api.response.FleetIntegrationRespons
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.IntegrationCommands.ReceiveIntegrationMessage;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.IntegrationCommands.ReplayIntegrationMessage;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetIntegrationApplicationService;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.MalformedRequestValueException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.IntegrationMessageStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URI;
@@ -51,6 +52,10 @@ class FleetIntegrationController {
         this.objectMapper = objectMapper;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Ingests a signed inbound integration message through the secure inbox")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "The payload failed schema validation, or a value could not be parsed")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "HMAC signature verification failed")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "The source system is not allowlisted for this site")
     @PostMapping("/{sourceSystem}/messages")
     ResponseEntity<ApiResponse<InboxMessageResponse>> receive(@PathVariable String sourceSystem,
             @RequestHeader("X-SFL-Integration-Signature") String signature,
@@ -61,7 +66,7 @@ class FleetIntegrationController {
         ActorContext actor = actorResolver.resolve(httpRequest);
         var message = integrationService.receive(new ReceiveIntegrationMessage(sourceSystem,
                 actorResolver.resolveIdempotencyKey(httpRequest), text(root, "eventType"), text(root, "siteCode"),
-                Instant.parse(text(root, "occurredAt")), signature, signatureTimestamp, rawPayload,
+                parseInstant("occurredAt", text(root, "occurredAt")), signature, signatureTimestamp, rawPayload,
                 objectMapper.convertValue(root.path("payload"), MAP_TYPE), actor,
                 actorResolver.resolveSourceChannel(httpRequest)));
         return ResponseEntity.created(URI.create("/api/v1/fleet/integrations/messages/" + message.id()))
@@ -75,6 +80,8 @@ class FleetIntegrationController {
       * handful of recent messages, so dead-letter replay was a documented capability that could not
       * be reached from the dashboard at all.
       */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Searches the inbound integration message inbox")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required integration replay permission")
     @GetMapping("/messages")
     public ApiResponse<List<InboxMessageResponse>> messages(
             @RequestParam(required = false) String sourceSystem,
@@ -87,11 +94,16 @@ class FleetIntegrationController {
                 .toList());
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reports inbound-inbox message health (processed/rejected/dead-lettered counts)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required integration health read permission")
     @GetMapping("/health")
     ApiResponse<IntegrationHealthResponse> health(HttpServletRequest httpRequest) {
         return ApiResponse.ok(IntegrationHealthResponse.from(integrationService.health(actorResolver.resolve(httpRequest))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Replays a dead-lettered inbound integration message")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required integration replay permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No inbox message exists with this id")
     @PostMapping("/messages/{messageId}/replay")
     ApiResponse<InboxMessageResponse> replay(@PathVariable UUID messageId, HttpServletRequest httpRequest) {
         return ApiResponse.ok(mapper.toResponse(integrationService.replay(new ReplayIntegrationMessage(messageId,
@@ -101,5 +113,19 @@ class FleetIntegrationController {
     private static String text(JsonNode root, String field) {
         JsonNode value = root.path(field);
         return value.isMissingNode() || value.isNull() ? null : value.asText();
+    }
+
+    /**
+     * {@code Instant.parse} throws a bare {@code DateTimeParseException}, which nothing in
+     * {@code FleetApiExceptionHandler} maps deliberately - it would otherwise surface as a 500 for a
+     * client mistake, or, worse, get caught by a future blanket handler alongside exceptions that were
+     * never meant to be a client-facing status. Routed through the dedicated domain exception instead.
+     */
+    private static Instant parseInstant(String field, String value) {
+        try {
+            return Instant.parse(value);
+        } catch (java.time.format.DateTimeParseException exception) {
+            throw MalformedRequestValueException.of(field, value);
+        }
     }
 }

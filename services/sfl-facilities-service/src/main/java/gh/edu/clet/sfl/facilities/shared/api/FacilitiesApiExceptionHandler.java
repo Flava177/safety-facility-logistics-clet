@@ -38,8 +38,10 @@ import org.springframework.web.method.annotation.MethodArgumentTypeMismatchExcep
  * <ul>
  *   <li>Unauthorised scope, restricted drilldown, no scope - <strong>403</strong></li>
  *   <li>Record not found - <strong>404</strong></li>
- *   <li>Duplicate identifier, version conflict, idempotency key conflict - <strong>409</strong></li>
- *   <li>Invalid transition, readiness blocked, readiness locked, mode transition - <strong>422</strong></li>
+ *   <li>Duplicate identifier, version conflict, idempotency key conflict, booking conflict, resource
+ *       unavailable - <strong>409</strong></li>
+ *   <li>Invalid transition, readiness blocked, readiness locked, mode transition, space not bookable
+ *       - <strong>422</strong></li>
  *   <li>Audit chain failure - <strong>500</strong></li>
  *   <li>Everything else - <strong>400</strong></li>
  * </ul>
@@ -62,6 +64,14 @@ class FacilitiesApiExceptionHandler {
             Map.entry(FacilitiesErrorCode.DUPLICATE_IDENTIFIER, HttpStatus.CONFLICT),
             Map.entry(FacilitiesErrorCode.VERSION_CONFLICT, HttpStatus.CONFLICT),
             Map.entry(FacilitiesErrorCode.IDEMPOTENCY_KEY_CONFLICT, HttpStatus.CONFLICT),
+            // BOOKING_CONFLICT and RESOURCE_UNAVAILABLE are the same "somebody else has it" shape as
+            // VERSION_CONFLICT above - see BookingController's own Javadoc, which has promised 409 for
+            // these since S159 shipped, and JpaBookingRepositoryAdapter, which translates the exclusion
+            // constraint violation into the same exception precisely so a caller cannot tell whether
+            // they lost a race or simply asked late.
+            Map.entry(FacilitiesErrorCode.BOOKING_CONFLICT, HttpStatus.CONFLICT),
+            Map.entry(FacilitiesErrorCode.RESOURCE_UNAVAILABLE, HttpStatus.CONFLICT),
+            Map.entry(FacilitiesErrorCode.SPACE_NOT_BOOKABLE, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.INVALID_STATE_TRANSITION, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.READINESS_BLOCKED, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.READINESS_LOCKED, HttpStatus.UNPROCESSABLE_ENTITY),
@@ -87,9 +97,14 @@ class FacilitiesApiExceptionHandler {
     /**
      * The pre-S152 authorisation exception from {@code sfl-service-common}.
      *
-     * <p>Still thrown by {@code WorkOrderService}, which authorises through {@code AuthorizationPolicy}
-     * directly. Mapped to the same envelope and the same {@code UNAUTHORIZED_SCOPE} code, so a client
-     * cannot tell which module refused it.
+     * <p>Nothing in this module throws it any more: {@code WorkOrderService} and its direct use of
+     * {@code AuthorizationPolicy} were replaced by {@code WorkOrderApplicationService} authorising
+     * through {@link gh.edu.clet.sfl.facilities.shared.application.FacilitiesAuthorization}, which
+     * raises {@code FacilitiesException} subtypes exclusively - see {@code facilitiesFailure} above.
+     * Kept rather than removed because {@code AuthorizationException} is a shared-library type another
+     * component in the request path could still raise; mapping it to the same envelope and the same
+     * {@code UNAUTHORIZED_SCOPE} code means a client cannot tell which module refused it, and costs
+     * nothing while it stays unreachable.
      */
     @ExceptionHandler(AuthorizationException.class)
     ResponseEntity<ApiResponse<Object>> forbidden(AuthorizationException exception,

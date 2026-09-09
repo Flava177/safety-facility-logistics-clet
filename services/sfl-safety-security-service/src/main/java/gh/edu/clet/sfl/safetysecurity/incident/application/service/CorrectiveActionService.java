@@ -17,6 +17,7 @@ import java.time.LocalDate;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 /** SRS §D.9 step 4: CAPA items - owner, due date, status. Overdue actions are computed, not stored - see {@link CorrectiveAction#isOverdue}. */
@@ -38,7 +39,12 @@ public class CorrectiveActionService {
         this.clock = clock;
     }
 
-    @Transactional
+    // SERIALIZABLE, matching IncidentClosureService#close: opening a mandatory CAPA reads this
+    // incident, and closing that same incident reads the set of open mandatory CAPAs - two
+    // transactions doing one each, concurrently, form the rw-dependency cycle Postgres needs both
+    // sides to be serializable to detect. See IncidentClosureService's class Javadoc for the full
+    // reasoning and IncidentClosureCapaGateConcurrencyEndToEndTest for the proof.
+    @Transactional(isolation = Isolation.SERIALIZABLE)
     public CorrectiveAction open(OpenCorrectiveAction command) {
         ActorContext actor = command.actor();
         SecurityIncident incident = requireIncident(command.incidentId());

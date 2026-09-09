@@ -4,11 +4,9 @@ import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceCommands;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceEvidenceService;
-import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.util.UUID;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -33,21 +31,18 @@ import org.springframework.web.bind.annotation.RestController;
 public class MaintenanceEvidenceController {
 
     private final MaintenanceEvidenceService service;
-    private final FacilitiesActorResolver actorResolver;
 
-    public MaintenanceEvidenceController(MaintenanceEvidenceService service,
-            FacilitiesActorResolver actorResolver) {
+    public MaintenanceEvidenceController(MaintenanceEvidenceService service) {
         this.service = service;
-        this.actorResolver = actorResolver;
     }
 
     @GetMapping("/{evidenceId}")
     @Operation(summary = "Read one piece of evidence",
             description = "Metadata only. The file itself is in object storage, at fileReference.")
     public ApiResponse<MaintenanceResponses.EvidenceResponse> findById(@PathVariable UUID evidenceId,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.EvidenceResponse.from(
-                service.findById(evidenceId, actor(http), channel(http))));
+                service.findById(evidenceId, actor, channel)));
     }
 
     @PostMapping("/{evidenceId}/exports")
@@ -56,10 +51,11 @@ public class MaintenanceEvidenceController {
                     + "named recipient, and the act itself is audited. This authorises and records the "
                     + "export and returns the reference to fetch; it does not move the file.")
     public ApiResponse<MaintenanceResponses.ExportGrantResponse> export(@PathVariable UUID evidenceId,
-            @Valid @RequestBody MaintenanceRequests.ExportEvidence request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.ExportEvidence request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.ExportGrantResponse.from(
                 service.export(new MaintenanceCommands.ExportEvidence(evidenceId, request.reason(),
-                        request.recipient(), actor(http), channel(http)))));
+                        request.recipient(), actor, channel))));
     }
 
     @PatchMapping("/{evidenceId}/legal-hold")
@@ -68,17 +64,10 @@ public class MaintenanceEvidenceController {
                     + "original classification survives the hold being lifted. A reason is required "
                     + "either way.")
     public ApiResponse<MaintenanceResponses.EvidenceResponse> setLegalHold(@PathVariable UUID evidenceId,
-            @Valid @RequestBody MaintenanceRequests.SetLegalHold request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.SetLegalHold request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.EvidenceResponse.from(
                 service.setLegalHold(new MaintenanceCommands.SetLegalHold(evidenceId, request.legalHold(),
-                        request.reason(), actor(http), channel(http)))));
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
+                        request.reason(), actor, channel))));
     }
 }

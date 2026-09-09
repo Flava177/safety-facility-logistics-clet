@@ -58,7 +58,11 @@ class ReadinessAssessmentEntity {
     @Column(name = "correlation_id", length = 120)
     private String correlationId;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.EAGER)
+    // LAZY: every current caller needs items, but the query methods on
+    // ReadinessAssessmentJpaRepository fetch them explicitly (JOIN FETCH / @EntityGraph) so the join
+    // happens once per query rather than once per row - a default EAGER @OneToMany still issues a
+    // separate SELECT per parent, it does not turn into a join by itself.
+    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true, fetch = FetchType.LAZY)
     @JoinColumn(name = "assessment_id", nullable = false)
     private List<ReadinessAssessmentItemEntity> items = new ArrayList<>();
 

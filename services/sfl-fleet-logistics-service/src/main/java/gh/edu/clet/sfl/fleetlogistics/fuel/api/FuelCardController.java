@@ -25,9 +25,9 @@ import org.springframework.web.bind.annotation.RestController;
 /**
  * The fuel-card register - SRS-SFL-S168fuel-04.
  *
- * <p>Only the masked reference the provider already sends is accepted or returned. A full card number
- * is payment data, this platform has no business holding one, and the C9 mapping puts the card platform
- * outside SFL.
+ * <p>Only the masked reference the provider already sends is accepted or returned. A full card
+ * number is payment data, this platform has no business holding one, and the C9 mapping puts the
+ * card platform outside SFL.
  */
 @RestController
 @RequestMapping("/api/v1/fuel/cards")
@@ -43,34 +43,88 @@ public class FuelCardController {
     }
 
     /** Issue a card. Manager-only: a fuel card is a payment instrument. */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Issues a new fuel card")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_CARD_MANAGE for the site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "A live card already exists for this masked reference at the site")
     @PostMapping
-    public ResponseEntity<ApiResponse<FuelCard>> issue(@Valid @RequestBody IssueRequest request,
-            HttpServletRequest http) {
-        FuelCard card = service.issue(new FuelCardService.IssueCard(request.siteCode(),
-                request.maskedReference(), request.provider(), request.vehicleId(), request.driverId(),
-                request.issuedOn(), request.expiresOn(), request.dailyLimit(), request.monthlyLimit(),
-                request.perTransactionLimit(), request.notes(), actors.resolve(http),
-                actors.resolveSourceChannel(http)));
+    public ResponseEntity<ApiResponse<FuelCard>> issue(
+            @Valid @RequestBody IssueRequest request, HttpServletRequest http) {
+        FuelCard card =
+                service.issue(
+                        new FuelCardService.IssueCard(
+                                request.siteCode(),
+                                request.maskedReference(),
+                                request.provider(),
+                                request.vehicleId(),
+                                request.driverId(),
+                                request.issuedOn(),
+                                request.expiresOn(),
+                                request.dailyLimit(),
+                                request.monthlyLimit(),
+                                request.perTransactionLimit(),
+                                request.notes(),
+                                actors.resolve(http),
+                                actors.resolveSourceChannel(http)));
         return ResponseEntity.created(URI.create("/api/v1/fuel/cards/" + card.id()))
                 .body(ApiResponse.ok(card));
     }
 
     /** assign · suspend · reinstate · cancel. */
+    @io.swagger.v3.oas.annotations.Operation(
+            summary = "Assigns, suspends, reinstates or cancels a fuel card")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "400",
+            description = "Unknown action, or a required reason was not supplied")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_CARD_MANAGE for the card's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "No card exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "409",
+            description = "A cancelled card cannot be transitioned further")
     @PostMapping("/{id}/{action:assign|suspend|reinstate|cancel}")
-    public ApiResponse<FuelCard> transition(@PathVariable UUID id, @PathVariable String action,
-            @RequestBody(required = false) TransitionRequest request, HttpServletRequest http) {
-        return ApiResponse.ok(service.transition(new FuelCardService.TransitionCard(id, action,
-                request == null ? null : request.reason(),
-                request == null ? null : request.vehicleId(),
-                request == null ? null : request.driverId(),
-                actors.resolve(http), actors.resolveSourceChannel(http))));
+    public ApiResponse<FuelCard> transition(
+            @PathVariable UUID id,
+            @PathVariable String action,
+            @RequestBody(required = false) TransitionRequest request,
+            HttpServletRequest http) {
+        return ApiResponse.ok(
+                service.transition(
+                        new FuelCardService.TransitionCard(
+                                id,
+                                action,
+                                request == null ? null : request.reason(),
+                                request == null ? null : request.vehicleId(),
+                                request == null ? null : request.driverId(),
+                                actors.resolve(http),
+                                actors.resolveSourceChannel(http))));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one fuel card by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_CARD_READ for the card's site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "404",
+            description = "No card exists with this id")
     @GetMapping("/{id}")
     public ApiResponse<FuelCard> detail(@PathVariable UUID id, HttpServletRequest http) {
         return ApiResponse.ok(service.card(id, actors.resolve(http)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists fuel cards for a site")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+            responseCode = "403",
+            description = "Actor lacks FUEL_CARD_READ for the site")
     @GetMapping
     public ApiResponse<FuelPageResponse<FuelCard>> list(
             @RequestParam String siteCode,
@@ -82,8 +136,16 @@ public class FuelCardController {
             @RequestParam(defaultValue = "50") int size,
             @RequestParam(required = false) String sort,
             HttpServletRequest http) {
-        return ApiResponse.ok(FuelPageResponse.of(service.cards(siteCode, status, vehicleId, driverId,
-                maskedReference, new FuelRepository.Paging(page, size, sort), actors.resolve(http))));
+        return ApiResponse.ok(
+                FuelPageResponse.of(
+                        service.cards(
+                                siteCode,
+                                status,
+                                vehicleId,
+                                driverId,
+                                maskedReference,
+                                new FuelRepository.Paging(page, size, sort),
+                                actors.resolve(http))));
     }
 
     public record IssueRequest(
@@ -98,9 +160,7 @@ public class FuelCardController {
             @Positive BigDecimal dailyLimit,
             @Positive BigDecimal monthlyLimit,
             @Positive BigDecimal perTransactionLimit,
-            String notes) {
-    }
+            String notes) {}
 
-    public record TransitionRequest(String reason, UUID vehicleId, UUID driverId) {
-    }
+    public record TransitionRequest(String reason, UUID vehicleId, UUID driverId) {}
 }

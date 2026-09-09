@@ -3,8 +3,8 @@ package gh.edu.clet.sfl.fleetlogistics.dispatch.application.service;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.port.DispatchRepository;
-import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.CourierItem;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchExceptionCase;
+import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.DispatchManifestItem;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.ScanImportBatch;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.domain.model.ScanImportRow;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.AuditPort;
@@ -81,12 +81,16 @@ public class DispatchScanService {
         }
         int accepted = 0;
         List<String> mismatchRows = new ArrayList<>();
+        // Collected and written with a single batch statement rather than one INSERT per row: a
+        // scan file is allowed up to the same 20MB bulk-import ceiling as the fuel CSV, and a
+        // thousand-row file was a thousand round trips to the database inside one transaction.
+        List<ScanImportRow> rows = new ArrayList<>(lines.size() - 1);
         for (int n = 1; n < lines.size(); n++) {
             String[] cols = lines.get(n).split(",", -1);
             String rowReference = cols.length > 0 && !cols[0].isBlank() ? cols[0].strip() : "row-" + n;
             String scannedCode = cols.length > 1 ? cols[1].strip() : cols[0].strip();
             var classified = classify(site, manifestNumbers, scannedCode);
-            repository.saveScanRow(new ScanImportRow(UUID.randomUUID(), batchId, site, rowReference, scannedCode,
+            rows.add(new ScanImportRow(UUID.randomUUID(), batchId, site, rowReference, scannedCode,
                     classified.courierItemId(), classified.outcome(), classified.message(), now));
             if (classified.outcome() == ScanImportRow.Outcome.MATCHED) {
                 accepted++;
@@ -94,6 +98,7 @@ public class DispatchScanService {
                 mismatchRows.add(rowReference + ":" + scannedCode + ":" + classified.outcome());
             }
         }
+        repository.saveScanRows(rows);
         int total = lines.size() - 1;
         int mismatch = total - accepted;
         ScanImportBatch.Status status = mismatch == 0 ? ScanImportBatch.Status.PROCESSED
@@ -175,9 +180,13 @@ public class DispatchScanService {
     private Set<String> manifestItemNumbers(UUID dispatchId) {
         Set<String> numbers = new HashSet<>();
         if (dispatchId == null) return numbers;
-        for (var manifestItem : repository.findManifestItems(dispatchId)) {
-            repository.findItem(manifestItem.courierItemId())
-                    .map(CourierItem::itemNumber).ifPresent(numbers::add);
+        // One batch lookup rather than one findItem per manifest line: a manifest is exactly the
+        // kind of collection a CSV import scans against on every row, so a per-item query here
+        // turned every import into O(manifest size) round trips before a single scan was classified.
+        List<UUID> courierItemIds = repository.findManifestItems(dispatchId).stream()
+                .map(DispatchManifestItem::courierItemId).toList();
+        for (var item : repository.findItemsByIds(courierItemIds)) {
+            numbers.add(item.itemNumber());
         }
         return numbers;
     }

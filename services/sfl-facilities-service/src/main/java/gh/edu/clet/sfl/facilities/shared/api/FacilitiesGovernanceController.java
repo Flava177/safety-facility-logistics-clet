@@ -11,12 +11,12 @@ import gh.edu.clet.sfl.facilities.shared.domain.audit.AuditEvent;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import java.time.Instant;
 import java.util.List;
+import java.util.function.Function;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -40,13 +40,11 @@ public class FacilitiesGovernanceController {
 
     private final FacilitiesGovernanceService governance;
     private final FacilitiesAuthorization authorization;
-    private final FacilitiesActorResolver actorResolver;
 
     public FacilitiesGovernanceController(FacilitiesGovernanceService governance,
-            FacilitiesAuthorization authorization, FacilitiesActorResolver actorResolver) {
+            FacilitiesAuthorization authorization) {
         this.governance = governance;
         this.authorization = authorization;
-        this.actorResolver = actorResolver;
     }
 
     // ---- audit --------------------------------------------------------------------------------
@@ -55,7 +53,7 @@ public class FacilitiesGovernanceController {
     @Operation(summary = "Search the audit trail",
             description = "SRS-SFL-S152-03. Append-only and hash-chained; includes refused attempts, which "
                     + "are recorded as AUTHORIZATION_DENIED.")
-    public ApiResponse<List<AuditEvent>> audit(
+    public ApiResponse<PageResponse<AuditEvent>> audit(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) String resourceType,
             @RequestParam(required = false) String resourceId,
@@ -63,10 +61,13 @@ public class FacilitiesGovernanceController {
             @RequestParam(required = false) AuditAction action,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant from,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Instant to,
-            @RequestParam(defaultValue = "100") int limit,
-            HttpServletRequest http) {
-        return ApiResponse.ok(governance.search(siteCode, resourceType, resourceId, actorId, action, from, to, limit,
-                actor(http), channel(http)));
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(PageResponse.from(
+                governance.search(siteCode, resourceType, resourceId, actorId, action, from, to, page, size,
+                        actor, channel),
+                Function.identity()));
     }
 
     @GetMapping("/audit/integrity")
@@ -74,8 +75,8 @@ public class FacilitiesGovernanceController {
             description = "A broken result names the record it broke at, what was expected and what was "
                     + "found. SRS-SFL-S152-03: 'Audit integrity check failed. Escalate to compliance and "
                     + "security.' Running the check is itself audited.")
-    public ApiResponse<AuditChainVerification> verifyChain(HttpServletRequest http) {
-        return ApiResponse.ok(governance.verifyChain(actor(http), channel(http)));
+    public ApiResponse<AuditChainVerification> verifyChain(ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(governance.verifyChain(actor, channel));
     }
 
     // ---- runtime configuration ----------------------------------------------------------------
@@ -85,8 +86,8 @@ public class FacilitiesGovernanceController {
             description = "NFR 23.8. Site values override platform defaults; both are returned so an "
                     + "operator can see which is in force.")
     public ApiResponse<List<RuntimeConfigurationPort.ConfigurationValue>> configuration(
-            @RequestParam(required = false) String siteCode, HttpServletRequest http) {
-        return ApiResponse.ok(governance.activeConfiguration(siteCode, actor(http), channel(http)));
+            @RequestParam(required = false) String siteCode, ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(governance.activeConfiguration(siteCode, actor, channel));
     }
 
     @PutMapping("/configuration/{key}")
@@ -95,9 +96,9 @@ public class FacilitiesGovernanceController {
                     + "effective-to date so a past escalation can be reconciled against the threshold that "
                     + "was actually active.")
     public ApiResponse<RuntimeConfigurationPort.ConfigurationValue> putConfiguration(@PathVariable String key,
-            @Valid @RequestBody PutConfigurationRequest request, HttpServletRequest http) {
+            @Valid @RequestBody PutConfigurationRequest request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(governance.putConfiguration(key, request.siteCode(), request.value(), request.valueType(),
-                request.description(), actor(http), channel(http)));
+                request.description(), actor, channel));
     }
 
     public record PutConfigurationRequest(
@@ -124,19 +125,10 @@ public class FacilitiesGovernanceController {
     @Operation(summary = "The permissions of the calling actor",
             description = "A flat list of permission names, the same shape the fleet and emergency "
                     + "services answer with, so one loader in the dashboard reads all three.")
-    public ApiResponse<List<String>> actorPermissions(HttpServletRequest http) {
-        ActorContext actor = actor(http);
+    public ApiResponse<List<String>> actorPermissions(ActorContext actor) {
         return ApiResponse.ok(authorization.permissionsOf(actor).stream()
                 .map(Enum::name)
                 .sorted()
                 .toList());
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
     }
 }

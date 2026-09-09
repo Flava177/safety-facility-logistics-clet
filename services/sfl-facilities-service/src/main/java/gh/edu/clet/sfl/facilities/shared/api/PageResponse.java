@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
 import gh.edu.clet.sfl.facilities.masterdata.application.ports.FacilitiesRepository;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.util.List;
 import java.util.function.Function;
 
@@ -19,6 +20,13 @@ public record PageResponse<T>(
         int size) {
 
     public static <D, R> PageResponse<R> from(FacilitiesRepository.Page<D> page, Function<D, R> mapper) {
+        int size = Math.max(1, page.size());
+        int totalPages = (int) Math.ceil(page.totalElements() / (double) size);
+        return new PageResponse<>(page.items().stream().map(mapper).toList(), page.totalElements(),
+                totalPages, page.page(), page.size());
+    }
+
+    public static <D, R> PageResponse<R> from(RepositoryPage<D> page, Function<D, R> mapper) {
         int size = Math.max(1, page.size());
         int totalPages = (int) Math.ceil(page.totalElements() / (double) size);
         return new PageResponse<>(page.items().stream().map(mapper).toList(), page.totalElements(),

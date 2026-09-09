@@ -23,15 +23,28 @@ public class OutboxAdminAdapter implements FuelOutboxAdminPort {
 
     @Override
     public OutboxHealth health() {
-        List<OutboxEntry> deadLetters = outbox
-                .findByStatusOrderByCreatedAtDesc(OutboxMessageEntity.STATUS_DEAD_LETTERED, PageRequest.of(0, 20))
-                .stream()
-                .map(m -> new OutboxEntry(m.id(), m.eventType(), m.aggregateType(), m.aggregateId(), m.status(),
-                        m.attemptCount(), m.failureReason(), m.createdAt()))
-                .toList();
-        return new OutboxHealth(outbox.countByStatus(OutboxMessageEntity.STATUS_PENDING),
+        List<OutboxEntry> deadLetters =
+                outbox
+                        .findByStatusOrderByCreatedAtDesc(
+                                OutboxMessageEntity.STATUS_DEAD_LETTERED, PageRequest.of(0, 20))
+                        .stream()
+                        .map(
+                                m ->
+                                        new OutboxEntry(
+                                                m.id(),
+                                                m.eventType(),
+                                                m.aggregateType(),
+                                                m.aggregateId(),
+                                                m.status(),
+                                                m.attemptCount(),
+                                                m.failureReason(),
+                                                m.createdAt()))
+                        .toList();
+        return new OutboxHealth(
+                outbox.countByStatus(OutboxMessageEntity.STATUS_PENDING),
                 outbox.countByStatus(OutboxMessageEntity.STATUS_PUBLISHED),
-                outbox.countByStatus(OutboxMessageEntity.STATUS_DEAD_LETTERED), deadLetters);
+                outbox.countByStatus(OutboxMessageEntity.STATUS_DEAD_LETTERED),
+                deadLetters);
     }
 
     @Override

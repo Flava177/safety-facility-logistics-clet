@@ -1,7 +1,7 @@
 package gh.edu.clet.sfl.safetysecurity.visitor.api;
 
 import gh.edu.clet.sfl.common.api.ApiResponse;
-import gh.edu.clet.sfl.safetysecurity.visitor.application.port.VisitorRepository;
+import gh.edu.clet.sfl.safetysecurity.emergency.api.EmergencyPageResponse;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.service.VisitorCheckInOutService;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.service.VisitorDecisionService;
 import gh.edu.clet.sfl.safetysecurity.visitor.application.service.VisitorRegistrationService;
@@ -121,13 +121,17 @@ public class VisitorVisitController {
     }
 
     @GetMapping("/visits")
-    @Operation(summary = "Search visits")
-    public ApiResponse<List<VisitorVisit>> search(@RequestParam(required = false) String siteCode,
+    @Operation(summary = "Search visits",
+            description = "Paginated the same way every other SFL collection is - see EmergencyPageResponse. "
+                    + "sort accepts \"expectedArrival\" or \"expectedArrival,desc\" (the default); any other "
+                    + "value falls back to the default rather than being rejected.")
+    public ApiResponse<EmergencyPageResponse<VisitorVisit>> search(@RequestParam(required = false) String siteCode,
             @RequestParam(required = false) VisitStatus status, @RequestParam(required = false) String hostId,
             @RequestParam(required = false) Instant from, @RequestParam(required = false) Instant to,
-            @RequestParam(defaultValue = "100") int limit, HttpServletRequest http) {
-        return ApiResponse.ok(registration.search(
-                new VisitorRepository.VisitQuery(siteCode, status, hostId, from, to, limit), actors.resolve(http)));
+            @RequestParam(defaultValue = "0") int page, @RequestParam(defaultValue = "25") int size,
+            @RequestParam(required = false) String sort, HttpServletRequest http) {
+        return ApiResponse.ok(EmergencyPageResponse.of(registration.searchPage(siteCode, status, hostId, from, to,
+                EmergencyPageResponse.paging(page, size, sort), actors.resolve(http))));
     }
 
     @GetMapping("/visits/{visitId}")

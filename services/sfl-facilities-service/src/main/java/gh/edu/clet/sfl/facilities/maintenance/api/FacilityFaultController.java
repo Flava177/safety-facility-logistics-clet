@@ -6,10 +6,11 @@ import gh.edu.clet.sfl.facilities.maintenance.application.FacilityFaultService;
 import gh.edu.clet.sfl.facilities.maintenance.application.MaintenanceCommands;
 import gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus;
 import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.api.IdempotencyKey;
+import gh.edu.clet.sfl.facilities.shared.api.PageResponse;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import java.net.URI;
 import java.time.Clock;
@@ -39,13 +40,10 @@ import org.springframework.web.bind.annotation.RestController;
 public class FacilityFaultController {
 
     private final FacilityFaultService service;
-    private final FacilitiesActorResolver actorResolver;
     private final Clock clock;
 
-    public FacilityFaultController(FacilityFaultService service, FacilitiesActorResolver actorResolver,
-            Clock clock) {
+    public FacilityFaultController(FacilityFaultService service, Clock clock) {
         this.service = service;
-        this.actorResolver = actorResolver;
         this.clock = clock;
     }
 
@@ -54,12 +52,13 @@ public class FacilityFaultController {
             description = "SRS-SFL-S153-01. A fault needs either a room or a location code: one with "
                     + "only a site cannot be dispatched anywhere.")
     public ResponseEntity<ApiResponse<MaintenanceResponses.FaultResponse>> report(
-            @Valid @RequestBody MaintenanceRequests.ReportFault request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.ReportFault request, ActorContext actor,
+            SourceChannel channel, @IdempotencyKey String idempotencyKey) {
         MaintenanceResponses.FaultResponse result = MaintenanceResponses.FaultResponse.from(
                 service.report(new MaintenanceCommands.ReportFault(request.siteCode(), request.roomId(),
                         request.locationCode(), request.assetId(), request.title(), request.description(),
-                        request.category(), request.priority(), actor(http), channel(http),
-                        idempotencyKey(http), request)),
+                        request.category(), request.priority(), actor, channel,
+                        idempotencyKey, request)),
                 clock);
         return ResponseEntity.created(URI.create("/api/v1/facilities/faults/" + result.id()))
                 .body(ApiResponse.ok(result));
@@ -69,25 +68,25 @@ public class FacilityFaultController {
     @Operation(summary = "Search faults",
             description = "Filtered by site, space, status and openness. A requester sees only the "
                     + "faults they reported, whatever the filters say.")
-    public ApiResponse<List<MaintenanceResponses.FaultResponse>> search(
+    public ApiResponse<PageResponse<MaintenanceResponses.FaultResponse>> search(
             @RequestParam(required = false) String siteCode,
             @RequestParam(required = false) UUID roomId,
             @RequestParam(required = false) FacilityFaultStatus status,
             @RequestParam(required = false) Boolean openOnly,
-            @RequestParam(defaultValue = "100") int limit,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.search(siteCode, roomId, status, openOnly, limit, actor(http),
-                        channel(http)).stream()
-                .map(fault -> MaintenanceResponses.FaultResponse.from(fault, clock))
-                .toList());
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "100") int size,
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(PageResponse.from(
+                service.search(siteCode, roomId, status, openOnly, page, size, actor, channel),
+                fault -> MaintenanceResponses.FaultResponse.from(fault, clock)));
     }
 
     @GetMapping("/{faultId}")
     @Operation(summary = "Read one fault")
     public ApiResponse<MaintenanceResponses.FaultResponse> findById(@PathVariable UUID faultId,
-            HttpServletRequest http) {
+            ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.FaultResponse.from(
-                service.findById(faultId, actor(http), channel(http)), clock));
+                service.findById(faultId, actor, channel), clock));
     }
 
     @PatchMapping("/{faultId}/triage")
@@ -95,10 +94,10 @@ public class FacilityFaultController {
             description = "SRS-SFL-S153-02. The SLA is computed from the configuration active now and "
                     + "the site's current operating mode. Priority may be corrected here and only here.")
     public ApiResponse<MaintenanceResponses.FaultResponse> triage(@PathVariable UUID faultId,
-            @Valid @RequestBody MaintenanceRequests.TriageFault request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.TriageFault request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.FaultResponse.from(
                 service.triage(new MaintenanceCommands.TriageFault(faultId, request.priority(),
-                        request.notes(), request.expectedVersion(), actor(http), channel(http))),
+                        request.notes(), request.expectedVersion(), actor, channel)),
                 clock));
     }
 
@@ -107,21 +106,22 @@ public class FacilityFaultController {
             description = "All three are terminal and all three require a reason. A duplicate must name "
                     + "the fault it duplicates.")
     public ApiResponse<MaintenanceResponses.FaultResponse> dismiss(@PathVariable UUID faultId,
-            @Valid @RequestBody MaintenanceRequests.DismissFault request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.DismissFault request, ActorContext actor, SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.FaultResponse.from(
                 service.dismiss(new MaintenanceCommands.DismissFault(faultId, request.outcome(),
                         request.reason(), request.duplicateOfFaultId(), request.expectedVersion(),
-                        actor(http), channel(http))),
+                        actor, channel)),
                 clock));
     }
 
     @PatchMapping("/{faultId}/lifecycle")
     @Operation(summary = "Change a fault's record lifecycle state")
     public ApiResponse<MaintenanceResponses.FaultResponse> changeLifecycle(@PathVariable UUID faultId,
-            @Valid @RequestBody MaintenanceRequests.ChangeLifecycle request, HttpServletRequest http) {
+            @Valid @RequestBody MaintenanceRequests.ChangeLifecycle request, ActorContext actor,
+            SourceChannel channel) {
         return ApiResponse.ok(MaintenanceResponses.FaultResponse.from(
                 service.changeLifecycle(new MaintenanceCommands.ChangeFaultLifecycle(faultId,
-                        request.lifecycleStatus(), request.expectedVersion(), actor(http), channel(http))),
+                        request.lifecycleStatus(), request.expectedVersion(), actor, channel)),
                 clock));
     }
 
@@ -129,21 +129,9 @@ public class FacilityFaultController {
     @Operation(summary = "Open faults on one space",
             description = "What the S152 space-detail screen shows beside the readiness blockers.")
     public ApiResponse<List<MaintenanceResponses.FaultResponse>> forRoom(@PathVariable UUID roomId,
-            HttpServletRequest http) {
-        return ApiResponse.ok(service.openFaultsForRoom(roomId, actor(http), channel(http)).stream()
+            ActorContext actor, SourceChannel channel) {
+        return ApiResponse.ok(service.openFaultsForRoom(roomId, actor, channel).stream()
                 .map(fault -> MaintenanceResponses.FaultResponse.from(fault, clock))
                 .toList());
-    }
-
-    private ActorContext actor(HttpServletRequest http) {
-        return actorResolver.resolve(http);
-    }
-
-    private SourceChannel channel(HttpServletRequest http) {
-        return actorResolver.resolveSourceChannel(http);
-    }
-
-    private String idempotencyKey(HttpServletRequest http) {
-        return actorResolver.resolveIdempotencyKey(http);
     }
 }

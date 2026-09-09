@@ -10,12 +10,14 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.PreventiveMaintenanceSchedu
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrder;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderPart;
 import gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus;
+import gh.edu.clet.sfl.facilities.shared.application.port.RepositoryPage;
 import java.time.Instant;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
 
@@ -74,11 +76,12 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
     }
 
     @Override
-    public List<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status,
-            Boolean openOnly, String reportedBy, int limit) {
-        return faults.search(normalize(siteCode), roomId, status, reportedBy, openOnly, page(limit)).stream()
-                .map(FacilityFaultRecord::toDomain)
-                .toList();
+    public RepositoryPage<FacilityFault> findFaults(String siteCode, UUID roomId, FacilityFaultStatus status,
+            Boolean openOnly, String reportedBy, int page, int size) {
+        Page<FacilityFaultRecord> result = faults.search(normalize(siteCode), roomId, status, reportedBy,
+                openOnly, PageRequest.of(page, clampSize(size)));
+        return RepositoryPage.of(result.getContent().stream().map(FacilityFaultRecord::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     @Override
@@ -111,12 +114,12 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
     }
 
     @Override
-    public List<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId, WorkOrderStatus status,
-            String assignedTo, UUID vendorId, Boolean openOnly, int limit) {
-        return workOrders.search(normalize(siteCode), roomId, assetId, status, assignedTo, vendorId, openOnly,
-                        page(limit)).stream()
-                .map(WorkOrderRecord::toDomain)
-                .toList();
+    public RepositoryPage<WorkOrder> findWorkOrders(String siteCode, UUID roomId, UUID assetId,
+            WorkOrderStatus status, String assignedTo, UUID vendorId, Boolean openOnly, int page, int size) {
+        Page<WorkOrderRecord> result = workOrders.search(normalize(siteCode), roomId, assetId, status,
+                assignedTo, vendorId, openOnly, PageRequest.of(page, clampSize(size)));
+        return RepositoryPage.of(result.getContent().stream().map(WorkOrderRecord::toDomain).toList(),
+                result.getTotalElements(), result.getNumber(), result.getSize());
     }
 
     @Override
@@ -267,5 +270,9 @@ public class JpaMaintenanceRepositoryAdapter implements MaintenanceRepository {
 
     private static PageRequest page(int limit) {
         return PageRequest.of(0, Math.max(1, Math.min(limit, 500)));
+    }
+
+    private static int clampSize(int size) {
+        return Math.max(1, Math.min(size, 500));
     }
 }

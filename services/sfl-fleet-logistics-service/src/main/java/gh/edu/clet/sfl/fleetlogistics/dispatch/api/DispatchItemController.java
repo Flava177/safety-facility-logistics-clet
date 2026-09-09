@@ -30,6 +30,9 @@ public class DispatchItemController {
         this.actors = actors;
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Registers a new courier item (inbound or outbound)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item permission for the site")
     @PostMapping
     public ResponseEntity<ApiResponse<CourierItem>> register(@Valid @RequestBody RegisterItemRequest r,
             HttpServletRequest h) {
@@ -39,6 +42,8 @@ public class DispatchItemController {
         return ResponseEntity.created(URI.create("/api/v1/dispatch/items/" + item.id())).body(ApiResponse.ok(item));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Lists courier items for a site, filtered by direction/status/handler")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item read permission for the site")
     @GetMapping
     public ApiResponse<DispatchPageResponse<CourierItem>> list(@RequestParam String siteCode,
             @RequestParam(required = false) CourierItem.Direction direction,
@@ -60,21 +65,36 @@ public class DispatchItemController {
     }
 
     /** The item's transition history: registration, every lifecycle move, misroute and closure. */
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads the transition history of one courier item")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No courier item exists with this id")
     @GetMapping("/{id}/history")
     public ApiResponse<List<AuditEvent>> history(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.history(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reads one courier item by id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item read permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No courier item exists with this id")
     @GetMapping("/{id}")
     public ApiResponse<CourierItem> detail(@PathVariable UUID id, HttpServletRequest h) {
         return ApiResponse.ok(service.item(id, actors.resolve(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Advances a courier item's lifecycle status (stage, dispatch, deliver, close, etc.)")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No courier item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "The transition is not permitted from the item's current status")
     @PostMapping("/{id}/{action:stage|dispatch|in-transit|deliver|return|close}")
     public ApiResponse<CourierItem> advance(@PathVariable UUID id, @PathVariable String action, HttpServletRequest h) {
         return ApiResponse.ok(service.advanceItem(id, action, actors.resolve(h), actors.resolveSourceChannel(h)));
     }
 
+    @io.swagger.v3.oas.annotations.Operation(summary = "Reroutes a courier item, recording a misroute reason and optionally a new handler")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Request failed bean validation")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch item permission")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "No courier item exists with this id")
+    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "409", description = "Only an active item can be rerouted")
     @PostMapping("/{id}/misroute")
     public ApiResponse<CourierItem> misroute(@PathVariable UUID id, @Valid @RequestBody MisrouteRequest r,
             HttpServletRequest h) {

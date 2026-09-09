@@ -3,6 +3,8 @@ package gh.edu.clet.sfl.safetysecurity.incident.api;
 import gh.edu.clet.sfl.common.api.ApiError;
 import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.AuthorizationException;
+import gh.edu.clet.sfl.safetysecurity.incident.application.service.CorrectiveActionService;
+import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentClosureService;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.exception.IncidentErrorCode;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.exception.IncidentException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -12,6 +14,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.core.Ordered;
 import org.springframework.core.annotation.Order;
+import org.springframework.dao.ConcurrencyFailureException;
 import org.springframework.dao.OptimisticLockingFailureException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -77,6 +80,21 @@ class IncidentApiExceptionHandler {
 
     @ExceptionHandler(OptimisticLockingFailureException.class)
     ResponseEntity<ApiResponse<Object>> optimisticLock(OptimisticLockingFailureException exception,
+            HttpServletRequest request) {
+        return respond(HttpStatus.CONFLICT, IncidentErrorCode.INCIDENT_RECORD_VERSION_CONFLICT.code(),
+                IncidentErrorCode.INCIDENT_RECORD_VERSION_CONFLICT.message(), null, request);
+    }
+
+    /**
+     * Postgres reports a {@code SERIALIZABLE} transaction it aborted to break a dependency cycle
+     * (SQLSTATE 40001) via this exception type, translated by Spring's JDBC exception translator -
+     * not {@link OptimisticLockingFailureException}, which is a sibling branch of {@code
+     * DataAccessException}, not a supertype of this. {@link IncidentClosureService#close} and {@link
+     * CorrectiveActionService#open} are the two callers that run at {@code SERIALIZABLE}; the same
+     * "reload and retry" answer applies regardless of which of the two lost the race.
+     */
+    @ExceptionHandler(ConcurrencyFailureException.class)
+    ResponseEntity<ApiResponse<Object>> concurrencyFailure(ConcurrencyFailureException exception,
             HttpServletRequest request) {
         return respond(HttpStatus.CONFLICT, IncidentErrorCode.INCIDENT_RECORD_VERSION_CONFLICT.code(),
                 IncidentErrorCode.INCIDENT_RECORD_VERSION_CONFLICT.message(), null, request);

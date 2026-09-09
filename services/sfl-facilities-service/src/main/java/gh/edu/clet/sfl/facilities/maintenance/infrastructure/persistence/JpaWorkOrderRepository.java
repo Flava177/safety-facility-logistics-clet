@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -14,7 +15,7 @@ public interface JpaWorkOrderRepository extends JpaRepository<WorkOrderRecord, U
 
     Optional<WorkOrderRecord> findByFacilityFaultId(UUID facilityFaultId);
 
-    @Query("""
+    @Query(value = """
             select w from WorkOrderRecord w
             where (:siteCode is null or w.siteCode = :siteCode)
               and (:roomId is null or w.roomId = :roomId)
@@ -26,8 +27,20 @@ public interface JpaWorkOrderRepository extends JpaRepository<WorkOrderRecord, U
                    or w.status not in (gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CLOSED,
                                        gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CANCELLED))
             order by w.metadata.createdAt desc
+            """,
+            countQuery = """
+            select count(w) from WorkOrderRecord w
+            where (:siteCode is null or w.siteCode = :siteCode)
+              and (:roomId is null or w.roomId = :roomId)
+              and (:assetId is null or w.assetId = :assetId)
+              and (:status is null or w.status = :status)
+              and (:assignedTo is null or w.assignedTo = :assignedTo)
+              and (:vendorId is null or w.vendorId = :vendorId)
+              and (:openOnly is null or :openOnly = false
+                   or w.status not in (gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CLOSED,
+                                       gh.edu.clet.sfl.facilities.maintenance.domain.WorkOrderStatus.CANCELLED))
             """)
-    List<WorkOrderRecord> search(@Param("siteCode") String siteCode,
+    Page<WorkOrderRecord> search(@Param("siteCode") String siteCode,
             @Param("roomId") UUID roomId,
             @Param("assetId") UUID assetId,
             @Param("status") WorkOrderStatus status,

@@ -39,6 +39,39 @@ class AuthorizationPolicyTest {
                 .hasMessage("Actor cannot access site: HQ");
     }
 
+    @Test
+    void grants_permission_when_matrix_says_so() {
+        PermissionMatrix matrix = (roles, permission) ->
+                roles.contains(SflRole.FACILITIES_MANAGER) && permission == SflPermission.FACILITIES_WORK_ORDER_CLOSE;
+        AuthorizationPolicy wired = new AuthorizationPolicy(matrix);
+        ActorContext manager = actor(Set.of(SflRole.FACILITIES_MANAGER), Set.of("MAIN"));
+
+        assertThat(wired.hasPermission(manager, SflPermission.FACILITIES_WORK_ORDER_CLOSE)).isTrue();
+        assertThatThrownBy(() -> wired.requirePermission(manager, SflPermission.FACILITIES_MASTER_DATA_MANAGE))
+                .isInstanceOf(AuthorizationException.class)
+                .hasMessage("Actor requires permission: FACILITIES_MASTER_DATA_MANAGE");
+    }
+
+    @Test
+    void refuses_permission_when_matrix_denies_it() {
+        PermissionMatrix matrix = (roles, permission) -> false;
+        AuthorizationPolicy wired = new AuthorizationPolicy(matrix);
+        ActorContext requester = actor(Set.of(SflRole.IFIMP_REQUESTER), Set.of("MAIN"));
+
+        assertThat(wired.hasPermission(requester, SflPermission.FACILITIES_WORK_ORDER_CLOSE)).isFalse();
+        assertThatThrownBy(() -> wired.requirePermission(requester, SflPermission.FACILITIES_WORK_ORDER_CLOSE))
+                .isInstanceOf(AuthorizationException.class);
+    }
+
+    @Test
+    void default_no_arg_constructor_denies_every_permission() {
+        ActorContext admin = actor(Set.of(SflRole.SFL_ADMIN), Set.of("*"));
+
+        assertThat(policy.hasPermission(admin, SflPermission.FACILITIES_WORK_ORDER_CLOSE)).isFalse();
+        assertThatThrownBy(() -> policy.requirePermission(admin, SflPermission.FACILITIES_WORK_ORDER_CLOSE))
+                .isInstanceOf(AuthorizationException.class);
+    }
+
     private ActorContext actor(Set<SflRole> roles, Set<String> sites) {
         return new ActorContext(new SiteScopedPrincipal("user-1", "User One", roles, sites, false), "corr-1");
     }
