@@ -33,8 +33,9 @@ interface DriverProfileJpaRepository extends JpaRepository<DriverProfileEntity, 
      * The active profile bound to an identity.
      *
      * <p>Compared exactly, not folded through {@code upper()} like the staff reference beside it: a
-     * subject claim is an opaque identifier and case is part of it. Folding a Keycloak UUID would work
-     * by luck and a Zitadel or Entra subject would not survive it.
+     * subject claim is an opaque identifier and case is part of it. Folding it through {@code upper()}
+     * would work by luck for one provider's format and silently break the match for another's - the
+     * whole point of staying provider-agnostic is not needing to know or care which.
      */
     @Query("""
             select d from DriverProfileEntity d

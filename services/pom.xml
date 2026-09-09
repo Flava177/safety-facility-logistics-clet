@@ -57,6 +57,71 @@
         </dependencies>
     </dependencyManagement>
 
+    <build>
+        <plugins>
+            <!--
+              Every module's tests run under the "test" Spring profile, and nothing else does: no
+              application-test.yml exists anywhere in the reactor, so this activates no extra config
+              by itself. Its purpose is narrower - it is what lets each service's open ("security
+              disabled") filter chain be gated with @Profile({"test","local","dev"}) without breaking
+              a single one of the dozens of existing tests that already set sfl.security.enabled=false
+              deliberately, while a deployment that never sets spring.profiles.active still cannot
+              reach that chain merely by a stray SFL_SECURITY_ENABLED=false in its environment.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <configuration>
+                    <systemPropertyVariables>
+                        <spring.profiles.active>test</spring.profiles.active>
+                    </systemPropertyVariables>
+                </configuration>
+            </plugin>
+            <!--
+              No dependency-convergence or banned-version enforcement existed anywhere in the reactor -
+              a future transitive-version conflict, or a coordinate that should never appear, would
+              otherwise resolve silently. dependencyConvergence is intentionally not turned on: with
+              only 3 non-BOM-managed coordinates (archunit, springdoc-openapi, testcontainers) and every
+              Spring dependency inherited version-less from the Boot BOM, there is nothing today for it
+              to catch, and it would make every future intentional exclusion an enforcer negotiation
+              instead of a POM change. bannedDependencies is the part actually worth having: it fails
+              the build the moment log4j or a SNAPSHOT dependency is ever pulled in, rather than relying
+              on someone noticing.
+            -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-enforcer-plugin</artifactId>
+                <version>3.5.0</version>
+                <executions>
+                    <execution>
+                        <id>enforce-no-banned-dependencies</id>
+                        <goals>
+                            <goal>enforce</goal>
+                        </goals>
+                        <configuration>
+                            <rules>
+                                <bannedDependencies>
+                                    <!--
+                                      Not banning SNAPSHOT dependencies here: every module in this
+                                      reactor is itself 0.1.0-SNAPSHOT and depends on its siblings by
+                                      that version, so requireReleaseDeps would fail this pre-1.0
+                                      reactor's own inter-module dependencies, not catch a real problem.
+                                    -->
+                                    <excludes>
+                                        <exclude>log4j:log4j</exclude>
+                                        <exclude>org.apache.logging.log4j:log4j-core:(,2.17.1)</exclude>
+                                    </excludes>
+                                    <searchTransitive>true</searchTransitive>
+                                </bannedDependencies>
+                            </rules>
+                            <fail>true</fail>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
+
     <profiles>
         <!--
           -Pui builds the dashboard once, here, before any module is packaged. It lives on the

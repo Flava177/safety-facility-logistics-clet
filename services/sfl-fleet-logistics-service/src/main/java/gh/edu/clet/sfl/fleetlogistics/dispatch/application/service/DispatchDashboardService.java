@@ -115,7 +115,16 @@ public class DispatchDashboardService {
         return sourceUpdatedAt.isBefore(clock.instant().minus(runtimeConfig.dashboardFreshnessThreshold(site)));
     }
 
+    /**
+     * Quotes a CSV cell and neutralises formula injection: a value beginning with {@code = + - @}
+     * (or a tab/CR) is prefixed with a bare quote before the field is quoted, so it lands in the cell
+     * as text instead of executing as a formula when the export is opened in a spreadsheet.
+     */
     private static String cell(String value) {
-        return "\"" + String.valueOf(value == null ? "" : value).replace("\"", "\"\"") + "\"";
+        String raw = value == null ? "" : value;
+        if (!raw.isEmpty() && "=+-@\t\r".indexOf(raw.charAt(0)) >= 0) {
+            raw = "'" + raw;
+        }
+        return "\"" + raw.replace("\"", "\"\"") + "\"";
     }
 }

@@ -44,8 +44,8 @@ public record DriverProfileReference(
         suspensionReason = suspensionReason == null || suspensionReason.isBlank()
                 ? null
                 : suspensionReason.strip();
-        // Not upper-cased, unlike staffReference. A subject claim is opaque and case-sensitive: Keycloak
-        // issues a lowercase UUID and folding it would break the match against the token it came from.
+        // Not upper-cased, unlike staffReference. A subject claim is opaque and case-sensitive - folding
+        // it would break the match against the token it came from, whichever provider issued it.
         principalSubject = principalSubject == null || principalSubject.isBlank()
                 ? null
                 : requireText(principalSubject, "principalSubject", 160);

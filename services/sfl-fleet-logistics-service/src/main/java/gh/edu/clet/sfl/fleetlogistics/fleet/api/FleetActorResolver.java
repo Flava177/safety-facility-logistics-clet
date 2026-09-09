@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.api;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.OidcRoleClaims;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
@@ -9,6 +10,7 @@ import java.util.Arrays;
 import java.util.Locale;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -21,8 +23,8 @@ import org.springframework.stereotype.Component;
  * <p>Two sources, one interface - exactly the swap the workplan requires:
  * <ul>
  *   <li><strong>Production:</strong> the OIDC/JWT resource-server principal, using standard claims
- *       ({@code sub}, {@code name}) plus the realm roles and site-scope claim. No provider-specific
- *       type appears beyond this class.</li>
+ *       ({@code sub}, {@code name}) plus the configured roles claim ({@code sfl.security.roles-claim})
+ *       and site-scope claim. No provider-specific type appears beyond this class.</li>
  *   <li><strong>Development:</strong> the {@code X-SFL-*} headers, matching the convention already used
  *       by the facilities service, active only when no authenticated JWT is present.</li>
  * </ul>
@@ -39,8 +41,12 @@ public class FleetActorResolver {
     static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
 
     private static final String CLAIM_SITES = "site_scopes";
-    private static final String CLAIM_REALM_ACCESS = "realm_access";
-    private static final String CLAIM_ROLES = "roles";
+
+    private final String rolesClaim;
+
+    public FleetActorResolver(@Value("${sfl.security.roles-claim:urn:zitadel:iam:org:project:roles}") String rolesClaim) {
+        this.rolesClaim = rolesClaim;
+    }
 
     /** Resolves the actor for the current request. */
     public ActorContext resolve(HttpServletRequest request) {
@@ -91,15 +97,8 @@ public class FleetActorResolver {
                 correlationId);
     }
 
-    @SuppressWarnings("unchecked")
     private Set<SflRole> realmRoles(Jwt jwt) {
-        Object realmAccess = jwt.getClaim(CLAIM_REALM_ACCESS);
-        if (!(realmAccess instanceof java.util.Map<?, ?> claims)
-                || !(claims.get(CLAIM_ROLES) instanceof java.util.List<?> roles)) {
-            return Set.of();
-        }
-        return roles.stream()
-                .map(String::valueOf)
+        return OidcRoleClaims.roleNames(jwt, rolesClaim).stream()
                 .map(FleetActorResolver::toRole)
                 .filter(java.util.Objects::nonNull)
                 .collect(Collectors.toUnmodifiableSet());

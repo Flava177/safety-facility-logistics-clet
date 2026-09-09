@@ -1,30 +1,22 @@
 package gh.edu.clet.sfl.safetysecurity.config;
 
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
-
+import gh.edu.clet.sfl.common.security.OidcRolesConverter;
 import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.convert.converter.Converter;
-import org.springframework.security.authentication.AbstractAuthenticationToken;
+import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
-import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.oauth2.jwt.Jwt;
-import org.springframework.security.oauth2.server.resource.authentication.JwtAuthenticationToken;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
  * The SSEMP filter chains - now the only ones in this deployable.
  *
  * <p><strong>One chain, not two.</strong> When S174 was folded in, it brought an identical pair of
- * chains whose bean methods were also called {@code developmentSecurity} and {@code keycloakSecurity}.
+ * chains whose bean methods were also called {@code developmentSecurity} and {@code resourceServerSecurity}.
  * Two beans of the same name in one context is a startup failure, not a merge - so the emergency pair
  * was deleted and its permit list absorbed below. This was the fourth near-verbatim copy of the same
  * ninety lines across the estate; collapsing it is the point of the merge rather than a side effect.
@@ -43,13 +35,19 @@ import org.springframework.security.web.SecurityFilterChain;
  *
  * <ul>
  *   <li><strong>Secure is what an absent property selects.</strong> {@code matchIfMissing = true} sits on
- *       the Keycloak chain, not the open one, so an environment that forgets the variable gets
+ *       the resource-server chain, not the open one, so an environment that forgets the variable gets
  *       authentication rather than an open API.</li>
  *   <li><strong>Taking the open path is loud.</strong> It logs a warning naming this service on every
  *       startup, because the previous default let an unauthenticated deployment look normal.</li>
  *   <li><strong>The health probe and {@code /api/v1/system/info} stay reachable without a token.</strong>
  *       A load balancer cannot present one.</li>
  * </ul>
+ *
+ * <p>Token validation is pure OIDC/JWKS driven by
+ * {@code spring.security.oauth2.resourceserver.jwt.issuer-uri}, and roles are read from whichever claim
+ * {@code sfl.security.roles-claim} names (see {@link OidcRolesConverter}) rather than one provider's
+ * specific shape - the platform's OIDC provider is Zitadel, but nothing here is written against it by
+ * name.
  *
  * <p>None of this makes any SSEMP system exist. It makes the foundation deployable and monitorable on
  * the same terms as its four siblings.
@@ -59,6 +57,7 @@ class SafetySecurityConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "false")
+    @Profile({"test", "local", "dev"})
     SecurityFilterChain developmentSecurity(HttpSecurity http) throws Exception {
         LoggerFactory.getLogger(getClass()).warn(
                 "sfl.security.enabled=false: every safety-security endpoint is UNAUTHENTICATED and the actor is "
@@ -72,7 +71,9 @@ class SafetySecurityConfiguration {
 
     @Bean
     @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "true", matchIfMissing = true)
-    SecurityFilterChain keycloakSecurity(HttpSecurity http) throws Exception {
+    SecurityFilterChain resourceServerSecurity(HttpSecurity http,
+            @Value("${sfl.security.roles-claim:urn:zitadel:iam:org:project:roles}") String rolesClaim)
+            throws Exception {
         return http.csrf(csrf -> csrf.disable())
                 .cors(Customizer.withDefaults())
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
@@ -82,29 +83,14 @@ class SafetySecurityConfiguration {
                         // into this one. Provider callbacks are authenticated at the application layer by
                         // HMAC and source allowlist (SRS-SFL-S174-04), not by a bearer token - an SMS or
                         // voice gateway posting a delivery receipt has no way to present one. The notice
-                        // page and Swagger are public operational surfaces.
+                        // page is a public operational surface; Swagger is not - unauthenticated schema
+                        // recon of the module handling incidents and emergency notifications is not a
+                        // trade a notice page needs, and facilities never opened it either.
                         .requestMatchers("/", "/index.html", "/emergency/**",
-                                "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html",
                                 "/api/v1/emergency/provider-callbacks/**").permitAll()
                         .anyRequest().authenticated())
-                .oauth2ResourceServer(oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(keycloakConverter())))
-                .httpBasic(Customizer.withDefaults())
+                .oauth2ResourceServer(
+                        oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(new OidcRolesConverter(rolesClaim))))
                 .build();
-    }
-
-    private Converter<Jwt, AbstractAuthenticationToken> keycloakConverter() {
-        return jwt -> new JwtAuthenticationToken(jwt, realmRoles(jwt), jwt.getSubject());
-    }
-
-    @SuppressWarnings("unchecked")
-    private Collection<GrantedAuthority> realmRoles(Jwt jwt) {
-        Map<String, Object> realmAccess = jwt.getClaimAsMap("realm_access");
-        if (realmAccess == null || !(realmAccess.get("roles") instanceof List<?> roles)) {
-            return Collections.emptyList();
-        }
-        return roles.stream()
-                .map(Object::toString)
-                .map(role -> (GrantedAuthority) new SimpleGrantedAuthority("ROLE_" + role.toUpperCase()))
-                .toList();
     }
 }

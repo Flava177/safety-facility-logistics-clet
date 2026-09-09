@@ -1,18 +1,18 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.OidcRoleClaims;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -25,8 +25,8 @@ import org.springframework.stereotype.Component;
  * <p>Two sources, one interface - the swap the workplan requires:
  * <ul>
  *   <li><strong>Production:</strong> the OIDC/JWT resource-server principal, using standard claims
- *       ({@code sub}, {@code name}) plus realm roles and the site-scope claim. No provider-specific
- *       type appears beyond this class.</li>
+ *       ({@code sub}, {@code name}) plus the configured roles claim ({@code sfl.security.roles-claim})
+ *       and the site-scope claim. No provider-specific type appears beyond this class.</li>
  *   <li><strong>Development:</strong> the {@code X-SFL-*} headers, active only when no authenticated
  *       JWT is present.</li>
  * </ul>
@@ -46,8 +46,13 @@ public class FacilitiesActorResolver {
     static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
 
     private static final String CLAIM_SITES = "site_scopes";
-    private static final String CLAIM_REALM_ACCESS = "realm_access";
-    private static final String CLAIM_ROLES = "roles";
+
+    private final String rolesClaim;
+
+    public FacilitiesActorResolver(
+            @Value("${sfl.security.roles-claim:urn:zitadel:iam:org:project:roles}") String rolesClaim) {
+        this.rolesClaim = rolesClaim;
+    }
 
     /** Resolves the actor for the current request. */
     public ActorContext resolve(HttpServletRequest request) {
@@ -99,12 +104,7 @@ public class FacilitiesActorResolver {
     }
 
     private Set<SflRole> realmRoles(Jwt jwt) {
-        Object realmAccess = jwt.getClaim(CLAIM_REALM_ACCESS);
-        if (!(realmAccess instanceof Map<?, ?> claims) || !(claims.get(CLAIM_ROLES) instanceof List<?> roles)) {
-            return Set.of();
-        }
-        return roles.stream()
-                .map(String::valueOf)
+        return OidcRoleClaims.roleNames(jwt, rolesClaim).stream()
                 .map(FacilitiesActorResolver::toRole)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toUnmodifiableSet());

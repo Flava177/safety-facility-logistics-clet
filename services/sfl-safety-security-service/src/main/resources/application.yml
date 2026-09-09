@@ -33,7 +33,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080}
 
 server:
   port: ${SFL_PORT:8092}

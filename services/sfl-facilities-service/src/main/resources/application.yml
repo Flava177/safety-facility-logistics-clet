@@ -27,10 +27,10 @@ spring:
     # asks for one - which is why a default `local` deployment needs no broker running.
     host: ${SFL_RABBITMQ_HOST:localhost}
     port: ${SFL_RABBITMQ_PORT:5672}
-    # `sfl`/`sfl` is the local-dev-only fallback below every env var here; every real deployment
+    # `sfl`/`change-me` is the local-dev-only fallback below every env var here; every real deployment
     # overrides both.
     username: ${SFL_RABBITMQ_USERNAME:sfl}
-    password: ${SFL_RABBITMQ_PASSWORD:sfl}
+    password: ${SFL_RABBITMQ_PASSWORD:change-me}
     # Correlated confirms and mandatory returns, both required for the drainer to know a publish
     # actually reached the broker rather than just the local socket buffer - see
     # AmqpFacilitiesEventTransport, which waits on the per-message CorrelationData future.
@@ -60,7 +60,7 @@ spring:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080}
 
 server:
   port: ${SFL_PORT:8091}

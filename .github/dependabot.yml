@@ -1,0 +1,35 @@
+version: 2
+updates:
+  - package-ecosystem: "maven"
+    directory: "/services"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+    groups:
+      spring-boot:
+        patterns:
+          - "org.springframework*"
+    ignore:
+      # The parent POM pins the Spring Boot BOM version deliberately - upgraded as one decision, not
+      # nudged by a bot one dependency at a time.
+      - dependency-name: "org.springframework.boot:spring-boot-starter-parent"
+
+  - package-ecosystem: "npm"
+    directory: "/frontend/sfl-operations-ui"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 10
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "docker"
+    directories:
+      - "/services/sfl-facilities-service"
+      - "/services/sfl-fleet-logistics-service"
+      - "/services/sfl-safety-security-service"
+      - "/services/sfl-portal-service"
+    schedule:
+      interval: "weekly"

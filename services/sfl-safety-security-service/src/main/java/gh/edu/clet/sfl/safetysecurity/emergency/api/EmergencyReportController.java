@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.safetysecurity.emergency.api;
 
+import gh.edu.clet.sfl.common.web.ContentDispositionFilenames;
 import gh.edu.clet.sfl.safetysecurity.emergency.application.service.EmergencyDashboardService;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,7 +29,8 @@ public class EmergencyReportController {
     @GetMapping(value = "/activations.csv", produces = "text/csv")
     public ResponseEntity<String> activations(@RequestParam String siteCode, HttpServletRequest h) {
         return ResponseEntity.ok().contentType(new MediaType("text", "csv"))
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=emergency-activations-" + siteCode + ".csv")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=emergency-activations-"
+                        + ContentDispositionFilenames.sanitizeSegment(siteCode) + ".csv")
                 .body(service.activationsReportCsv(siteCode, actors.resolve(h)));
     }
 }

@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.fleetlogistics.dispatch.api;
 
+import gh.edu.clet.sfl.common.web.ContentDispositionFilenames;
 import gh.edu.clet.sfl.fleetlogistics.dispatch.application.service.DispatchDashboardService;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import jakarta.servlet.http.HttpServletRequest;
@@ -29,14 +30,15 @@ public class DispatchReportController {
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch report export permission for the site")
     @GetMapping(value = "/items.csv", produces = "text/csv")
     public ResponseEntity<String> items(@RequestParam String siteCode, HttpServletRequest h) {
-        return csv("dispatch-items-" + siteCode + ".csv", service.itemsReportCsv(siteCode, actors.resolve(h)));
+        return csv("dispatch-items-" + ContentDispositionFilenames.sanitizeSegment(siteCode) + ".csv",
+                service.itemsReportCsv(siteCode, actors.resolve(h)));
     }
 
     @io.swagger.v3.oas.annotations.Operation(summary = "Exports the exception case queue for a site as CSV")
     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Actor lacks the required dispatch report export permission for the site")
     @GetMapping(value = "/exceptions.csv", produces = "text/csv")
     public ResponseEntity<String> exceptions(@RequestParam String siteCode, HttpServletRequest h) {
-        return csv("dispatch-exceptions-" + siteCode + ".csv",
+        return csv("dispatch-exceptions-" + ContentDispositionFilenames.sanitizeSegment(siteCode) + ".csv",
                 service.exceptionsReportCsv(siteCode, actors.resolve(h)));
     }
 

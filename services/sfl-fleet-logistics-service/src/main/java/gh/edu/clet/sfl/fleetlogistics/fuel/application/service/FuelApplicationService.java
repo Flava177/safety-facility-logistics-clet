@@ -2296,7 +2296,18 @@ public class FuelApplicationService {
         return prefix + "-" + Instant.now().toEpochMilli() + "-" + NUMBERS.incrementAndGet();
     }
 
+    /**
+     * Quotes a CSV cell and neutralises formula injection: a value beginning with {@code = + - @}
+     * (or a tab/CR, which some spreadsheet parsers also treat as a formula lead-in) is prefixed
+     * with a bare quote before the field is quoted, so a vendor-supplied reference like {@code
+     * =CMD(...)} lands in the cell as text instead of executing when the export is opened in a
+     * spreadsheet.
+     */
     private static String csv(String value) {
-        return "\"" + String.valueOf(value).replace("\"", "\"\"") + "\"";
+        String raw = String.valueOf(value);
+        if (!raw.isEmpty() && "=+-@\t\r".indexOf(raw.charAt(0)) >= 0) {
+            raw = "'" + raw;
+        }
+        return "\"" + raw.replace("\"", "\"\"") + "\"";
     }
 }

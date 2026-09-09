@@ -49,13 +49,13 @@ spring:
   rabbitmq:
     host: ${SFL_RABBITMQ_HOST:localhost}
     port: ${SFL_RABBITMQ_PORT:5672}
-    username: ${SFL_RABBITMQ_USERNAME:guest}
-    password: ${SFL_RABBITMQ_PASSWORD:guest}
+    username: ${SFL_RABBITMQ_USERNAME:sfl}
+    password: ${SFL_RABBITMQ_PASSWORD:change-me}
   security:
     oauth2:
       resourceserver:
         jwt:
-          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080/realms/sfl}
+          issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080}
 
 server:
   port: ${SFL_PORT:8093}

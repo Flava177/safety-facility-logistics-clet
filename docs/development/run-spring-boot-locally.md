@@ -49,9 +49,9 @@ From `services/`:
 ..\mvnw.cmd -pl sfl-facilities-service spring-boot:run
 ```
 
-**Authentication is on by default since A1, and that is the point.** With no Keycloak running, every
-endpoint answers `401` and `WWW-Authenticate` points at an issuer that is not there. For a laptop with
-no identity provider:
+**Authentication is on by default since A1, and that is the point.** With no identity provider running,
+every endpoint answers `401` and `WWW-Authenticate` points at an issuer that is not there. For a laptop
+with no identity provider:
 
 ```powershell
 $env:SFL_SECURITY_ENABLED = 'false'
@@ -62,8 +62,9 @@ unauthenticated and the actor is whatever the `X-SFL-*` headers claim. That warn
 variable is load-bearing, and an environment that simply forgets it is now **secure** rather than
 open - the inverse of how this behaved before 31 July, when forgetting it left every API wide open.
 
-To run against real identity instead, bring up Keycloak with the imported realm
-(`deploy/keycloak/sfl-realm.json`) and leave the variable unset.
+To run against real identity instead, bring up the platform's OIDC provider (Zitadel; see
+`deploy/idp/README.md` - unlike the Keycloak realm it replaced, its roles/personas are not
+provisioned automatically) and leave the variable unset.
 
 ## Running the whole platform
 
