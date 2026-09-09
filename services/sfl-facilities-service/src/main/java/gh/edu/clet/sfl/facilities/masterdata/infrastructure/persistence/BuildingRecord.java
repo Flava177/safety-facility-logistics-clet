@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.masterdata.infrastructure.persistence;
 import gh.edu.clet.sfl.facilities.masterdata.domain.Building;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -14,7 +15,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "buildings", schema = "facilities")
-public class BuildingRecord {
+public class BuildingRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -37,7 +38,14 @@ public class BuildingRecord {
     protected BuildingRecord() {
     }
 
-    private BuildingRecord(Building building) {
+    public static BuildingRecord from(Building building) {
+        BuildingRecord record = new BuildingRecord();
+        record.apply(building);
+        return record;
+    }
+
+    /** Copies the aggregate onto this row - deliberately not {@code record_version}; see VersionedRecord. */
+    public void apply(Building building) {
         id = building.id();
         siteId = building.siteId();
         siteCode = building.siteCode();
@@ -48,12 +56,8 @@ public class BuildingRecord {
         metadata = RecordMetadataEmbeddable.from(building.metadata());
     }
 
-    public static BuildingRecord from(Building building) {
-        return new BuildingRecord(building);
-    }
-
     public Building toDomain() {
         return new Building(id, siteId, siteCode, buildingCode, name, description, lifecycleStatus,
-                metadata.toDomain());
+                metadata.toDomain(recordVersion()));
     }
 }

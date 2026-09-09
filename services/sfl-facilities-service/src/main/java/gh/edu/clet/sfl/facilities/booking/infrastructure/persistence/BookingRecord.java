@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.BookingWindow;
 import gh.edu.clet.sfl.facilities.booking.domain.ReadinessHoldReason;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -38,7 +39,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "bookings", schema = "facilities")
-public class BookingRecord {
+public class BookingRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -153,7 +154,7 @@ public class BookingRecord {
                 new BookingWindow(startsAt, endsAt, setupMinutes, teardownMinutes), status,
                 expectedAttendees, requestedBy, requestedFor, requestedAt, approvalRequired, approvalId,
                 confirmedAt, startedAt, completedAt, closureReason, readinessHoldReason, readinessHeldAt,
-                overrideReason, lifecycleStatus, metadata.toDomain());
+                overrideReason, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 
     public UUID getId() {

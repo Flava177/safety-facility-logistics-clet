@@ -41,5 +41,7 @@ Write-Host ""
 Write-Host "$up of $($services.Count) services up."
 if ($up -lt $services.Count) {
     Write-Host "Start one with:  cd services; ..\mvnw.cmd -pl sfl-<name>-service spring-boot:run"
-    Write-Host "Set SFL_SECURITY_ENABLED=false first if no Keycloak is running, or every call returns 401."
+    Write-Host "Set SFL_SECURITY_ENABLED=false and SPRING_PROFILES_ACTIVE=local first if no identity"
+    Write-Host "provider is running - the first alone no longer opens the dev chain, and every call,"
+    Write-Host "including this health check, returns 401 without both."
 }

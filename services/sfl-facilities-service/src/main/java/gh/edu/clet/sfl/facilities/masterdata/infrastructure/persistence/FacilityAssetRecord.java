@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.AssetOperationalStatus;
 import gh.edu.clet.sfl.facilities.masterdata.domain.FacilityAsset;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -19,7 +20,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "facility_assets", schema = "facilities")
-public class FacilityAssetRecord {
+public class FacilityAssetRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -76,7 +77,14 @@ public class FacilityAssetRecord {
     protected FacilityAssetRecord() {
     }
 
-    private FacilityAssetRecord(FacilityAsset asset) {
+    public static FacilityAssetRecord from(FacilityAsset asset) {
+        FacilityAssetRecord record = new FacilityAssetRecord();
+        record.apply(asset);
+        return record;
+    }
+
+    /** Copies the aggregate onto this row - deliberately not {@code record_version}; see VersionedRecord. */
+    public void apply(FacilityAsset asset) {
         id = asset.id();
         siteCode = asset.siteCode();
         assetCode = asset.assetCode();
@@ -102,14 +110,10 @@ public class FacilityAssetRecord {
         metadata = RecordMetadataEmbeddable.from(asset.metadata());
     }
 
-    public static FacilityAssetRecord from(FacilityAsset asset) {
-        return new FacilityAssetRecord(asset);
-    }
-
     public FacilityAsset toDomain() {
         return new FacilityAsset(id, siteCode, assetCode, name, category, criticality, operationalStatus, roomId,
                 locationCode, manufacturer, modelNumber, serialNumber, installedOn, warrantyExpiresOn,
                 serviceIntervalDays, lastServicedOn, custodian, deviceReferenceId, assetReferenceId, statusNotes,
-                statusChangedAt, lifecycleStatus, metadata.toDomain());
+                statusChangedAt, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }

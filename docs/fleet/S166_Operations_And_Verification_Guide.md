@@ -206,8 +206,12 @@ SFL_FLEET_LOGISTICS_DB_URL=jdbc:postgresql://localhost:5443/sfl__fleet_vehicle_s
 SFL_DB_USERNAME=sfl
 SFL_DB_PASSWORD=sfl
 SFL_SECURITY_ENABLED=false
+SPRING_PROFILES_ACTIVE=local
 SFL_FLEET_EVENT_TRANSPORT=local
 ```
+
+Both `SFL_SECURITY_ENABLED=false` and `SPRING_PROFILES_ACTIVE=local` are required together - the open
+filter chain is gated behind `@Profile({"test","local","dev"})`, so the first alone no longer opens it.
 
 Start the Docker database before running the app.
 

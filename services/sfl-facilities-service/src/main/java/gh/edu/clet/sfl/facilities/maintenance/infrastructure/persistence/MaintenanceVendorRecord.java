@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.maintenance.infrastructure.persistence;
 import gh.edu.clet.sfl.facilities.maintenance.domain.MaintenanceVendor;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -16,7 +17,7 @@ import java.util.UUID;
 /** JPA mapping for {@link MaintenanceVendor}. */
 @Entity
 @Table(name = "maintenance_vendors", schema = "facilities")
-public class MaintenanceVendorRecord {
+public class MaintenanceVendorRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -77,6 +78,6 @@ public class MaintenanceVendorRecord {
     public MaintenanceVendor toDomain() {
         return new MaintenanceVendor(id, siteCode, vendorCode, name, specialisation, contactName, contactEmail,
                 contactPhone, responseHours, contractReference, contractExpiresOn, externalVendorId,
-                lifecycleStatus, metadata.toDomain());
+                lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }

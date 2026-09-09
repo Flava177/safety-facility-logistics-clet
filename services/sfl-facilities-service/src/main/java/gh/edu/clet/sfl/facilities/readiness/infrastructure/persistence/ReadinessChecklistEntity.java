@@ -6,6 +6,7 @@ import gh.edu.clet.sfl.facilities.readiness.domain.ReadinessChecklistItem;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
@@ -32,7 +33,7 @@ import java.util.UUID;
  */
 @Entity
 @Table(name = "facility_readiness_checklists", schema = "facilities")
-class ReadinessChecklistEntity {
+class ReadinessChecklistEntity extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -99,6 +100,6 @@ class ReadinessChecklistEntity {
                 .map(item -> item.toDomain(id))
                 .toList();
         return new ReadinessChecklist(id, siteCode, checklistCode, name, description, spaceType, operatingMode,
-                version, domainItems, lifecycleStatus, metadata.toDomain());
+                version, domainItems, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 }

@@ -5,6 +5,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.LocationReadinessStatus;
 import gh.edu.clet.sfl.facilities.masterdata.domain.SpaceType;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -18,7 +19,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "facility_rooms", schema = "facilities")
-public class FacilityRoomRecord {
+public class FacilityRoomRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -73,7 +74,14 @@ public class FacilityRoomRecord {
     protected FacilityRoomRecord() {
     }
 
-    private FacilityRoomRecord(FacilityRoom room) {
+    public static FacilityRoomRecord from(FacilityRoom room) {
+        FacilityRoomRecord record = new FacilityRoomRecord();
+        record.apply(room);
+        return record;
+    }
+
+    /** Copies the aggregate onto this row - deliberately not {@code record_version}; see VersionedRecord. */
+    public void apply(FacilityRoom room) {
         id = room.id();
         floorId = room.floorId();
         siteCode = room.siteCode();
@@ -96,13 +104,10 @@ public class FacilityRoomRecord {
         metadata = RecordMetadataEmbeddable.from(room.metadata());
     }
 
-    public static FacilityRoomRecord from(FacilityRoom room) {
-        return new FacilityRoomRecord(room);
-    }
-
     public FacilityRoom toDomain() {
         return new FacilityRoom(id, floorId, siteCode, roomCode, name, spaceType, roomType, capacity, areaSqm,
                 costCentre, bookable, examinationCapable, readinessStatus, readinessNotes, readinessUpdatedAt,
-                readinessLocked, readinessLockedBy, readinessLockedAt, lifecycleStatus, metadata.toDomain());
+                readinessLocked, readinessLockedBy, readinessLockedAt, lifecycleStatus,
+                metadata.toDomain(recordVersion()));
     }
 }

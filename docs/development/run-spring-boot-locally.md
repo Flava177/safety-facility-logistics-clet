@@ -55,12 +55,18 @@ with no identity provider:
 
 ```powershell
 $env:SFL_SECURITY_ENABLED = 'false'
+$env:SPRING_PROFILES_ACTIVE = 'local'
 ```
 
 The service then logs a warning naming itself on every startup, stating that every endpoint is
 unauthenticated and the actor is whatever the `X-SFL-*` headers claim. That warning is deliberate. The
 variable is load-bearing, and an environment that simply forgets it is now **secure** rather than
 open - the inverse of how this behaved before 31 July, when forgetting it left every API wide open.
+
+**Both lines are required, not just the first.** The open filter chain is additionally gated behind
+`@Profile({"test","local","dev"})`, so `SFL_SECURITY_ENABLED=false` on its own no longer opens it -
+without an active profile too, no `SecurityFilterChain` bean registers at all, and every endpoint,
+including the health probe, falls through to Spring Security's secure-everything default instead.
 
 To run against real identity instead, bring up the platform's OIDC provider (Zitadel; see
 `deploy/idp/README.md` - unlike the Keycloak realm it replaced, its roles/personas are not
@@ -88,7 +94,8 @@ The health probe stays reachable without a token by design: a load balancer cann
 
 Import `services/pom.xml` as the Maven project, not the repository root - there is no longer a pom at
 the root. Set the project JDK to 17. Each service has its own `…Application` class; run whichever you
-are working on, with `SFL_SECURITY_ENABLED=false` in the run configuration.
+are working on, with both `SFL_SECURITY_ENABLED=false` and an active profile of `local` (or `dev`) set
+on the run configuration - the checked-in configurations under `services/.run/` already do this.
 
 If you see **"Invalid VCS root mapping"** on project open, `.idea/vcs.xml` has acquired a Git root
 mapping for `frontend/sfl-operations-ui`, which is a directory in this repository rather than a

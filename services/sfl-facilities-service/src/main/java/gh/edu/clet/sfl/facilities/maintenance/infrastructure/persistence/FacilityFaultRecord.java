@@ -5,6 +5,7 @@ import gh.edu.clet.sfl.facilities.maintenance.domain.FacilityFaultStatus;
 import gh.edu.clet.sfl.facilities.maintenance.domain.FaultPriority;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -18,7 +19,7 @@ import java.util.UUID;
 /** JPA mapping for {@link FacilityFault}. Column names match V9 exactly. */
 @Entity
 @Table(name = "facility_faults", schema = "facilities")
-public class FacilityFaultRecord {
+public class FacilityFaultRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -119,7 +120,7 @@ public class FacilityFaultRecord {
         return new FacilityFault(id, faultNumber, siteCode, roomId, locationCode, assetId, title, description,
                 category, priority, status, reportedBy, reportedAt, triagedBy, triagedAt, triageNotes,
                 duplicateOfFaultId, workOrderId, slaDueAt, escalationLevel, escalatedAt, blockerRaised,
-                resolvedAt, resolutionNotes, lifecycleStatus, metadata.toDomain());
+                resolvedAt, resolutionNotes, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 
     public UUID getId() {

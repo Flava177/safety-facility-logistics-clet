@@ -331,8 +331,13 @@ launch() { # module, port, label
   [ -f "$jar" ] || die "$jar is missing. Run without --skip-build."
 
   # Prefixed so three services in one console stay tellable apart.
+  #
+  # SPRING_PROFILES_ACTIVE is load-bearing alongside SFL_SECURITY_ENABLED=false: the open filter
+  # chain is gated behind @Profile({"test","local","dev"}), so without an active profile here the
+  # service would register no SecurityFilterChain at all and 401 its own health probe.
   (
-    SFL_SECURITY_ENABLED=false "$JAVA_HOME/bin/java" -jar "$jar" --server.port="$port" 2>&1 \
+    SFL_SECURITY_ENABLED=false SPRING_PROFILES_ACTIVE=local "$JAVA_HOME/bin/java" -jar "$jar" \
+      --server.port="$port" 2>&1 \
       | sed -u "s/^/[$label] /"
   ) &
   PIDS+=("$!")

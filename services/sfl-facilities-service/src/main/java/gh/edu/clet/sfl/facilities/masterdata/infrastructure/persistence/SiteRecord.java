@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.facilities.masterdata.domain.Site;
 import gh.edu.clet.sfl.facilities.shared.domain.model.OperatingMode;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
+import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.VersionedRecord;
 import jakarta.persistence.Column;
 import jakarta.persistence.Embedded;
 import jakarta.persistence.Entity;
@@ -16,7 +17,7 @@ import java.util.UUID;
 
 @Entity
 @Table(name = "sites", schema = "facilities")
-public class SiteRecord {
+public class SiteRecord extends VersionedRecord {
 
     @Id
     private UUID id;
@@ -42,7 +43,21 @@ public class SiteRecord {
     protected SiteRecord() {
     }
 
-    private SiteRecord(Site site) {
+    public static SiteRecord from(Site site) {
+        SiteRecord record = new SiteRecord();
+        record.apply(site);
+        return record;
+    }
+
+    /**
+     * Copies the aggregate onto this row - deliberately not {@code record_version}, which
+     * {@link VersionedRecord} owns entirely. The adapter reuses the already-managed row for an
+     * update rather than merging a detached one for exactly this reason: a value this method set
+     * would be the version the caller last read, not the one still current in the database, and
+     * merging a stale value in is indistinguishable from a real conflict to Hibernate's optimistic
+     * check - every write would fail, not just a genuinely concurrent one.
+     */
+    public void apply(Site site) {
         id = site.id();
         siteCode = site.siteCode();
         name = site.name();
@@ -54,12 +69,8 @@ public class SiteRecord {
         metadata = RecordMetadataEmbeddable.from(site.metadata());
     }
 
-    public static SiteRecord from(Site site) {
-        return new SiteRecord(site);
-    }
-
     public Site toDomain() {
         return new Site(id, siteCode, name, description, lifecycleStatus, operatingMode,
-                operatingModeChangedAt, operatingModeChangedBy, metadata.toDomain());
+                operatingModeChangedAt, operatingModeChangedBy, metadata.toDomain(recordVersion()));
     }
 }

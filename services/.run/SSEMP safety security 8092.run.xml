@@ -2,6 +2,7 @@
   <configuration default="false" name="SSEMP safety security 8092" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
     <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
     <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="ACTIVE_PROFILES" value="local" />
     <envs>
       <env name="SFL_PORT" value="8092" />
       <env name="SFL_SAFETY_SECURITY_DB_URL" value="jdbc:postgresql://localhost:5442/sfl_safety_security_service" />

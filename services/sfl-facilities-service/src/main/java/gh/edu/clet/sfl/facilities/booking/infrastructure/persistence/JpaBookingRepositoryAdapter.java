@@ -129,7 +129,9 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
 
     @Override
     public Booking saveBooking(Booking booking) {
-        BookingRecord record = bookings.findById(booking.id()).orElseGet(BookingRecord::new);
+        Optional<BookingRecord> existing = bookings.findById(booking.id());
+        existing.ifPresent(record -> record.requireNotStale(booking.metadata().version()));
+        BookingRecord record = existing.orElseGet(BookingRecord::new);
         record.apply(booking);
         try {
             return bookings.saveAndFlush(record).toDomain();
@@ -214,8 +216,9 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
 
     @Override
     public BookableResource saveResource(BookableResource resource) {
-        BookableResourceRecord record = resources.findById(resource.id())
-                .orElseGet(BookableResourceRecord::new);
+        Optional<BookableResourceRecord> existing = resources.findById(resource.id());
+        existing.ifPresent(record -> record.requireNotStale(resource.metadata().version()));
+        BookableResourceRecord record = existing.orElseGet(BookableResourceRecord::new);
         record.apply(resource);
         return resources.save(record).toDomain();
     }

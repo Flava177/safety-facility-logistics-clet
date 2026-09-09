@@ -44,8 +44,9 @@ class JpaReadinessRepositoryAdapter implements ReadinessRepository {
     public ReadinessChecklist saveChecklist(ReadinessChecklist checklist) {
         // Load-then-apply rather than construct-then-merge: the item collection is managed, and
         // replacing it wholesale on a detached entity leaves the old rows behind.
-        ReadinessChecklistEntity entity = checklists.findById(checklist.id())
-                .orElseGet(() -> ReadinessChecklistEntity.from(checklist));
+        Optional<ReadinessChecklistEntity> existing = checklists.findById(checklist.id());
+        existing.ifPresent(entity -> entity.requireNotStale(checklist.metadata().version()));
+        ReadinessChecklistEntity entity = existing.orElseGet(() -> ReadinessChecklistEntity.from(checklist));
         entity.apply(checklist);
         return checklists.save(entity).toDomain();
     }

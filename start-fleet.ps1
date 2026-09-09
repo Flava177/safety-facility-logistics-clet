@@ -126,7 +126,12 @@ if (Test-Path $indexHtml) {
 # The dashboard still opens on its sign-in page: that form picks which seeded account's X-SFL-*
 # headers to send, which is exactly the identity an open service reads. Signing in is how the
 # portal is chosen, not how the service is secured.
+#
+# SPRING_PROFILES_ACTIVE is equally load-bearing since the open filter chain is also gated behind
+# @Profile({"test","local","dev"}) - SFL_SECURITY_ENABLED=false alone no longer opens it. Without
+# this line, no SecurityFilterChain bean registers at all and the service 401s its own health probe.
 $env:SFL_SECURITY_ENABLED = "false"
+$env:SPRING_PROFILES_ACTIVE = "local"
 $env:SFL_FLEET_OPEN_BROWSER = if ($NoBrowser) { "false" } else { "true" }
 
 Write-Step "Starting the Fleet & Logistics service on http://localhost:8093"
