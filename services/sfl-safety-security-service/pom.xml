@@ -22,6 +22,16 @@
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
+        <!--
+          Real transport for the emergency outbox. Before this, sfl.emergency.messaging.transport had
+          only "local" (a no-op that marked every message PUBLISHED without sending it anywhere) and
+          the property itself did nothing - selecting "rabbitmq" would have silently behaved exactly
+          like "local". Facilities and fleet already carry this starter for the same reason.
+        -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-amqp</artifactId>
+        </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-data-jpa</artifactId>

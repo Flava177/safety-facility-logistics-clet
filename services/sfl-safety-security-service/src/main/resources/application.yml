@@ -34,6 +34,19 @@ spring:
       resourceserver:
         jwt:
           issuer-uri: ${SFL_IAM_ISSUER:http://localhost:8080}
+  rabbitmq:
+    # Only used when `sfl.emergency.messaging.transport=rabbitmq`. Boot creates the connection factory
+    # from these regardless, but nothing opens a connection until a publisher asks for one - which is
+    # why a default `local` deployment needs no broker running. Same broker, same env vars as
+    # facilities/fleet - this is the shared `sfl.events` exchange, not a separate instance.
+    host: ${SFL_RABBITMQ_HOST:localhost}
+    port: ${SFL_RABBITMQ_PORT:5672}
+    username: ${SFL_RABBITMQ_USERNAME:sfl}
+    password: ${SFL_RABBITMQ_PASSWORD:change-me}
+    # Correlated confirms and mandatory returns - required for the drainer to know a publish actually
+    # reached the broker rather than just the local socket buffer. See AmqpEmergencyEventTransport.
+    publisher-confirm-type: correlated
+    publisher-returns: true
 
 server:
   port: ${SFL_PORT:8092}
@@ -48,6 +61,15 @@ management:
     health:
       probes:
         enabled: true
+  health:
+    # Off by default: Spring Boot registers a RabbitHealthIndicator from AMQP-on-the-classpath alone,
+    # and a failing indicator drags the aggregate health status to DOWN - a service that started
+    # cleanly and is serving its API correctly would report 503, which a readiness probe reads as
+    # "take it out of rotation". Facilities hit exactly this the first time all services started
+    # together with AMQP on the classpath; this service now carries the same dependency and needs the
+    # same override. Set true deliberately in any environment actually running transport=rabbitmq.
+    rabbit:
+      enabled: ${SFL_RABBITMQ_HEALTH_ENABLED:false}
 
 sfl:
   security:
@@ -60,10 +82,16 @@ sfl:
     schema: safety_security,emergency_notification
     owns: "Safety, Security & Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174"
   emergency:
-    # Outbound provider delivery uses a self-contained transactional outbox with a recorded local sink
-    # (no broker required for Phase 1); failed deliveries dead-letter and are replayable.
+    # Outbound delivery uses a self-contained transactional outbox; failed deliveries dead-letter and
+    # are replayable. `local` records delivery without a broker and is the single-node default. Any
+    # environment with a real consumer must set `rabbitmq` deliberately - selecting it without a
+    # RabbitTemplate fails at startup rather than dropping events quietly.
     messaging:
       transport: ${SFL_EMERGENCY_EVENT_TRANSPORT:local}
+      exchange: ${SFL_EMERGENCY_EVENT_EXCHANGE:sfl.events}
+      # How long the rabbitmq transport waits for the broker's publisher confirm before treating the
+      # publish as failed and handing it back to the drainer's retry/dead-letter path.
+      confirm-timeout: PT5S
       max-attempts: ${SFL_EMERGENCY_OUTBOX_MAX_ATTEMPTS:5}
     scheduling:
       # Unacknowledged-escalation, dashboard-refresh and stale-integration sweeps. Individual sweeps are
