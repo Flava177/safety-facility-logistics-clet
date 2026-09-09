@@ -235,68 +235,101 @@ public class JdbcFuelRepository implements FuelRepository {
     /* ------------------------------------------------------------------------------ policies */
 
     /**
-     * Inserts a policy, or writes over the one already carrying this id.
+     * Updates a policy if the caller's read is still current, or inserts one carrying this id for
+     * the first time.
      *
-     * <p>Insert-only until policies became editable, which meant an edit died on the primary key
-     * rather than on any rule. The upsert leaves {@code id} and the creation stamp alone - who
-     * created a policy does not change because somebody later revised its limits - and lets the
-     * database own the version bump, which is what {@code RecordMetadata} says it is for.
+     * <p>Was an unconditional {@code ON CONFLICT DO UPDATE} that bumped {@code version} without
+     * ever checking it - every concurrent edit silently won, and the loser's changes vanished with
+     * no error. Now the same conditional-update shape every other {@code save*} in this file uses:
+     * update guarded by the version the caller read, insert only when the row does not exist yet,
+     * and a version conflict throws rather than overwrites. The update list leaves {@code id} and
+     * the creation stamp alone - who created a policy does not change because somebody later
+     * revised its limits.
      */
     @Override
     public FuelPolicy savePolicy(FuelPolicy p) {
-        jdbc.update(
-                """
-            INSERT INTO fleet_logistics.fuel_policies (id,site_code,policy_name,effective_from,effective_to,policy_version,max_per_transaction,daily_limit,monthly_limit,tank_capacity,min_consumption,max_consumption,odometer_jump_tolerance,receipt_required,receipt_grace_hours,materiality_amount,anomaly_sla_hours,cost_variance_tolerance,repeated_pattern_window_hours,repeated_pattern_threshold,allowed_fuel_products,approved_vendors,status,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
-            VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
-            ON CONFLICT (id) DO UPDATE SET
-                policy_name=EXCLUDED.policy_name, effective_from=EXCLUDED.effective_from,
-                effective_to=EXCLUDED.effective_to, policy_version=EXCLUDED.policy_version,
-                max_per_transaction=EXCLUDED.max_per_transaction, daily_limit=EXCLUDED.daily_limit,
-                monthly_limit=EXCLUDED.monthly_limit, tank_capacity=EXCLUDED.tank_capacity,
-                min_consumption=EXCLUDED.min_consumption, max_consumption=EXCLUDED.max_consumption,
-                odometer_jump_tolerance=EXCLUDED.odometer_jump_tolerance,
-                receipt_required=EXCLUDED.receipt_required, receipt_grace_hours=EXCLUDED.receipt_grace_hours,
-                materiality_amount=EXCLUDED.materiality_amount, anomaly_sla_hours=EXCLUDED.anomaly_sla_hours,
-                cost_variance_tolerance=EXCLUDED.cost_variance_tolerance,
-                repeated_pattern_window_hours=EXCLUDED.repeated_pattern_window_hours,
-                repeated_pattern_threshold=EXCLUDED.repeated_pattern_threshold,
-                allowed_fuel_products=EXCLUDED.allowed_fuel_products,
-                approved_vendors=EXCLUDED.approved_vendors, status=EXCLUDED.status,
-                last_modified_by=EXCLUDED.last_modified_by, last_modified_at=EXCLUDED.last_modified_at,
-                source_channel=EXCLUDED.source_channel, audit_correlation_id=EXCLUDED.audit_correlation_id,
-                version=fleet_logistics.fuel_policies.version+1
+        int updated =
+                jdbc.update(
+                        """
+            UPDATE fleet_logistics.fuel_policies SET
+                policy_name=?, effective_from=?, effective_to=?, policy_version=?,
+                max_per_transaction=?, daily_limit=?, monthly_limit=?, tank_capacity=?,
+                min_consumption=?, max_consumption=?, odometer_jump_tolerance=?,
+                receipt_required=?, receipt_grace_hours=?, materiality_amount=?, anomaly_sla_hours=?,
+                cost_variance_tolerance=?, repeated_pattern_window_hours=?, repeated_pattern_threshold=?,
+                allowed_fuel_products=?, approved_vendors=?, status=?,
+                last_modified_by=?, last_modified_at=?, source_channel=?, audit_correlation_id=?,
+                version=version+1
+            WHERE id=? AND version=?
             """,
-                p.id(),
-                p.siteCode().value(),
-                p.name(),
-                ts(p.effectiveFrom()),
-                ts(p.effectiveTo()),
-                p.policyVersion(),
-                p.maxPerTransaction(),
-                p.dailyLimit(),
-                p.monthlyLimit(),
-                p.tankCapacity(),
-                p.minConsumption(),
-                p.maxConsumption(),
-                p.odometerJumpTolerance(),
-                p.receiptRequired(),
-                p.receiptGraceHours(),
-                p.materialityAmount(),
-                p.anomalySlaHours(),
-                p.costVarianceTolerance(),
-                p.repeatedPatternWindowHours(),
-                p.repeatedPatternThreshold(),
-                String.join(",", p.allowedFuelProducts()),
-                String.join(",", p.approvedVendors()),
-                p.status().name(),
-                p.metadata().createdBy(),
-                ts(p.metadata().createdAt()),
-                p.metadata().lastModifiedBy(),
-                ts(p.metadata().lastModifiedAt()),
-                p.metadata().sourceChannel().name(),
-                p.metadata().auditCorrelationId(),
-                p.metadata().version());
-        return p;
+                        p.name(),
+                        ts(p.effectiveFrom()),
+                        ts(p.effectiveTo()),
+                        p.policyVersion(),
+                        p.maxPerTransaction(),
+                        p.dailyLimit(),
+                        p.monthlyLimit(),
+                        p.tankCapacity(),
+                        p.minConsumption(),
+                        p.maxConsumption(),
+                        p.odometerJumpTolerance(),
+                        p.receiptRequired(),
+                        p.receiptGraceHours(),
+                        p.materialityAmount(),
+                        p.anomalySlaHours(),
+                        p.costVarianceTolerance(),
+                        p.repeatedPatternWindowHours(),
+                        p.repeatedPatternThreshold(),
+                        String.join(",", p.allowedFuelProducts()),
+                        String.join(",", p.approvedVendors()),
+                        p.status().name(),
+                        p.metadata().lastModifiedBy(),
+                        ts(p.metadata().lastModifiedAt()),
+                        p.metadata().sourceChannel().name(),
+                        p.metadata().auditCorrelationId(),
+                        p.id(),
+                        p.metadata().version());
+        if (updated == 0 && findPolicy(p.id()).isEmpty()) {
+            jdbc.update(
+                    """
+                INSERT INTO fleet_logistics.fuel_policies (id,site_code,policy_name,effective_from,effective_to,policy_version,max_per_transaction,daily_limit,monthly_limit,tank_capacity,min_consumption,max_consumption,odometer_jump_tolerance,receipt_required,receipt_grace_hours,materiality_amount,anomaly_sla_hours,cost_variance_tolerance,repeated_pattern_window_hours,repeated_pattern_threshold,allowed_fuel_products,approved_vendors,status,created_by,created_at,last_modified_by,last_modified_at,source_channel,audit_correlation_id,version)
+                VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+                """,
+                    p.id(),
+                    p.siteCode().value(),
+                    p.name(),
+                    ts(p.effectiveFrom()),
+                    ts(p.effectiveTo()),
+                    p.policyVersion(),
+                    p.maxPerTransaction(),
+                    p.dailyLimit(),
+                    p.monthlyLimit(),
+                    p.tankCapacity(),
+                    p.minConsumption(),
+                    p.maxConsumption(),
+                    p.odometerJumpTolerance(),
+                    p.receiptRequired(),
+                    p.receiptGraceHours(),
+                    p.materialityAmount(),
+                    p.anomalySlaHours(),
+                    p.costVarianceTolerance(),
+                    p.repeatedPatternWindowHours(),
+                    p.repeatedPatternThreshold(),
+                    String.join(",", p.allowedFuelProducts()),
+                    String.join(",", p.approvedVendors()),
+                    p.status().name(),
+                    p.metadata().createdBy(),
+                    ts(p.metadata().createdAt()),
+                    p.metadata().lastModifiedBy(),
+                    ts(p.metadata().lastModifiedAt()),
+                    p.metadata().sourceChannel().name(),
+                    p.metadata().auditCorrelationId(),
+                    p.metadata().version());
+        } else if (updated == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException(
+                    "FuelPolicy version conflict");
+        }
+        return findPolicy(p.id()).orElseThrow();
     }
 
     @Override
@@ -1381,6 +1414,17 @@ public class JdbcFuelRepository implements FuelRepository {
                     "status",
                     "status");
 
+    /**
+     * Updates a card if the caller's read is still current, or inserts one carrying this id for the
+     * first time.
+     *
+     * <p>The update was already guarded by {@code WHERE id=? AND version=?}, but a version conflict
+     * (row exists, {@code updated == 0}) fell through both branches and returned the caller's own,
+     * never-persisted argument as if it had saved - the caller had no way to know their write was
+     * dropped. Now a conflict throws, matching every other {@code save*} in this file, and a
+     * successful save returns a fresh read so the caller sees the version the database actually
+     * holds.
+     */
     @Override
     public FuelCard saveCard(FuelCard c) {
         int updated =
@@ -1428,8 +1472,11 @@ public class JdbcFuelRepository implements FuelRepository {
                     c.metadata().sourceChannel().name(),
                     c.metadata().auditCorrelationId(),
                     c.metadata().version());
+        } else if (updated == 0) {
+            throw new org.springframework.dao.OptimisticLockingFailureException(
+                    "FuelCard version conflict");
         }
-        return c;
+        return findCard(c.id()).orElseThrow();
     }
 
     @Override
