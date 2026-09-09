@@ -1,17 +1,17 @@
 package gh.edu.clet.sfl.fleetlogistics.assets.api;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.OidcRoleClaims;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.Locale;
-import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -34,9 +34,9 @@ import org.springframework.stereotype.Component;
  * service duly had none. It now returns a full {@link ActorContext}, which is what
  * {@code AssetVisibilityAccessPolicy} needs to answer both of its questions.
  *
- * <p>The claim names are the platform's - {@code realm_access.roles} and {@code site_scopes}, both
- * issued by the imported realm and read identically by the other three services. AVAMP is brought
- * into line rather than given a fourth convention.
+ * <p>The claim names are the platform's - the configured roles claim ({@code sfl.security.roles-claim})
+ * and {@code site_scopes}, both issued by the platform's OIDC provider and read identically by the
+ * other three services. AVAMP is brought into line rather than given a fourth convention.
  *
  * <p><strong>The header path is not deleted.</strong> With {@code sfl.security.enabled=false} there
  * is no JWT, the dashboard sends {@code X-SFL-*}, and local development works as it did. What changed
@@ -51,9 +51,14 @@ public class AssetVisibilityActorResolver {
     static final String HEADER_SITES = "X-SFL-Sites";
     static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
 
-    private static final String CLAIM_REALM_ACCESS = "realm_access";
-    private static final String CLAIM_ROLES = "roles";
     private static final String CLAIM_SITES = "site_scopes";
+
+    private final String rolesClaim;
+
+    public AssetVisibilityActorResolver(
+            @Value("${sfl.security.roles-claim:urn:zitadel:iam:org:project:roles}") String rolesClaim) {
+        this.rolesClaim = rolesClaim;
+    }
 
     /** The actor, with the roles and site scopes an authorisation check needs. */
     public ActorContext resolve(HttpServletRequest request) {
@@ -106,12 +111,7 @@ public class AssetVisibilityActorResolver {
     }
 
     private Set<SflRole> realmRoles(Jwt jwt) {
-        Object realmAccess = jwt.getClaim(CLAIM_REALM_ACCESS);
-        if (!(realmAccess instanceof Map<?, ?> claims) || !(claims.get(CLAIM_ROLES) instanceof List<?> roles)) {
-            return Set.of();
-        }
-        return roles.stream()
-                .map(String::valueOf)
+        return OidcRoleClaims.roleNames(jwt, rolesClaim).stream()
                 .map(AssetVisibilityActorResolver::toRole)
                 .filter(Objects::nonNull)
                 .collect(Collectors.toUnmodifiableSet());

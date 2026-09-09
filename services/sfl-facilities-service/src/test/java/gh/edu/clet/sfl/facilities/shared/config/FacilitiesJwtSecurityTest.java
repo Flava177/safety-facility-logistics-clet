@@ -23,9 +23,9 @@ import org.springframework.test.web.servlet.MockMvc;
 /**
  * The production security chain, executed.
  *
- * <p><strong>Why this test did not exist and had to.</strong> {@code keycloakSecurity} - the chain
- * that runs in every environment that is not a developer's laptop - had no test at all. Searching
- * every {@code src/test/java} in the reactor for {@code keycloakSecurity},
+ * <p><strong>Why this test did not exist and had to.</strong> {@code resourceServerSecurity} - the
+ * chain that runs in every environment that is not a developer's laptop - had no test at all. Searching
+ * every {@code src/test/java} in the reactor for that bean name,
  * {@code sfl.security.enabled=true} or {@code JwtAuthenticationToken} returned nothing. The only
  * filter chain that will ever face a real user had never been executed across four build passes,
  * while the suite reported green off the development chain that permits everything.
@@ -122,12 +122,13 @@ class FacilitiesJwtSecurityTest {
     }
 
     /**
-     * A token shaped the way the realm issues them.
+     * A token shaped the way the platform's OIDC provider (Zitadel) issues them.
      *
-     * <p>{@code realm_access.roles} and {@code site_scopes} are the two claims
-     * {@code FacilitiesActorResolver.fromJwt} reads, so a change here or in
-     * {@code deploy/keycloak/sfl-realm.json} that is not made in both places fails this test rather
-     * than surfacing in production as an actor with no roles and no sites.
+     * <p>{@code urn:zitadel:iam:org:project:roles} and {@code site_scopes} are the two claims
+     * {@code FacilitiesActorResolver.fromJwt} reads (the first via {@code OidcRolesConverter}, the
+     * second directly), so a change here or in {@code deploy/idp}'s bootstrap that is not made in both
+     * places fails this test rather than surfacing in production as an actor with no roles and no
+     * sites.
      */
     private static Jwt facilitiesManager() {
         return token("facilities.manager", "Facilities Manager", "FACILITIES_MANAGER");
@@ -138,13 +139,13 @@ class FacilitiesJwtSecurityTest {
         return token("akosua.requester", "Akosua Requester", "IFIMP_REQUESTER");
     }
 
-    private static Jwt token(String subject, String name, String realmRole) {
+    private static Jwt token(String subject, String name, String projectRole) {
         return Jwt.withTokenValue("test-token")
                 .header("alg", "none")
                 .subject(subject)
                 .claim("name", name)
                 .claim("preferred_username", subject)
-                .claim("realm_access", Map.of("roles", List.of(realmRole)))
+                .claim("urn:zitadel:iam:org:project:roles", Map.of(projectRole, Map.of("org-id", "clet")))
                 .claim("site_scopes", List.of("MAIN"))
                 .build();
     }

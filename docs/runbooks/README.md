@@ -34,9 +34,10 @@ architecture exists to prevent.
 
 - **Authentication is on by default as of 1 August 2026 (A1).** `SFL_SECURITY_ENABLED` now defaults
   to `true`, and the filter chain that opens everything requires the property to be *explicitly*
-  `false` - absent no longer means open. The compose stack runs Keycloak with the `sfl` realm
-  imported. The local development scripts set the variable to `false` deliberately and log a warning
-  on every startup when they do.
+  `false` - absent no longer means open. The compose stack runs Zitadel (`idp`/`idp-postgres`) as the
+  platform's OIDC provider; unlike the Keycloak realm it replaced, its roles/personas are not
+  provisioned automatically on startup - see `deploy/idp/README.md`. The local development scripts set
+  `SFL_SECURITY_ENABLED` to `false` deliberately and log a warning on every startup when they do.
 
   Two consequences for these runbooks: a service that will not start may now be failing to reach its
   issuer rather than its database, and any `curl` in anger needs a bearer token. Obtain one against

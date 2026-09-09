@@ -1,0 +1,14 @@
+title = "SFL gitleaks config"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Confirmed false positives, verified 2026-09-09"
+
+# "publish/consume" in a documentation markdown file (SFL_Phase1_System_Architecture_Implementation_Guide_v2.md,
+# line 208) - ordinary English text describing Kafka event flow, not a secret. Flagged by the generic
+# entropy-based "generic-api-key" rule; verified against the actual file content before allowlisting.
+regexes = [
+  '''publish/consume''',
+]

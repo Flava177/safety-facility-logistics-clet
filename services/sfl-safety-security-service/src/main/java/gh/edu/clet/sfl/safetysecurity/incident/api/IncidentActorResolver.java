@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.safetysecurity.incident.api;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
+import gh.edu.clet.sfl.common.security.OidcRoleClaims;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.model.SourceChannel;
@@ -11,6 +12,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.oauth2.jwt.Jwt;
@@ -34,6 +36,13 @@ public class IncidentActorResolver {
     static final String HEADER_CORRELATION_ID = "X-Correlation-ID";
     static final String HEADER_SOURCE_CHANNEL = "X-SFL-Source-Channel";
     static final String HEADER_IDEMPOTENCY_KEY = "Idempotency-Key";
+
+    private final String rolesClaim;
+
+    public IncidentActorResolver(
+            @Value("${sfl.security.roles-claim:urn:zitadel:iam:org:project:roles}") String rolesClaim) {
+        this.rolesClaim = rolesClaim;
+    }
 
     public ActorContext resolve(HttpServletRequest request) {
         String correlationId = resolveCorrelationId(request);
@@ -86,12 +95,7 @@ public class IncidentActorResolver {
     }
 
     private Set<SflRole> realmRoles(Jwt jwt) {
-        Object realmAccess = jwt.getClaim("realm_access");
-        if (!(realmAccess instanceof java.util.Map<?, ?> claims)
-                || !(claims.get("roles") instanceof java.util.List<?> roles)) {
-            return Set.of();
-        }
-        return roles.stream().map(String::valueOf).map(IncidentActorResolver::toRole)
+        return OidcRoleClaims.roleNames(jwt, rolesClaim).stream().map(IncidentActorResolver::toRole)
                 .filter(Objects::nonNull).collect(Collectors.toUnmodifiableSet());
     }
 

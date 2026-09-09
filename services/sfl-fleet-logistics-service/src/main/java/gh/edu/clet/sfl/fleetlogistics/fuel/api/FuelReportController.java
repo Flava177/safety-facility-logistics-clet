@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.fleetlogistics.fuel.api;
 
+import gh.edu.clet.sfl.common.web.ContentDispositionFilenames;
 import gh.edu.clet.sfl.fleetlogistics.fleet.api.FleetActorResolver;
 import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelApplicationService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +33,9 @@ public class FuelReportController {
                 .contentType(new MediaType("text", "csv"))
                 .header(
                         HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename=fuel-transactions-" + siteCode + ".csv")
+                        "attachment; filename=fuel-transactions-"
+                                + ContentDispositionFilenames.sanitizeSegment(siteCode)
+                                + ".csv")
                 .body(service.transactionReportCsv(siteCode, actors.resolve(h)));
     }
 }

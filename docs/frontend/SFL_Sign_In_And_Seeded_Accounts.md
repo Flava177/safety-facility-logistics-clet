@@ -70,17 +70,13 @@ service behind it is open.
 
 ## The token-issuing path, for when it is wanted
 
-`deploy/keycloak/sfl-realm.json` carries the same twenty-two accounts with the same addresses and the
-same password, and `shared/auth/keycloak.ts` exchanges them for a real token via the realm. Both write
-the same session shape, so nothing downstream cares which signed you in. To use it, start Keycloak
-and run the service with security on:
-
-```powershell
-docker compose -f deploy\compose\docker-compose.microservices.yml up -d keycloak
-```
-
-Verified against the running realm: the fleet manager and driver receive tokens carrying their role
-and site scope, and a wrong password is refused `invalid_grant`.
+The platform's OIDC provider is now Zitadel (`deploy/idp/README.md`), not Keycloak. Unlike Keycloak's
+`--import-realm`, Zitadel has no equivalent single-file realm import, so the same twenty-two accounts
+this section used to describe as auto-provisioned (`deploy/idp/sfl-realm.json` is kept only as the
+*reference* for what to recreate) are **not currently provisioned** against a running Zitadel instance,
+and there is no `shared/auth/zitadel.ts` yet exchanging them for a real token. Bringing this path back
+needs both pieces built and verified with the same rigor the old Keycloak path had - not assumed to
+carry over unchanged. Until then, local sign-in stays on the `X-SFL-*` header path described above.
 
 ## What this closed
 

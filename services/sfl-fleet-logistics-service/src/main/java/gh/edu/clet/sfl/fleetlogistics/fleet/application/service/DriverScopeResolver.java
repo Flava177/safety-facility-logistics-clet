@@ -16,8 +16,9 @@ import org.springframework.transaction.annotation.Transactional;
  * <p>Three places in this service asked "is this record the actor's own?" by comparing a driver's
  * {@code staffReference} against {@code ActorContext.actorId()}. That holds under header
  * authentication, where the caller supplies {@code X-SFL-User} and it happens to be the staff
- * reference. It cannot hold under a token, where {@code actorId()} is the subject claim - a Keycloak
- * UUID. So from the day authentication was switched on, the comparison was false for every driver:
+ * reference. It cannot hold under a token, where {@code actorId()} is the subject claim issued by the
+ * platform's OIDC provider (Zitadel). So from the day authentication was switched on, the comparison
+ * was false for every driver:
  * the narrowing refused drivers their own records and, because the collection query had no narrowing
  * at all, still showed them everybody's.
  *
