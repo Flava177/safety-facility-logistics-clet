@@ -177,9 +177,12 @@ class OutboxDrainerTest extends FleetPostgresSupport {
     void a_pending_message_is_sent_and_marked_published() {
         UUID id = insertPending("sfl.ftlmp.vehicle-created.v1");
 
-        int published = drainer(10).drainOnce();
+        // Not asserting drainOnce()'s exact return count: this runs against the shared e2e database
+        // (see FacilitiesOutboxDrainerTest's identical note), which can carry other due rows from
+        // other tests in the same run. Draining those too is correct behaviour for a batch drainer -
+        // what this test actually owns is proving its own message.
+        drainer(10).drainOnce();
 
-        assertThat(published).isEqualTo(1);
         assertThat(transport.sent).contains(id);
         OutboxMessageEntity row = repository.findById(id).orElseThrow();
         assertThat(row.status()).isEqualTo(OutboxMessageEntity.STATUS_PUBLISHED);
@@ -229,11 +232,13 @@ class OutboxDrainerTest extends FleetPostgresSupport {
         UUID healthyTwo = insertPending("sfl.ftlmp.vehicle-created.v1");
         transport.failing.add(poison);
 
-        int published = drainer(10).drainOnce();
+        drainer(10).drainOnce();
 
         // The poison message failed but must not have taken the other two down with it - proof that
-        // each message settles in its own transaction rather than one shared batch transaction.
-        assertThat(published).isEqualTo(2);
+        // each message settles in its own transaction rather than one shared batch transaction. Not
+        // asserting drainOnce()'s exact return count here either, for the same shared-database reason
+        // as the test above.
+        assertThat(transport.sent).contains(healthyOne, healthyTwo).doesNotContain(poison);
         assertThat(repository.findById(healthyOne).orElseThrow().status())
                 .isEqualTo(OutboxMessageEntity.STATUS_PUBLISHED);
         assertThat(repository.findById(healthyTwo).orElseThrow().status())
