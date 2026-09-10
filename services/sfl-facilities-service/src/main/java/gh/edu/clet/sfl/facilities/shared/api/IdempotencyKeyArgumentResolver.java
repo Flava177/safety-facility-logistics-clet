@@ -1,6 +1,5 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -25,7 +24,6 @@ final class IdempotencyKeyArgumentResolver implements HandlerMethodArgumentResol
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
             NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        return actorResolver.resolveIdempotencyKey(request);
+        return actorResolver.resolveIdempotencyKey(ServletRequests.require(webRequest));
     }
 }

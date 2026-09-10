@@ -60,6 +60,11 @@ services:
     ports:
       - "127.0.0.1:5672:5672"
       - "127.0.0.1:15672:15672"
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   idp-postgres:
     # Zitadel requires Postgres (or CockroachDB) as its backing store - there is no embedded/in-memory
@@ -134,12 +139,19 @@ services:
       SFL_FACILITIES_DB_USERNAME: ${SFL_FACILITIES_POSTGRES_USER:-sfl}
       SFL_FACILITIES_DB_PASSWORD: ${SFL_FACILITIES_POSTGRES_PASSWORD:-change-me}
       SFL_IAM_ISSUER: http://idp:8080
+      SFL_RABBITMQ_HOST: rabbitmq
+      SFL_RABBITMQ_USERNAME: ${SFL_RABBITMQ_USER:-sfl}
+      SFL_RABBITMQ_PASSWORD: ${SFL_RABBITMQ_PASSWORD:-change-me}
+      SFL_FACILITIES_EVENT_TRANSPORT: rabbitmq
+      SFL_RABBITMQ_HEALTH_ENABLED: "true"
     ports:
       - "8091:8080"
     depends_on:
       facilities-postgres:
         condition: service_healthy
       idp:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -163,12 +175,19 @@ services:
       SFL_SAFETY_SECURITY_DB_USERNAME: ${SFL_SAFETY_SECURITY_POSTGRES_USER:-sfl}
       SFL_SAFETY_SECURITY_DB_PASSWORD: ${SFL_SAFETY_SECURITY_POSTGRES_PASSWORD:-change-me}
       SFL_IAM_ISSUER: http://idp:8080
+      SFL_RABBITMQ_HOST: rabbitmq
+      SFL_RABBITMQ_USERNAME: ${SFL_RABBITMQ_USER:-sfl}
+      SFL_RABBITMQ_PASSWORD: ${SFL_RABBITMQ_PASSWORD:-change-me}
+      SFL_EMERGENCY_EVENT_TRANSPORT: rabbitmq
+      SFL_RABBITMQ_HEALTH_ENABLED: "true"
     ports:
       - "8092:8080"
     depends_on:
       safety-security-postgres:
         condition: service_healthy
       idp:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]
@@ -192,12 +211,19 @@ services:
       SFL_FLEET_LOGISTICS_DB_USERNAME: ${SFL_FLEET_LOGISTICS_POSTGRES_USER:-sfl}
       SFL_FLEET_LOGISTICS_DB_PASSWORD: ${SFL_FLEET_LOGISTICS_POSTGRES_PASSWORD:-change-me}
       SFL_IAM_ISSUER: http://idp:8080
+      SFL_RABBITMQ_HOST: rabbitmq
+      SFL_RABBITMQ_USERNAME: ${SFL_RABBITMQ_USER:-sfl}
+      SFL_RABBITMQ_PASSWORD: ${SFL_RABBITMQ_PASSWORD:-change-me}
+      SFL_FLEET_EVENT_TRANSPORT: rabbitmq
+      SFL_RABBITMQ_HEALTH_ENABLED: "true"
     ports:
       - "8093:8080"
     depends_on:
       fleet-vehicle-postgres:
         condition: service_healthy
       idp:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8080/actuator/health"]

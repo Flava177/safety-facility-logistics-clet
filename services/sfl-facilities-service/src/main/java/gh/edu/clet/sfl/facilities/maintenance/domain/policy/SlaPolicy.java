@@ -78,6 +78,13 @@ public record SlaPolicy(
         Objects.requireNonNull(response, "response is required");
         Objects.requireNonNull(resolution, "resolution is required");
         Objects.requireNonNull(escalationInterval, "escalationInterval is required");
+        // Copied rather than stored as-is: this value is deliberately built once per run and applied
+        // to every schedule/work order in it (see the class Javadoc). A caller that mutated the map it
+        // handed in - or the one returned by response()/resolution() - after construction would corrupt
+        // every subsequent evaluation sharing this instance, silently and without a stack trace
+        // anywhere near the actual mutation.
+        response = java.util.Map.copyOf(response);
+        resolution = java.util.Map.copyOf(resolution);
         if (examinationFactor <= 0d) {
             throw new IllegalArgumentException("examinationFactor must be greater than zero");
         }

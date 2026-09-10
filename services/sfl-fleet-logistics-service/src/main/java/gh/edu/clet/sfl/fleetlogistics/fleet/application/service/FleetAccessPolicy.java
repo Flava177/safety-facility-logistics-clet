@@ -27,7 +27,7 @@ import org.springframework.stereotype.Component;
  * transaction may already hold.
  */
 @Component
-public class FleetAccessPolicy {
+public final class FleetAccessPolicy {
 
     private final AuthorizationPolicy authorizationPolicy;
 

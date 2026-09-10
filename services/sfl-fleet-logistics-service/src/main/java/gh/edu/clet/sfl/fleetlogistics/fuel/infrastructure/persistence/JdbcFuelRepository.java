@@ -195,16 +195,11 @@ public class JdbcFuelRepository implements FuelRepository {
             RowMapper<T> mapper) {
         Long total =
                 jdbc.query(
-                        con -> {
-                            var ps =
-                                    con.prepareStatement(
-                                            "SELECT COUNT(*) FROM "
-                                                    + table
-                                                    + " WHERE "
-                                                    + where.sql());
-                            bind(ps, con, sites, where.args());
-                            return ps;
-                        },
+                        con ->
+                                prepareAndBind(
+                                        con,
+                                        "SELECT COUNT(*) FROM " + table + " WHERE " + where.sql(),
+                                        ps -> bind(ps, con, sites, where.args())),
                         rs -> rs.next() ? rs.getLong(1) : 0L);
         long totalElements = total == null ? 0L : total;
         if (totalElements == 0L)
@@ -212,21 +207,21 @@ public class JdbcFuelRepository implements FuelRepository {
 
         List<T> content =
                 jdbc.query(
-                        con -> {
-                            var ps =
-                                    con.prepareStatement(
-                                            "SELECT * FROM "
-                                                    + table
-                                                    + " WHERE "
-                                                    + where.sql()
-                                                    + " ORDER BY "
-                                                    + order.sql()
-                                                    + " LIMIT ? OFFSET ?");
-                            int i = bind(ps, con, sites, where.args());
-                            ps.setInt(i++, paging.size());
-                            ps.setInt(i, paging.offset());
-                            return ps;
-                        },
+                        con ->
+                                prepareAndBind(
+                                        con,
+                                        "SELECT * FROM "
+                                                + table
+                                                + " WHERE "
+                                                + where.sql()
+                                                + " ORDER BY "
+                                                + order.sql()
+                                                + " LIMIT ? OFFSET ?",
+                                        ps -> {
+                                            int i = bind(ps, con, sites, where.args());
+                                            ps.setInt(i++, paging.size());
+                                            ps.setInt(i, paging.offset());
+                                        }),
                         mapper);
         return FuelPage.of(
                 content, paging.page(), paging.size(), totalElements, order.describedAs());
@@ -948,16 +943,18 @@ public class JdbcFuelRepository implements FuelRepository {
         if (sites.isEmpty()) return 0L;
         Long count =
                 jdbc.query(
-                        con -> {
-                            var ps =
-                                    con.prepareStatement(
-                                            "SELECT COUNT(*) FROM fleet_logistics.fuel_anomaly_cases WHERE site_code = ANY (?) AND (vehicle_id=? OR driver_id=?) AND created_at>=?");
-                            ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
-                            ps.setObject(2, vehicle);
-                            ps.setObject(3, driver);
-                            ps.setObject(4, ts(since));
-                            return ps;
-                        },
+                        con ->
+                                prepareAndBind(
+                                        con,
+                                        "SELECT COUNT(*) FROM fleet_logistics.fuel_anomaly_cases WHERE site_code = ANY (?) AND (vehicle_id=? OR driver_id=?) AND created_at>=?",
+                                        ps -> {
+                                            ps.setArray(
+                                                    1,
+                                                    con.createArrayOf("varchar", sites.toArray()));
+                                            ps.setObject(2, vehicle);
+                                            ps.setObject(3, driver);
+                                            ps.setObject(4, ts(since));
+                                        }),
                         rs -> rs.next() ? rs.getLong(1) : 0L);
         return count == null ? 0L : count;
     }
@@ -1184,13 +1181,15 @@ public class JdbcFuelRepository implements FuelRepository {
         sql.append(" GROUP BY day ORDER BY day");
         String query = sql.toString();
         return jdbc.query(
-                con -> {
-                    var ps = con.prepareStatement(query);
-                    int i = 1;
-                    ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
-                    for (Object arg : args) ps.setObject(i++, arg);
-                    return ps;
-                },
+                con ->
+                        prepareAndBind(
+                                con,
+                                query,
+                                ps -> {
+                                    int i = 1;
+                                    ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
+                                    for (Object arg : args) ps.setObject(i++, arg);
+                                }),
                 (rs, n) ->
                         new DailyFuelTotals(
                                 rs.getObject("day", java.time.LocalDate.class),
@@ -1217,13 +1216,15 @@ public class JdbcFuelRepository implements FuelRepository {
         String query = sql.toString();
         Map<String, Long> counts = new LinkedHashMap<>();
         jdbc.query(
-                con -> {
-                    var ps = con.prepareStatement(query);
-                    int i = 1;
-                    ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
-                    for (Object arg : args) ps.setObject(i++, arg);
-                    return ps;
-                },
+                con ->
+                        prepareAndBind(
+                                con,
+                                query,
+                                ps -> {
+                                    int i = 1;
+                                    ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
+                                    for (Object arg : args) ps.setObject(i++, arg);
+                                }),
                 (org.springframework.jdbc.core.RowCallbackHandler)
                         rs -> counts.put(rs.getString(1), rs.getLong(2)));
         return counts;
@@ -1236,15 +1237,15 @@ public class JdbcFuelRepository implements FuelRepository {
         String scope = (site == null ? "" : " AND site_code=?");
 
         jdbc.query(
-                con -> {
-                    var ps =
-                            con.prepareStatement(
-                                    "SELECT COALESCE(SUM(transaction_count),0),COALESCE(SUM(fuel_volume),0),COALESCE(SUM(fuel_spend),0),COALESCE(SUM(reconciled_count),0),COALESCE(SUM(exception_count),0),MAX(source_updated_at) AS source_updated_at FROM fleet_logistics.fuel_dashboard_summary WHERE site_code = ANY (?)"
-                                            + scope);
-                    ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
-                    if (site != null) ps.setString(2, site);
-                    return ps;
-                },
+                con ->
+                        prepareAndBind(
+                                con,
+                                "SELECT COALESCE(SUM(transaction_count),0),COALESCE(SUM(fuel_volume),0),COALESCE(SUM(fuel_spend),0),COALESCE(SUM(reconciled_count),0),COALESCE(SUM(exception_count),0),MAX(source_updated_at) AS source_updated_at FROM fleet_logistics.fuel_dashboard_summary WHERE site_code = ANY (?)"
+                                        + scope,
+                                ps -> {
+                                    ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+                                    if (site != null) ps.setString(2, site);
+                                }),
                 rs -> {
                     if (rs.next()) {
                         m.put("transactionCount", rs.getLong(1));
@@ -1309,15 +1310,15 @@ public class JdbcFuelRepository implements FuelRepository {
                 "importBatchesWithErrors",
                 count("fleet_logistics.fuel_import_batches", "rejected_rows>0", sites, site, null));
         jdbc.query(
-                con -> {
-                    var ps =
-                            con.prepareStatement(
-                                    "SELECT MAX(submitted_at) FROM fleet_logistics.fuel_import_batches WHERE site_code = ANY (?)"
-                                            + scope);
-                    ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
-                    if (site != null) ps.setString(2, site);
-                    return ps;
-                },
+                con ->
+                        prepareAndBind(
+                                con,
+                                "SELECT MAX(submitted_at) FROM fleet_logistics.fuel_import_batches WHERE site_code = ANY (?)"
+                                        + scope,
+                                ps -> {
+                                    ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
+                                    if (site != null) ps.setString(2, site);
+                                }),
                 rs -> {
                     m.put("lastImportAt", rs.next() ? instant(rs, 1) : null);
                     return null;
@@ -1376,26 +1377,55 @@ public class JdbcFuelRepository implements FuelRepository {
         return Math.min(Math.max(limit, 1), 500);
     }
 
+    /**
+     * A {@code PreparedStatement} created and then closed if binding its parameters fails.
+     *
+     * <p>Binding used to run directly inside the {@code PreparedStatementCreator} lambda: every
+     * site-scoped query in this class builds its statement in two steps, {@code
+     * con.prepareStatement(sql)} then one or more {@code ps.setXxx(...)}/ {@code
+     * createArrayOf(...)} calls, all of which declare {@code throws SQLException}. If a bind call
+     * threw, the already-created statement was never returned to {@code JdbcTemplate} and so never
+     * reached the {@code close()} it normally guarantees.
+     */
+    private static PreparedStatement prepareAndBind(Connection con, String sql, SqlBinder binder)
+            throws SQLException {
+        PreparedStatement ps = con.prepareStatement(sql);
+        try {
+            binder.bind(ps);
+            return ps;
+        } catch (SQLException | RuntimeException e) {
+            ps.close();
+            throw e;
+        }
+    }
+
+    @FunctionalInterface
+    private interface SqlBinder {
+        void bind(PreparedStatement ps) throws SQLException;
+    }
+
     /** One scoped COUNT. {@code extra} is bound after the site scope when present. */
     private long count(
             String table, String predicate, List<String> sites, String site, Object extra) {
         Long value =
                 jdbc.query(
-                        con -> {
-                            var ps =
-                                    con.prepareStatement(
-                                            "SELECT COUNT(*) FROM "
-                                                    + table
-                                                    + " WHERE site_code = ANY (?)"
-                                                    + (site == null ? "" : " AND site_code=?")
-                                                    + " AND "
-                                                    + predicate);
-                            int i = 1;
-                            ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
-                            if (site != null) ps.setString(i++, site);
-                            if (extra != null) ps.setObject(i, extra);
-                            return ps;
-                        },
+                        con ->
+                                prepareAndBind(
+                                        con,
+                                        "SELECT COUNT(*) FROM "
+                                                + table
+                                                + " WHERE site_code = ANY (?)"
+                                                + (site == null ? "" : " AND site_code=?")
+                                                + " AND "
+                                                + predicate,
+                                        ps -> {
+                                            int i = 1;
+                                            ps.setArray(
+                                                    i++,
+                                                    con.createArrayOf("varchar", sites.toArray()));
+                                            if (site != null) ps.setString(i++, site);
+                                            if (extra != null) ps.setObject(i, extra);
+                                        }),
                         rs -> rs.next() ? rs.getLong(1) : 0L);
         return value == null ? 0L : value;
     }

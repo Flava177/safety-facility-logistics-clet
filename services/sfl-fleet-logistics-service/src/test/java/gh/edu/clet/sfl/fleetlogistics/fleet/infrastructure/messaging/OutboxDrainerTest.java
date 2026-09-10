@@ -12,6 +12,7 @@ import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -164,11 +165,23 @@ class OutboxDrainerTest extends FleetPostgresSupport {
         return new OutboxDrainer(repository, transport, runtimeConfiguration, transactionManager, clock, batchSize);
     }
 
+    /**
+     * Monotonically decreasing, so every message this test class inserts sorts before anything a
+     * concurrently-running e2e test in the same suite writes with a real "now" timestamp -
+     * {@code claimDue} orders {@code createdAt asc LIMIT batchSize}, and this class is not the only
+     * thing in the reactor that writes to this table. Confirmed against a real, freshly seeded
+     * Postgres database (not a per-CI-run empty one): other e2e tests in this module leave their own
+     * PENDING outbox rows behind, and with more than {@code batchSize} of those already queued ahead
+     * of a message stamped with the real clock, this class's own message never entered the claimed
+     * batch at all. Backdating removes the dependency on how much of that exists at any given moment.
+     */
+    private static final AtomicLong INSERT_SEQUENCE = new AtomicLong(0);
+
     private UUID insertPending(String eventType) {
         UUID id = UUID.randomUUID();
+        Instant createdAt = Instant.EPOCH.plusSeconds(INSERT_SEQUENCE.incrementAndGet());
         OutboxMessageEntity entity = new OutboxMessageEntity(id, eventType, 1, "OutboxDrainerTest", id.toString(),
-                "MAIN", "corr-" + id, "cause-" + id, "actor-1", null, 1, "{\"probe\":\"" + id + "\"}",
-                clock.instant());
+                "MAIN", "corr-" + id, "cause-" + id, "actor-1", null, 1, "{\"probe\":\"" + id + "\"}", createdAt);
         repository.save(entity);
         return id;
     }

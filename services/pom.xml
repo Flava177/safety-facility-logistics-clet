@@ -119,6 +119,38 @@
                     </execution>
                 </executions>
             </plugin>
+            <!--
+              No static analysis existed anywhere in this reactor - a resource leak, a null
+              dereference, or a genuine concurrency bug (inconsistent synchronization, a double-checked
+              lock without volatile, a wait/notify outside a synchronized block) could reach main with
+              nothing catching it before a human review did. SpotBugs looks for exactly that class of
+              defect from bytecode, not style - it does not care about formatting, only correctness.
+              Bound to `verify` and failing the build: a repository with a genuinely broken load-bearing
+              pattern (this session's optimistic-locking and outbox work included) should not merge on
+              green CI alone. Effort/threshold are tuned deliberately, not left at defaults - see the
+              exclude filter below for why a low-priority-informational finding does not fail the build
+              by itself, only Medium confidence and above.
+            -->
+            <plugin>
+                <groupId>com.github.spotbugs</groupId>
+                <artifactId>spotbugs-maven-plugin</artifactId>
+                <version>4.10.4.1</version>
+                <configuration>
+                    <effort>Default</effort>
+                    <threshold>Medium</threshold>
+                    <excludeFilterFile>${maven.multiModuleProjectDirectory}/spotbugs-exclude.xml</excludeFilterFile>
+                    <failOnError>true</failOnError>
+                </configuration>
+                <executions>
+                    <execution>
+                        <id>spotbugs-check</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>check</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 

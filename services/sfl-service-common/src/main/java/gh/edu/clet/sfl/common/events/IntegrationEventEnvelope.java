@@ -1,6 +1,8 @@
 package gh.edu.clet.sfl.common.events;
 
 import java.time.Instant;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 import java.util.UUID;
@@ -33,6 +35,11 @@ public record IntegrationEventEnvelope(
         Objects.requireNonNull(occurredAt, "occurredAt must not be null");
         requireNonBlank(sourceService, "sourceService");
         Objects.requireNonNull(payload, "payload must not be null");
+        // Copied rather than stored as-is: a caller mutating the map it passed in (or received back
+        // from payload()) must not be able to reach into an envelope already handed to another
+        // service - an event, once built, is a fact, not a shared mutable buffer. LinkedHashMap over
+        // Map.copyOf because a payload legitimately may carry a null value and Map.copyOf rejects one.
+        payload = Collections.unmodifiableMap(new LinkedHashMap<>(payload));
     }
 
     private static void requireNonBlank(String value, String fieldName) {
@@ -113,7 +120,7 @@ public record IntegrationEventEnvelope(
         }
 
         public Builder payload(Map<String, Object> payload) {
-            this.payload = payload;
+            this.payload = payload == null ? Map.of() : Collections.unmodifiableMap(new LinkedHashMap<>(payload));
             return this;
         }
 
