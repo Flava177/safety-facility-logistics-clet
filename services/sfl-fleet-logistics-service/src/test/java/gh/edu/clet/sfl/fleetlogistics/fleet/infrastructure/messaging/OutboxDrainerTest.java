@@ -13,6 +13,7 @@ import java.util.Optional;
 import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -20,6 +21,7 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.TestConfiguration;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Primary;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.transaction.PlatformTransactionManager;
 
 /**
@@ -135,8 +137,21 @@ class OutboxDrainerTest extends FleetPostgresSupport {
     @Autowired private RuntimeConfigurationPort runtimeConfiguration;
     @Autowired private PlatformTransactionManager transactionManager;
     @Autowired private Clock clock;
+    @Autowired private JdbcTemplate jdbc;
 
     private OutboxDrainer drainer;
+
+    /**
+     * {@code drainOnce()} claims every currently-due {@code PENDING} row in the table, not just the
+     * ones a given test inserted - so a row left {@code PENDING} by one test (the backoff and
+     * still-failing-poison tests both do this deliberately) is still claimable by the next test's
+     * drainer against this same real database, inflating its {@code published} count. Mirrors
+     * {@code FacilitiesOutboxDrainerTest}'s identical cleanup for the identical reason.
+     */
+    @BeforeEach
+    void cleanSlate() {
+        jdbc.update("DELETE FROM fleet_logistics.outbox_messages WHERE aggregate_type = 'OutboxDrainerTest'");
+    }
 
     @AfterEach
     void tearDown() {
