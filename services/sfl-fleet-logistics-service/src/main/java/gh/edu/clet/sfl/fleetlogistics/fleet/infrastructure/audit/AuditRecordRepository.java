@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.audit;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 /**
@@ -15,5 +16,12 @@ import org.springframework.data.jpa.repository.JpaRepository;
  */
 public interface AuditRecordRepository extends JpaRepository<AuditRecordEntity, UUID>, AuditRecordSearch {
 
-    List<AuditRecordEntity> findAllByOrderBySequenceNoAsc();
+    /**
+     * One bounded, ascending page of the chain starting just after {@code afterSequenceNo}. A keyset
+     * cursor rather than an offset, so a page late in a large chain costs the same as one at the start -
+     * see {@code JpaAuditAdapter.verifyChain}, which replaces {@code findAllByOrderBySequenceNoAsc()}'s
+     * whole-table load with a sequence of these.
+     */
+    List<AuditRecordEntity> findBySequenceNoGreaterThanOrderBySequenceNoAsc(long afterSequenceNo,
+            Pageable pageable);
 }

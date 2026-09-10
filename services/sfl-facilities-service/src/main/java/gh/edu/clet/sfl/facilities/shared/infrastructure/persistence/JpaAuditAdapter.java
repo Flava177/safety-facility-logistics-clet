@@ -17,6 +17,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -45,13 +46,20 @@ class JpaAuditAdapter implements AuditPort {
     private final AuditChainStateRepository chainState;
     private final ObjectMapper objectMapper;
     private final Clock clock;
+    private final int verificationBatchSize;
+    private final int verificationMaxBatchesPerCall;
 
     JpaAuditAdapter(AuditRecordRepository records, AuditChainStateRepository chainState,
-            ObjectMapper objectMapper, Clock clock) {
+            ObjectMapper objectMapper, Clock clock,
+            @Value("${sfl.facilities.audit.chain-verification.batch-size:5000}") int verificationBatchSize,
+            @Value("${sfl.facilities.audit.chain-verification.max-batches-per-call:200}")
+            int verificationMaxBatchesPerCall) {
         this.records = records;
         this.chainState = chainState;
         this.objectMapper = objectMapper;
         this.clock = clock;
+        this.verificationBatchSize = verificationBatchSize;
+        this.verificationMaxBatchesPerCall = verificationMaxBatchesPerCall;
     }
 
     @Override
@@ -128,13 +136,58 @@ class JpaAuditAdapter implements AuditPort {
         }
     }
 
+    /**
+     * Replays the chain in bounded pages rather than materialising the whole append-only table.
+     *
+     * <p>{@code findAllByOrderBySequenceNoAsc()} used to load every audit record ever written into one
+     * {@code List} on every call - fine at a few thousand rows, a memory and multi-second-transaction
+     * risk once the table (which only grows, across every module, for the service's entire lifetime)
+     * reaches the hundreds of thousands. This keeps at most one page ({@code verificationBatchSize}
+     * rows) in memory at a time, verifying each page against the running previous-hash carried forward
+     * from the one before it - {@link AuditHashChain#verify} already supports exactly this via its
+     * {@code expectedFirstPreviousHash} parameter, designed for replaying a chain segment rather than
+     * only the whole thing from genesis.
+     *
+     * <p>A chain longer than {@code verificationBatchSize * verificationMaxBatchesPerCall} cannot be
+     * fully replayed in one call without giving up the memory bound this exists to add, so this caps
+     * the work per call and returns {@link AuditChainVerification#incomplete} rather than blocking one
+     * HTTP request for however long the full table takes - every record it did verify is genuinely
+     * verified. {@code resumeFromSequence} names where it stopped, as a diagnostic; this method always
+     * restarts from genesis on the next call rather than persisting a checkpoint, so a chain that
+     * permanently outgrows the configured bound needs a larger bound (raised for a deliberate,
+     * administrative full pass) or an offline job built on the same bounded-page query, not repeated
+     * calls to this endpoint.
+     */
     @Override
     @Transactional(readOnly = true)
     public AuditChainVerification verifyChain() {
-        List<AuditEvent> ordered = records.findAllByOrderBySequenceNoAsc().stream()
-                .map(AuditRecordEntity::toDomain)
-                .toList();
-        return AuditHashChain.verify(ordered, AuditHashChain.GENESIS_HASH);
+        String previousHash = AuditHashChain.GENESIS_HASH;
+        // Sequences start at 0 (V5 seeds the chain head's nextSequence at 0), so the cursor must start
+        // below that - -1L, not 0L - or the very first "greater than" page would skip record 0 outright.
+        long afterSequenceNo = -1L;
+        long totalVerified = 0L;
+
+        for (int batch = 0; batch < verificationMaxBatchesPerCall; batch++) {
+            List<AuditEvent> page = records
+                    .findBySequenceNoGreaterThanOrderBySequenceNoAsc(afterSequenceNo,
+                            PageRequest.of(0, verificationBatchSize))
+                    .stream()
+                    .map(AuditRecordEntity::toDomain)
+                    .toList();
+            if (page.isEmpty()) {
+                return AuditChainVerification.intact(totalVerified, previousHash);
+            }
+
+            AuditChainVerification pageResult = AuditHashChain.verify(page, previousHash);
+            totalVerified += pageResult.recordsVerified();
+            if (!pageResult.intact()) {
+                return new AuditChainVerification(false, true, totalVerified, pageResult.brokenAtSequence(),
+                        pageResult.expected(), pageResult.found(), pageResult.reason(), null, null);
+            }
+            previousHash = pageResult.headHash();
+            afterSequenceNo = page.get(page.size() - 1).sequenceNo();
+        }
+        return AuditChainVerification.incomplete(totalVerified, previousHash, afterSequenceNo + 1);
     }
 
     @Override

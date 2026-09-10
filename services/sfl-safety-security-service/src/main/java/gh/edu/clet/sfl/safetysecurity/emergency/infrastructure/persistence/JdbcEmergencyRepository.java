@@ -30,6 +30,7 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -290,6 +291,20 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     @Override
     public Optional<AudienceGroup> findAudienceGroup(UUID id) {
         return one("SELECT * FROM emergency_notification.audience_groups WHERE id=?", this::audience, id);
+    }
+
+    @Override
+    public List<AudienceGroup> findAudienceGroupsByIds(Collection<UUID> ids) {
+        if (ids.isEmpty()) {
+            return List.of();
+        }
+        UUID[] idArray = ids.toArray(new UUID[0]);
+        return jdbc.query(con -> {
+            var ps = con.prepareStatement(
+                    "SELECT * FROM emergency_notification.audience_groups WHERE id = ANY(?)");
+            ps.setArray(1, con.createArrayOf("uuid", idArray));
+            return ps;
+        }, this::audience);
     }
 
     @Override

@@ -1,6 +1,8 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.config;
 
 import gh.edu.clet.sfl.common.security.OidcRolesConverter;
+import gh.edu.clet.sfl.common.security.TimeoutBoundedJwtDecoders;
+import java.time.Duration;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,6 +12,7 @@ import org.springframework.context.annotation.Profile;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
+import org.springframework.security.oauth2.jwt.JwtDecoder;
 import org.springframework.security.web.SecurityFilterChain;
 
 /**
@@ -41,6 +44,20 @@ class FleetSecurityConfiguration {
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(requests -> requests.anyRequest().permitAll())
                 .build();
+    }
+
+    /**
+     * Bounded so a slow or unreachable identity provider fails a request in seconds rather than
+     * blocking its thread indefinitely - see {@link TimeoutBoundedJwtDecoders} for the full reasoning
+     * and the fail-fast-per-request vs. startup-warming trade-off this makes deliberately.
+     */
+    @Bean
+    @ConditionalOnProperty(name = "sfl.security.enabled", havingValue = "true", matchIfMissing = true)
+    JwtDecoder jwtDecoder(
+            @Value("${spring.security.oauth2.resourceserver.jwt.issuer-uri}") String issuerUri,
+            @Value("${sfl.security.jwks.connect-timeout:PT3S}") Duration connectTimeout,
+            @Value("${sfl.security.jwks.read-timeout:PT3S}") Duration readTimeout) {
+        return TimeoutBoundedJwtDecoders.fromIssuerLocation(issuerUri, connectTimeout, readTimeout);
     }
 
     @Bean

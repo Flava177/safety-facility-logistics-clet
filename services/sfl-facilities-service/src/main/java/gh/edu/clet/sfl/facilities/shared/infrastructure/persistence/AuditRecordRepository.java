@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.facilities.shared.infrastructure.persistence;
 
 import java.util.List;
 import java.util.UUID;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 
@@ -17,7 +18,18 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 interface AuditRecordRepository extends JpaRepository<AuditRecordEntity, UUID>,
         JpaSpecificationExecutor<AuditRecordEntity> {
 
-    List<AuditRecordEntity> findAllByOrderBySequenceNoAsc();
+    /**
+     * One bounded, ascending page of the chain starting just after {@code afterSequenceNo}.
+     *
+     * <p>The keyset ({@code sequenceNo > cursor}, not an offset) is what makes each page O(page size)
+     * regardless of how far into the table it starts - an {@code OFFSET} that grows with every page
+     * would make replaying the tail of a large chain cost as much as replaying the whole thing twice
+     * over. See {@code JpaAuditAdapter.verifyChain} for why this replaces
+     * {@code findAllByOrderBySequenceNoAsc()}, which loaded the entire append-only table into memory on
+     * every call.
+     */
+    List<AuditRecordEntity> findBySequenceNoGreaterThanOrderBySequenceNoAsc(long afterSequenceNo,
+            Pageable pageable);
 
     List<AuditRecordEntity> findByResourceTypeAndResourceIdOrderBySequenceNoAsc(String resourceType,
             String resourceId);

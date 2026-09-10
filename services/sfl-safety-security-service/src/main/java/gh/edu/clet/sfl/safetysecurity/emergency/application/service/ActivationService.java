@@ -372,10 +372,11 @@ public class ActivationService {
     }
 
     private int targetCount(NotificationActivation activation) {
+        // One bounded IN query rather than one SELECT per audience group - this runs on the
+        // emergency-activation fan-out, the life-safety broadcast path where added latency matters most.
         int total = 0;
-        for (UUID audienceId : activation.audienceGroupIds()) {
-            total += repository.findAudienceGroup(audienceId)
-                    .map(gh.edu.clet.sfl.safetysecurity.emergency.domain.model.AudienceGroup::recipientCount).orElse(0);
+        for (var group : repository.findAudienceGroupsByIds(activation.audienceGroupIds())) {
+            total += group.recipientCount();
         }
         return total;
     }

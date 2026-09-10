@@ -465,6 +465,9 @@ COMMIT_MSG_*.txt
 !/solution.md
 !/docs/**/*.md
 
+# A working audit-input document, not yet reviewed for what should be shared - stays local.
+docs/architecture/2026-09-09-final-issues-review.md
+
 # The SRS binaries stay out, which is what the rule above them used to be for.
 #
 # Four files, 3.4 MB, and a `.docx` is opaque to every tool that makes a repository worth having -

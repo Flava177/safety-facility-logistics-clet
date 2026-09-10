@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.safetysecurity;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.scheduling.annotation.EnableScheduling;
 
 /**
  * The SSEMP deployable - S160, S160a, S161, S162, S162a and S163.
@@ -26,8 +27,16 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
  * foundation migration and answers {@code /actuator/health}. That makes it deployable and monitorable,
  * and makes the claim the documents were already making true. It does not make any of the six SSEMP
  * systems exist.
+ *
+ * <p>{@code @EnableScheduling} was itself missing until a later pass found it: without it, Spring never
+ * registers the {@code ScheduledAnnotationBeanPostProcessor} that makes {@code @Scheduled} do anything,
+ * so {@code EmergencySweepScheduler} and the emergency outbox {@code OutboxDrainer} both compiled,
+ * started cleanly and never once fired - the drainer's real transport (see its own class Javadoc) had
+ * nothing driving it on a timer, which is the same "nothing is delivered" outcome the transport fix
+ * exists to end, just one layer further out.
  */
 @SpringBootApplication
+@EnableScheduling
 public class SafetySecurityServiceApplication {
 
     public static void main(String[] args) {

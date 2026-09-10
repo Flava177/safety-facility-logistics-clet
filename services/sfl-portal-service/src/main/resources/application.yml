@@ -5,6 +5,15 @@ spring:
 
 server:
   port: ${SFL_PORTAL_PORT:8090}
+  tomcat:
+    threads:
+      # No datasource here to derive a smaller bound from (see the comment at the top of this file) -
+      # this stays explicit at Spring Boot's own framework default rather than an invented number,
+      # pending real traffic data. What actually bounds this service is the three upstream services'
+      # own capacity, since every request here fans out to them for the actor's permissions; if this
+      # is ever tuned down, it should be tied to their pool sizes the same way theirs are tied to Hikari.
+      max: ${SFL_WEB_MAX_THREADS:200}
+      min-spare: ${SFL_WEB_MIN_SPARE_THREADS:10}
 
 logging:
   level:
