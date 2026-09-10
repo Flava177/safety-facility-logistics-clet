@@ -25,7 +25,7 @@ separately, after the matrix was complete, per the review's own rule against spe
 | H8 | Audit-chain `verifyChain()` (facilities + fleet) loaded the entire table into one `List` | Unbounded memory/time growth as the append-only table grows; reachable over an authenticated HTTP endpoint | `shared/domain/audit/AuditChainVerification.java`, `shared/infrastructure/persistence/{AuditRecordRepository,JpaAuditAdapter}.java` (facilities); the fleet equivalents; `application.yml` (both) | `JpaAuditAdapterVerifyChainTest` (bounded pages, cross-page break detection, capped-incomplete result) | `batch-size=5000`, `max-batches-per-call=200` (1M rows/call default, both services) | `resumeFromSequence` is diagnostic only — `verifyChain()` always restarts from genesis; a chain that permanently exceeds the bound needs a raised bound or a dedicated offline job, not repeated calls. Documented, not silently assumed | **Passed** |
 | H9 | Emergency-activation fan-out looped `findAudienceGroup` once per group | N sequential queries on the life-safety broadcast path | `emergency/application/port/EmergencyRepository.java`, `.../infrastructure/persistence/JdbcEmergencyRepository.java`, `.../application/service/ActivationService.java` | `JdbcEmergencyRepositoryAudienceGroupBatchTest` (correctness + one-query proof via a spied `JdbcTemplate`) | None | None found | **Passed** |
 | M10 | Fleet outbox drainer claimed a whole batch and `saveAll`'d once at the end | A poison payload or mid-loop crash rolled back already-delivered messages in the same batch | `fleet/infrastructure/messaging/OutboxDrainer.java` | `OutboxDrainerTest` (poison message doesn't roll back healthy ones already sent in the same pass) | None | None found | **Passed** |
-| M11 | No explicit Hikari/Tomcat/scheduler-thread config, any of the four services | Boot's unstated defaults (10 connections, 200 web threads, one shared scheduler thread) | Every service's `application.yml`; `FacilitiesServiceConfiguration.java`, `EmergencyServiceConfiguration.java` (new dedicated `TaskScheduler`, fleet already had one) | No new automated test — this is configuration, not behavior; verified by inspection and successful context startup during the full test run | Defaults kept at documented framework values (`maximum-pool-size=10`, `SFL_WEB_MAX_THREADS=20`, portal `=200`) rather than invented capacity numbers — see each `application.yml`'s own comment | Actual production capacity numbers are still unverified against real DB `max_connections` and real traffic; this ships tunability and hygiene (leak detection, explicit timeouts, isolated scheduler pool), not a load-tested capacity plan | **Passed** (config wiring); **Needs Evidence** (real capacity numbers — see Remaining Issues) |
+| M11 | No explicit Hikari/Tomcat/scheduler-thread config, any of the four services | Boot's unstated defaults (10 connections, 200 web threads, one shared scheduler thread) | Every service's `application.yml`; `FacilitiesServiceConfiguration.java`, `EmergencyServiceConfiguration.java` (new dedicated `TaskScheduler`, fleet already had one) | No new automated test — this is configuration, not behavior; verified by inspection and successful context startup during the full test run | Defaults kept at documented framework values (`maximum-pool-size=10`, `SFL_WEB_MAX_THREADS=20`, portal `=200`) rather than invented capacity numbers — see each `application.yml`'s own comment | The wiring (explicit, tunable, documented, isolated scheduler pool) is done and verified; the actual numbers are not sized against real DB `max_connections` or real traffic — that sign-off has not happened | **Needs Evidence** (numbers, not wiring — see Remaining Issues #4) |
 | M12 | `FixedWindowRateLimiter` never evicted expired windows | Unbounded per-key memory growth for the life of the process | `sfl-service-common/.../ratelimit/FixedWindowRateLimiter.java` | `FixedWindowRateLimiterTest` (expiration, concurrent access, bounded growth, rate-limit semantics all still correct) | Self-sweeping, no new dependency added | None found | **Passed** |
 | M13 | RabbitMQ health indicator defaulted to disabled with no check against `transport=rabbitmq` | A `rabbitmq`-backed deployment could silently run with a readiness probe blind to broker connectivity | `sfl-service-common/.../web/RabbitHealthConfigurationValidator.java`, each service's messaging configuration class | `RabbitHealthConfigurationValidatorTest` (fails fast on the invalid combination, passes for every valid one) | Runs as an `InitializingBean` at context refresh — fails the boot, not a delayed warning | None found | **Passed** |
 
@@ -53,7 +53,7 @@ manual-inspection finding rather than a regression test.
 | Optimistic locking and HTTP 409 translation | Verified for fuel policy/card (C1/C2, new tests) and unaffected on every other versioned aggregate — no shared exception-translation code was touched |
 | Bulk updates bypassing version checks | Searched every `UPDATE ... SET` in fleet-logistics and safety-security repositories: all are single-record, `WHERE id = ?`-scoped (most also `AND version = ?`); no mass/bulk update statement exists in the changed files or elsewhere in the modules touched |
 | Outbox state transitions and duplicate delivery | Fleet and safety-security outboxes both now confirm before marking `PUBLISHED`; fleet's per-message-transaction change and facilities' pre-existing pattern were compared line-for-line; idempotency-key dedup on the consumer side (fleet) is unchanged and untouched |
-| RabbitMQ confirms, returns, timeout, retry, dead-letter | Fleet transport now mirrors facilities' proven `awaitConfirmation` pattern exactly; both are covered by symmetric mock-based tests (ack, nack, timeout, unroutable return) |
+| RabbitMQ confirms, returns, timeout, retry, dead-letter | Confirms/returns/timeout: fleet transport now mirrors facilities' proven `awaitConfirmation` pattern exactly, both covered by symmetric mock-based tests (ack, nack, timeout, unroutable return). Retry: both outbox drainers retry with backoff, tested. **Dead-letter — precision needed:** searched the whole codebase for an actual RabbitMQ dead-letter exchange/queue declaration (`RabbitAdmin`, `Queue`/`Exchange`/`Binding` beans, `x-dead-letter-exchange` arguments) — none exists anywhere. "Dead-letter" in this codebase is an application-level outbox-row status (`DEAD_LETTERED`) set after `max-attempts`, not a broker-level DLX/DLQ, despite `AmqpFleetEventTransport`'s and `AmqpFacilitiesEventTransport`'s own Javadoc naming `sfl.events.dlx` as "the Phase 1 topology from the event catalog." That topology is documented as intended but is not actually provisioned by any code in this repository. Not a regression introduced by this pass - the same gap exists on both the audited-clean facilities transport and the newly-fixed fleet/emergency ones - but stated here precisely rather than left to the word "dead-letter" implying broker-level behavior that isn't there |
 | JWT/JWKS timeout and readiness behavior | Bounded in all three services via one shared class; readiness/lazy-discovery trade-off is a documented decision (see H5 residual risk), not a silent gap |
 | PostgreSQL lock timeout and transaction handling | Booking advisory lock now bounded; `set_config(..., true)` scoping and automatic release on commit/rollback verified by reading the generated SQL and by the contention test |
 | Query counts and memory use on hot paths | PM generation (H7) and emergency fan-out (H9) both verified by dedicated count-proving tests; audit-chain verification (H8) verified by a page-count-proving test |
@@ -109,6 +109,12 @@ manual-inspection finding rather than a regression test.
   out (secure by default) with an explicit warning comment. No unsafe default found.
 - No secrets, credentials, or API keys found committed anywhere in tracked files or history (gitleaks,
   above). Compose files use `${VAR:-change-me}`-style placeholders throughout, never a real credential.
+- Swept the whole codebase for outbound HTTP clients (`RestTemplate`, `WebClient`,
+  `HttpClient.newHttpClient`/`newBuilder`) to confirm the JWKS fix (H5) was not the only unbounded
+  timeout in the platform: `TimeoutBoundedJwtDecoders` is the **only** `RestTemplate` construction site
+  anywhere in the five modules. Every external gateway (notification, badge device, watchlist, CCTV) is
+  a `Recorded*`/stub adapter with no real outbound call yet (Phase 1, deferred integration per their own
+  Javadoc) - no other unbounded-timeout HTTP client exists to find.
 - New configuration surface added by this pass (`SFL_JWKS_CONNECT_TIMEOUT`,
   `SFL_JWKS_READ_TIMEOUT`, `SFL_BOOKING_ADVISORY_LOCK_TIMEOUT`, `SFL_AUDIT_VERIFICATION_BATCH_SIZE`,
   `SFL_AUDIT_VERIFICATION_MAX_BATCHES`, `SFL_DB_POOL_MAX_SIZE`, `SFL_DB_POOL_CONNECTION_TIMEOUT_MS`,
@@ -120,41 +126,57 @@ manual-inspection finding rather than a regression test.
 
 ## Release recommendation: **Conditionally Approved**
 
-Every finding in the original review — three Critical, six High, four Medium — is implemented,
-tested where a real Postgres/broker is available, and verified by direct code reading where it is not.
-One additional, more severe finding (missing `@EnableScheduling`) was caught and fixed in the course of
-this verification. No regressions were found in any of the specifically-named risk categories.
+Twelve of the thirteen original findings are implemented, tested where a real Postgres/broker is
+available, and verified by direct code reading where it is not — status **Passed** in the matrix
+above. The thirteenth (M11, pool/thread sizing) has its wiring done and verified but its actual
+capacity numbers unvalidated against a real database and real traffic — status **Needs Evidence**, not
+Failed: nothing about it is wrong, it just hasn't been sized yet. One additional, more severe finding
+(missing `@EnableScheduling`) was caught and fixed in the course of this verification. No regressions
+were found in any of the specifically-named risk categories.
 
 The conditions are the gaps this review could not close, not defects it found:
 
-1. Bring `.env.example` (both copies) up to date with the new environment variables this pass added.
-2. Decide what `deploy/compose/docker-compose.microservices.yml`'s RabbitMQ container is for, and wire
+1. Decide whether a real broker-level dead-letter exchange/queue is required, or whether the
+   application-level `DEAD_LETTERED` outbox status is the intended Phase-1 design — and correct the
+   Javadoc's `sfl.events.dlx` reference to match whichever is true.
+2. Bring `.env.example` (both copies) up to date with the new environment variables this pass added.
+3. Decide what `deploy/compose/docker-compose.microservices.yml`'s RabbitMQ container is for, and wire
    it up (or remove it) accordingly.
-3. Run the upgrade-path migration check and the broker-backed (real RabbitMQ) integration pass at least
+4. Run the upgrade-path migration check and the broker-backed (real RabbitMQ) integration pass at least
    once before a production deployment — both are described above with the exact commands.
-4. Treat the Hikari/Tomcat defaults as a starting point, not a capacity plan — they need sign-off
+5. Treat the Hikari/Tomcat defaults as a starting point, not a capacity plan — they need sign-off
    against the actual database's `max_connections` and expected concurrent load before a production
    rollout sizes real hardware around them.
 
-None of the four blocks the code from being correct; they are evidence and documentation gaps.
+None of the five blocks the code from being correct; they are evidence, design-clarity, and
+documentation gaps.
 
 ---
 
 ## Prioritized remaining issues
 
-1. **(Medium)** Real RabbitMQ-backed integration run has never happened for either the fleet or the
+1. **(Medium)** No RabbitMQ dead-letter exchange/queue is actually provisioned anywhere, despite
+   `AmqpFleetEventTransport`/`AmqpFacilitiesEventTransport` Javadoc naming `sfl.events.dlx` as intended
+   Phase-1 topology. "Dead-lettering" today is only the outbox row's own `DEAD_LETTERED` status after
+   `max-attempts` — a poison message stops being retried and becomes visible in the table/dashboard, but
+   never actually reaches a broker-level DLQ an operator could inspect or replay from at the broker.
+   Pre-existing on the already-audited-clean facilities transport too, not introduced by this pass, but
+   worth closing before "dead-letter behavior" is claimed as broker-level in any external material.
+2. **(Medium)** Real RabbitMQ-backed integration run has never happened for either the fleet or the
    safety-security transport, only mocked-broker tests. Do this before any environment sets
    `transport=rabbitmq` for real.
-2. **(Medium)** Upgrade-path migration validation (item 6 above) has no automated coverage at all.
-3. **(Low)** `.env.example` / `deploy/env/.env.example` don't list the ~9 new environment variables.
-4. **(Low)** `docker-compose.microservices.yml`'s RabbitMQ container is currently unused by any service
+3. **(Medium)** Upgrade-path migration validation (item 6 above) has no automated coverage at all.
+4. **(Medium)** Hikari/Tomcat pool sizes are explicit and tunable but not sized against any real
+   database `max_connections` figure or measured traffic — see M11.
+5. **(Low)** `.env.example` / `deploy/env/.env.example` don't list the ~9 new environment variables.
+6. **(Low)** `docker-compose.microservices.yml`'s RabbitMQ container is currently unused by any service
    in that topology as configured.
-5. **(Low)** No static-analysis or dependency-vulnerability tooling is configured anywhere in the
+7. **(Low)** No static-analysis or dependency-vulnerability tooling is configured anywhere in the
    repository — pre-existing, not introduced here, but worth a decision independent of this change set.
-6. **(Low)** Fleet's audit-chain bounded-verification implementation (mirroring facilities') has no
+8. **(Low)** Fleet's audit-chain bounded-verification implementation (mirroring facilities') has no
    fleet-specific automated test of its own; it was verified by direct comparison against the tested
    facilities implementation, which shares the same logic shape line-for-line.
-7. **(Informational)** The emergency-activation per-channel gateway-send loop (mentioned in the
+9. **(Informational)** The emergency-activation per-channel gateway-send loop (mentioned in the
    original audit alongside the fan-out N+1) remains sequential. Not a regression — it was already
    sequential — and the audit itself treated parallelizing it as optional ("assess, but do not
    recklessly introduce").
@@ -185,10 +207,12 @@ scheduling gap found while verifying it), and ten further hardening items coveri
 confirmation, identity-provider and lock timeouts, bounded resource usage (audit verification, database
 connections, web threads, rate-limiter memory), and startup-time configuration validation. Each fix is
 covered by an automated test proving the specific failure mode it closes; the full suite (1,086 tests)
-passes with zero failures. Four residual items remain — documented above — none of which represent an
-unresolved correctness defect; they are verification and documentation gaps (an upgrade-path migration
-test, a live-broker integration pass, environment-variable documentation, and a production capacity
-sign-off) appropriate to close before, not necessarily blocking, a production rollout.
+passes with zero failures. Five conditions remain — documented above — none of which represent an
+unresolved correctness defect in the code delivered: a design clarification on dead-letter handling
+(application-level today, not broker-level, despite documentation naming a broker topology), an
+upgrade-path migration test, a live-broker integration pass, environment-variable documentation, and a
+production capacity sign-off. All are verification, documentation, or design-clarity gaps appropriate
+to close before, not necessarily blocking, a production rollout.
 
 ## Exact commands to run before pushing
 
