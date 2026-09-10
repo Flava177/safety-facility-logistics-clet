@@ -1,7 +1,6 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -25,7 +24,6 @@ final class SourceChannelArgumentResolver implements HandlerMethodArgumentResolv
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
             NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        return actorResolver.resolveSourceChannel(request);
+        return actorResolver.resolveSourceChannel(ServletRequests.require(webRequest));
     }
 }

@@ -130,25 +130,48 @@ public class JdbcDispatchRepository implements DispatchRepository {
         return i;
     }
 
+    /**
+     * A {@code PreparedStatement} created and then closed if binding its parameters fails.
+     *
+     * <p>Binding used to run directly inside the {@code PreparedStatementCreator} lambda: every
+     * site-scoped query here builds its statement in two steps, {@code con.prepareStatement(sql)}
+     * then one or more {@code ps.setXxx(...)}/{@code createArrayOf(...)} calls, all of which declare
+     * {@code throws SQLException}. If a bind call threw, the already-created statement was never
+     * returned to {@code JdbcTemplate} and so never reached the {@code close()} it normally guarantees.
+     */
+    private static PreparedStatement prepareAndBind(Connection con, String sql, SqlBinder binder)
+            throws SQLException {
+        PreparedStatement ps = con.prepareStatement(sql);
+        try {
+            binder.bind(ps);
+            return ps;
+        } catch (SQLException | RuntimeException e) {
+            ps.close();
+            throw e;
+        }
+    }
+
+    @FunctionalInterface
+    private interface SqlBinder {
+        void bind(PreparedStatement ps) throws SQLException;
+    }
+
     private <T> DispatchPage<T> page(String table, List<String> sites, Where where, Order order, Paging paging,
             RowMapper<T> mapper) {
-        Long total = jdbc.query(con -> {
-            var ps = con.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + where.sql());
-            bindScoped(ps, con, sites, where.args());
-            return ps;
-        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        Long total = jdbc.query(con -> prepareAndBind(con,
+                "SELECT COUNT(*) FROM " + table + " WHERE " + where.sql(),
+                ps -> bindScoped(ps, con, sites, where.args())), rs -> rs.next() ? rs.getLong(1) : 0L);
         long totalElements = total == null ? 0L : total;
         if (totalElements == 0L) {
             return DispatchPage.empty(paging.page(), paging.size(), order.describedAs());
         }
-        List<T> content = jdbc.query(con -> {
-            var ps = con.prepareStatement("SELECT * FROM " + table + " WHERE " + where.sql()
-                    + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?");
-            int i = bindScoped(ps, con, sites, where.args());
-            ps.setInt(i++, paging.size());
-            ps.setInt(i, paging.offset());
-            return ps;
-        }, mapper);
+        List<T> content = jdbc.query(con -> prepareAndBind(con,
+                "SELECT * FROM " + table + " WHERE " + where.sql() + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?",
+                ps -> {
+                    int i = bindScoped(ps, con, sites, where.args());
+                    ps.setInt(i++, paging.size());
+                    ps.setInt(i, paging.offset());
+                }), mapper);
         return DispatchPage.of(content, paging.page(), paging.size(), totalElements, order.describedAs());
     }
 
@@ -237,11 +260,9 @@ public class JdbcDispatchRepository implements DispatchRepository {
     @Override
     public List<CourierItem> findItemsByIds(List<UUID> ids) {
         if (ids == null || ids.isEmpty()) return List.of();
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement("SELECT * FROM fleet_logistics.courier_items WHERE id = ANY (?)");
-            ps.setArray(1, con.createArrayOf("uuid", ids.toArray()));
-            return ps;
-        }, this::item);
+        return jdbc.query(con -> prepareAndBind(con,
+                "SELECT * FROM fleet_logistics.courier_items WHERE id = ANY (?)",
+                ps -> ps.setArray(1, con.createArrayOf("uuid", ids.toArray()))), this::item);
     }
 
     // ---- Dispatch manifests ----------------------------------------------------------------------
@@ -887,12 +908,10 @@ public class JdbcDispatchRepository implements DispatchRepository {
     private long count(List<String> sites, String site, String template) {
         String scoped = site == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
         String sql = String.format(template, scoped);
-        Long value = jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        Long value = jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             if (site != null) ps.setString(2, site);
-            return ps;
-        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        }), rs -> rs.next() ? rs.getLong(1) : 0L);
         return value == null ? 0L : value;
     }
 
@@ -902,24 +921,20 @@ public class JdbcDispatchRepository implements DispatchRepository {
                 + scoped + " UNION ALL SELECT MAX(last_modified_at) FROM fleet_logistics.dispatches WHERE " + scoped
                 + " UNION ALL SELECT MAX(last_modified_at) FROM fleet_logistics.dispatch_exception_cases WHERE "
                 + scoped + ") s";
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        return jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             int i = 1;
             for (int block = 0; block < 3; block++) {
                 ps.setArray(i++, con.createArrayOf("varchar", sites.toArray()));
                 if (site != null) ps.setString(i++, site);
             }
-            return ps;
-        }, rs -> rs.next() && rs.getTimestamp(1) != null ? rs.getTimestamp(1).toInstant() : null);
+        }), rs -> rs.next() && rs.getTimestamp(1) != null ? rs.getTimestamp(1).toInstant() : null);
     }
 
     private <T> List<T> query(String sql, List<String> sites, List<Object> args, RowMapper<T> mapper) {
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        return jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             for (int i = 0; i < args.size(); i++) ps.setObject(i + 2, args.get(i));
-            return ps;
-        }, mapper);
+        }), mapper);
     }
 
     private <T> Optional<T> one(String sql, RowMapper<T> mapper, Object... args) {

@@ -126,23 +126,20 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
 
     private <T> EmergencyPage<T> page(String table, List<String> sites, Where where, Order order, Paging paging,
             RowMapper<T> mapper) {
-        Long total = jdbc.query(con -> {
-            var ps = con.prepareStatement("SELECT COUNT(*) FROM " + table + " WHERE " + where.sql());
-            bindScoped(ps, con, sites, where.args());
-            return ps;
-        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        Long total = jdbc.query(con -> prepareAndBind(con,
+                "SELECT COUNT(*) FROM " + table + " WHERE " + where.sql(),
+                ps -> bindScoped(ps, con, sites, where.args())), rs -> rs.next() ? rs.getLong(1) : 0L);
         long totalElements = total == null ? 0L : total;
         if (totalElements == 0L) {
             return EmergencyPage.empty(paging.page(), paging.size(), order.describedAs());
         }
-        List<T> content = jdbc.query(con -> {
-            var ps = con.prepareStatement("SELECT * FROM " + table + " WHERE " + where.sql()
-                    + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?");
-            int i = bindScoped(ps, con, sites, where.args());
-            ps.setInt(i++, paging.size());
-            ps.setInt(i, paging.offset());
-            return ps;
-        }, mapper);
+        List<T> content = jdbc.query(con -> prepareAndBind(con,
+                "SELECT * FROM " + table + " WHERE " + where.sql() + " ORDER BY " + order.sql() + " LIMIT ? OFFSET ?",
+                ps -> {
+                    int i = bindScoped(ps, con, sites, where.args());
+                    ps.setInt(i++, paging.size());
+                    ps.setInt(i, paging.offset());
+                }), mapper);
         return EmergencyPage.of(content, paging.page(), paging.size(), totalElements, order.describedAs());
     }
 
@@ -299,12 +296,9 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
             return List.of();
         }
         UUID[] idArray = ids.toArray(new UUID[0]);
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(
-                    "SELECT * FROM emergency_notification.audience_groups WHERE id = ANY(?)");
-            ps.setArray(1, con.createArrayOf("uuid", idArray));
-            return ps;
-        }, this::audience);
+        return jdbc.query(con -> prepareAndBind(con,
+                "SELECT * FROM emergency_notification.audience_groups WHERE id = ANY(?)",
+                ps -> ps.setArray(1, con.createArrayOf("uuid", idArray))), this::audience);
     }
 
     @Override
@@ -668,14 +662,12 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
         String predicate = scope == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
         String sql = String.format(template, predicate);
         Map<String, Long> counts = new LinkedHashMap<>();
-        jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             if (scope != null) {
                 ps.setString(2, scope);
             }
-            return ps;
-        }, (org.springframework.jdbc.core.RowCallbackHandler) rs -> counts.put(rs.getString(1), rs.getLong(2)));
+        }), (org.springframework.jdbc.core.RowCallbackHandler) rs -> counts.put(rs.getString(1), rs.getLong(2)));
         return counts;
     }
 
@@ -826,51 +818,71 @@ public class JdbcEmergencyRepository implements EmergencyRepository {
     private long count(List<String> sites, String site, String template) {
         String scoped = site == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
         String sql = String.format(template, scoped);
-        Long value = jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        Long value = jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             if (site != null) {
                 ps.setString(2, site);
             }
-            return ps;
-        }, rs -> rs.next() ? rs.getLong(1) : 0L);
+        }), rs -> rs.next() ? rs.getLong(1) : 0L);
         return value == null ? 0L : value;
     }
 
     private Instant maxSourceUpdatedAt(List<String> sites, String site) {
         String scoped = site == null ? "site_code = ANY (?)" : "site_code = ANY (?) AND site_code=?";
         String sql = "SELECT MAX(last_modified_at) FROM emergency_notification.notification_activations WHERE " + scoped;
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        return jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             if (site != null) {
                 ps.setString(2, site);
             }
-            return ps;
-        }, rs -> rs.next() && rs.getTimestamp(1) != null ? rs.getTimestamp(1).toInstant() : null);
+        }), rs -> rs.next() && rs.getTimestamp(1) != null ? rs.getTimestamp(1).toInstant() : null);
     }
 
     private <T> List<T> list(String sql, List<String> sites, int limit, RowMapper<T> mapper) {
         if (sites.isEmpty()) {
             return List.of();
         }
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        return jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             ps.setInt(2, bound(limit));
-            return ps;
-        }, mapper);
+        }), mapper);
     }
 
     private <T> List<T> query(String sql, List<String> sites, List<Object> args, RowMapper<T> mapper) {
-        return jdbc.query(con -> {
-            var ps = con.prepareStatement(sql);
+        return jdbc.query(con -> prepareAndBind(con, sql, ps -> {
             ps.setArray(1, con.createArrayOf("varchar", sites.toArray()));
             for (int i = 0; i < args.size(); i++) {
                 ps.setObject(i + 2, args.get(i));
             }
+        }), mapper);
+    }
+
+    /**
+     * A {@code PreparedStatement} created and then closed if binding its parameters fails.
+     *
+     * <p>Every site-scoped query in this class builds its statement in two steps -
+     * {@code con.prepareStatement(sql)}, then one or more {@code ps.setXxx(...)} calls including
+     * {@code createArrayOf(...)}, all of which declare {@code throws SQLException}. Binding used to
+     * run directly inside the {@code PreparedStatementCreator} lambda: if any bind call threw, the
+     * already-created statement was never returned to {@code JdbcTemplate} and so never reached the
+     * {@code close()} it normally guarantees - a real, if narrow, leaked-server-side-resource path on
+     * a connection that is often still healthy enough to keep leaking through.
+     */
+    private static PreparedStatement prepareAndBind(Connection con, String sql, SqlBinder binder)
+            throws SQLException {
+        PreparedStatement ps = con.prepareStatement(sql);
+        try {
+            binder.bind(ps);
             return ps;
-        }, mapper);
+        } catch (SQLException | RuntimeException e) {
+            ps.close();
+            throw e;
+        }
+    }
+
+    @FunctionalInterface
+    private interface SqlBinder {
+        void bind(PreparedStatement ps) throws SQLException;
     }
 
     private <T> Optional<T> one(String sql, RowMapper<T> mapper, Object... args) {

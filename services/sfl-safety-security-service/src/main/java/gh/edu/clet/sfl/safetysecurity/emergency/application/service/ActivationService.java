@@ -29,13 +29,18 @@ import java.time.Instant;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 /** SRS-SFL-S174-02: the emergency notification activation workflow, including break-glass and all-clear. */
 @Service
 public class ActivationService {
+
+    private static final Logger log = LoggerFactory.getLogger(ActivationService.class);
 
     private final EmergencyRepository repository;
     private final EmergencyAccessPolicy access;
@@ -362,8 +367,15 @@ public class ActivationService {
                     record.metadata().modifiedBy(actor.actorId(), clock.instant(), channel, actor.correlationId()));
             repository.saveChannel(sent);
         }
-        // Observe-only / seam-only context (no certified life-safety actuation - Arch §0E).
-        lifeSafety.latestLifeSafetyEvent(activation.siteCode().value());
+        // Observe-only / seam-only context (no certified life-safety actuation - Arch §0E). The
+        // result was previously discarded, which made "observe-only" observe nothing at all - an
+        // investigator reading this activation's audit trail had no way to see what the seam
+        // reported, or that it was consulted. Logged rather than persisted onto the activation:
+        // Phase-1's recorded seam always returns empty (no live feed yet - see
+        // RecordedIntegrationSeams), so there is nothing yet worth a schema change to store.
+        Optional<String> lifeSafetyEvent = lifeSafety.latestLifeSafetyEvent(activation.siteCode().value());
+        log.info("Life-safety context for activation {} at site {}: {}", activation.id(),
+                activation.siteCode().value(), lifeSafetyEvent.orElse("none reported"));
         for (UUID zone : activation.recipientZoneIds()) {
             lockdown.recordLockdownContext(activation.id(), zone.toString());
             cctv.preserveContext(activation.id(), zone.toString());
