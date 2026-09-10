@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.safetysecurity.emergency.infrastructure.persistence;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.clearInvocations;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -17,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.UUID;
 import javax.sql.DataSource;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.condition.EnabledIf;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -54,6 +56,17 @@ class JdbcEmergencyRepositoryAudienceGroupBatchTest extends SafetySecurityPostgr
 
     @Autowired private EmergencyRepository repository;
     @Autowired private JdbcTemplate jdbc;
+
+    /**
+     * Spring caches the {@code ApplicationContext} (and so this spy bean) across every test method in
+     * this class, so invocations recorded by one test would otherwise still be on the spy's tally when
+     * the next test's {@code verify(...)} runs. Reset before each test so a call count assertion only
+     * ever reflects that test's own calls.
+     */
+    @BeforeEach
+    void resetSpyInvocations() {
+        clearInvocations(jdbc);
+    }
 
     private static String site() {
         return "ES" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
