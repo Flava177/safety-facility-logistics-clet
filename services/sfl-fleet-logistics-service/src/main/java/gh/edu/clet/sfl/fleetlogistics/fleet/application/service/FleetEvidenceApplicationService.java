@@ -306,12 +306,14 @@ public class FleetEvidenceApplicationService {
     private static Map<String, Object> auditImage(AuditChainVerification result) {
         Map<String, Object> image = new LinkedHashMap<>();
         image.put("intact", result.intact());
+        image.put("complete", result.complete());
         image.put("recordsChecked", result.recordsChecked());
         image.put("firstDivergentSequence", result.firstDivergentSequence());
         image.put("expectedValue", result.expectedValue());
         image.put("actualValue", result.actualValue());
         image.put("reason", result.reason());
         image.put("headHash", result.headHash());
+        image.put("resumeFromSequence", result.resumeFromSequence());
         return image;
     }
 }

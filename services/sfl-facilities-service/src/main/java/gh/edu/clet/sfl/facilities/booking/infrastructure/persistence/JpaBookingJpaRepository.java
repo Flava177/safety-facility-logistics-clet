@@ -191,12 +191,33 @@ public interface JpaBookingJpaRepository extends JpaRepository<BookingRecord, UU
     long nextBookingSequence();
 
     /**
-     * Takes a transaction-scoped advisory lock. See {@code BookingRepository.lockSpace} for why.
+     * Takes a transaction-scoped advisory lock, bounded by {@code timeoutMillis}. See
+     * {@code BookingRepository.lockSpace} for why.
      *
-     * <p>Wrapped in {@code select 1 from (...)} because {@code pg_advisory_xact_lock} returns SQL
-     * {@code void}, which has no useful Java mapping. The subquery gives the statement a row to
-     * return and the lock is taken either way.
+     * <p>Wrapped in {@code select 1 from (...)} because neither {@code set_config} (called for its
+     * side effect, not its return value) nor {@code pg_advisory_xact_lock} (which returns SQL
+     * {@code void}) has a return the caller needs. The subquery gives the statement a row to return;
+     * both calls happen either way.
+     *
+     * <p>{@code set_config('lock_timeout', ..., true)} is the functional equivalent of
+     * {@code SET LOCAL lock_timeout}: transaction-scoped, and reset automatically on commit or
+     * rollback the same way the advisory lock itself is released - no session-level state leaks to the
+     * connection once it is returned to the pool. It is set once per lock acquisition and deliberately
+     * left in effect for the rest of the enclosing transaction rather than reset immediately after:
+     * the point of this bound is that the booking transaction should never block indefinitely on
+     * <em>any</em> lock wait, not only this specific advisory one.
+     *
+     * <p>A wait that exceeds the bound raises PostgreSQL {@code SQLSTATE 55P03}
+     * ("lock_not_available"), which {@code JpaBookingRepositoryAdapter} translates into the same
+     * {@code BookingConflictException} / HTTP 409 a losing writer gets from the exclusion constraint -
+     * from the requester's side, "someone else has this room right now" and "waited too long behind
+     * someone else" are the same answer.
      */
-    @Query(value = "select 1 from (select pg_advisory_xact_lock(:key)) as acquired", nativeQuery = true)
-    int acquireAdvisoryLock(@Param("key") long key);
+    @Query(value = """
+            select 1 from (
+                select set_config('lock_timeout', (:timeoutMillis)::text || 'ms', true),
+                       pg_advisory_xact_lock(:key)
+            ) as acquired
+            """, nativeQuery = true)
+    int acquireAdvisoryLock(@Param("key") long key, @Param("timeoutMillis") long timeoutMillis);
 }

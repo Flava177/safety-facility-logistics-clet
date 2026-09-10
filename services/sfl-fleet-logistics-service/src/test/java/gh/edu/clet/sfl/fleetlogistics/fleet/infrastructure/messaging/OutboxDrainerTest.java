@@ -1,0 +1,229 @@
+package gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.messaging;
+
+import static org.assertj.core.api.Assertions.assertThat;
+
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.port.RuntimeConfigurationPort;
+import gh.edu.clet.sfl.fleetlogistics.fleet.e2e.FleetPostgresSupport;
+import java.time.Clock;
+import java.time.Duration;
+import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.condition.EnabledIf;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.boot.test.context.TestConfiguration;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Primary;
+import org.springframework.transaction.PlatformTransactionManager;
+
+/**
+ * {@code OutboxDrainer} against a real PostgreSQL.
+ *
+ * <p>Was a single {@code @Transactional} method that claimed a whole batch, sent every message
+ * synchronously, then {@code saveAll}'d the batch once at the end. A poison payload or a crash mid-loop
+ * would roll back the transaction and revert every already-sent message in that batch back to
+ * {@code PENDING} - resending events a consumer already received. This pins the one-message-per-transaction
+ * fix: a failure partway through a batch must not touch messages that already succeeded.
+ */
+@EnabledIf(value = "gh.edu.clet.sfl.fleetlogistics.fleet.e2e.FleetPostgresSupport#databaseAvailable",
+        disabledReason = "No PostgreSQL available; see FleetPostgresSupport.unavailableReason()")
+@SpringBootTest(properties = {"sfl.security.enabled=false", "sfl.fuel.scheduling.enabled=false",
+        "sfl.fleet.scheduling.outbox.enabled=false", "sfl.fleet.messaging.transport=local"})
+class OutboxDrainerTest extends FleetPostgresSupport {
+
+    /** A transport the test can break for specific messages, and that records what it was asked to send. */
+    static final class RecordingTransport implements FleetEventTransport {
+        final List<UUID> sent = new ArrayList<>();
+        final java.util.Set<UUID> failing = java.util.concurrent.ConcurrentHashMap.newKeySet();
+        final AtomicBoolean failAll = new AtomicBoolean(false);
+
+        @Override
+        public void send(OutboxMessageEntity message) {
+            if (failAll.get() || failing.contains(message.id())) {
+                throw new IllegalStateException("broker unavailable");
+            }
+            sent.add(message.id());
+        }
+
+        @Override
+        public String name() {
+            return "recording";
+        }
+    }
+
+    /** Small, fixed attempt/backoff so tests do not depend on the compiled-in default of 8 attempts. */
+    static final class FixedRuntimeConfiguration implements RuntimeConfigurationPort {
+        @Override
+        public Duration complianceExpiryWarningWindow(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration inspectionValidityWindow(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration serviceDueWarningWindow(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration odometerStalenessThreshold(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration telematicsStalenessThreshold(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration dashboardFreshnessThreshold(String siteCode) {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration integrationSignatureWindow() {
+            throw new UnsupportedOperationException();
+        }
+
+        @Override
+        public Duration outboundRetryBackoff(int attempt) {
+            return Duration.ofSeconds(30);
+        }
+
+        @Override
+        public int outboundMaxAttempts() {
+            return 3;
+        }
+
+        @Override
+        public Optional<String> value(String key, String siteCode) {
+            return Optional.empty();
+        }
+
+        @Override
+        public Instant activeConfigurationChangedAt() {
+            return Instant.EPOCH;
+        }
+    }
+
+    @TestConfiguration
+    static class Beans {
+        @Bean
+        @Primary
+        RecordingTransport recordingTransport() {
+            return new RecordingTransport();
+        }
+
+        @Bean
+        @Primary
+        RuntimeConfigurationPort fixedRuntimeConfiguration() {
+            return new FixedRuntimeConfiguration();
+        }
+    }
+
+    @Autowired private OutboxMessageRepository repository;
+    @Autowired private RecordingTransport transport;
+    @Autowired private RuntimeConfigurationPort runtimeConfiguration;
+    @Autowired private PlatformTransactionManager transactionManager;
+    @Autowired private Clock clock;
+
+    private OutboxDrainer drainer;
+
+    @AfterEach
+    void tearDown() {
+        transport.sent.clear();
+        transport.failing.clear();
+        transport.failAll.set(false);
+    }
+
+    private OutboxDrainer drainer(int batchSize) {
+        return new OutboxDrainer(repository, transport, runtimeConfiguration, transactionManager, clock, batchSize);
+    }
+
+    private UUID insertPending(String eventType) {
+        UUID id = UUID.randomUUID();
+        OutboxMessageEntity entity = new OutboxMessageEntity(id, eventType, 1, "OutboxDrainerTest", id.toString(),
+                "MAIN", "corr-" + id, "cause-" + id, "actor-1", null, 1, "{\"probe\":\"" + id + "\"}",
+                clock.instant());
+        repository.save(entity);
+        return id;
+    }
+
+    @Test
+    void a_pending_message_is_sent_and_marked_published() {
+        UUID id = insertPending("sfl.ftlmp.vehicle-created.v1");
+
+        int published = drainer(10).drainOnce();
+
+        assertThat(published).isEqualTo(1);
+        assertThat(transport.sent).contains(id);
+        OutboxMessageEntity row = repository.findById(id).orElseThrow();
+        assertThat(row.status()).isEqualTo(OutboxMessageEntity.STATUS_PUBLISHED);
+        assertThat(row.publishedAt()).isNotNull();
+        assertThat(row.failureReason()).isNull();
+    }
+
+    @Test
+    void a_failed_delivery_is_retried_with_backoff_rather_than_immediately() {
+        UUID id = insertPending("sfl.ftlmp.vehicle-fault-reported.v1");
+        transport.failing.add(id);
+
+        drainer(10).drainOnce();
+
+        OutboxMessageEntity row = repository.findById(id).orElseThrow();
+        assertThat(row.status()).isEqualTo(OutboxMessageEntity.STATUS_PENDING);
+        assertThat(row.attemptCount()).isEqualTo(1);
+        assertThat(row.failureReason()).contains("broker unavailable");
+
+        // A second tick inside the 30s backoff window must not pick it up again.
+        drainer(10).drainOnce();
+        assertThat(repository.findById(id).orElseThrow().attemptCount()).isEqualTo(1);
+    }
+
+    @Test
+    void a_message_that_keeps_failing_is_dead_lettered_after_max_attempts() {
+        UUID poison = insertPending("sfl.ftlmp.dispatch-booking-requested.v1");
+        transport.failing.add(poison);
+
+        for (int attempt = 0; attempt < 3; attempt++) {
+            repository.findById(poison).ifPresent(entity -> {
+                entity.requeue(clock.instant());
+                repository.save(entity);
+            });
+            drainer(10).drainOnce();
+        }
+
+        OutboxMessageEntity row = repository.findById(poison).orElseThrow();
+        assertThat(row.status()).isEqualTo(OutboxMessageEntity.STATUS_DEAD_LETTERED);
+        assertThat(row.attemptCount()).isEqualTo(3);
+    }
+
+    @Test
+    void a_poison_message_earlier_in_the_batch_does_not_roll_back_messages_already_delivered_after_it() {
+        UUID poison = insertPending("sfl.ftlmp.vehicle-created.v1");
+        UUID healthyOne = insertPending("sfl.ftlmp.vehicle-created.v1");
+        UUID healthyTwo = insertPending("sfl.ftlmp.vehicle-created.v1");
+        transport.failing.add(poison);
+
+        int published = drainer(10).drainOnce();
+
+        // The poison message failed but must not have taken the other two down with it - proof that
+        // each message settles in its own transaction rather than one shared batch transaction.
+        assertThat(published).isEqualTo(2);
+        assertThat(repository.findById(healthyOne).orElseThrow().status())
+                .isEqualTo(OutboxMessageEntity.STATUS_PUBLISHED);
+        assertThat(repository.findById(healthyTwo).orElseThrow().status())
+                .isEqualTo(OutboxMessageEntity.STATUS_PUBLISHED);
+        assertThat(repository.findById(poison).orElseThrow().status())
+                .isEqualTo(OutboxMessageEntity.STATUS_PENDING);
+    }
+}

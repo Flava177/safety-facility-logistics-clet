@@ -339,8 +339,8 @@ class FleetEvidenceApplicationServiceTest {
 
         @Override
         public AuditChainVerification verifyChain() {
-            return new AuditChainVerification(false, 9, 4L, "expected", "actual",
-                    "Hash mismatch at sequence 4", null);
+            return new AuditChainVerification(false, true, 9, 4L, "expected", "actual",
+                    "Hash mismatch at sequence 4", null, null);
         }
     }
 }

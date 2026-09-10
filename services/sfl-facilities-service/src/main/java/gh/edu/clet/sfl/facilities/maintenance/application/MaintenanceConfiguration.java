@@ -59,9 +59,13 @@ public class MaintenanceConfiguration {
     /**
      * The SLA and escalation rules in force for a site, right now.
      *
-     * <p>Built fresh on each call. That sounds wasteful until you count: it is one read per key from
-     * a table the port already caches per request, against the alternative of a rule change that
-     * silently does not apply.
+     * <p>Built fresh on each call - {@link RuntimeConfigurationPort} caches nothing (see its Javadoc),
+     * so this is a handful of primary-key reads every time, against the alternative of a rule change
+     * that silently does not apply. That is a fine cost for the ordinary per-request call. A caller
+     * that needs this for many schedules across a handful of distinct sites in one unit of work - such
+     * as {@code PreventiveMaintenanceService.generateDueWorkOrders} or
+     * {@code MaintenanceEscalationService.sweep} - should cache the result per site code for the
+     * duration of that one run, not call this once per schedule; both do.
      */
     public SlaPolicy slaPolicyFor(String siteCode) {
         SlaPolicy fallback = SlaPolicy.defaults();

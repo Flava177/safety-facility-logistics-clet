@@ -17,9 +17,12 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Optional;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.CannotAcquireLockException;
 import org.springframework.dao.DataAccessException;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.PessimisticLockingFailureException;
+import org.springframework.dao.QueryTimeoutException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Repository;
@@ -79,24 +82,27 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
     private final JpaBookingApprovalJpaRepository approvals;
     private final JpaSetupTaskJpaRepository setupTasks;
     private final JpaNoShowJpaRepository noShows;
+    private final long advisoryLockTimeoutMillis;
 
     public JpaBookingRepositoryAdapter(JpaBookingJpaRepository bookings,
             JpaBookableResourceJpaRepository resources, JpaResourceAllocationJpaRepository allocations,
             JpaBookingApprovalJpaRepository approvals, JpaSetupTaskJpaRepository setupTasks,
-            JpaNoShowJpaRepository noShows) {
+            JpaNoShowJpaRepository noShows,
+            @Value("${sfl.facilities.booking.advisory-lock-timeout:PT5S}") Duration advisoryLockTimeout) {
         this.bookings = bookings;
         this.resources = resources;
         this.allocations = allocations;
         this.approvals = approvals;
         this.setupTasks = setupTasks;
         this.noShows = noShows;
+        this.advisoryLockTimeoutMillis = advisoryLockTimeout.toMillis();
     }
 
     // ---- concurrency --------------------------------------------------------------------------
 
     @Override
     public void lockSpace(UUID roomId) {
-        bookings.acquireAdvisoryLock(lockKey(roomId, SPACE_LOCK_NAMESPACE));
+        acquireAdvisoryLock(lockKey(roomId, SPACE_LOCK_NAMESPACE));
     }
 
     @Override
@@ -107,7 +113,45 @@ public class JpaBookingRepositoryAdapter implements BookingRepository {
         // one level up rather than removed.
         resourceIds.stream()
                 .sorted()
-                .forEach(id -> bookings.acquireAdvisoryLock(lockKey(id, RESOURCE_LOCK_NAMESPACE)));
+                .forEach(id -> acquireAdvisoryLock(lockKey(id, RESOURCE_LOCK_NAMESPACE)));
+    }
+
+    /**
+     * A booking request that queues behind another one for longer than
+     * {@code sfl.facilities.booking.advisory-lock-timeout} gives up rather than holding its checked-out
+     * connection - and every other request that happens to need one from the same pool - indefinitely.
+     * PostgreSQL raises {@code SQLSTATE 55P03} ("lock_not_available") when the bound set in
+     * {@link JpaBookingJpaRepository#acquireAdvisoryLock} is exceeded; from here it reads exactly like
+     * losing the room to a concurrent writer, so it gets the same {@code BookingConflictException} /
+     * HTTP 409 rather than a 500.
+     */
+    private void acquireAdvisoryLock(long key) {
+        try {
+            bookings.acquireAdvisoryLock(key, advisoryLockTimeoutMillis);
+        } catch (DataAccessException failure) {
+            if (isLockUnavailable(failure)) {
+                throw new FacilitiesException.BookingConflictException(
+                        "Another request is holding this room or resource; timed out waiting for it to finish."
+                                + " Try again.");
+            }
+            throw failure;
+        }
+    }
+
+    private static boolean isLockUnavailable(DataAccessException failure) {
+        if (failure instanceof CannotAcquireLockException || failure instanceof QueryTimeoutException
+                || failure instanceof PessimisticLockingFailureException) {
+            return true;
+        }
+        Throwable cursor = failure;
+        while (cursor != null) {
+            String text = cursor.getMessage();
+            if (text != null && text.toLowerCase(Locale.ROOT).contains("lock timeout")) {
+                return true;
+            }
+            cursor = cursor.getCause();
+        }
+        return false;
     }
 
     /**

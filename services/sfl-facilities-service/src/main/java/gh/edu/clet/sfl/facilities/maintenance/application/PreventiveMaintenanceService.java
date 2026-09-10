@@ -24,7 +24,9 @@ import java.time.Instant;
 import java.time.LocalDate;
 import java.time.ZoneOffset;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -210,6 +212,15 @@ public class PreventiveMaintenanceService {
         List<WorkOrder> generated = new ArrayList<>();
         Instant at = now();
 
+        // Cached for the duration of this run, not across runs: a schedule change must still apply on
+        // the very next generation. Same shape as MaintenanceEscalationService.sweep's `policies` map -
+        // one read per distinct site per run instead of one read per schedule, which matters once a
+        // site's schedules number in the hundreds. See MaintenanceConfiguration.slaPolicyFor's Javadoc
+        // for why this caching lives here rather than in the port.
+        Map<String, SlaPolicy> slaPolicies = new HashMap<>();
+        Map<String, OperatingMode> operatingModes = new HashMap<>();
+        Map<String, Integer> evidenceRequirements = new HashMap<>();
+
         for (PreventiveMaintenanceSchedule schedule : due) {
             // Re-checked in the aggregate as well as in the query. The query narrows by date; only the
             // schedule knows whether this cycle has already been generated for, and that is the check
@@ -226,13 +237,13 @@ public class PreventiveMaintenanceService {
                 continue;
             }
 
-            SlaPolicy sla = configuration.slaPolicyFor(schedule.siteCode());
-            Instant slaDue = sla.resolutionDueFrom(at, schedule.priority(),
-                    operatingModeOf(schedule.siteCode()));
-            Instant responseDue = sla.responseDueFrom(at, schedule.priority(),
-                    operatingModeOf(schedule.siteCode()));
-            int evidenceRequired = configuration.evidenceRequiredFor(schedule.siteCode(),
-                    schedule.priority());
+            SlaPolicy sla = slaPolicies.computeIfAbsent(schedule.siteCode(), configuration::slaPolicyFor);
+            OperatingMode mode = operatingModes.computeIfAbsent(schedule.siteCode(), this::operatingModeOf);
+            Instant slaDue = sla.resolutionDueFrom(at, schedule.priority(), mode);
+            Instant responseDue = sla.responseDueFrom(at, schedule.priority(), mode);
+            int evidenceRequired = evidenceRequirements.computeIfAbsent(
+                    schedule.siteCode() + "|" + schedule.priority(),
+                    key -> configuration.evidenceRequiredFor(schedule.siteCode(), schedule.priority()));
 
             WorkOrder order = maintenance.saveWorkOrder(WorkOrder.planned(UUID.randomUUID(),
                     maintenance.nextWorkOrderNumber(schedule.siteCode()), schedule.workOrderType(),

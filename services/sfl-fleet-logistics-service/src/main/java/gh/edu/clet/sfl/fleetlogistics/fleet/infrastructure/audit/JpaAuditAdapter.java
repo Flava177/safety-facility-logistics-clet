@@ -15,6 +15,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
@@ -38,13 +40,20 @@ public class JpaAuditAdapter implements AuditPort {
     private final AuditChainStateRepository chainState;
     private final Clock clock;
     private final ObjectMapper objectMapper;
+    private final int verificationBatchSize;
+    private final int verificationMaxBatchesPerCall;
 
     JpaAuditAdapter(AuditRecordRepository auditRecords, AuditChainStateRepository chainState, Clock clock,
-            ObjectMapper objectMapper) {
+            ObjectMapper objectMapper,
+            @Value("${sfl.fleet.audit.chain-verification.batch-size:5000}") int verificationBatchSize,
+            @Value("${sfl.fleet.audit.chain-verification.max-batches-per-call:200}")
+            int verificationMaxBatchesPerCall) {
         this.auditRecords = auditRecords;
         this.chainState = chainState;
         this.clock = clock;
         this.objectMapper = objectMapper;
+        this.verificationBatchSize = verificationBatchSize;
+        this.verificationMaxBatchesPerCall = verificationMaxBatchesPerCall;
     }
 
     @Override
@@ -84,13 +93,42 @@ public class JpaAuditAdapter implements AuditPort {
                 .toList();
     }
 
+    /**
+     * Replays the chain in bounded pages rather than materialising the whole append-only table - see
+     * {@code JpaAuditAdapter.verifyChain} in facilities-service, which this mirrors exactly (same
+     * over-a-service's-lifetime growth, same HTTP-reachable endpoint via
+     * {@code FleetEvidenceApplicationService.verifyAuditChain}).
+     */
     @Override
     @Transactional(readOnly = true)
     public AuditChainVerification verifyChain() {
-        List<AuditEvent> ordered = auditRecords.findAllByOrderBySequenceNoAsc().stream()
-                .map(entity -> entity.toDomain(objectMapper))
-                .toList();
-        return AuditHashChain.verify(ordered, AuditHashChain.GENESIS_HASH);
+        String previousHash = AuditHashChain.GENESIS_HASH;
+        // Sequences start at 0, so the cursor must start below that - -1L, not 0L - or the very first
+        // "greater than" page would skip record 0 outright.
+        long afterSequenceNo = -1L;
+        int totalChecked = 0;
+
+        for (int batch = 0; batch < verificationMaxBatchesPerCall; batch++) {
+            List<AuditEvent> page = auditRecords
+                    .findBySequenceNoGreaterThanOrderBySequenceNoAsc(afterSequenceNo,
+                            PageRequest.of(0, verificationBatchSize))
+                    .stream()
+                    .map(entity -> entity.toDomain(objectMapper))
+                    .toList();
+            if (page.isEmpty()) {
+                return AuditChainVerification.intact(totalChecked, previousHash);
+            }
+
+            AuditChainVerification pageResult = AuditHashChain.verify(page, previousHash);
+            totalChecked += pageResult.recordsChecked();
+            if (!pageResult.intact()) {
+                return new AuditChainVerification(false, true, totalChecked, pageResult.firstDivergentSequence(),
+                        pageResult.expectedValue(), pageResult.actualValue(), pageResult.reason(), null, null);
+            }
+            previousHash = pageResult.headHash();
+            afterSequenceNo = page.get(page.size() - 1).sequenceNo();
+        }
+        return AuditChainVerification.incomplete(totalChecked, previousHash, afterSequenceNo + 1);
     }
 
     /**

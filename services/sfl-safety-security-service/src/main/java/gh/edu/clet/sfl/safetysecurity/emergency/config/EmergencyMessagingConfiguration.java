@@ -1,10 +1,12 @@
 package gh.edu.clet.sfl.safetysecurity.emergency.config;
 
+import gh.edu.clet.sfl.common.web.RabbitHealthConfigurationValidator;
 import gh.edu.clet.sfl.safetysecurity.emergency.infrastructure.messaging.EmergencyEventTransport;
 import gh.edu.clet.sfl.safetysecurity.emergency.infrastructure.messaging.EmergencyEventTransports;
 import java.time.Duration;
 import java.util.Locale;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -43,5 +45,17 @@ class EmergencyMessagingConfiguration {
             default -> throw new IllegalStateException("Unknown sfl.emergency.messaging.transport '" + transport
                     + "'. Supported transports are: local, rabbitmq.");
         };
+    }
+
+    /**
+     * Fails startup rather than let a {@code rabbitmq}-transport deployment run with the broker health
+     * indicator disabled - see {@link RabbitHealthConfigurationValidator}.
+     */
+    @Bean
+    InitializingBean rabbitHealthConfigurationCheck(
+            @Value("${sfl.emergency.messaging.transport:local}") String transport,
+            @Value("${management.health.rabbit.enabled:false}") boolean rabbitHealthEnabled) {
+        return () -> RabbitHealthConfigurationValidator.validate("sfl.emergency.messaging.transport", transport,
+                "management.health.rabbit.enabled", rabbitHealthEnabled);
     }
 }

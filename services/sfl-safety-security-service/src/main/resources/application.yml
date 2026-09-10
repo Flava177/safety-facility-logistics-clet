@@ -5,6 +5,20 @@ spring:
     url: ${SFL_SAFETY_SECURITY_DB_URL:${SFL_DB_URL:jdbc:postgresql://localhost:5442/sfl_safety_security_service}}
     username: ${SFL_SAFETY_SECURITY_DB_USERNAME:${SFL_DB_USERNAME:sfl}}
     password: ${SFL_SAFETY_SECURITY_DB_PASSWORD:${SFL_DB_PASSWORD:sfl}}
+    hikari:
+      pool-name: sfl-safety-security-hikari
+      # Explicit rather than left to Spring Boot's own default (which is this same number,
+      # unstated) - every other setting here is sized relative to it. Every request handler, the
+      # RabbitMQ listener, and every one of this service's @Scheduled jobs share this one pool; raise
+      # it only with matching headroom on the database's own max_connections, not in isolation.
+      maximum-pool-size: ${SFL_DB_POOL_MAX_SIZE:10}
+      connection-timeout: ${SFL_DB_POOL_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # HikariCP's own documented starting point for surfacing a checked-out-and-never-returned
+      # connection; 0 (the library default) means a leak is invisible until the pool is exhausted.
+      leak-detection-threshold: 60000
   jpa:
     open-in-view: false
     hibernate:
@@ -51,6 +65,14 @@ spring:
 server:
   port: ${SFL_PORT:8092}
   shutdown: graceful
+  tomcat:
+    threads:
+      # Boot's own default is 200 - far more concurrent requests than a 10-connection Hikari pool
+      # (above) could ever serve at once. Bounded to a small multiple of the pool size instead, so a
+      # burst past capacity queues predictably at the web tier rather than accepting far more requests
+      # than the database side can ever drain. Tune both together, not independently.
+      max: ${SFL_WEB_MAX_THREADS:20}
+      min-spare: ${SFL_WEB_MIN_SPARE_THREADS:4}
 
 management:
   endpoints:
@@ -78,6 +100,11 @@ sfl:
     # left Spring Security's default securing everything including /actuator/health, so the service
     # answered 401 to its own probe. See SafetySecurityConfiguration.
     enabled: ${SFL_SECURITY_ENABLED:true}
+    jwks:
+      # Bounds how long a request thread can block fetching/validating against the identity
+      # provider's JWKS - see SafetySecurityConfiguration.jwtDecoder and TimeoutBoundedJwtDecoders.
+      connect-timeout: ${SFL_JWKS_CONNECT_TIMEOUT:PT3S}
+      read-timeout: ${SFL_JWKS_READ_TIMEOUT:PT3S}
   service-boundary:
     schema: safety_security,emergency_notification
     owns: "Safety, Security & Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174"

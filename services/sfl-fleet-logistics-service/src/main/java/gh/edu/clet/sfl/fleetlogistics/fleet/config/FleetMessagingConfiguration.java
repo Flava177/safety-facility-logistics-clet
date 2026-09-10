@@ -1,11 +1,14 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.config;
 
+import gh.edu.clet.sfl.common.web.RabbitHealthConfigurationValidator;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.IntegrationConfigurationNotFoundException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.messaging.FleetEventTransport;
 import gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.messaging.FleetEventTransports;
+import java.time.Duration;
 import java.util.Locale;
 import java.util.Map;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.beans.factory.InitializingBean;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
@@ -26,6 +29,7 @@ class FleetMessagingConfiguration {
     FleetEventTransport fleetEventTransport(
             @Value("${sfl.fleet.messaging.transport:local}") String transport,
             @Value("${sfl.fleet.messaging.exchange:sfl.events}") String exchange,
+            @Value("${sfl.fleet.messaging.confirm-timeout:PT5S}") Duration confirmTimeout,
             ObjectProvider<RabbitTemplate> rabbitTemplate) {
         String selected = transport == null ? "" : transport.strip().toLowerCase(Locale.ROOT);
         return switch (selected) {
@@ -37,7 +41,7 @@ class FleetMessagingConfiguration {
                             "configuredTransport", "rabbitmq",
                             "reason", "sfl.fleet.messaging.transport=rabbitmq but no RabbitTemplate is available"));
                 }
-                yield FleetEventTransports.rabbitMq(template, exchange);
+                yield FleetEventTransports.rabbitMq(template, exchange, confirmTimeout);
             }
             case "local" -> FleetEventTransports.local();
             default -> throw new IntegrationConfigurationNotFoundException(Map.of(
@@ -45,5 +49,17 @@ class FleetMessagingConfiguration {
                     "configuredTransport", String.valueOf(transport),
                     "supportedTransports", "local, rabbitmq"));
         };
+    }
+
+    /**
+     * Fails startup rather than let a {@code rabbitmq}-transport deployment run with the broker health
+     * indicator disabled - see {@link RabbitHealthConfigurationValidator}.
+     */
+    @Bean
+    InitializingBean rabbitHealthConfigurationCheck(
+            @Value("${sfl.fleet.messaging.transport:local}") String transport,
+            @Value("${management.health.rabbit.enabled:false}") boolean rabbitHealthEnabled) {
+        return () -> RabbitHealthConfigurationValidator.validate("sfl.fleet.messaging.transport", transport,
+                "management.health.rabbit.enabled", rabbitHealthEnabled);
     }
 }

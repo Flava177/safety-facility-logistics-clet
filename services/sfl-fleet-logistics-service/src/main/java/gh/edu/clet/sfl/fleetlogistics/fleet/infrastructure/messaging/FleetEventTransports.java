@@ -1,5 +1,6 @@
 package gh.edu.clet.sfl.fleetlogistics.fleet.infrastructure.messaging;
 
+import java.time.Duration;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 /**
@@ -13,6 +14,11 @@ public final class FleetEventTransports {
 
     public static FleetEventTransport rabbitMq(RabbitTemplate rabbitTemplate, String exchange) {
         return new AmqpFleetEventTransport(rabbitTemplate, exchange);
+    }
+
+    public static FleetEventTransport rabbitMq(RabbitTemplate rabbitTemplate, String exchange,
+            Duration confirmTimeout) {
+        return new AmqpFleetEventTransport(rabbitTemplate, exchange, confirmTimeout);
     }
 
     public static FleetEventTransport local() {

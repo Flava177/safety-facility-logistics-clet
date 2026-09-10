@@ -12,6 +12,7 @@ import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.NotificationChannel
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.NotificationTemplate;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.model.RecipientZone;
 import java.time.Instant;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -96,6 +97,16 @@ public interface EmergencyRepository {
     // Audience groups
     AudienceGroup saveAudienceGroup(AudienceGroup a);
     Optional<AudienceGroup> findAudienceGroup(UUID id);
+
+    /**
+     * Every audience group among {@code ids} that exists, in one bounded {@code IN} query - for the
+     * emergency-activation fan-out, which used to loop {@link #findAudienceGroup} once per id on the
+     * life-safety broadcast path. A missing id is simply absent from the result, not an error: the
+     * caller sums recipient counts and a group deleted since the activation was created contributes
+     * zero, same as {@code findAudienceGroup(id).orElse(0)} did before.
+     */
+    List<AudienceGroup> findAudienceGroupsByIds(Collection<UUID> ids);
+
     Optional<RecipientZone> findZone(UUID id);
     Optional<AudienceGroup> findAudienceGroupByCode(String siteCode, String groupCode);
     EmergencyPage<AudienceGroup> findAudienceGroups(RecordQuery query);

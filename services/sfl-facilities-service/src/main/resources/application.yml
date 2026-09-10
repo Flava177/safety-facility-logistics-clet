@@ -7,6 +7,25 @@ spring:
     # overrides both.
     username: ${SFL_FACILITIES_DB_USERNAME:${SFL_DB_USERNAME:sfl}}
     password: ${SFL_FACILITIES_DB_PASSWORD:${SFL_DB_PASSWORD:sfl}}
+    hikari:
+      pool-name: sfl-facilities-hikari
+      # Explicit rather than left to Spring Boot's own default (which is this same number,
+      # unstated) - every other setting here is sized relative to it, and an operator changing it
+      # should not have to first discover what it already was. Every request handler, the RabbitMQ
+      # listener, and every one of the five @Scheduled jobs share this one pool; raise it only with
+      # matching headroom on the database's own max_connections (shared across all five services'
+      # pools plus their own operational connections), not in isolation.
+      maximum-pool-size: ${SFL_DB_POOL_MAX_SIZE:10}
+      # How long a caller waits for a connection to free up before failing with a clear pool-exhaustion
+      # error, rather than queuing silently. HikariCP's own default, stated rather than assumed.
+      connection-timeout: ${SFL_DB_POOL_CONNECTION_TIMEOUT_MS:30000}
+      validation-timeout: 5000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+      # Flags a connection checked out and never returned - a leak, not a slow query - after this long.
+      # HikariCP's own documented starting point; 0 (the library default) means leaks are invisible
+      # until the pool is exhausted.
+      leak-detection-threshold: 60000
   jpa:
     open-in-view: false
     hibernate:
@@ -65,6 +84,15 @@ spring:
 server:
   port: ${SFL_PORT:8091}
   shutdown: graceful
+  tomcat:
+    threads:
+      # Boot's own default is 200 - far more concurrent requests than a 10-connection Hikari pool
+      # (above) could ever serve at once. Bounded to a small multiple of the pool size instead, so a
+      # burst past capacity queues predictably at the web tier and fails fast with a clear timeout,
+      # rather than accepting far more requests than the database side can ever drain. Tune both
+      # together, not independently.
+      max: ${SFL_WEB_MAX_THREADS:20}
+      min-spare: ${SFL_WEB_MIN_SPARE_THREADS:4}
 
 management:
   health:
@@ -101,6 +129,11 @@ sfl:
     # put in an X-SFL-* header. Both halves are inverted: absent now means secure, and running open
     # takes an explicit SFL_SECURITY_ENABLED=false plus a warning on every startup.
     enabled: ${SFL_SECURITY_ENABLED:true}
+    jwks:
+      # Bounds how long a request thread can block fetching/validating against the identity
+      # provider's JWKS - see FacilitiesSecurityConfiguration.jwtDecoder and TimeoutBoundedJwtDecoders.
+      connect-timeout: ${SFL_JWKS_CONNECT_TIMEOUT:PT3S}
+      read-timeout: ${SFL_JWKS_READ_TIMEOUT:PT3S}
   facilities:
     messaging:
       # `local` records delivery without a broker and is the single-node default. Any environment with a
@@ -120,3 +153,17 @@ sfl:
       # by retrying through it, and must not schedule the next attempt beyond the end of the week.
       retry-base: PT10S
       retry-cap: PT1H
+    booking:
+      # Bounds how long a booking request can queue behind another one holding the same room/resource
+      # advisory lock before giving up with a 409 rather than holding its connection (and the pool slot
+      # behind it) indefinitely. See JpaBookingRepositoryAdapter.acquireAdvisoryLock.
+      advisory-lock-timeout: ${SFL_BOOKING_ADVISORY_LOCK_TIMEOUT:PT5S}
+    audit:
+      chain-verification:
+        # Bounds how much of the audit chain one verifyChain() call replays: at most batch-size rows
+        # per page, at most max-batches-per-call pages - 1,000,000 rows by default. A chain within that
+        # bound verifies to completion in one call; a longer one returns an "incomplete" result with a
+        # resume cursor rather than materialising the whole table or holding one HTTP request open
+        # indefinitely. See JpaAuditAdapter.verifyChain.
+        batch-size: ${SFL_AUDIT_VERIFICATION_BATCH_SIZE:5000}
+        max-batches-per-call: ${SFL_AUDIT_VERIFICATION_MAX_BATCHES:200}
