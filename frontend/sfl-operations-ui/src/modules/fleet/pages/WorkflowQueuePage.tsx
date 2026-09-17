@@ -18,16 +18,30 @@ import { defaultPageSize } from 'shared/api/config';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { Checkbox, EnumSelect, TextInput } from 'shared/components/fields';
+import { Checkbox, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
+};
 
 interface Filters {
   siteCode: string;
@@ -208,33 +222,29 @@ const WorkflowQueuePage = () => {
             onChange={(value) => setFilter('siteCode', value)}
             allowEmpty
           />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={filters.status}
-            options={FLEET_WORKFLOW_STATUSES}
-            onChange={(value) => setFilter('status', value)}
-            allowEmpty
+            selected={filters.status ? [filters.status] : []}
+            onChange={(next) => setFilter('status', pickSingle(filters.status, next))}
+            options={FLEET_WORKFLOW_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Type"
-            value={filters.type}
-            options={FLEET_WORKFLOW_TYPES}
-            onChange={(value) => setFilter('type', value)}
-            allowEmpty
+            selected={filters.type ? [filters.type] : []}
+            onChange={(next) => setFilter('type', pickSingle(filters.type, next))}
+            options={FLEET_WORKFLOW_TYPES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Priority"
-            value={filters.priority}
-            options={WORKFLOW_PRIORITIES}
-            onChange={(value) => setFilter('priority', value)}
-            allowEmpty
+            selected={filters.priority ? [filters.priority] : []}
+            onChange={(next) => setFilter('priority', pickSingle(filters.priority, next))}
+            options={WORKFLOW_PRIORITIES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Severity"
-            value={filters.severity}
-            options={WORKFLOW_SEVERITIES}
-            onChange={(value) => setFilter('severity', value)}
-            allowEmpty
+            selected={filters.severity ? [filters.severity] : []}
+            onChange={(next) => setFilter('severity', pickSingle(filters.severity, next))}
+            options={WORKFLOW_SEVERITIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Assignee"

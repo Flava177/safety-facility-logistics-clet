@@ -16,6 +16,7 @@ import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { useNotifier } from 'shared/components/Notifier';
@@ -24,7 +25,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
+import { SelectInput, TextInput } from 'shared/components/fields';
 import { formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
@@ -36,6 +37,19 @@ const QUEUE_VIEWS = [
   { value: 'SECURITY', label: 'Security relevant' },
   { value: 'UNASSIGNED', label: 'Unassigned' },
 ];
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
+};
 
 /**
  * The dispatch exception queue.
@@ -298,19 +312,17 @@ const DispatchExceptionsPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Type"
-            value={type}
-            options={EXCEPTION_TYPES}
-            onChange={(value) => setType(value)}
-            allowEmpty
+            selected={type ? [type] : []}
+            onChange={(next) => setType(pickSingle(type, next))}
+            options={EXCEPTION_TYPES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={EXCEPTION_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={EXCEPTION_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <SelectInput
             label="View"
@@ -320,12 +332,11 @@ const DispatchExceptionsPage = () => {
             allowEmpty
             emptyLabel="Everything returned"
           />
-          <EnumSelect
+          <FacetFilter
             label="Severity"
-            value={severity}
-            options={EXCEPTION_SEVERITIES}
-            onChange={(value) => setSeverity(value)}
-            allowEmpty
+            selected={severity ? [severity] : []}
+            onChange={(next) => setSeverity(pickSingle(severity, next))}
+            options={EXCEPTION_SEVERITIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Assignee"

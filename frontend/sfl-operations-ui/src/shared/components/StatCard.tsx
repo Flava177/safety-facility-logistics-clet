@@ -70,7 +70,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
         )}
         {onClick && (
           <span className="inline-flex items-center gap-1 text-theme-sm font-medium text-teal-700 group-hover:underline">
-            View records
+            View
             <Icon name="chevron-right" size={14} aria-hidden="true" />
           </span>
         )}
