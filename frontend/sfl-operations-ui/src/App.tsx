@@ -67,7 +67,7 @@ const TripDetailPage = lazy(() => import('modules/fleet/pages/TripDetailPage'));
 const WorkflowQueuePage = lazy(() => import('modules/fleet/pages/WorkflowQueuePage'));
 const WorkflowDetailPage = lazy(() => import('modules/fleet/pages/WorkflowDetailPage'));
 const CompliancePage = lazy(() => import('modules/fleet/pages/CompliancePage'));
-const GovernancePage = lazy(() => import('modules/fleet/pages/GovernancePage'));
+const EvidenceAuditPage = lazy(() => import('modules/fleet/pages/EvidenceAuditPage'));
 const IntegrationHealthPage = lazy(() => import('modules/fleet/pages/IntegrationHealthPage'));
 
 const FuelDashboardPage = lazy(() => import('modules/fuel/pages/FuelDashboardPage'));
@@ -336,7 +336,7 @@ const App = () => {
                   <Route path=":itemId" element={<WorkflowDetailPage />} />
                 </Route>
                 <Route path="compliance" element={<CompliancePage />} />
-                <Route path="governance" element={<GovernancePage />} />
+                <Route path="evidence" element={<EvidenceAuditPage />} />
                 <Route path="integrations" element={<IntegrationHealthPage />} />
               </Route>
               <Route path="fuel" element={<SystemRoutes system="S168" />}>

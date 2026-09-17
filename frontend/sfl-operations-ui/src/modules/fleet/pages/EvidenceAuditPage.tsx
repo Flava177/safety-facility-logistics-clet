@@ -79,7 +79,7 @@ interface AuditRow {
  * record or an identifier, which keeps this screen from becoming an index of every incident at every
  * site that anyone with the dashboard open can page through.
  */
-const GovernancePage = () => {
+const EvidenceAuditPage = () => {
   const { notifyError, notifySuccess } = useNotifier();
   const canExportEvidence = canRequestEvidenceExport();
   const [tab, setTab] = useState<TabKey>('evidence');
@@ -761,4 +761,4 @@ const RequestExportDialog = ({
   );
 };
 
-export default GovernancePage;
+export default EvidenceAuditPage;
