@@ -24,6 +24,7 @@ import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
+import Tabs from 'shared/components/Tabs';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -102,6 +103,7 @@ const FleetDashboardPage = () => {
   const siteCode = '';
   const operatingMode = '';
   const [drilldown, setDrilldown] = useState<DrilldownIndicator | null>(null);
+  const [exceptionsTab, setExceptionsTab] = useState<'escalated' | 'compliance'>('escalated');
 
   const windowStart = useMemo(
     () =>
@@ -461,19 +463,11 @@ const FleetDashboardPage = () => {
                     minHeight={280}
                   >
                     <ActivityChart points={activity} />
-                    <p className="mt-3 text-theme-xs text-gray-600">
-                      Bucketed by day from the trip and workflow records returned for this{' '}
-                      {ACTIVITY_DAYS}-day window; the fleet service exposes no time-series endpoint.
-                    </p>
                   </DataState>
                 </SectionCard>
 
                 <SectionCard title="Fleet availability" subtitle="Vehicles in the current scope">
                   <ReadinessChart slices={readinessSlices} centreLabel="Vehicles" height={280} />
-                  <p className="mt-2 text-theme-xs text-gray-600">
-                    Available and blocked are snapshot indicators; committed is the remainder of the{' '}
-                    {snapshot.data.reconciliation.vehicles} vehicles reconciled in this scope.
-                  </p>
                 </SectionCard>
               </div>
 
@@ -533,22 +527,45 @@ const FleetDashboardPage = () => {
                 </SectionCard>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-2">
-                <SectionCard
-                  title="Escalated workflow"
-                  subtitle="Past SLA or manually escalated"
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      endIcon="chevron-right"
-                      onClick={() => navigate(fleetPaths.workflow)}
-                    >
-                      View queue
-                    </Button>
-                  }
-                  flush
-                >
+              <SectionCard
+                title={exceptionsTab === 'escalated' ? 'Escalated workflow' : 'Compliance exceptions'}
+                subtitle={
+                  exceptionsTab === 'escalated'
+                    ? 'Past SLA or manually escalated'
+                    : 'Records behind the expired-compliance indicator'
+                }
+                actions={
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    endIcon="chevron-right"
+                    onClick={() =>
+                      navigate(exceptionsTab === 'escalated' ? fleetPaths.workflow : fleetPaths.compliance)
+                    }
+                  >
+                    {exceptionsTab === 'escalated' ? 'View queue' : 'Compliance'}
+                  </Button>
+                }
+                flush
+              >
+                <Tabs
+                  items={[
+                    {
+                      value: 'escalated',
+                      label: 'Escalated workflow',
+                      count: escalated.data?.content.length,
+                    },
+                    {
+                      value: 'compliance',
+                      label: 'Compliance exceptions',
+                      count: expiredCompliance.data?.length,
+                    },
+                  ]}
+                  value={exceptionsTab}
+                  onChange={(value) => setExceptionsTab(value as 'escalated' | 'compliance')}
+                  className="px-5"
+                />
+                {exceptionsTab === 'escalated' ? (
                   <DataState
                     loading={escalated.initialising}
                     error={escalated.error}
@@ -568,23 +585,7 @@ const FleetDashboardPage = () => {
                       dense
                     />
                   </DataState>
-                </SectionCard>
-
-                <SectionCard
-                  title="Compliance exceptions"
-                  subtitle="Records behind the expired-compliance indicator"
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      endIcon="chevron-right"
-                      onClick={() => navigate(fleetPaths.compliance)}
-                    >
-                      Compliance
-                    </Button>
-                  }
-                  flush
-                >
+                ) : (
                   <DataState
                     loading={expiredCompliance.initialising}
                     error={expiredCompliance.error}
@@ -603,8 +604,8 @@ const FleetDashboardPage = () => {
                       dense
                     />
                   </DataState>
-                </SectionCard>
-              </div>
+                )}
+              </SectionCard>
             </div>
           )}
         </DataState>
