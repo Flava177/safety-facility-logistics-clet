@@ -1,18 +1,23 @@
 import { useCallback, useMemo, useState } from 'react';
 import { InboxMessageResponse } from 'modules/fleet/api/dto';
-import { INTEGRATION_MESSAGE_STATUSES, IntegrationMessageStatus } from 'modules/fleet/api/enums';
+import {
+  INTEGRATION_MESSAGE_STATUSES,
+  IntegrationMessageStatus,
+  humanise,
+} from 'modules/fleet/api/enums';
 import { integrationsApi } from 'modules/fleet/api/fleetApi';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, FieldLabelSpacer, TextInput } from 'shared/components/fields';
+import { FieldLabelSpacer, TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -46,6 +51,19 @@ const IntegrationHealthPage = () => {
   const [replayId, setReplayId] = useState('');
   const [replaying, setReplaying] = useState<string | null>(null);
   const filtered = Boolean(sourceSystem || status || eventType);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const health = useApiQuery((signal) => integrationsApi.health(signal), []);
 
@@ -283,12 +301,14 @@ const IntegrationHealthPage = () => {
                   onChange={setSourceSystem}
                   helperText="Matches on part of the name."
                 />
-                <EnumSelect
+                <FacetFilter
                   label="Status"
-                  value={status}
-                  options={INTEGRATION_MESSAGE_STATUSES}
-                  onChange={(value) => setStatus(value as IntegrationMessageStatus | '')}
-                  allowEmpty
+                  selected={status ? [status] : []}
+                  onChange={(next) => setStatus(pickSingle(status, next))}
+                  options={INTEGRATION_MESSAGE_STATUSES.map((value) => ({
+                    value,
+                    label: humanise(value),
+                  }))}
                 />
                 <TextInput
                   label="Event type"

@@ -10,10 +10,12 @@ import {
 import { driverLogbooksApi } from 'modules/fuel/api/fuelApi';
 import { CreateLogbookDialog } from 'modules/fuel/dialogs/logbookDialogs';
 import { DriverSelect, VehicleSelect } from 'modules/fleet/components/FleetReferenceSelect';
+import { humanise } from 'modules/fleet/api/enums';
 import { useClampPage, useServerPage } from 'modules/fuel/components/useServerPage';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -21,7 +23,6 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { DateField } from 'shared/components/DateField';
-import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
@@ -53,6 +54,19 @@ const DriverLogbooksPage = () => {
   const [journeyFrom, setJourneyFrom] = useState('');
   const [journeyTo, setJourneyTo] = useState('');
   const [creating, setCreating] = useState(false);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const filterKey = `${siteCode}|${status}|${useClass}|${driverId}|${vehicleId}|${journeyFrom}|${journeyTo}`;
   const paging = useServerPage(filterKey);
@@ -166,19 +180,17 @@ const DriverLogbooksPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={LOGBOOK_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={LOGBOOK_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Use classification"
-            value={useClass}
-            options={LOGBOOK_USE_CLASSIFICATIONS}
-            onChange={(value) => setUseClass(value)}
-            allowEmpty
+            selected={useClass ? [useClass] : []}
+            onChange={(next) => setUseClass(pickSingle(useClass, next))}
+            options={LOGBOOK_USE_CLASSIFICATIONS.map((value) => ({ value, label: humanise(value) }))}
           />
           <DriverSelect
             siteCode={siteCode}

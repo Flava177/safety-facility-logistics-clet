@@ -13,6 +13,7 @@ import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -21,7 +22,7 @@ import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
 import { DateTimeField } from 'shared/components/DateField';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
@@ -48,6 +49,19 @@ const InboundMailPage = () => {
   const [to, setTo] = useState('');
   const [registering, setRegistering] = useState(false);
   const [distributing, setDistributing] = useState<CourierItem | null>(null);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const filterKey = `${siteCode}|${status}|${handler}|${from}|${to}`;
   const paging = useServerPage(filterKey);
@@ -193,12 +207,11 @@ const InboundMailPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={ITEM_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={ITEM_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Handler"

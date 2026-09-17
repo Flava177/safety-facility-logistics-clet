@@ -10,13 +10,13 @@ import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import { DateTimeField } from 'shared/components/DateField';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect } from 'shared/components/fields';
 import { formatDateTime, fromLocalInputValue } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -49,6 +49,19 @@ const TripQueuePage = () => {
   const setFilter = <K extends keyof Filters>(key: K, value: Filters[K]) => {
     setFilters((current) => ({ ...current, [key]: value }));
     setPagination((current) => ({ ...current, page: 0 }));
+  };
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
   };
 
   // Reset is a filter change like any other: leaving the page index behind asks the server for a
@@ -197,19 +210,17 @@ const TripQueuePage = () => {
             onChange={(value) => setFilter('siteCode', value)}
             allowEmpty
           />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={filters.status}
-            options={TRIP_STATUSES}
-            onChange={(value) => setFilter('status', value)}
-            allowEmpty
+            selected={filters.status ? [filters.status] : []}
+            onChange={(next) => setFilter('status', pickSingle(filters.status, next))}
+            options={TRIP_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Operating mode"
-            value={filters.operatingMode}
-            options={OPERATING_MODES}
-            onChange={(value) => setFilter('operatingMode', value)}
-            allowEmpty
+            selected={filters.operatingMode ? [filters.operatingMode] : []}
+            onChange={(next) => setFilter('operatingMode', pickSingle(filters.operatingMode, next))}
+            options={OPERATING_MODES.map((value) => ({ value, label: humanise(value) }))}
           />
           <DateTimeField
             label="From"

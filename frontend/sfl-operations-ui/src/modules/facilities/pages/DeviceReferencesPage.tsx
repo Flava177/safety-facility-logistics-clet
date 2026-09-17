@@ -3,11 +3,11 @@ import Alert from 'shared/components/Alert';
 import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { DeviceReference } from '../api/dto';
@@ -42,6 +42,19 @@ const DeviceReferencesPage = () => {
   const [adding, setAdding] = useState(false);
   const [editing, setEditing] = useState<DeviceReference | null>(null);
   const [retiring, setRetiring] = useState<DeviceReference | null>(null);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
+  };
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -143,15 +156,12 @@ const DeviceReferencesPage = () => {
         }
       />
 
-      {/* Both controls labelled, so they sit on one line - see the note on the asset register. */}
       <FilterBar>
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-        <SelectInput
+        <FacetFilter
           label="Device type"
-          value={type}
-          onChange={setType}
-          allowEmpty
-          emptyLabel="Any device type"
+          selected={type ? [type] : []}
+          onChange={(next) => setType(pickSingle(type, next))}
           options={deviceReferenceTypes.map((value) => ({ value, label: humaniseCode(value) }))}
         />
       </FilterBar>

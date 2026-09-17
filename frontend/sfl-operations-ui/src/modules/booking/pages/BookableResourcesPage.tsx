@@ -1,11 +1,11 @@
 import { useState } from 'react';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { humaniseCode } from 'modules/facilities/components/facilitiesFormat';
@@ -35,6 +35,19 @@ const BookableResourcesPage = () => {
   const [siteCode, setSiteCode] = useState(defaultSite);
   const [category, setCategory] = useState('');
   const [registering, setRegistering] = useState(false);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
+  };
 
   const resources = useApiQuery(
     (signal) =>
@@ -129,18 +142,12 @@ const BookableResourcesPage = () => {
         }
       />
 
-      {/*
-        Both controls labelled. A bare `Select` renders no label line and `FilterBar` aligns its
-        children at the top, so it sat a label's height above the site select beside it.
-      */}
       <FilterBar onReset={() => setCategory('')} resetDisabled={!category}>
         <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-        <SelectInput
+        <FacetFilter
           label="Category"
-          value={category}
-          onChange={setCategory}
-          allowEmpty
-          emptyLabel="Any category"
+          selected={category ? [category] : []}
+          onChange={(next) => setCategory(pickSingle(category, next))}
           options={RESOURCE_CATEGORIES.map((value) => ({ value, label: humaniseCode(value) }))}
         />
       </FilterBar>

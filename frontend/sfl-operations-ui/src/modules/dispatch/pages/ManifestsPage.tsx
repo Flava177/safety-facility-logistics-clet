@@ -4,9 +4,11 @@ import { DispatchManifest } from 'modules/dispatch/api/dto';
 import { DISPATCH_STATUSES, DispatchStatus } from 'modules/dispatch/api/enums';
 import { manifestsApi } from 'modules/dispatch/api/dispatchApi';
 import { CreateManifestDialog } from 'modules/dispatch/dialogs/manifestDialogs';
+import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -14,7 +16,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { DateTimeField } from 'shared/components/DateField';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
@@ -41,6 +43,19 @@ const ManifestsPage = () => {
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
   const [creating, setCreating] = useState(false);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const filterKey = `${siteCode}|${status}|${destinationCentre}|${from}|${to}`;
   const paging = useServerPage(filterKey);
@@ -163,12 +178,11 @@ const ManifestsPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={DISPATCH_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={DISPATCH_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Destination centre"
