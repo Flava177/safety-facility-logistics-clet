@@ -109,7 +109,7 @@ const FacetFilter = ({
   };
 
   return (
-    <div ref={rootRef} className={cn('relative', className)}>
+    <div ref={rootRef} className={cn('relative w-full', className)}>
       {/*
         The button carries its own name, so it needs no label - but it shares a row with fields that
         have one, and that row aligns on the control. Reserving the label's height is what keeps this
@@ -126,23 +126,26 @@ const FacetFilter = ({
         // constraints are active without opening the panel.
         aria-label={`${label}: ${summary()}`}
         className={cn(
-          'flex h-10 items-center gap-2 rounded-lg border bg-white px-3 text-theme-sm transition-colors',
-          'disabled:cursor-not-allowed disabled:bg-gray-50 disabled:text-gray-500',
+          'flex h-10 w-full items-center justify-between gap-2 rounded-lg border bg-white px-3',
+          'text-theme-sm transition-colors disabled:cursor-not-allowed disabled:bg-gray-50',
+          'disabled:text-gray-500',
           selected.length > 0
             ? 'border-teal-500 text-gray-900'
             : 'border-gray-300 text-gray-700 hover:border-gray-400',
         )}
       >
-        <Icon name="filter" size={15} className="shrink-0 text-gray-500" aria-hidden="true" />
-        <span className="font-medium">{label}</span>
-        {selected.length > 0 && (
-          <>
-            <span aria-hidden="true" className="h-4 w-px bg-gray-300" />
-            <span className="rounded bg-teal-50 px-1.5 py-0.5 text-theme-xs font-semibold text-teal-800">
-              {summary()}
-            </span>
-          </>
-        )}
+        <span className="flex min-w-0 items-center gap-2">
+          <Icon name="filter" size={15} className="shrink-0 text-gray-500" aria-hidden="true" />
+          <span className="font-medium">{label}</span>
+          {selected.length > 0 && (
+            <>
+              <span aria-hidden="true" className="h-4 w-px shrink-0 bg-gray-300" />
+              <span className="truncate rounded bg-teal-50 px-1.5 py-0.5 text-theme-xs font-semibold text-teal-800">
+                {summary()}
+              </span>
+            </>
+          )}
+        </span>
         <Icon
           name="chevron-down"
           size={15}
