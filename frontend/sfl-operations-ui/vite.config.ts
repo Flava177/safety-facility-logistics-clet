@@ -28,6 +28,15 @@ export default defineConfig(({ mode }) => {
     server: {
       host: '0.0.0.0',
       port: Number(env.VITE_APP_PORT || 5005),
+      // `platform.ts` asks its own origin "which platform am I" on purpose - a base URL would ask
+      // some other service instead. On `npm run dev` that origin is Vite itself, which has no such
+      // route, so the dev server proxies just this one path to the Fleet service it targets by
+      // default. Dev-only: the production bundle is served BY the platform service, so the request
+      // is already same-origin there and this block never runs.
+      proxy:
+        mode === 'production'
+          ? undefined
+          : { '/api/v1/system/info': env.VITE_FLEET_API_BASE_URL || 'http://localhost:8093' },
     },
     preview: {
       port: Number(env.VITE_APP_PORT || 5005),

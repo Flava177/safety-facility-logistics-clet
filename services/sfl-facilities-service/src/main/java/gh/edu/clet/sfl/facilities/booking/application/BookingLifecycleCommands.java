@@ -178,8 +178,9 @@ final class BookingLifecycleCommands {
         FacilityRoom room = service.requireRoom(booking.roomId());
         BookingWindow window = service.windowFor(booking.siteCode(), booking.purpose(), command.startsAt(),
                 command.endsAt(),
-                command.setupMinutes() == null ? booking.window().setupMinutes() : command.setupMinutes(),
-                command.teardownMinutes() == null ? booking.window().teardownMinutes()
+                command.setupMinutes() == null ? Integer.valueOf(booking.window().setupMinutes())
+                        : command.setupMinutes(),
+                command.teardownMinutes() == null ? Integer.valueOf(booking.window().teardownMinutes())
                         : command.teardownMinutes(),
                 at);
 

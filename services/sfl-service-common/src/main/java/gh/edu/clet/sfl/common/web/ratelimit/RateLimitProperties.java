@@ -48,7 +48,7 @@ public class RateLimitProperties {
     }
 
     public void setPathPatterns(List<String> pathPatterns) {
-        this.pathPatterns = pathPatterns;
+        this.pathPatterns = pathPatterns == null ? List.of() : List.copyOf(pathPatterns);
     }
 
     public List<String> getExcludePathPatterns() {
@@ -56,6 +56,6 @@ public class RateLimitProperties {
     }
 
     public void setExcludePathPatterns(List<String> excludePathPatterns) {
-        this.excludePathPatterns = excludePathPatterns;
+        this.excludePathPatterns = excludePathPatterns == null ? List.of() : List.copyOf(excludePathPatterns);
     }
 }

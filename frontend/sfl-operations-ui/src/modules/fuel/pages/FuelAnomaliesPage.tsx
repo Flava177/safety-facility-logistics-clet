@@ -17,6 +17,7 @@ import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import PageHeader from 'shared/components/PageHeader';
@@ -24,7 +25,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
+import { SelectInput, TextInput } from 'shared/components/fields';
 import { formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
@@ -35,6 +36,19 @@ const QUEUE_VIEWS = [
   { value: 'MATERIAL', label: 'Material only' },
   { value: 'UNASSIGNED', label: 'Unassigned' },
 ];
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
+};
 
 /**
  * The fuel anomaly queue.
@@ -250,12 +264,11 @@ const FuelAnomaliesPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={ANOMALY_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={ANOMALY_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <SelectInput
             label="View"
@@ -265,19 +278,17 @@ const FuelAnomaliesPage = () => {
             allowEmpty
             emptyLabel="Every case"
           />
-          <EnumSelect
+          <FacetFilter
             label="Type"
-            value={type}
-            options={ANOMALY_TYPES}
-            onChange={(value) => setType(value)}
-            allowEmpty
+            selected={type ? [type] : []}
+            onChange={(next) => setType(pickSingle(type, next))}
+            options={ANOMALY_TYPES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Severity"
-            value={severity}
-            options={ANOMALY_SEVERITIES}
-            onChange={(value) => setSeverity(value)}
-            allowEmpty
+            selected={severity ? [severity] : []}
+            onChange={(next) => setSeverity(pickSingle(severity, next))}
+            options={ANOMALY_SEVERITIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Assignee"

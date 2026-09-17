@@ -18,6 +18,7 @@ import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { useNotifier } from 'shared/components/Notifier';
@@ -26,7 +27,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, SelectInput, TextInput } from 'shared/components/fields';
+import { SelectInput, TextInput } from 'shared/components/fields';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
@@ -38,6 +39,19 @@ const QUEUE_VIEWS = [
   { value: 'AWAITING_APPROVAL', label: 'Awaiting approval' },
   { value: 'AFTER_ACTION_DUE', label: 'After-action due' },
 ];
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
+};
 
 /**
  * The activation register.
@@ -312,17 +326,16 @@ const ActivationsPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={ACTIVATION_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
-            renderOptionLabel={(option) =>
-              OPERATOR_REACHABLE_STATUSES.includes(option)
-                ? humanise(option)
-                : `${humanise(option)} (set elsewhere)`
-            }
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={ACTIVATION_STATUSES.map((value) => ({
+              value,
+              label: OPERATOR_REACHABLE_STATUSES.includes(value)
+                ? humanise(value)
+                : `${humanise(value)} (set elsewhere)`,
+            }))}
           />
           <SelectInput
             label="View"
@@ -332,19 +345,17 @@ const ActivationsPage = () => {
             allowEmpty
             emptyLabel="Everything returned"
           />
-          <EnumSelect
+          <FacetFilter
             label="Mode"
-            value={mode}
-            options={ACTIVATION_MODES}
-            onChange={(value) => setMode(value)}
-            allowEmpty
+            selected={mode ? [mode] : []}
+            onChange={(next) => setMode(pickSingle(mode, next))}
+            options={ACTIVATION_MODES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Priority"
-            value={priority}
-            options={PRIORITIES}
-            onChange={(value) => setPriority(value)}
-            allowEmpty
+            selected={priority ? [priority] : []}
+            onChange={(next) => setPriority(pickSingle(priority, next))}
+            options={PRIORITIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Reference"

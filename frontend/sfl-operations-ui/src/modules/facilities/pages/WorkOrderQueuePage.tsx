@@ -74,7 +74,7 @@ const WorkOrderQueuePage = () => {
   );
 
   /** Overdue first, worst first within that; everything else keeps the service's order. */
-  const rows = [...(orders.data ?? [])].sort((a, b) => {
+  const rows = [...(orders.data?.items ?? [])].sort((a, b) => {
     if (a.overdue !== b.overdue) {
       return a.overdue ? -1 : 1;
     }

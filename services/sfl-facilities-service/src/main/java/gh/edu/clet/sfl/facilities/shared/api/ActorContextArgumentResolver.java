@@ -1,7 +1,6 @@
 package gh.edu.clet.sfl.facilities.shared.api;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
-import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.core.MethodParameter;
 import org.springframework.web.bind.support.WebDataBinderFactory;
 import org.springframework.web.context.request.NativeWebRequest;
@@ -31,7 +30,6 @@ final class ActorContextArgumentResolver implements HandlerMethodArgumentResolve
     @Override
     public Object resolveArgument(MethodParameter parameter, ModelAndViewContainer mavContainer,
             NativeWebRequest webRequest, WebDataBinderFactory binderFactory) {
-        HttpServletRequest request = webRequest.getNativeRequest(HttpServletRequest.class);
-        return actorResolver.resolve(request);
+        return actorResolver.resolve(ServletRequests.require(webRequest));
     }
 }

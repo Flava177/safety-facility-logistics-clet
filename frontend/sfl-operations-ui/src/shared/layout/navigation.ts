@@ -182,7 +182,7 @@ export const fleetPaths = {
   workflow: '/fleetvehicle/fleet/workflow',
   workflowDetail: (itemId: string) => `/fleetvehicle/fleet/workflow/${itemId}`,
   compliance: '/fleetvehicle/fleet/compliance',
-  governance: '/fleetvehicle/fleet/governance',
+  evidence: '/fleetvehicle/fleet/evidence',
   integrations: '/fleetvehicle/fleet/integrations',
 };
 
@@ -733,7 +733,7 @@ export const navSections: NavSection[] = [
       },
       {
         label: 'Evidence & audit',
-        to: fleetPaths.governance,
+        to: fleetPaths.evidence,
         icon: 'document',
         description: 'Closure evidence and audit trail',
         // FLEET_EVIDENCE_READ, not FLEET_EVIDENCE_REGISTER. A driver holds the second - they attach

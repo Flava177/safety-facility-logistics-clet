@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router';
 import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
@@ -69,6 +69,19 @@ const SpaceRegisterPage = () => {
   const changeFilter = (apply: () => void) => {
     apply();
     setPage(0);
+  };
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
   };
 
   const resetFilters = () =>
@@ -231,20 +244,16 @@ const SpaceRegisterPage = () => {
           allowEmpty
           emptyLabel="All sites"
         />
-        <SelectInput
+        <FacetFilter
           label="Space type"
-          value={spaceType}
-          onChange={(v) => changeFilter(() => setSpaceType(v))}
-          allowEmpty
-          emptyLabel="Any space type"
+          selected={spaceType ? [spaceType] : []}
+          onChange={(next) => changeFilter(() => setSpaceType(pickSingle(spaceType, next)))}
           options={spaceTypes.map((type) => ({ value: type, label: humaniseCode(type) }))}
         />
-        <SelectInput
+        <FacetFilter
           label="Readiness"
-          value={readiness}
-          onChange={(v) => changeFilter(() => setReadiness(v))}
-          allowEmpty
-          emptyLabel="Any readiness"
+          selected={readiness ? [readiness] : []}
+          onChange={(next) => changeFilter(() => setReadiness(pickSingle(readiness, next)))}
           options={readinessStatuses.map((status) => ({
             value: status,
             label: humaniseCode(status),

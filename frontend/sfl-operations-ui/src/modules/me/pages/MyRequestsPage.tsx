@@ -50,7 +50,7 @@ const MyRequestsPage = () => {
     { key: 'status', header: 'Status', cell: (row) => <StatusChip value={row.status} /> },
   ];
 
-  const rows = faults.data ?? [];
+  const rows = faults.data?.items ?? [];
 
   return (
     <div className="space-y-8">

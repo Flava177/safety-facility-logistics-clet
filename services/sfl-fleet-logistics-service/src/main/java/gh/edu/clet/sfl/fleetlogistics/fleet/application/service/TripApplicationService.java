@@ -22,6 +22,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.event.FleetEventType;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.AssignmentConflictException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.OptimisticLockConflictException;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.PreTripInspectionMissingException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ReadinessBlockedException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RecordNotFoundException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
@@ -577,6 +578,13 @@ public class TripApplicationService {
         }
         if (blocking.contains(ReadinessBlockerCode.DRIVER_INELIGIBLE)) {
             throw new gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DriverIneligibleException(details);
+        }
+        // Distinct from the vehicle's own readiness: this is a fact about the trip (no pre-trip
+        // inspection recorded), and only `start()` ever asks for it (inspectionRequired = true) - see
+        // its call to assessForAssignment. Reporting it as FLEET_READINESS_BLOCKED sent an operator
+        // to fix the vehicle's compliance documents when the vehicle was never the problem.
+        if (blocking.contains(ReadinessBlockerCode.MANDATORY_INSPECTION_MISSING)) {
+            throw new PreTripInspectionMissingException(details);
         }
         throw new ReadinessBlockedException(details);
     }

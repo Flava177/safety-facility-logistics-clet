@@ -109,6 +109,13 @@ public class AuditAdapter implements AuditPort {
      */
     private long nextSequence() {
         Long next = jdbc.queryForObject("SELECT nextval('safety_security.audit_log_sequence_no_seq')", Long.class);
+        if (next == null) {
+            // Postgres's nextval() never actually returns SQL NULL - it raises an error instead if the
+            // sequence is missing - so this is unreachable in practice. Guarded anyway rather than let
+            // the auto-unboxing NPE on the return statement stand as the failure mode for a genuinely
+            // corrupted deployment (the sequence dropped or renamed underneath a running service).
+            throw new IllegalStateException("audit_log_sequence_no_seq.nextval() returned no value");
+        }
         return next;
     }
 

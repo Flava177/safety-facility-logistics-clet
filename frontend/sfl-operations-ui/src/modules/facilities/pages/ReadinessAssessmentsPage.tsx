@@ -155,7 +155,7 @@ const ReadinessAssessmentsPage = () => {
       <DataState
         loading={assessments.loading}
         error={assessments.error}
-        empty={!assessments.data || assessments.data.length === 0}
+        empty={!assessments.data || assessments.data.items.length === 0}
         emptyTitle="Nothing assessed yet"
         emptyHint={
           space.data
@@ -166,7 +166,7 @@ const ReadinessAssessmentsPage = () => {
       >
         {assessments.data && (
           <DataTable
-            rows={assessments.data}
+            rows={assessments.data.items}
             columns={columns}
             getRowId={(row) => row.id}
             onRowClick={(row) => navigate(facilitiesPaths.assessmentDetail(row.id))}

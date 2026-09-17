@@ -4,7 +4,7 @@ import FormDialog from 'shared/components/FormDialog';
 import { SelectInput, TextAreaInput } from 'shared/components/fields';
 import { FleetApiError, isFleetApiError } from 'shared/errors/FleetApiError';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
-import type { DismissFaultRequest, FacilityFault } from '../api/dto';
+import type { DismissFaultRequest, FacilitiesPage, FacilityFault } from '../api/dto';
 import type { FaultDismissalOutcome } from '../api/enums';
 import { faultDismissalOutcomes } from '../api/enums';
 import { searchFaults } from '../api/facilitiesApi';
@@ -44,7 +44,13 @@ const DismissFaultDialog = ({ fault, onClose, onSubmit }: DismissFaultDialogProp
     (signal) =>
       outcome === 'DUPLICATE'
         ? searchFaults({ siteCode: fault.siteCode, openOnly: true, limit: 100 }, signal)
-        : Promise.resolve([]),
+        : Promise.resolve<FacilitiesPage<FacilityFault>>({
+            items: [],
+            totalElements: 0,
+            totalPages: 0,
+            page: 0,
+            size: 0,
+          }),
     [outcome, fault.siteCode],
   );
 
@@ -114,7 +120,7 @@ const DismissFaultDialog = ({ fault, onClose, onSubmit }: DismissFaultDialogProp
             allowEmpty
             emptyLabel="Choose the fault it duplicates"
             error={touched && missingDuplicate}
-            options={(candidates.data ?? [])
+            options={(candidates.data?.items ?? [])
               .filter((candidate) => candidate.id !== fault.id)
               .map((candidate) => ({
                 value: candidate.id,

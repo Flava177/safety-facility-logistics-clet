@@ -50,6 +50,7 @@ final class FleetHttpStatusMapper {
                  FLEET_RETENTION_CLASS_MISSING,
                  FLEET_INTEGRATION_SCHEMA_INVALID,
                  FLEET_READINESS_BLOCKED,
+                 FLEET_PRETRIP_INSPECTION_MISSING,
                  FLEET_DRIVER_INELIGIBLE,
                  FLEET_ODOMETER_REGRESSION,
                  FLEET_ARCHIVED_RECORD_IMMUTABLE,

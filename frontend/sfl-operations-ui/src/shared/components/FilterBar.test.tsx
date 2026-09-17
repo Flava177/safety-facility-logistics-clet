@@ -82,7 +82,7 @@ describe('FilterBar active filters', () => {
  */
 describe('FilterBar alignment', () => {
   const fieldRow = (container: HTMLElement) =>
-    container.querySelector('div.flex.flex-1.flex-wrap');
+    container.querySelector('div.flex.flex-wrap.items-start');
 
   it('aligns the field row at the top, not the bottom', () => {
     const { container } = render(

@@ -678,9 +678,8 @@ export const CloseTripDialog = ({
       onSubmit={form.submit}
     >
       <Alert variant="info">
-        Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING. Anything already
-        filed against this trip is offered below; register it under Evidence &amp; audit first if the
-        list is empty.
+        Evidence is required to close a trip. Pick one below, or register it under Evidence &amp;
+        audit first if none is listed.
       </Alert>
       <NumberInput
         label="End odometer (km)"

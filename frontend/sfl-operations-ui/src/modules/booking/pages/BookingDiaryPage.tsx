@@ -68,7 +68,7 @@ const BookingDiaryPage = () => {
     [siteCode, status, purpose, scope],
   );
 
-  const fetched = bookings.data ?? [];
+  const fetched = bookings.data?.items ?? [];
   const rows = fetched.filter(
     (booking) =>
       (status.length === 0 || status.includes(booking.status)) &&

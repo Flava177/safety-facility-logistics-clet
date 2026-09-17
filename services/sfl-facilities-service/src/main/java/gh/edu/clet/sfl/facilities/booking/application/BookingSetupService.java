@@ -60,7 +60,6 @@ public class BookingSetupService {
                     "Setup work cannot be raised against a " + target.status() + " booking.");
         }
 
-        Instant at = clock.instant();
         List<SetupTask> created = new ArrayList<>();
         for (BookingCommands.CreateSetupTasks.NewSetupTask requested : command.tasks()) {
             SetupTask task = bookings.saveSetupTask(SetupTask.create(UUID.randomUUID(), target,

@@ -245,8 +245,8 @@ export const CloseWorkflowItemDialog = ({
       onSubmit={form.submit}
     >
       <Alert variant="info">
-        Closing without evidence is refused with FLEET_CLOSURE_EVIDENCE_MISSING. If nothing is filed
-        against this record yet, register it under Evidence &amp; audit first.
+        Evidence is required to close this item. Register one under Evidence &amp; audit first if
+        none is listed below.
       </Alert>
       <EvidenceSelect
         label="Closure evidence"

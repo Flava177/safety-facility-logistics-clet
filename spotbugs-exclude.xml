@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Every entry here names the bug pattern (and, where narrow, the class) and the reason - a silent
+  exclude is the same "nothing catches it" problem this plugin exists to close. Nothing here was
+  suppressed because it was inconvenient; each entry was read and verified safe, or is a documented,
+  deliberate trade-off for this codebase's architecture.
+-->
+<FindBugsFilter>
+    <!--
+      SiteScopeGuc concatenates a String into "SET LOCAL app.site_scopes = '...'" because SET LOCAL
+      takes no bind parameter (PostgreSQL syntax, not a driver limitation) - documented at length in
+      the class's own Javadoc. The value is not escaped, it is *constrained*: encode() drops any scope
+      that fails isPlainIdentifier first, which allows only [A-Za-z0-9-_.] - none of which can close a
+      quoted string literal, start a new statement, or otherwise change what the statement does.
+      SpotBugs's SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE pattern matches "any non-constant String
+      reaching execute()" and cannot see that the allowlist upstream makes injection impossible; a
+      bind-parameter fix does not exist for this specific statement shape.
+    -->
+    <Match>
+        <Class name="gh.edu.clet.sfl.common.security.SiteScopeGuc"/>
+        <Bug pattern="SQL_NONCONSTANT_STRING_PASSED_TO_EXECUTE"/>
+    </Match>
+
+    <!--
+      AmqpFacilitiesEventTransport.awaitConfirmation (and the fleet/emergency transports built the same
+      way) end with:
+        (confirm == null || !confirm.isAck()) ? ... : (confirm == null ? "..." : confirm.getReason())
+      confirm.getReason() only ever executes when confirm is provably non-null (the ternary's own
+      condition guards it) - SpotBugs's null-flow analysis loses that correlation across the outer ||
+      and the nested ternary and reports a false null dereference. Read line by line at each of the
+      three call sites and confirmed unreachable.
+    -->
+    <Match>
+        <Bug pattern="NP_NULL_ON_SOME_PATH_FROM_RETURN_VALUE"/>
+        <Method name="awaitConfirmation"/>
+    </Match>
+
+    <!--
+      EI_EXPOSE_REP / EI_EXPOSE_REP2, repository-wide.
+
+      This project is a layered Spring application: every controller is constructed with the
+      application services it calls, every service with the repositories/ports/outbox/clock it needs,
+      every repository adapter with its JdbcTemplate or JPA repository - all stored as final
+      constructor-injected fields, which is the intended and only shape dependency injection takes
+      here. SpotBugs's EI_EXPOSE_REP2 does not distinguish "a Spring-managed singleton collaborator"
+      from "a mutable value object a caller could still reach into and corrupt" - it fires on storing
+      *any* externally-supplied reference type outside a small built-in safe list, so it flags a
+      constructor storing a FacilitiesRepository exactly the same way it would flag one storing a
+      caller-owned ArrayList. There is no meaningful "defensive copy" of a repository or a service
+      bean, and excluding this pattern per-class across every constructor in the reactor (on the order
+      of a hundred call sites, confirmed by an unfiltered run) would make the filter file larger and
+      less readable than the source it is meant to keep legible.
+
+      The same pattern also fires on every Jackson request/response record's List/Map-typed field
+      (BookingRequests$AllocateResources.resources, ReadinessRequests$SubmitAssessment.answers, and
+      similar). These are deserialized fresh per HTTP request by Jackson and never cached or shared
+      across requests, so the realistic exposure window is effectively zero - unlike a value object
+      such as SlaPolicy, which this pass fixed properly (Map.copyOf in its compact constructor)
+      precisely because it is deliberately built once and reused across many evaluations in one run,
+      which is exactly the shape of shared-mutable-state bug this whole hardening pass has been about.
+
+      Net effect of this exclusion: a genuinely new mutable-collection-exposure bug in a class that
+      does NOT fit the "DI collaborator" or "ephemeral per-request DTO" shape - most likely another
+      cached/reused value object like SlaPolicy - will not be caught by this rule automatically. That
+      is the deliberate trade-off being made here, not an oversight: it was judged cheaper to keep
+      reviewing that specific, narrower risk by hand (as this pass did for SlaPolicy) than to either
+      hand-fix every DI constructor and DTO record in the reactor, or hide a hundred-plus false
+      positives behind individual per-class entries in this file.
+    -->
+    <Match>
+        <Bug pattern="EI_EXPOSE_REP,EI_EXPOSE_REP2"/>
+    </Match>
+
+    <!--
+      CT_CONSTRUCTOR_THROW on FleetDomainException: it is `public abstract class ... extends
+      RuntimeException` - the documented base type for every fleet business exception - with
+      `protected` constructors meant only for its subclasses to call. Its constructor validates
+      (Objects.requireNonNull on errorCode) and so can throw, which is exactly what
+      CT_CONSTRUCTOR_THROW flags as a finalizer-attack vector: a subclass constructor that fails
+      partway can leave a partially-initialized instance reachable if a malicious subclass overrides
+      finalize(). That threat model requires an attacker able to load their own subclass into the same
+      JVM, which does not apply here - every subclass is our own compiled domain code, this
+      application does not run untrusted plugins/classloaders, and the class cannot be made final
+      (it is abstract by design). Compare FleetAccessPolicy, which fixed the same finding by going
+      final instead, because it did not need to be subclassed at all.
+    -->
+    <Match>
+        <Class name="gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetDomainException"/>
+        <Bug pattern="CT_CONSTRUCTOR_THROW"/>
+    </Match>
+</FindBugsFilter>

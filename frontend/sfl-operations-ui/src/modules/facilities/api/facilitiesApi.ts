@@ -269,7 +269,7 @@ export const updateChecklist = (checklistId: string, request: UpdateChecklistReq
 export const listAssessments = (
   params: { siteCode?: string; roomId?: string; limit?: number },
   signal?: AbortSignal,
-) => get<ReadinessAssessment[]>('/readiness/assessments', params as QueryParams, signal);
+) => get<FacilitiesPage<ReadinessAssessment>>('/readiness/assessments', params as QueryParams, signal);
 
 export const getAssessment = (assessmentId: string, signal?: AbortSignal) =>
   get<ReadinessAssessment>(`/readiness/assessments/${assessmentId}`, undefined, signal);
@@ -278,7 +278,7 @@ export const submitAssessment = (request: SubmitAssessmentRequest) =>
   post<ReadinessAssessment>('/readiness/assessments', request, true);
 
 export const listBlockers = (params: BlockerSearchParams, signal?: AbortSignal) =>
-  get<ReadinessBlocker[]>('/readiness/blockers', params as QueryParams, signal);
+  get<FacilitiesPage<ReadinessBlocker>>('/readiness/blockers', params as QueryParams, signal);
 
 export const raiseBlocker = (request: RaiseBlockerRequest) =>
   post<ReadinessBlocker>('/readiness/blockers', request);
@@ -316,7 +316,7 @@ export const getDashboardStale = (siteCode?: string, signal?: AbortSignal) =>
 // ---- governance -------------------------------------------------------------------------------
 
 export const searchAudit = (params: AuditSearchParams, signal?: AbortSignal) =>
-  get<AuditEvent[]>('/audit', params as QueryParams, signal);
+  get<FacilitiesPage<AuditEvent>>('/audit', params as QueryParams, signal);
 
 /** Replays the whole chain. Running the check is itself audited. */
 export const verifyAuditChain = (signal?: AbortSignal) =>
@@ -350,7 +350,7 @@ export const getActorPermissions = (signal?: AbortSignal) =>
 // ---- faults -------------------------------------------------------------------------------------
 
 export const searchFaults = (params: FaultSearchParams, signal?: AbortSignal) =>
-  get<FacilityFault[]>('/faults', params as QueryParams, signal);
+  get<FacilitiesPage<FacilityFault>>('/faults', params as QueryParams, signal);
 
 export const getFault = (faultId: string, signal?: AbortSignal) =>
   get<FacilityFault>(`/faults/${faultId}`, undefined, signal);
@@ -375,7 +375,7 @@ export const changeFaultLifecycle = (faultId: string, request: ChangeLifecycleRe
 // ---- work orders --------------------------------------------------------------------------------
 
 export const searchWorkOrders = (params: WorkOrderSearchParams, signal?: AbortSignal) =>
-  get<WorkOrder[]>('/work-orders', params as QueryParams, signal);
+  get<FacilitiesPage<WorkOrder>>('/work-orders', params as QueryParams, signal);
 
 export const getWorkOrder = (workOrderId: string, signal?: AbortSignal) =>
   get<WorkOrder>(`/work-orders/${workOrderId}`, undefined, signal);

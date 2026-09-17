@@ -22,6 +22,7 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ClosureEvidenceMiss
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DriverIneligibleException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetAuthorizationException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.FleetErrorCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.PreTripInspectionMissingException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.ReadinessBlockedException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.ComplianceDocument;
@@ -247,8 +248,8 @@ class TripApplicationServiceTest {
 
         assertThatThrownBy(() -> service.start(new StartTripCommand(trip.id(), 42_000L, null,
                 FleetTestDoubles.fleetOfficer("ACCRA"), SourceChannel.WEB)))
-                .isInstanceOf(ReadinessBlockedException.class)
-                .extracting(exception -> ((ReadinessBlockedException) exception).details())
+                .isInstanceOf(PreTripInspectionMissingException.class)
+                .extracting(exception -> ((PreTripInspectionMissingException) exception).details())
                 .satisfies(details -> assertThat(details.get("blockerCodes").toString())
                         .contains("MANDATORY_INSPECTION_MISSING"));
     }

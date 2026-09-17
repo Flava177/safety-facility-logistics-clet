@@ -318,64 +318,90 @@ export const DonutChart = ({
   const rows = labels.map((label, index) => ({ name: label, value: values[index] ?? 0 }));
 
   /*
-    Numeric radii rather than percentages, because `activeShape` takes resolved sector props and a
-    percentage string is not one - the hover growth has to be expressed in the same units as the
-    resting size. Derived from the height, less the room the legend takes at the bottom.
+    The ring's own diameter, not the caller's `height` budget directly. Callers still pass the
+    260-280 that used to be the whole chart-plus-legend box, and a donut that size leaves a
+    three-or-four-row legend beside it nowhere to sit in a one-in-three-column card - the label
+    column collapses to nothing before the ring gives up an inch. Capping the diameter and putting
+    the legend beneath rather than beside it means the ring is never the reason the card doesn't
+    fit; only the row count grows the total height, which the grid's `h-full` card already absorbs.
   */
-  const outerRadius = Math.max(48, Math.round((height - 56) / 2));
+  const ringSize = Math.max(140, Math.min(height, 200));
+  const outerRadius = Math.round(ringSize / 2) - 4;
   const innerRadius = Math.round(outerRadius * 0.62);
 
   return (
-    <div className="relative" style={{ height }}>
-      <ResponsiveContainer width="100%" height="100%">
-        <PieChart>
-          <Pie
-            data={rows}
-            dataKey="value"
-            nameKey="name"
-            innerRadius={innerRadius}
-            outerRadius={outerRadius}
-            paddingAngle={1}
-            stroke="none"
-            // Enlarging the hovered slice is the whole interaction here: a donut has no axis to
-            // anchor a cursor to, so the slice itself has to acknowledge the pointer.
-            activeShape={{ outerRadius: outerRadius + 6 }}
+    <div className="flex flex-col items-center gap-5">
+      <div className="relative shrink-0" style={{ height: ringSize, width: ringSize }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <PieChart>
+            <Pie
+              data={rows}
+              dataKey="value"
+              nameKey="name"
+              innerRadius={innerRadius}
+              outerRadius={outerRadius}
+              paddingAngle={1}
+              stroke="none"
+              // Enlarging the hovered slice is the whole interaction here: a donut has no axis to
+              // anchor a cursor to, so the slice itself has to acknowledge the pointer.
+              activeShape={{ outerRadius: outerRadius + 6 }}
+            >
+              {rows.map((row, index) => (
+                <Cell key={row.name} fill={colors[index] ?? defaultColor(index)} />
+              ))}
+            </Pie>
+            <Tooltip content={<ChartTooltip />} />
+          </PieChart>
+        </ResponsiveContainer>
+
+        {/*
+          The centre total is absolutely positioned rather than drawn into the SVG, so it inherits
+          the dashboard's font stack and tabular figures. `pointer-events-none` keeps it out of the
+          way of the slice hover underneath it - without that, the middle of the chart swallows the
+          pointer.
+        */}
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center">
+          <span className="text-theme-xs" style={{ color: chartColors.text }}>
+            {centreLabel}
+          </span>
+          <span
+            className="text-title-sm font-bold tabular-nums"
+            style={{ color: chartColors.navy }}
           >
-            {rows.map((row, index) => (
-              <Cell key={row.name} fill={colors[index] ?? defaultColor(index)} />
-            ))}
-          </Pie>
-          <Tooltip content={<ChartTooltip />} />
-          <Legend
-            verticalAlign="bottom"
-            align="center"
-            iconType="circle"
-            iconSize={8}
-            formatter={(value: string) => (
-              <span className="text-theme-xs" style={{ color: chartColors.text }}>
-                {value}
-              </span>
-            )}
-          />
-        </PieChart>
-      </ResponsiveContainer>
+            {total}
+          </span>
+        </div>
+      </div>
 
       {/*
-        The centre total is absolutely positioned rather than drawn into the SVG, so it inherits the
-        dashboard's font stack and tabular figures. `pointer-events-none` keeps it out of the way of
-        the slice hover underneath it - without that, the middle of the chart swallows the pointer.
+        A row per slice rather than the plotting kit's own legend, because a name and a dot answer
+        "what is this colour" but not "is it a lot" - the two questions a composition chart exists
+        to answer. Value and share sit in their own columns so every row's numbers line up under
+        the next, which a legend's run-on text can never do.
       */}
-      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center pb-8">
-        <span className="text-theme-xs" style={{ color: chartColors.text }}>
-          {centreLabel}
-        </span>
-        <span
-          className="text-title-sm font-bold tabular-nums"
-          style={{ color: chartColors.navy }}
-        >
-          {total}
-        </span>
-      </div>
+      <ul className="w-full max-w-xs min-w-0 space-y-3">
+        {rows.map((row, index) => {
+          const share = total > 0 ? Math.round((row.value / total) * 100) : 0;
+          return (
+            <li key={row.name} className="flex items-center gap-2.5">
+              <span
+                aria-hidden="true"
+                className="h-2.5 w-2.5 shrink-0 rounded-full"
+                style={{ backgroundColor: colors[index] ?? defaultColor(index) }}
+              />
+              <span className="min-w-0 flex-1 truncate text-theme-sm text-gray-600">
+                {row.name}
+              </span>
+              <span className="text-theme-sm font-semibold text-gray-900 tabular-nums">
+                {row.value}
+              </span>
+              <span className="w-10 shrink-0 text-right text-theme-xs text-gray-500 tabular-nums">
+                {share}%
+              </span>
+            </li>
+          );
+        })}
+      </ul>
     </div>
   );
 };

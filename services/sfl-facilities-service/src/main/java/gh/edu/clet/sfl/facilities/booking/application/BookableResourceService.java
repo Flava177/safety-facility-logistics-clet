@@ -134,7 +134,7 @@ public class BookableResourceService {
         }
 
         Map<UUID, Integer> requested = new LinkedHashMap<>();
-        command.resources().forEach((id, quantity) -> requested.put(id, quantity == null ? 1 : quantity));
+        command.resources().forEach((id, quantity) -> requested.put(id, quantity == null ? Integer.valueOf(1) : quantity));
         List<BookableResource> resources = booking.requireResources(target.siteCode(), requested.keySet());
         booking.assertResourcesAreFree(target.window(), requested, resources, target.id());
 

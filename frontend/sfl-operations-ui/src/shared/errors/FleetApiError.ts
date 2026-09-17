@@ -179,7 +179,10 @@ const ERROR_TITLES: { match: RegExp; title: string }[] = [
   // First match wins, so the specific patterns lead. `INVALID_STATE_TRANSITION` is a state problem
   // rather than a typing one, and a looser `INVALID_` rule above this line would have claimed it and
   // told the operator to check what they entered when there was nothing wrong with it.
-  { match: /STATE_TRANSITION|BLOCKED|LOCKED|EVIDENCE_MISSING|NOT_APPROVED/, title: 'This cannot be done yet' },
+  {
+    match: /STATE_TRANSITION|BLOCKED|LOCKED|EVIDENCE_MISSING|NOT_APPROVED|PRETRIP_INSPECTION_MISSING/,
+    title: 'This cannot be done yet',
+  },
   { match: /UNAUTHORIZED|FORBIDDEN|NO_SCOPE|DENIED/, title: 'You do not have access to this' },
   { match: /NOT_FOUND/, title: 'That record no longer exists' },
   { match: /VERSION_CONFLICT|IDEMPOTENCY/, title: 'Somebody else changed this first' },

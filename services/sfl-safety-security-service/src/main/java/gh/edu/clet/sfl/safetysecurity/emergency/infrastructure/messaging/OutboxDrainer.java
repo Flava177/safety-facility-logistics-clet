@@ -72,9 +72,10 @@ public class OutboxDrainer {
                         + "WHERE id=?", OffsetDateTime.ofInstant(clock.instant(), ZoneOffset.UTC), message.id());
                 published++;
             } catch (RuntimeException e) {
-                int attempts = jdbc.queryForObject(
+                Integer previous = jdbc.queryForObject(
                         "SELECT attempt_count FROM emergency_notification.outbox_messages WHERE id=?", Integer.class,
-                        message.id()) + 1;
+                        message.id());
+                int attempts = (previous == null ? 0 : previous) + 1;
                 String status = attempts >= maxAttempts ? "DEAD_LETTERED" : "PENDING";
                 jdbc.update("UPDATE emergency_notification.outbox_messages SET attempt_count=?, status=?, "
                         + "failure_reason=? WHERE id=?", attempts, status, e.getMessage(), message.id());

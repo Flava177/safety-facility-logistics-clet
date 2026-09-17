@@ -93,18 +93,25 @@ const FilterBar = ({
   return (
     <div className="border-b border-gray-200 px-5 pt-5 pb-4">
       {quickFilters && <div className="mb-4 flex flex-wrap items-center gap-3">{quickFilters}</div>}
-      <div className="flex flex-col gap-4 lg:flex-row lg:items-start">
-        <div className="flex flex-1 flex-wrap items-start gap-x-4 gap-y-4">
-          {Children.map(children, (child) =>
-            child === null || child === undefined || child === false ? null : (
-              <div className="w-full sm:w-[13.5rem]">{child}</div>
-            ),
-          )}
-        </div>
+      {/*
+        One wrapping row, trailing included - not a fixed-width fields group beside a separate
+        trailing item. Splitting them let the fields group's flex-basis land on whatever width was
+        left over after the trailing block, which is rarely an exact multiple of a column's width
+        plus its gap: the remainder sat as dead space after the last visible field, before Reset.
+        Folding Reset into the same wrap flow means every gap - between fields, and between the last
+        field and Reset - is the same 1rem, and Reset simply wraps to its own line when there is no
+        room left rather than floating a variable distance from the last field.
+      */}
+      <div className="flex flex-wrap items-start gap-x-4 gap-y-4">
+        {Children.map(children, (child) =>
+          child === null || child === undefined || child === false ? null : (
+            <div className="w-full sm:w-[13.5rem]">{child}</div>
+          ),
+        )}
         {(trailing || showResetButton) && (
           // The spacer puts these on the control line with the fields. Without it they sit level
           // with the labels, which is where the eye is least likely to look for a button.
-          <div className="shrink-0">
+          <div className="w-full shrink-0 sm:w-auto">
             <span className="hidden lg:block">
               <FieldLabelSpacer />
             </span>

@@ -31,7 +31,7 @@ const SectionCard = ({
 }: SectionCardProps) => (
   <section
     className={cn(
-      'flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white',
+      'flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-md',
       className,
     )}
   >

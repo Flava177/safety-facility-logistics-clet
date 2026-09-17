@@ -13,9 +13,17 @@ import org.springframework.amqp.rabbit.core.RabbitTemplate;
 
 /**
  * RabbitMQ transport: exchange {@code sfl.events}, routing key
- * {@code {platform}.{event-name}.v{version}}, dead-letter exchange {@code sfl.events.dlx} - the
- * Phase 1 topology from the event catalogue, and byte-for-byte the envelope the fleet transport sends
- * so a consumer can bind both without a per-service special case.
+ * {@code {platform}.{event-name}.v{version}}, byte-for-byte the envelope the fleet transport sends so a
+ * consumer can bind both without a per-service special case.
+ *
+ * <p><strong>No broker-level dead-letter exchange exists.</strong> {@code sfl.events.dlx} is named in
+ * the event catalog as the intended Phase 2 topology, but no code in this repository declares that
+ * exchange, a queue bound to it, or the {@code x-dead-letter-exchange} queue argument that would route
+ * to it - provisioning it is an operational/infrastructure decision, not something this transport does
+ * on its own. What exists today is application-level: the outbox drainer retries with backoff and marks
+ * a row {@code DEAD_LETTERED} after {@code max-attempts}, which stops retries and surfaces the row for
+ * an operator, but never places the message on a broker queue an operator could inspect or replay from
+ * at the broker.
  *
  * <p><strong>Waits for the broker, not the socket.</strong> A bare {@code RabbitTemplate.send} returns
  * once the message is written to the connection's local buffer, which is before the broker has done
