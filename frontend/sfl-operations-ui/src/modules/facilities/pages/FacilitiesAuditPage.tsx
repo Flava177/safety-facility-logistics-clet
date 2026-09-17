@@ -3,12 +3,12 @@ import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import type { AuditChainVerification, AuditEvent } from '../api/dto';
@@ -37,6 +37,19 @@ const FacilitiesAuditPage = () => {
   const [action, setAction] = useState<string>('');
   const [verification, setVerification] = useState<AuditChainVerification | null>(null);
   const [verifying, setVerifying] = useState(false);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
+  };
 
   const { data, loading, error, refetch } = useApiQuery(
     (signal) =>
@@ -175,12 +188,10 @@ const FacilitiesAuditPage = () => {
 
         <FilterBar>
           <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
-          <SelectInput
+          <FacetFilter
             label="Action"
-            value={action}
-            onChange={setAction}
-            allowEmpty
-            emptyLabel="Any action"
+            selected={action ? [action] : []}
+            onChange={(next) => setAction(pickSingle(action, next))}
             options={auditActions.map((value) => ({ value, label: humaniseCode(value) }))}
           />
         </FilterBar>

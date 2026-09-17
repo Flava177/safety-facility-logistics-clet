@@ -13,6 +13,8 @@ import { DerivedNote } from 'modules/fuel/components/Provenance';
 import { humanise } from 'modules/fleet/api/enums';
 import Alert from 'shared/components/Alert';
 import Button from 'shared/components/Button';
+import { BarChart, DonutChart } from 'shared/charts/Charts';
+import { toneColors } from 'shared/charts/palette';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import PageHeader from 'shared/components/PageHeader';
@@ -20,6 +22,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
+import Tabs from 'shared/components/Tabs';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { emergencyPaths } from 'shared/layout/navigation';
@@ -40,6 +43,7 @@ import { emergencyPaths } from 'shared/layout/navigation';
 const EmergencyDashboardPage = () => {
   const navigate = useNavigate();
   const [siteCode, setSiteCode] = useState(defaultSite);
+  const [outstandingTab, setOutstandingTab] = useState<'activations' | 'drill'>('activations');
 
   const dashboard = useApiQuery(
     (signal) => emergencyDashboardApi.dashboard(siteCode, signal),
@@ -77,6 +81,35 @@ const EmergencyDashboardPage = () => {
   const lastDrill = completedDrills[0];
 
   const counts = dashboard.data;
+
+  /** The same seven counts as the cards above, read as bars rather than tiles. */
+  const exceptionBars = useMemo(
+    () =>
+      counts
+        ? [
+            { label: 'Active activations', value: counts.activeActivationCount, critical: true },
+            { label: 'Break-glass sends', value: counts.breakGlassCount },
+            { label: 'Failed recipients', value: counts.failedRecipientCount, critical: true },
+            { label: 'Acknowledgements outstanding', value: counts.ackPendingCount },
+            { label: 'Escalated', value: counts.escalatedCount, critical: true },
+            { label: 'All-clear pending', value: counts.allClearPendingCount },
+          ]
+        : [],
+    [counts],
+  );
+
+  /**
+   * The same three lists behind "Live and pending activations" below, as a composition rather than
+   * a table - an operator reads how the open register divides at a glance before scanning rows.
+   */
+  const activationMix = useMemo(
+    () => [
+      { name: 'Live', value: live.length, tone: 'blocked' as const },
+      { name: 'Awaiting approval', value: pending.length, tone: 'caution' as const },
+      { name: 'Pending closure', value: allClearPending.length, tone: 'ready' as const },
+    ],
+    [live.length, pending.length, allClearPending.length],
+  );
 
   const columns = useMemo<Column<NotificationActivation>[]>(
     () => [
@@ -292,93 +325,143 @@ const EmergencyDashboardPage = () => {
               />
             </div>
 
-            <SectionCard
-              title="Live and pending activations"
-              subtitle="Everything at this site that is not yet closed"
-              flush
-            >
-              <DataState
-                loading={activations.initialising}
-                error={activations.error}
-                onRetry={activations.refetch}
-                empty={live.length + pending.length + allClearPending.length === 0}
-                emptyTitle="Nothing outstanding"
-                emptyHint="No activation at this site is live, awaiting approval or awaiting closure."
-                minHeight={200}
-              >
-                <DataTable
-                  rows={[...live, ...pending, ...allClearPending]}
-                  columns={columns}
-                  getRowId={(row) => row.id}
-                  onRowClick={(row) => navigate(emergencyPaths.activationDetail(row.id))}
-                  caption="Activations at this site that are live, awaiting approval or awaiting closure, with mode, priority, channel count, time to send and status."
-                  dense
+            <div className="grid gap-5 xl:grid-cols-3">
+              <SectionCard className="xl:col-span-2" title="Exceptions" subtitle="The counts above, by kind">
+                <BarChart
+                  height={270}
+                  horizontal
+                  stacked
+                  integerAxis={false}
+                  categories={exceptionBars.map((bar) => bar.label)}
+                  series={[
+                    {
+                      name: 'Blocking',
+                      data: exceptionBars.map((bar) => (bar.critical ? bar.value : 0)),
+                      color: toneColors.blocked,
+                    },
+                    {
+                      name: 'Needs attention',
+                      data: exceptionBars.map((bar) => (bar.critical ? 0 : bar.value)),
+                      color: toneColors.caution,
+                    },
+                  ]}
                 />
-              </DataState>
-              <div className="px-5 pb-4">
-                <DerivedNote>
-                  Counted from the activation register rather than published by the service - the
-                  dashboard endpoint returns totals, not the records behind them.
-                </DerivedNote>
-              </div>
-            </SectionCard>
+              </SectionCard>
+
+              <SectionCard title="Open activations" subtitle="How the open register divides">
+                <DonutChart
+                  height={280}
+                  centreLabel="Open"
+                  labels={activationMix.map((slice) => slice.name)}
+                  values={activationMix.map((slice) => slice.value)}
+                  colors={activationMix.map((slice) => toneColors[slice.tone])}
+                />
+              </SectionCard>
+            </div>
 
             <SectionCard
-              title="Last completed drill"
-              subtitle="What the notification path achieved when it was last rehearsed"
+              title={outstandingTab === 'activations' ? 'Live and pending activations' : 'Last completed drill'}
+              subtitle={
+                outstandingTab === 'activations'
+                  ? 'Everything at this site that is not yet closed'
+                  : 'What the notification path achieved when it was last rehearsed'
+              }
+              flush
             >
-              <DataState
-                loading={drills.initialising}
-                error={drills.error}
-                onRetry={drills.refetch}
-                empty={!lastDrill}
-                emptyTitle="No drill has been completed"
-                emptyHint="Start one from the drills screen - an untested notification path is an assumption."
-                minHeight={140}
-              >
-                {lastDrill && (
-                  <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-                    <StatCard
-                      label="Reached"
-                      value={percentOf(lastDrill.reachedRecipients, lastDrill.targetRecipients)}
-                      icon="users"
-                      caption={`${formatNumber(lastDrill.reachedRecipients)} of ${formatNumber(lastDrill.targetRecipients)}`}
+              <Tabs
+                items={[
+                  {
+                    value: 'activations',
+                    label: 'Live and pending',
+                    count: live.length + pending.length + allClearPending.length,
+                  },
+                  { value: 'drill', label: 'Last completed drill' },
+                ]}
+                value={outstandingTab}
+                onChange={(value) => setOutstandingTab(value as 'activations' | 'drill')}
+                className="px-5"
+              />
+              {outstandingTab === 'activations' ? (
+                <>
+                  <DataState
+                    loading={activations.initialising}
+                    error={activations.error}
+                    onRetry={activations.refetch}
+                    empty={live.length + pending.length + allClearPending.length === 0}
+                    emptyTitle="Nothing outstanding"
+                    emptyHint="No activation at this site is live, awaiting approval or awaiting closure."
+                    minHeight={200}
+                  >
+                    <DataTable
+                      rows={[...live, ...pending, ...allClearPending]}
+                      columns={columns}
+                      getRowId={(row) => row.id}
+                      onRowClick={(row) => navigate(emergencyPaths.activationDetail(row.id))}
+                      caption="Activations at this site that are live, awaiting approval or awaiting closure, with mode, priority, channel count, time to send and status."
+                      dense
                     />
-                    <StatCard
-                      label="Acknowledged"
-                      value={percentOf(
-                        lastDrill.acknowledgedRecipients,
-                        lastDrill.targetRecipients,
-                      )}
-                      icon="check-circle"
-                      tone={
-                        lastDrill.acknowledgedRecipients / Math.max(lastDrill.targetRecipients, 1) <
-                        0.8
-                          ? 'caution'
-                          : 'good'
-                      }
-                      caption={`${formatNumber(lastDrill.acknowledgedRecipients)} replied`}
-                    />
-                    <StatCard
-                      label="Elapsed"
-                      value={formatElapsed(lastDrill.activationMillis)}
-                      icon="clock"
-                      caption="Start to last recipient"
-                    />
-                    <StatCard
-                      label="Drill"
-                      value={lastDrill.drillNumber}
-                      icon="target"
-                      caption={
-                        lastDrill.completedAt
-                          ? `Completed ${formatDateTime(lastDrill.completedAt)}`
-                          : humanise(lastDrill.status)
-                      }
-                      onClick={() => navigate(emergencyPaths.drills)}
-                    />
+                  </DataState>
+                  <div className="px-5 pb-4">
+                    <DerivedNote>
+                      Counted from the activation register rather than published by the service - the
+                      dashboard endpoint returns totals, not the records behind them.
+                    </DerivedNote>
                   </div>
-                )}
-              </DataState>
+                </>
+              ) : (
+                <DataState
+                  loading={drills.initialising}
+                  error={drills.error}
+                  onRetry={drills.refetch}
+                  empty={!lastDrill}
+                  emptyTitle="No drill has been completed"
+                  emptyHint="Start one from the drills screen - an untested notification path is an assumption."
+                  minHeight={140}
+                >
+                  {lastDrill && (
+                    <div className="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-4">
+                      <StatCard
+                        label="Reached"
+                        value={percentOf(lastDrill.reachedRecipients, lastDrill.targetRecipients)}
+                        icon="users"
+                        caption={`${formatNumber(lastDrill.reachedRecipients)} of ${formatNumber(lastDrill.targetRecipients)}`}
+                      />
+                      <StatCard
+                        label="Acknowledged"
+                        value={percentOf(
+                          lastDrill.acknowledgedRecipients,
+                          lastDrill.targetRecipients,
+                        )}
+                        icon="check-circle"
+                        tone={
+                          lastDrill.acknowledgedRecipients / Math.max(lastDrill.targetRecipients, 1) <
+                          0.8
+                            ? 'caution'
+                            : 'good'
+                        }
+                        caption={`${formatNumber(lastDrill.acknowledgedRecipients)} replied`}
+                      />
+                      <StatCard
+                        label="Elapsed"
+                        value={formatElapsed(lastDrill.activationMillis)}
+                        icon="clock"
+                        caption="Start to last recipient"
+                      />
+                      <StatCard
+                        label="Drill"
+                        value={lastDrill.drillNumber}
+                        icon="target"
+                        caption={
+                          lastDrill.completedAt
+                            ? `Completed ${formatDateTime(lastDrill.completedAt)}`
+                            : humanise(lastDrill.status)
+                        }
+                        onClick={() => navigate(emergencyPaths.drills)}
+                      />
+                    </div>
+                  )}
+                </DataState>
+              )}
             </SectionCard>
           </div>
         )}

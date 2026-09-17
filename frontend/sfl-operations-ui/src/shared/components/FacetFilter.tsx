@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Icon from './Icon';
 import { FieldLabelSpacer } from './fields';
 import { cn } from './cn';
@@ -46,6 +47,15 @@ interface FacetFilterProps {
  * is defensible and wrong here, because it makes the resting state of every register an empty table.
  * The button label says which it is: "Any status" when unconstrained, the value when one is chosen,
  * "2 selected" beyond that.
+ *
+ * <h2>Why the panel is portaled</h2>
+ *
+ * Every filter bar sits in its own `SectionCard`, and `SectionCard` is `overflow-hidden` so a table's
+ * square corners don't spill past its rounded ones. A panel positioned `absolute` inside that card is
+ * clipped the moment it needs more room than the card is tall - invisible and unclickable, not just
+ * cut off, because `overflow-hidden` stops it from painting at all. `Select` solved this the same way
+ * for the same reason: `position: fixed` by a portal to `document.body` takes the panel out of every
+ * ancestor's overflow, measured from the trigger's own position rather than inherited from the DOM.
  */
 const FacetFilter = ({
   label,
@@ -59,13 +69,52 @@ const FacetFilter = ({
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState('');
   const rootRef = useRef<HTMLDivElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const listRef = useRef<HTMLDivElement>(null);
+  const [rect, setRect] = useState<{ top: number; left: number; width: number; drop: 'down' | 'up' }>(
+    { top: 0, left: 0, width: 0, drop: 'down' },
+  );
+
+  /** Measures the trigger and decides which way the panel opens - see the class doc above. */
+  const place = useCallback(() => {
+    const trigger = triggerRef.current;
+    if (!trigger) {
+      return;
+    }
+    const box = trigger.getBoundingClientRect();
+    const below = window.innerHeight - box.bottom;
+    setRect({
+      top: below < 320 && box.top > below ? box.top : box.bottom,
+      left: box.left,
+      width: box.width,
+      drop: below < 320 && box.top > below ? 'up' : 'down',
+    });
+  }, []);
+
+  useLayoutEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+    place();
+    // The trigger moves if anything behind the panel scrolls or the window resizes; `true` catches
+    // scrolling in nested containers, not just on the document.
+    window.addEventListener('scroll', place, true);
+    window.addEventListener('resize', place);
+    return () => {
+      window.removeEventListener('scroll', place, true);
+      window.removeEventListener('resize', place);
+    };
+  }, [open, place]);
 
   useEffect(() => {
     if (!open) {
       return undefined;
     }
     const onPointerDown = (event: MouseEvent) => {
-      if (!rootRef.current?.contains(event.target as Node)) {
+      const target = event.target as Node;
+      const insideField = rootRef.current?.contains(target);
+      const insidePanel = listRef.current?.contains(target);
+      if (!insideField && !insidePanel) {
         setOpen(false);
       }
     };
@@ -117,6 +166,7 @@ const FacetFilter = ({
       */}
       <FieldLabelSpacer />
       <button
+        ref={triggerRef}
         type="button"
         disabled={disabled}
         onClick={() => setOpen((current) => !current)}
@@ -154,75 +204,91 @@ const FacetFilter = ({
         />
       </button>
 
-      {open && (
-        <div className="absolute z-99999 mt-1.5 w-64 rounded-lg border border-gray-200 bg-white py-1.5 shadow-theme-lg">
-          {searchable && (
-            <div className="border-b border-gray-100 px-2 pb-1.5">
-              <input
-                type="text"
-                value={query}
-                onChange={(event) => setQuery(event.target.value)}
-                placeholder={`Search ${label.toLowerCase()}`}
-                aria-label={`Search ${label.toLowerCase()}`}
-                className="h-8 w-full rounded-md border border-gray-200 px-2 text-theme-sm outline-none focus:border-teal-600"
-              />
-            </div>
-          )}
+      {open &&
+        createPortal(
+          <div
+            ref={listRef}
+            style={{
+              position: 'fixed',
+              top: rect.drop === 'down' ? rect.top + 6 : undefined,
+              bottom: rect.drop === 'up' ? window.innerHeight - rect.top + 6 : undefined,
+              left: rect.left,
+              width: Math.max(rect.width, 256),
+            }}
+            className="z-999999 rounded-lg border border-gray-200 bg-white py-1.5 shadow-theme-lg"
+          >
+            {searchable && (
+              <div className="border-b border-gray-100 px-2 pb-1.5">
+                <input
+                  type="text"
+                  value={query}
+                  onChange={(event) => setQuery(event.target.value)}
+                  placeholder={`Search ${label.toLowerCase()}`}
+                  aria-label={`Search ${label.toLowerCase()}`}
+                  className="h-8 w-full rounded-md border border-gray-200 px-2 text-theme-sm outline-none focus:border-teal-600"
+                />
+              </div>
+            )}
 
-          <ul role="listbox" aria-multiselectable="true" className="custom-scrollbar max-h-64 overflow-y-auto py-1">
-            {visible.map((option) => {
-              const checked = selected.includes(option.value);
-              return (
-                <li key={option.value}>
-                  <button
-                    type="button"
-                    role="option"
-                    aria-selected={checked}
-                    disabled={option.disabled}
-                    onClick={() => toggle(option.value)}
-                    className={cn(
-                      'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-theme-sm transition-colors',
-                      'hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400',
-                    )}
-                  >
-                    <span
-                      aria-hidden="true"
+            <ul
+              role="listbox"
+              aria-multiselectable="true"
+              className="custom-scrollbar max-h-64 overflow-y-auto py-1"
+            >
+              {visible.map((option) => {
+                const checked = selected.includes(option.value);
+                return (
+                  <li key={option.value}>
+                    <button
+                      type="button"
+                      role="option"
+                      aria-selected={checked}
+                      disabled={option.disabled}
+                      onClick={() => toggle(option.value)}
                       className={cn(
-                        'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
-                        checked ? 'border-teal-600 bg-teal-600 text-white' : 'border-gray-300',
+                        'flex w-full items-center gap-2.5 px-3 py-1.5 text-left text-theme-sm transition-colors',
+                        'hover:bg-gray-50 disabled:cursor-not-allowed disabled:text-gray-400',
                       )}
                     >
-                      {checked && <Icon name="check-circle" size={12} />}
-                    </span>
-                    <span className="min-w-0 flex-1 truncate text-gray-800">{option.label}</span>
-                    {option.count !== undefined && (
-                      // Tabular figures so the counts form a column rather than a ragged edge.
-                      <span className="shrink-0 font-mono text-theme-xs text-gray-500 tabular-nums">
-                        {option.count}
+                      <span
+                        aria-hidden="true"
+                        className={cn(
+                          'flex h-4 w-4 shrink-0 items-center justify-center rounded border',
+                          checked ? 'border-teal-600 bg-teal-600 text-white' : 'border-gray-300',
+                        )}
+                      >
+                        {checked && <Icon name="check-circle" size={12} />}
                       </span>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-            {visible.length === 0 && (
-              <li className="px-3 py-2 text-theme-sm text-gray-500">Nothing matches.</li>
-            )}
-          </ul>
+                      <span className="min-w-0 flex-1 truncate text-gray-800">{option.label}</span>
+                      {option.count !== undefined && (
+                        // Tabular figures so the counts form a column rather than a ragged edge.
+                        <span className="shrink-0 font-mono text-theme-xs text-gray-500 tabular-nums">
+                          {option.count}
+                        </span>
+                      )}
+                    </button>
+                  </li>
+                );
+              })}
+              {visible.length === 0 && (
+                <li className="px-3 py-2 text-theme-sm text-gray-500">Nothing matches.</li>
+              )}
+            </ul>
 
-          {selected.length > 0 && (
-            <div className="border-t border-gray-100 px-2 pt-1.5">
-              <button
-                type="button"
-                onClick={() => onChange([])}
-                className="w-full rounded-md px-2 py-1.5 text-center text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
-              >
-                Clear {label.toLowerCase()}
-              </button>
-            </div>
-          )}
-        </div>
-      )}
+            {selected.length > 0 && (
+              <div className="border-t border-gray-100 px-2 pt-1.5">
+                <button
+                  type="button"
+                  onClick={() => onChange([])}
+                  className="w-full rounded-md px-2 py-1.5 text-center text-theme-sm font-medium text-gray-700 transition-colors hover:bg-gray-50"
+                >
+                  Clear {label.toLowerCase()}
+                </button>
+              </div>
+            )}
+          </div>,
+          document.body,
+        )}
     </div>
   );
 };

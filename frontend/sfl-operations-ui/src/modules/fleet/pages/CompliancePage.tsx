@@ -19,11 +19,11 @@ import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import { DateField } from 'shared/components/DateField';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
-import { EnumSelect } from 'shared/components/fields';
 import StatusChip from 'shared/components/StatusChip';
 import Tabs from 'shared/components/Tabs';
 import { formatDate, formatDaysRemaining, formatNumber } from 'shared/components/format';
@@ -89,6 +89,19 @@ const CompliancePage = () => {
   const [status, setStatus] = useState<ComplianceDocumentStatus | ''>('');
   const [expiringBefore, setExpiringBefore] = useState('');
   const filtered = Boolean(documentType || status || expiringBefore);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const snapshot = useApiQuery(
     (signal) => dashboardApi.operations({ siteCode: siteCode || undefined }, signal),
@@ -329,19 +342,17 @@ const CompliancePage = () => {
               }}
               resetDisabled={!filtered}
             >
-              <EnumSelect
+              <FacetFilter
                 label="Document type"
-                value={documentType}
-                options={COMPLIANCE_DOCUMENT_TYPES}
-                onChange={(value) => setDocumentType(value as ComplianceDocumentType | '')}
-                allowEmpty
+                selected={documentType ? [documentType] : []}
+                onChange={(next) => setDocumentType(pickSingle(documentType, next))}
+                options={COMPLIANCE_DOCUMENT_TYPES.map((value) => ({ value, label: humanise(value) }))}
               />
-              <EnumSelect
+              <FacetFilter
                 label="Status"
-                value={status}
-                options={COMPLIANCE_DOCUMENT_STATUSES}
-                onChange={(value) => setStatus(value as ComplianceDocumentStatus | '')}
-                allowEmpty
+                selected={status ? [status] : []}
+                onChange={(next) => setStatus(pickSingle(status, next))}
+                options={COMPLIANCE_DOCUMENT_STATUSES.map((value) => ({ value, label: humanise(value) }))}
               />
               <DateField
                 label="Expiring before"

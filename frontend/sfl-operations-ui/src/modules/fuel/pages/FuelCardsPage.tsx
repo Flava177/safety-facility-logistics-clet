@@ -12,6 +12,7 @@ import Button from 'shared/components/Button';
 import { DateField } from 'shared/components/DateField';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, type Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import FormDialog from 'shared/components/FormDialog';
 import KeyValueGrid from 'shared/components/KeyValueGrid';
@@ -21,7 +22,6 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import {
-  EnumSelect,
   NumberInput,
   SelectInput,
   TextAreaInput,
@@ -81,6 +81,19 @@ const FuelCardsPage = () => {
   const [selected, setSelected] = useState<FuelCard | null>(null);
   const [issuing, setIssuing] = useState(false);
   const [action, setAction] = useState<{ card: FuelCard; action: CardAction } | null>(null);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const mayManage = canManageFuelCards();
   const filterKey = `${siteCode}|${status}|${maskedReference}`;
@@ -196,13 +209,11 @@ const FuelCardsPage = () => {
           resetDisabled={!status && !maskedReference}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={FUEL_CARD_STATUSES}
-            allowEmpty
-            emptyLabel="Any status"
-            onChange={(value) => setStatus((value || '') as FuelCardStatus | '')}
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={FUEL_CARD_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Masked reference"

@@ -18,6 +18,7 @@ import { defaultPageSize } from 'shared/api/config';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
@@ -25,7 +26,6 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import SearchInput from 'shared/components/SearchInput';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect } from 'shared/components/fields';
 import { formatOdometer } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -49,6 +49,19 @@ const emptyFilters: Filters = {
   availability: '',
   category: '',
   responsibleUnit: '',
+};
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
 };
 
 /**
@@ -224,33 +237,29 @@ const VehicleRegisterPage = () => {
             onChange={(value) => setFilter('registrationNumber', value)}
             placeholder="GT-1234-24"
           />
-          <EnumSelect
+          <FacetFilter
             label="Lifecycle"
-            value={filters.status}
-            options={VEHICLE_LIFECYCLE_STATUSES}
-            onChange={(value) => setFilter('status', value)}
-            allowEmpty
+            selected={filters.status ? [filters.status] : []}
+            onChange={(next) => setFilter('status', pickSingle(filters.status, next))}
+            options={VEHICLE_LIFECYCLE_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Service status"
-            value={filters.serviceStatus}
-            options={VEHICLE_SERVICE_STATUSES}
-            onChange={(value) => setFilter('serviceStatus', value)}
-            allowEmpty
+            selected={filters.serviceStatus ? [filters.serviceStatus] : []}
+            onChange={(next) => setFilter('serviceStatus', pickSingle(filters.serviceStatus, next))}
+            options={VEHICLE_SERVICE_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Availability"
-            value={filters.availability}
-            options={VEHICLE_AVAILABILITY_STATUSES}
-            onChange={(value) => setFilter('availability', value)}
-            allowEmpty
+            selected={filters.availability ? [filters.availability] : []}
+            onChange={(next) => setFilter('availability', pickSingle(filters.availability, next))}
+            options={VEHICLE_AVAILABILITY_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Category"
-            value={filters.category}
-            options={VEHICLE_CATEGORIES}
-            onChange={(value) => setFilter('category', value)}
-            allowEmpty
+            selected={filters.category ? [filters.category] : []}
+            onChange={(next) => setFilter('category', pickSingle(filters.category, next))}
+            options={VEHICLE_CATEGORIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <SearchInput
             label="Responsible unit"

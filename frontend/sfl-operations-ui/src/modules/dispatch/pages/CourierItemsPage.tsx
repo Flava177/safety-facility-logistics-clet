@@ -17,6 +17,7 @@ import { humanise } from 'modules/fleet/api/enums';
 import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import Icon from 'shared/components/Icon';
 import { useNotifier } from 'shared/components/Notifier';
@@ -25,7 +26,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
 import { DateTimeField } from 'shared/components/DateField';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { TextInput } from 'shared/components/fields';
 import { formatDateTime } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { useClampPage, useServerPage } from 'shared/hooks/useServerPage';
@@ -62,6 +63,19 @@ const CourierItemsPage = () => {
   const [to, setTo] = useState('');
   const [registering, setRegistering] = useState(false);
   const [exporting, setExporting] = useState(false);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+    if (next.length === 0) {
+      return '';
+    }
+    return (next.find((value) => value !== current) ?? next[0]) as T;
+  };
 
   const filterKey =
     `${siteCode}|${direction}|${status}|${sensitivity}|${itemType}|${handler}|${reference}|${from}|${to}`;
@@ -229,26 +243,23 @@ const CourierItemsPage = () => {
           resetDisabled={!filtersApplied}
         >
           <SiteSelect value={siteCode} onChange={setSiteCode} required />
-          <EnumSelect
+          <FacetFilter
             label="Direction"
-            value={direction}
-            options={ITEM_DIRECTIONS}
-            onChange={(value) => setDirection(value)}
-            allowEmpty
+            selected={direction ? [direction] : []}
+            onChange={(next) => setDirection(pickSingle(direction, next))}
+            options={ITEM_DIRECTIONS.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Status"
-            value={status}
-            options={ITEM_STATUSES}
-            onChange={(value) => setStatus(value)}
-            allowEmpty
+            selected={status ? [status] : []}
+            onChange={(next) => setStatus(pickSingle(status, next))}
+            options={ITEM_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Sensitivity"
-            value={sensitivity}
-            options={SENSITIVITIES}
-            onChange={(value) => setSensitivity(value)}
-            allowEmpty
+            selected={sensitivity ? [sensitivity] : []}
+            onChange={(next) => setSensitivity(pickSingle(sensitivity, next))}
+            options={SENSITIVITIES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Handler"
@@ -262,12 +273,11 @@ const CourierItemsPage = () => {
             onChange={setReference}
             placeholder="Item number, sender or recipient"
           />
-          <EnumSelect
+          <FacetFilter
             label="Item type"
-            value={itemType}
-            options={ITEM_TYPES}
-            onChange={(value) => setItemType(value)}
-            allowEmpty
+            selected={itemType ? [itemType] : []}
+            onChange={(next) => setItemType(pickSingle(itemType, next))}
+            options={ITEM_TYPES.map((value) => ({ value, label: humanise(value) }))}
           />
           <DateTimeField label="From" value={from} onChange={setFrom} />
           <DateTimeField label="To" value={to} onChange={setTo} />

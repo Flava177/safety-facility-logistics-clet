@@ -6,6 +6,7 @@ import {
   DRIVER_LIFECYCLE_STATUSES,
   DriverEligibilityStatus,
   DriverLifecycleStatus,
+  humanise,
 } from 'modules/fleet/api/enums';
 import { describeDriverEligibility } from 'modules/fleet/api/driverEligibility';
 import { driversApi } from 'modules/fleet/api/fleetApi';
@@ -15,13 +16,14 @@ import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import { DateField } from 'shared/components/DateField';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import { useNotifier } from 'shared/components/Notifier';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { EnumSelect, TextInput } from 'shared/components/fields';
+import { TextInput } from 'shared/components/fields';
 import { formatDate, formatDaysRemaining } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fleetPaths } from 'shared/layout/navigation';
@@ -43,6 +45,19 @@ const emptyFilters: Filters = {
   eligibility: '',
   responsibleUnit: '',
   licenceExpiringBefore: '',
+};
+
+/**
+ * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+ * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+ * option already active clears it, same as the dropdown it replaces; toggling a different one while
+ * one is active swaps to the new choice instead of appearing to hold both.
+ */
+const pickSingle = <T extends string>(current: T | '', next: string[]): T | '' => {
+  if (next.length === 0) {
+    return '';
+  }
+  return (next.find((value) => value !== current) ?? next[0]) as T;
 };
 
 /** Licence expiry earns colour: an expired licence is a refusal at assignment time, not a note. */
@@ -202,19 +217,17 @@ const DriverRegisterPage = () => {
             value={filters.search}
             onChange={(value) => setFilter('search', value)}
           />
-          <EnumSelect
+          <FacetFilter
             label="Lifecycle"
-            value={filters.status}
-            options={DRIVER_LIFECYCLE_STATUSES}
-            onChange={(value) => setFilter('status', value)}
-            allowEmpty
+            selected={filters.status ? [filters.status] : []}
+            onChange={(next) => setFilter('status', pickSingle(filters.status, next))}
+            options={DRIVER_LIFECYCLE_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
-          <EnumSelect
+          <FacetFilter
             label="Eligibility"
-            value={filters.eligibility}
-            options={DRIVER_ELIGIBILITY_STATUSES}
-            onChange={(value) => setFilter('eligibility', value)}
-            allowEmpty
+            selected={filters.eligibility ? [filters.eligibility] : []}
+            onChange={(next) => setFilter('eligibility', pickSingle(filters.eligibility, next))}
+            options={DRIVER_ELIGIBILITY_STATUSES.map((value) => ({ value, label: humanise(value) }))}
           />
           <TextInput
             label="Responsible unit"
