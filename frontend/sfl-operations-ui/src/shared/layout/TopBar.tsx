@@ -77,7 +77,7 @@ const TopBar = () => {
   }, [profileOpen]);
 
   return (
-    <header className="on-dark fixed inset-x-0 top-0 z-9999 h-16 bg-brand-800">
+    <header className="on-dark fixed inset-x-0 top-0 z-9999 h-16 bg-brand-800 shadow-theme-lg">
       <div className="flex h-full items-center justify-between gap-3 px-4 lg:px-5">
         <div className="flex min-w-0 items-center gap-3">
           <button

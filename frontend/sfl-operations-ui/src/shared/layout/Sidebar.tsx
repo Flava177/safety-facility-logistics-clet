@@ -47,7 +47,7 @@ const Sidebar = () => {
 
       <aside
         className={cn(
-          'fixed top-16 bottom-0 left-0 z-99998 flex flex-col border-r border-gray-200 bg-white transition-all duration-200 ease-in-out',
+          'fixed top-16 bottom-0 left-0 z-99998 flex flex-col border-r border-gray-200 bg-white shadow-theme-md transition-all duration-200 ease-in-out',
           expanded ? 'w-[260px]' : 'w-[260px] lg:w-[76px]',
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         )}

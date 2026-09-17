@@ -52,7 +52,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
         </div>
         <span
           className={cn(
-            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg',
+            'flex h-10 w-10 shrink-0 items-center justify-center rounded-lg shadow-theme-xs',
             palette.plate,
             palette.icon,
           )}
@@ -80,7 +80,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
 
   if (!onClick) {
     return (
-      <div className="flex flex-col rounded-lg border border-gray-200 bg-white px-5 py-4">
+      <div className="flex flex-col rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-theme-md">
         {inner}
       </div>
     );
@@ -91,7 +91,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
       type="button"
       onClick={onClick}
       aria-label={`${label}: ${value}. Show the records behind this figure.`}
-      className="group flex w-full flex-col rounded-lg border border-gray-200 bg-white px-5 py-4 text-left transition-colors hover:border-gold-300 hover:bg-gold-25"
+      className="group flex w-full flex-col rounded-lg border border-gray-200 bg-white px-5 py-4 text-left shadow-theme-md transition-all hover:-translate-y-1 hover:border-gold-300 hover:bg-gold-25 hover:shadow-theme-xl"
     >
       {inner}
     </button>
