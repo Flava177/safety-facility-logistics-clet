@@ -366,7 +366,7 @@ const SpaceDetailPage = () => {
                   minHeight={80}
                 >
                   <DataTable
-                    rows={assessments.data ?? []}
+                    rows={assessments.data?.items ?? []}
                     columns={assessmentColumns}
                     getRowId={(row) => row.id}
                     onRowClick={(row) => navigate(facilitiesPaths.assessmentDetail(row.id))}

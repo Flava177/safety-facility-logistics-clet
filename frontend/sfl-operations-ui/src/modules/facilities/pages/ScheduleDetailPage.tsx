@@ -10,7 +10,7 @@ import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
-import type { WorkOrder } from '../api/dto';
+import type { FacilitiesPage, WorkOrder } from '../api/dto';
 import { getAsset, getSchedule, searchWorkOrders } from '../api/facilitiesApi';
 import {
   formatDate,
@@ -46,11 +46,17 @@ const ScheduleDetailPage = () => {
             { siteCode: schedule.data.siteCode, assetId: schedule.data.assetId, limit: 50 },
             signal,
           )
-        : Promise.resolve([]),
+        : Promise.resolve<FacilitiesPage<WorkOrder>>({
+            items: [],
+            totalElements: 0,
+            totalPages: 0,
+            page: 0,
+            size: 0,
+          }),
     [schedule.data?.assetId, schedule.data?.siteCode],
   );
 
-  const fromThisSchedule = (generated.data ?? []).filter(
+  const fromThisSchedule = (generated.data?.items ?? []).filter(
     (order) => order.scheduleId === scheduleId,
   );
 

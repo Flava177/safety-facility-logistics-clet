@@ -1,5 +1,6 @@
 import { apiClient } from 'shared/api/client';
 import type { QueryParams } from 'shared/api/types';
+import type { FacilitiesPage } from 'modules/facilities/api/dto';
 import type {
   BookableResource,
   Booking,
@@ -68,7 +69,7 @@ export const bookingsApi = {
    * display convention, and the rows would still have crossed the boundary.
    */
   search: (params: BookingSearchParams, signal?: AbortSignal) =>
-    get<Booking[]>('/bookings', params as QueryParams, signal),
+    get<FacilitiesPage<Booking>>('/bookings', params as QueryParams, signal),
 
   findById: (bookingId: string, signal?: AbortSignal) =>
     get<Booking>(`/bookings/${bookingId}`, undefined, signal),
@@ -178,7 +179,7 @@ export const bookableResourcesApi = {
 export const setupTasksApi = {
   /** Ordered by when the room is needed, not when the task was raised. Defaults to the next two days. */
   queue: (params: { siteCode?: string; dueBefore?: string; limit?: number }, signal?: AbortSignal) =>
-    get<SetupTask[]>('/setup-tasks', params as QueryParams, signal),
+    get<FacilitiesPage<SetupTask>>('/setup-tasks', params as QueryParams, signal),
 
   /**
    * Resolve a setup task.

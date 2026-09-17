@@ -38,7 +38,7 @@ const MyQueuePage = () => {
     [site],
   );
 
-  const rows = orders.data ?? [];
+  const rows = orders.data?.items ?? [];
 
   const columns: Column<WorkOrder>[] = [
     { key: 'workOrderNumber', header: 'Job', cell: (row) => row.workOrderNumber },

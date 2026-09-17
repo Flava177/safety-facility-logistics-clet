@@ -173,7 +173,6 @@ const FacilitiesAuditPage = () => {
           </Alert>
         )}
 
-        {/* Both controls labelled, so they sit on one line - see the note on the asset register. */}
         <FilterBar>
           <SiteSelect value={siteCode} onChange={setSiteCode} allowEmpty emptyLabel="All sites" />
           <SelectInput
@@ -193,14 +192,14 @@ const FacilitiesAuditPage = () => {
           <DataState
             loading={loading}
             error={error}
-            empty={!data || data.length === 0}
+            empty={!data || data.items.length === 0}
             emptyTitle="No audit records match"
             emptyHint="Widen the site or clear the action filter."
             onRetry={refetch}
           >
             {data && (
               <DataTable
-                rows={data}
+                rows={data.items}
                 columns={columns}
                 getRowId={(event) => event.id}
                 caption="Audit trail"

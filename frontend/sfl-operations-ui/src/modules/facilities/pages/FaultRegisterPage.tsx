@@ -71,7 +71,7 @@ const FaultRegisterPage = () => {
     site total would be a promise this screen cannot keep: a requester's view is narrowed per record
     by `FacilityFaultService.requesterFilter`, so their totals are legitimately smaller.
   */
-  const fetched = faults.data ?? [];
+  const fetched = faults.data?.items ?? [];
   const visible = fetched.filter(
     (fault) =>
       (status.length === 0 || status.includes(fault.status)) &&

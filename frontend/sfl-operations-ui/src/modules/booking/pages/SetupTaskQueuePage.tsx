@@ -54,7 +54,7 @@ const SetupTaskQueuePage = () => {
     [siteCode, dueBefore],
   );
 
-  const rows = tasks.data ?? [];
+  const rows = tasks.data?.items ?? [];
   const overdue = rows.filter((task) => task.overdue && task.status === 'PENDING').length;
 
   const columns: Column<SetupTask>[] = [
