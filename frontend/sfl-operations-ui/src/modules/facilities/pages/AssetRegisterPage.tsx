@@ -3,11 +3,11 @@ import { useNavigate } from 'react-router';
 import ControlButton from 'shared/components/ControlButton';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatusChip from 'shared/components/StatusChip';
-import { SelectInput } from 'shared/components/fields';
 import { useNotifier } from 'shared/components/Notifier';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { facilitiesPaths } from 'shared/layout/navigation';
@@ -79,6 +79,19 @@ const AssetRegisterPage = () => {
   const changeFilter = (apply: () => void) => {
     apply();
     setPage(0);
+  };
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
   };
 
   const columns: Column<FacilityAsset>[] = [
@@ -185,12 +198,6 @@ const AssetRegisterPage = () => {
         }
       />
 
-      {/*
-        Every control here carries a label. They were bare `Select`s with only a placeholder, and
-        `FilterBar` aligns its children at the top - so the three unlabelled ones sat a label's height
-        above the site select and the row read as broken. A label is the better fix than a spacer
-        because an operator should not have to open a dropdown to learn what it filters.
-      */}
       <FilterBar>
         <SiteSelect
           value={siteCode}
@@ -198,28 +205,22 @@ const AssetRegisterPage = () => {
           allowEmpty
           emptyLabel="All sites"
         />
-        <SelectInput
+        <FacetFilter
           label="Category"
-          value={category}
-          onChange={(v) => changeFilter(() => setCategory(v))}
-          allowEmpty
-          emptyLabel="Any category"
+          selected={category ? [category] : []}
+          onChange={(next) => changeFilter(() => setCategory(pickSingle(category, next)))}
           options={assetCategories.map((value) => ({ value, label: humaniseCode(value) }))}
         />
-        <SelectInput
+        <FacetFilter
           label="Criticality"
-          value={criticality}
-          onChange={(v) => changeFilter(() => setCriticality(v))}
-          allowEmpty
-          emptyLabel="Any criticality"
+          selected={criticality ? [criticality] : []}
+          onChange={(next) => changeFilter(() => setCriticality(pickSingle(criticality, next)))}
           options={assetCriticalities.map((value) => ({ value, label: humaniseCode(value) }))}
         />
-        <SelectInput
+        <FacetFilter
           label="Condition"
-          value={status}
-          onChange={(v) => changeFilter(() => setStatus(v))}
-          allowEmpty
-          emptyLabel="Any condition"
+          selected={status ? [status] : []}
+          onChange={(next) => changeFilter(() => setStatus(pickSingle(status, next)))}
           options={assetOperationalStatuses.map((value) => ({ value, label: humaniseCode(value) }))}
         />
       </FilterBar>
