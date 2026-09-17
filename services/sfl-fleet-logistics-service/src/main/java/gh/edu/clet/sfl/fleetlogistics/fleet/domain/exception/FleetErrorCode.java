@@ -58,6 +58,15 @@ public enum FleetErrorCode {
     FLEET_ASSIGNMENT_CONFLICT("The vehicle or driver is already assigned during the requested period.", false),
     FLEET_READINESS_BLOCKED("The vehicle is not ready for assignment. Resolve the listed readiness blockers.", false),
     FLEET_DRIVER_INELIGIBLE("The driver is not eligible for this assignment.", false),
+    /**
+     * Starting a trip is gated on a valid pre-trip inspection (SRS-SFL-S166-02), which is a fact
+     * about the trip, not the vehicle record - the vehicle itself can be fully compliant and still
+     * have no inspection on file for this trip. Kept out of {@link #FLEET_READINESS_BLOCKED} on
+     * purpose: that message tells an operator to "resolve the listed readiness blockers" on the
+     * vehicle, which sends them to the wrong screen when the one thing missing is an inspection.
+     */
+    FLEET_PRETRIP_INSPECTION_MISSING(
+            "A pre-trip inspection has not been recorded for this trip. Record one before starting.", false),
     FLEET_ODOMETER_REGRESSION("The odometer reading is lower than the last recorded reading for this vehicle.", false),
     FLEET_INTEGRATION_SOURCE_NOT_ALLOWED("Integration message rejected: source system is not allowlisted.", false),
     FLEET_INTEGRATION_NOT_CONFIGURED("The required integration is not configured for this environment.", false),
