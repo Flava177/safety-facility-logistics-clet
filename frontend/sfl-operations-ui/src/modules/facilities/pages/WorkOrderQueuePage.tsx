@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router';
 import DataState from 'shared/components/DataState';
 import DataTable, { Column } from 'shared/components/DataTable';
+import FacetFilter from 'shared/components/FacetFilter';
 import FilterBar, { ActiveFilter } from 'shared/components/FilterBar';
 import PageHeader from 'shared/components/PageHeader';
 import QuickFilters from 'shared/components/QuickFilters';
@@ -52,6 +53,19 @@ const WorkOrderQueuePage = () => {
   const [status, setStatus] = useState<string>('');
   const [vendorId, setVendorId] = useState<string>('');
   const [openOnly, setOpenOnly] = useState(true);
+
+  /**
+   * `FacetFilter` is built for a union the operator composes themselves - the search endpoint takes
+   * one value per axis, not several, so "select" here always replaces rather than adds. Toggling the
+   * option already active clears it, same as the dropdown it replaces; toggling a different one while
+   * one is active swaps to the new choice instead of appearing to hold both.
+   */
+  const pickSingle = (current: string, next: string[]): string => {
+    if (next.length === 0) {
+      return '';
+    }
+    return next.find((value) => value !== current) ?? next[0];
+  };
 
   const orders = useApiQuery(
     (signal) =>
@@ -219,12 +233,10 @@ const WorkOrderQueuePage = () => {
         }
       >
         <SiteSelect value={siteCode} onChange={setSiteCode} />
-        <SelectInput
+        <FacetFilter
           label="Status"
-          value={status}
-          onChange={setStatus}
-          allowEmpty
-          emptyLabel="Any status"
+          selected={status ? [status] : []}
+          onChange={(next) => setStatus(pickSingle(status, next))}
           options={workOrderStatuses.map((value) => ({ value, label: humaniseCode(value) }))}
         />
         <SelectInput
