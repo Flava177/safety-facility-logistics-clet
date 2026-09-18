@@ -265,6 +265,8 @@ const EvidenceAuditPage = () => {
           ]}
           value={tab}
           onChange={(value) => setTab(value as TabKey)}
+          variant="pill"
+          className="px-5 pt-5 pb-3"
         />
 
         <div className="p-5">

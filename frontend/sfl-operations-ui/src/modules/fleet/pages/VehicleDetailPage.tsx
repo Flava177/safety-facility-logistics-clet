@@ -287,7 +287,8 @@ const VehicleDetailPage = () => {
                 ]}
                 value={tab}
                 onChange={(value) => setTab(value as TabKey)}
-                className="px-2"
+                variant="pill"
+                className="px-5 pt-5 pb-3"
               />
 
               <div className="p-5">

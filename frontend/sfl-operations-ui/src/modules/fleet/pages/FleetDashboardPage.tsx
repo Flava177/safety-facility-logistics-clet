@@ -563,7 +563,8 @@ const FleetDashboardPage = () => {
                   ]}
                   value={exceptionsTab}
                   onChange={(value) => setExceptionsTab(value as 'escalated' | 'compliance')}
-                  className="px-5"
+                  variant="pill"
+                  className="px-5 pb-3"
                 />
                 {exceptionsTab === 'escalated' ? (
                   <DataState
