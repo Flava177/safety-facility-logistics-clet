@@ -269,7 +269,7 @@ export const SidebarToggle = ({ className }: { className?: string }) => {
       aria-label={expanded ? 'Collapse navigation' : 'Expand navigation'}
       title={expanded ? 'Collapse navigation' : 'Expand navigation'}
       className={cn(
-        'hidden h-8 w-8 items-center justify-center rounded-md text-gray-500 transition-colors hover:bg-gray-100 hover:text-gray-800 lg:flex',
+        'hidden h-8 w-8 items-center justify-center rounded-[var(--radius-control)] text-white/60 transition-colors hover:bg-white/10 hover:text-white lg:flex',
         className,
       )}
     >
