@@ -18,7 +18,7 @@ The active SFL implementation is the **three-platform Spring Boot** workspace un
 one deployable per programme, five schemas, three databases:
 
 - `sfl-facilities-service` - **SFL.IFIMP**, port 8091. S152 CAFM/IWMS, S153 CMMS, S159 Room & Resource Booking, hall-readiness. Schema `facilities`.
-- `sfl-safety-security-service` - **SFL.SSEMP**, port 8092. S160 Visitor and S163 HSE Incident/Near-Miss are built in `safety_security`; S174 Emergency Notification is built in `emergency_notification`. S160a Access Control, S161 CCTV, S162 Intrusion and S162a Life-Safety remain Buy-and-Integrate scope.
+- `sfl-safety-security-service` - **SFL.SSEMP**, port 8092. S160 Visitor, S163 HSE Incident/Near-Miss and S162a Fire/Life-Safety Monitoring are built in `safety_security`; S174 Emergency Notification is built in `emergency_notification`. S162a is observe-only by design - no outbound command/actuation port exists, unlike its Buy-and-Integrate siblings - and its fast-lane trigger calls S174's break-glass activation in-process. S160a Access Control, S161 CCTV and S162 Intrusion remain Buy-and-Integrate scope as far as this worktree can see.
 - `sfl-fleet-logistics-service` - **SFL.FTLMP**, port 8093. S166 Fleet, S168_fuel Fuel & Logbooks, S171 Mailroom/Courier & Dispatch (schema `fleet_logistics`) and AVAMP-Lite asset/device/location references (schema `asset_visibility`, package `..fleetlogistics.assets`). Serves the dashboard at `/ui`.
 - `sfl-service-common` - shared kernel (principal/RBAC, error & event envelopes, outbox/inbox contracts, integration-security primitives). Library, no schema.
 

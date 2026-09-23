@@ -104,7 +104,11 @@ class SafetySecurityConfiguration {
                         // recon of the module handling incidents and emergency notifications is not a
                         // trade a notice page needs, and facilities never opened it either.
                         .requestMatchers("/", "/index.html", "/emergency/**",
-                                "/api/v1/emergency/provider-callbacks/**").permitAll()
+                                "/api/v1/emergency/provider-callbacks/**", "/api/v1/life-safety/integration/**")
+                        .permitAll()
+                        // Life-safety's integration endpoint is authenticated at the application layer by
+                        // HMAC and source allowlist (SRS-SFL-S162a-01), the same reasoning as the emergency
+                        // provider-callbacks line above: a fire panel gateway has no SFL bearer token.
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(
                         oauth -> oauth.jwt(jwt -> jwt.jwtAuthenticationConverter(new OidcRolesConverter(rolesClaim))))
