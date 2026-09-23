@@ -20,7 +20,7 @@ Every Phase 1 system must be classified as one of the following before implement
 | Buy and Integrate | A vendor system owns the hardware/device operation. SFL retrieves and displays data through approved integration methods. |
 | Hybrid | A vendor system captures device/raw data while SFL owns workflow, escalation, audit, dashboarding and reporting. |
 
-The classification is documented in `docs/phase-1-system-classification.md`.
+The classification is documented in `docs/planning/phase-1-system-classification.md`.
 
 ## Consequences
 

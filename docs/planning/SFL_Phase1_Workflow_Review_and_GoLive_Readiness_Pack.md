@@ -5,8 +5,20 @@
 **Version:** 1.2 - 1 August 2026  
 **Classification:** CONFIDENTIAL - RESTRICTED DISTRIBUTION  
 **Prepared for:** F&L Safety, Facilities & Logistics Directorate + DTI (co-owner)  
-**Authoritative baseline:** `docs/System Mappings and SRS/SFL_SRS.docx` (CLET/DTI/CL9/SFL/SRS/2026/001)  
+**Authoritative baseline:** `docs/srs/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx` (CLET/DTI/CL9/SFL/SRS/2026/001)  
 **Supporting baselines:** Cluster 9 SFL System Architecture Document v1.2 (Reviewed); CLET Comprehensive Digital System Mapping v2; SFL repository `docs/**`, `services/**` and `frontend/**` as at 1 August 2026
+
+---
+
+> **Status update - 23 September 2026.** This pack is a point-in-time snapshot from 1 August 2026 and
+> is kept for its review structure and evidence trail, not as a live status source. Since it was
+> written, S159 Room & Resource Booking, S160 Visitor Management, S163 HSE Incident/Near-Miss
+> Reporting, and all four SSEMP Buy-and-Integrate systems - S160a Physical Access Control, S161
+> CCTV/VMS, S162 Intrusion Detection & Alarm Monitoring and S162a Fire & Life-Safety Monitoring - have
+> been built. **All thirteen Phase 1 Fast-Track systems are now built.** For current status, read
+> `solution.md` at the repository root; for what each system actually does, read the per-system doc
+> suite under `docs/facilities/`, `docs/fleet/`, `docs/fuel/`, `docs/dispatch/` and `docs/emergency/`.
+> Anything below this line describes the state of the project on 1 August 2026, not today.
 
 ---
 
@@ -78,7 +90,7 @@ Backend verification must be run in a Docker-enabled environment for formal UAT 
 > landed. The platform layer moved from *partial* to built. The totals moved from **3 · 3 · 7** to
 > **7 · 0 · 6**. The six unbuilt SSEMP systems are unchanged, and they are unbuilt **scope** rather than a gap
 > in what was attempted - closing them is a separate multi-pass build against
-> `docs/phase-1-system-classification.md`.
+> `docs/planning/phase-1-system-classification.md`.
 
 ## A.3 The issues that decide Go-Live
 
@@ -1290,7 +1302,7 @@ CLET Comms system and is carried in F.2 as a deferred dependency, not a build ga
 | DD-08 | The Architecture v1.2 REVIEWED file's internal version block still reads **"Version 1.1 - May 2026"** | Correct the document control block |
 | DD-09 | `solution.md` cites an SRS filename that does not exist on disk | Correct the reference |
 | ~~DD-10~~ | ✅ **CLOSED.** Empty `docs/api-contracts/` and `docs/event-contracts/` were removed; `docs/runbooks/` is populated and retained | - |
-| ~~DD-11~~ | ✅ **CLOSED.** Stale .NET-era/demo build documents were moved to `docs/archive/release1-demo-cleanup-2026-08-01/`; current Spring Boot local-run guidance remains in `docs/development/run-spring-boot-locally.md` | - |
+| ~~DD-11~~ | ✅ **CLOSED.** Stale .NET-era/demo build documents were moved to `docs/to-delete/release1-demo-cleanup-2026-08-01/` (pending review/deletion); current Spring Boot local-run guidance remains in `docs/development/run-spring-boot-locally.md` | - |
 | DD-12 | Two SRS artefacts and two architecture artefacts of differing vintage are referenced across `README.md`, `solution.md` and the REQUIREMENT DOC folder | Declare one of each authoritative |
 | DD-13 | The S174 traceability matrix names controllers and ports (`TemplateController`, `LifeSafetyEventPort`, `CctvEvidencePort`, `AccessControlLockdownPort`, …) that **do not exist as files** | Correct the matrix to match the code |
 | DD-14 | The S166 state-model document describes a 7-value inbox status enum that does not exist in code (the real one has 4 values), and states `RETURNED → DRAFT` for logbooks where the code does `RETURNED → RESUBMITTED` | Correct the documents to match the code |
@@ -1485,7 +1497,7 @@ Two gate sets exist and must be read together: the Architecture document's **G1�
 
 | Claim type | Source |
 |---|---|
-| Requirements, workflows, state names, business rules, NFRs | `docs/System Mappings and SRS/SFL_SRS.docx` |
+| Requirements, workflows, state names, business rules, NFRs | `docs/srs/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx` |
 | Lifecycles, business rules BR-01…BR-12, gates G1–G6, SOPs, dashboards, KPIs, commissioning tests CT-01…CT-10, open decisions | Cluster 9 SFL System Architecture Document v1.2 (Reviewed) |
 | Implementation status, state machines, thresholds, permission matrix, endpoints | SFL repository `services/**` source, Flyway migrations, `target/surefire-reports/*.xml` from the test run of 29 July 2026, and `frontend/sfl-operations-ui/src` |
 | Release 1 scope, current build status, remaining gaps and handoff position | `docs/SFL_Phase1_Workflow_Review_and_GoLive_Readiness_Pack.md`, `docs/adr/**`, and the per-domain traceability, operations and final-implementation reports |

@@ -20,27 +20,35 @@ FTLMP rather than as a deployable of its own.
 
 ## Release 1 scope
 
-The repository now contains **nine implemented systems**, not the full 13-system Phase 1.
+The repository now contains **all thirteen Phase 1 Fast-Track systems**.
 
 **Built and demoable**
 
-| System | What                              |
-| ------ | --------------------------------- |
-| S152   | Facility management - CAFM / IWMS |
-| S153   | Maintenance management - CMMS     |
-| S159   | Room & resource booking           |
-| S160   | Visitor management                |
-| S163   | HSE incident and near-miss        |
-| S166   | Fleet & vehicle management        |
-| S168   | Fuel management & driver logbooks |
-| S171   | Mailroom, courier & dispatch      |
-| S174   | Emergency mass notification       |
+| System | What                                          |
+| ------ | --------------------------------------------- |
+| S152   | Facility management - CAFM / IWMS              |
+| S153   | Maintenance management - CMMS                  |
+| S159   | Room & resource booking                        |
+| S160   | Visitor management                             |
+| S160a  | Physical access control integration            |
+| S161   | CCTV / video management integration            |
+| S162   | Intrusion detection & alarm monitoring         |
+| S162a  | Fire & life-safety monitoring                  |
+| S163   | HSE incident and near-miss                     |
+| S166   | Fleet & vehicle management                     |
+| S168   | Fuel management & driver logbooks              |
+| S171   | Mailroom, courier & dispatch                   |
+| S174   | Emergency mass notification                    |
 
-**Not implemented** - S160a access control, S161 CCTV/VMS, S162 intrusion and S162a fire & life
-safety. These are Buy-and-Integrate systems rather than replacements for specialist platforms.
+S160a, S161, S162 and S162a are Buy-and-Integrate systems: SFL owns the workflow, audit and dashboard
+layer over a recorded/simulated vendor gateway; the certified vendor hardware (door readers, cameras,
+alarm panels, fire panels) is procured separately and is not part of this codebase. S162a in
+particular has no outbound command port at all - it observes, records and notifies only, by design.
 
 S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
-integration with the external Comms system.
+integration with the external Comms system. The same is true of every vendor integration point across
+S160a/S161/S162/S168/S171: the workflow is built and tested end to end, and connecting to a real
+vendor is a procurement and configuration step, not further development.
 
 ## Layout
 
@@ -48,7 +56,8 @@ integration with the external Comms system.
 services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
   sfl-facilities-service             IFIMP  - S152, S153, S159                    :8091
                                      schema: facilities
-  sfl-safety-security-service        SSEMP  - S160, S163, S174                    :8092
+  sfl-safety-security-service        SSEMP  - S160, S160a, S161, S162, S162a,      :8092
+                                     S163, S174
                                      schemas: safety_security, emergency_notification
   sfl-fleet-logistics-service        FTLMP  - S166, S168, S171, AVAMP; serves /ui :8093
                                      schemas: fleet_logistics, asset_visibility

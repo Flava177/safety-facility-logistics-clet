@@ -1,8 +1,8 @@
 # SFL Implementation Solution Log & Architecture Standard
 
 > **Authoritative references**
-> - **Specification (the contract):** `docs/System Mappings and SRS/SFL_SRS.docx` - the 13 Fast-Track systems, all functional/non-functional requirements. Every module, endpoint, event and test traces to an `SRS-SFL-*` ID.
-> - **Build plan:** `docs/SFL_Phase1_Implementation_Workplan.md` - hexagonal design, per-service backlog, delivery waves, testing/commissioning.
+> - **Specification (the contract):** `docs/srs/CLET_Cluster9_SFL_Phase1_SRS_v1.0.docx` - the 13 Fast-Track systems, all functional/non-functional requirements. Every module, endpoint, event and test traces to an `SRS-SFL-*` ID.
+> - **Build plan:** this file - the delivery waves and per-service backlog it once described are complete; this log is now the current build-plan-and-status record. The original workplan is retained for history at `docs/to-delete/release1-demo-cleanup-2026-08-01/SFL_Phase1_Implementation_Workplan.md`.
 > - **Reference implementation pattern:** the S074 comms-service (API-first, contract → 202 → fast/deferred processing → transactional audit outbox → runtime-resolved adapter registry → OIDC/JWT + permission checks → emergency fast-lane). We mirror its *shape*, re-expressed in Java/Spring with hexagonal layering.
 > - **ADRs:** `docs/adr/0001` (foundation), `0002` (build/buy/hybrid), `0003` (Java/Spring migration),
 >   `0004` (S174 as its own deployable), `0005` (programme-scoped portals), `0006` (one dashboard),
