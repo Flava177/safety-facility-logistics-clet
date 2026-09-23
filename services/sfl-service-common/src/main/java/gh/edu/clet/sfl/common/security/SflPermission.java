@@ -236,5 +236,69 @@ public enum SflPermission {
     INCIDENT_CAPA_MANAGE,
     INCIDENT_CAPA_VERIFY,
     INCIDENT_CLOSE,
-    INCIDENT_REPORT_EXPORT
+    INCIDENT_REPORT_EXPORT,
+
+    // Physical Access Control Integration permissions (SRS S160a). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.policy.AccessControlPermissionMatrix).
+    ACCESS_EVENT_READ,
+    ACCESS_EXCEPTION_READ,
+    ACCESS_EXCEPTION_ACKNOWLEDGE,
+    ACCESS_PROVISIONING_READ,
+    ACCESS_PROVISIONING_MANAGE,
+    ACCESS_OVERRIDE_CREATE,
+    ACCESS_OVERRIDE_BREAK_GLASS,
+    ACCESS_OVERRIDE_READ,
+    ACCESS_ZONE_MANAGE,
+    ACCESS_ZONE_READ,
+    ACCESS_OCCUPANCY_READ,
+    ACCESS_REPORT_READ,
+
+    // CCTV / Video Management System Integration permissions (SRS S161). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.cctv.domain.policy.CctvPermissionMatrix).
+    CCTV_CAMERA_READ,
+    CCTV_EVIDENCE_REQUEST_CREATE,
+    CCTV_EVIDENCE_REQUEST_APPROVE,
+    CCTV_EVIDENCE_REQUEST_READ,
+    CCTV_EVIDENCE_ITEM_READ,
+    CCTV_LIVE_VIEW_START,
+    CCTV_LIVE_VIEW_READ,
+    CCTV_ANALYTICS_ALERT_READ,
+    CCTV_ANALYTICS_ALERT_ACKNOWLEDGE,
+    CCTV_DISCLOSURE_CREATE,
+    CCTV_DISCLOSURE_APPROVE,
+    CCTV_DISCLOSURE_READ,
+    CCTV_RETENTION_MANAGE,
+
+    // Intrusion Detection & Alarm Monitoring permissions (SRS S162). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.intrusion.domain.policy.IntrusionPermissionMatrix).
+    INTRUSION_ALARM_READ,
+    INTRUSION_ALARM_ACKNOWLEDGE,
+    INTRUSION_ALARM_RESOLVE,
+    INTRUSION_ALARM_LINK_EVIDENCE,
+    INTRUSION_ALARM_LINK_INCIDENT,
+    INTRUSION_ZONE_READ,
+    INTRUSION_ZONE_MANAGE,
+    INTRUSION_ZONE_DISARM,
+    INTRUSION_PANEL_HEALTH_READ,
+    INTRUSION_DISPATCH_RECORD,
+    INTRUSION_DISPATCH_READ,
+    INTRUSION_REPORT_READ,
+
+    // Fire-Safety & Life-Safety Monitoring permissions (SRS S162a). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.lifesafety.domain.policy.LifeSafetyPermissionMatrix). S162a is
+    // observe-only by design - there is no "actuate"/"arm"/"disarm" permission here, unlike S160a/S162.
+    LIFESAFETY_EVENT_READ,
+    LIFESAFETY_FASTLANE_READ,
+    LIFESAFETY_INSPECTION_MANAGE,
+    LIFESAFETY_INSPECTION_READ,
+    LIFESAFETY_COMPLIANCE_EXCEPTION_READ,
+    LIFESAFETY_COMPLIANCE_EXCEPTION_RESOLVE,
+    LIFESAFETY_COVERAGE_MANAGE,
+    LIFESAFETY_COVERAGE_READ,
+    LIFESAFETY_MUSTER_READ,
+    LIFESAFETY_MUSTER_CHECKIN
 }

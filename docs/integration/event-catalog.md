@@ -106,6 +106,22 @@ message bodies, unmasked recipient PII or provider secrets.
 | `sfl.ssemp.emergency-activation-closed.v1` | An activation is closed with reason/summary/evidence. |
 | `sfl.ssemp.emergency-drill-completed.v1` | A drill run completes and records performance metrics. |
 
+#### S161 CCTV / Video Management System Integration additions
+
+Added September 2026 with the S161 slice, alongside S160a. Published by `sfl-safety-security-service`
+from schema `safety_security`. `camera-health-changed` and `cctv-evidence-requested` above are the
+pre-seeded catalog names and are reused verbatim; the remainder are new S161 lifecycle events. Payloads
+carry references, hashes and classifications only - never raw video or unmasked recipient details.
+
+| Event | Trigger |
+|---|---|
+| `sfl.ssemp.cctv-evidence-request-decided.v1` | An evidence request is approved or rejected. |
+| `sfl.ssemp.cctv-evidence-item-recorded.v1` | Footage is retrieved from the VMS and recorded by reference with a hash. |
+| `sfl.ssemp.cctv-analytics-alert-raised.v1` | A video-analytics alert (motion, line-crossing, loitering, tamper) is ingested. |
+| `sfl.ssemp.cctv-analytics-alert-resolved.v1` | A video-analytics alert is resolved. |
+| `sfl.ssemp.cctv-retention-purged.v1` | An evidence item's reference is purged by the retention sweep. |
+| `sfl.ssemp.cctv-disclosure-decided.v1` | A disclosure of footage outside CLET is approved or rejected. |
+
 ### SFL.FTLMP
 
 | Event | Trigger |
