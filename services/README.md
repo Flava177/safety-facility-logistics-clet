@@ -10,9 +10,12 @@ shared kernel.
 | `sfl-fleet-logistics-service` | FTLMP    | S166, S168_fuel, S171, AVAMP-Lite | `fleet_logistics`, `asset_visibility`   | `8093` |
 | `sfl-service-common`          | -        | Shared kernel                    | -                                       | -      |
 
-SSEMP implements S160 Visitor Management, S163 HSE Incident/Near-Miss Reporting and S174 Emergency
-Notification. S160a, S161, S162 and S162a remain Buy-and-Integrate scope under
-`docs/phase-1-system-classification.md`.
+SSEMP now implements all seven of its systems: S160 Visitor Management, S163 HSE Incident/Near-Miss
+Reporting, S174 Emergency Notification, and the four Buy-and-Integrate systems under
+`docs/planning/phase-1-system-classification.md` - S160a Physical Access Control Integration, S161
+CCTV/VMS Integration, S162 Intrusion Detection & Alarm Monitoring and S162a Fire & Life-Safety
+Monitoring. For each of those four, SFL owns the workflow/audit/dashboard layer; the certified vendor
+hardware itself is procured separately and is not part of this codebase.
 `sfl-fleet-logistics-service` additionally packages and serves the React dashboard at `/ui`.
 
 ### Why three, and why five schemas

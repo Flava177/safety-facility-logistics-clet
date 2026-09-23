@@ -4,7 +4,7 @@
 - Date: 2026-07-29
 - Deciders: SFL platform / F&L directorate
 - Relates: [0004 S174 as a separate deployable](0004-s174-emergency-notification-as-separate-service.md);
-  [phase-1-system-classification](../phase-1-system-classification.md);
+  [phase-1-system-classification](../planning/phase-1-system-classification.md);
   [microservices-realignment](../architecture/microservices-realignment.md)
 
 ## Context
