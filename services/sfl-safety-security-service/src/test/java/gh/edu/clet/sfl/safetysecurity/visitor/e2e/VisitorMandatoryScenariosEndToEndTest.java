@@ -103,6 +103,27 @@ class VisitorMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSuppor
     }
 
     @Test
+    void a_stationery_delivery_is_badged_checked_in_visible_to_security_and_checked_out() {
+        String hostId = "stores-officer-" + UUID.randomUUID();
+        VisitorVisit delivery = preRegister(VisitPurpose.DELIVERY, hostId);
+        VisitorVisit badged = checkInOut.assignBadge(new VisitorCheckInOutService.AssignBadge(delivery.id(),
+                "DEL-" + UUID.randomUUID(), List.of("RECEPTION", "STORES"), delivery.metadata().version(),
+                actor("reception-delivery", SflRole.RECEPTION_OFFICER), SourceChannel.WEB));
+        VisitorVisit arrived = checkInOut.checkIn(new VisitorCheckInOutService.Transition(badged.id(),
+                badged.metadata().version(), actor("reception-delivery", SflRole.RECEPTION_OFFICER),
+                SourceChannel.WEB));
+
+        assertThat(arrived.status()).isEqualTo(VisitStatus.CHECKED_IN);
+        assertThat(rollCall.rollCall(SITE, actor("soc-delivery", SflRole.SOC_OPERATOR)))
+                .extracting(VisitorVisit::id).contains(arrived.id());
+
+        VisitorVisit departed = checkInOut.checkOut(new VisitorCheckInOutService.Transition(arrived.id(),
+                arrived.metadata().version(), actor("reception-delivery", SflRole.RECEPTION_OFFICER),
+                SourceChannel.WEB));
+        assertThat(departed.status()).isEqualTo(VisitStatus.CHECKED_OUT);
+    }
+
+    @Test
     void whoever_registered_a_visit_may_not_also_decide_on_it() {
         // preRegister() always registers as "reception-e2e" - the host is a different actor and is
         // legitimately allowed to decide (that is the whole point of host approval). What is

@@ -1,0 +1,18 @@
+/* Top Nav bar — Figma "Top Nav bar" section: global application header */
+
+.top-nav-bar {
+  width: 100%;
+  max-width: 1181px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+  padding: 24px 32px;
+  background: var(--color-surface);
+  border-bottom: var(--border-width-hairline) solid var(--color-border-default);
+}
+.top-nav-bar .brand { font-family: var(--font-ui); font-weight: 700; font-size: var(--text-h6-size); color: var(--color-primary); }
+.top-nav-bar nav { display: flex; gap: 32px; }
+.top-nav-bar nav a { font-family: var(--font-ui); font-size: 14px; color: var(--color-text-body); text-decoration: none; }
+.top-nav-bar nav a[aria-current="page"] { color: var(--color-primary); font-weight: 600; }
+.top-nav-bar .actions { display: flex; align-items: center; gap: 16px; }

@@ -1,0 +1,37 @@
+/* Text Area / Rich Text — Figma "Text Area" + "Character Counter" sections */
+
+.textarea-field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 400px;
+  font-family: var(--font-ui);
+}
+.textarea-field label { font-size: var(--text-c1-size); font-weight: 600; }
+.textarea-field textarea {
+  width: 100%;
+  min-height: 140px;
+  resize: vertical;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+}
+.textarea-field textarea:hover { border-color: var(--color-cloud-grey-700); }
+.textarea-field textarea:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-deep-teal-50); }
+.textarea-field textarea:disabled { background: var(--color-surface-neutral); color: var(--color-text-muted); }
+.textarea-field textarea[aria-invalid="true"] { border-color: var(--color-red-500); }
+
+.char-counter {
+  align-self: flex-end;
+  font-family: "Plus Jakarta Sans", var(--font-ui);
+  font-weight: 500;
+  font-size: 11px;
+  line-height: 12px;
+  color: var(--color-text-muted);
+}
+.char-counter[data-status="error"] { color: var(--color-red-500); }

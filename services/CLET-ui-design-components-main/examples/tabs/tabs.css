@@ -1,0 +1,41 @@
+/* Tabs — Figma "Tabs" (bar) + "Tab (Item)" sections */
+
+.tablist {
+  display: inline-flex;
+  gap: 4px;
+  /* Cloud Grey 300, not the 100-weight --color-surface-neutral used for the
+     page background itself — same value on both would make the track
+     invisible against .app-main and only the white active pill would show. */
+  background: var(--color-cloud-grey-300);
+  border-radius: var(--radius-2xl);
+  padding: 4px;
+}
+.tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  border: none; background: none; cursor: pointer;
+  padding: 12px;
+  border-radius: var(--radius-2xl);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 14px;
+  line-height: 16px;
+  color: var(--color-text-muted);
+}
+.tab:hover { color: var(--color-text-body); }
+.tab:focus-visible { outline: 2px solid var(--color-deep-teal-400); outline-offset: 2px; }
+.tab[aria-selected="true"] { background: var(--color-surface); color: var(--color-primary); box-shadow: var(--shadow-100); }
+.tab:disabled { color: var(--color-cloud-grey-600); cursor: not-allowed; }
+
+.tab .tab-icon { width: 18px; height: 18px; flex: none; }
+
+/* Icon + label segmented control: same .tablist/.tab, just with an icon
+   before the label, a full-width pill track, and a near-black (rather than
+   brand-teal) active label to match the reference screenshot exactly. */
+.tablist--icon { width: 100%; max-width: 420px; }
+.tablist--icon .tab { flex: 1; justify-content: center; padding: 12px 16px; font-weight: 500; }
+.tablist--icon .tab[aria-selected="true"] { color: var(--color-clet-navy-500); font-weight: 700; }
+
+.tabpanel { padding: var(--space-4) 0; font-family: var(--font-caption); font-size: var(--text-b3-size); }
+.tabpanel[hidden] { display: none; }

@@ -9,12 +9,14 @@
       <env name="SFL_DB_USERNAME" value="sfl" />
       <env name="SFL_DB_PASSWORD" value="sfl" />
       <env name="SFL_SECURITY_ENABLED" value="false" />
-      <env name="SFL_FLEET_OPEN_BROWSER" value="true" />
       <env name="SFL_FLEET_EVENT_TRANSPORT" value="rabbitmq" />
       <env name="SFL_RABBITMQ_HOST" value="localhost" />
       <env name="SFL_RABBITMQ_PORT" value="5672" />
       <env name="SFL_RABBITMQ_USERNAME" value="sfl" />
       <env name="SFL_RABBITMQ_PASSWORD" value="sfl" />
+      <env name="SFL_RABBITMQ_HEALTH_ENABLED" value="true" />
+      <env name="SFL_FLEET_OPEN_SWAGGER" value="true" />
+      <env name="SFL_FLEET_OPEN_DASHBOARD" value="false" />
     </envs>
     <module name="sfl-fleet-logistics-service" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.fleetlogistics.FleetLogisticsServiceApplication" />

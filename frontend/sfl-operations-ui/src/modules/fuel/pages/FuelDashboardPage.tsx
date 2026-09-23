@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import {
@@ -28,12 +28,12 @@ import Button from 'shared/components/Button';
 import DataState from 'shared/components/DataState';
 import DataTable, { CellStack, Column } from 'shared/components/DataTable';
 import FilterBar from 'shared/components/FilterBar';
-import Icon from 'shared/components/Icon';
 import PageHeader from 'shared/components/PageHeader';
 import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
+import Tabs from 'shared/components/Tabs';
 import { formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
 import { fuelPaths } from 'shared/layout/navigation';
@@ -64,19 +64,6 @@ const toSpendPoints = (totals: DailyFuelTotals[], days: number): SpendPoint[] =>
   });
 };
 
-/** Header metadata: when the snapshot was taken and what it covers. Facts, so no tone. */
-const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean }) => (
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-theme-xs font-medium text-gray-700">
-    {stale && (
-      <>
-        <Icon name="alert-triangle" size={13} className="shrink-0 text-warning-700" />
-        <span className="sr-only">May be out of date.</span>
-      </>
-    )}
-    {children}
-  </span>
-);
-
 /**
  * The Fuel & Driver Logbooks workspace.
  *
@@ -96,6 +83,7 @@ const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean })
  */
 const FuelDashboardPage = () => {
   const navigate = useNavigate();
+  const [attentionTab, setAttentionTab] = useState<'cases' | 'reconciliation'>('cases');
   const [siteCode, setSiteCode] = useState(defaultSite);
 
   const windowStart = useMemo(
@@ -292,19 +280,6 @@ const FuelDashboardPage = () => {
           <Button variant="outline" startIcon="refresh" onClick={refreshAll}>
             Refresh
           </Button>
-        }
-        meta={
-          data && (
-            <div className="flex flex-wrap items-center gap-2">
-              <MetaChip stale={data.stale}>
-                {data.sourceUpdatedAt
-                  ? `Transactions last changed ${formatDateTime(data.sourceUpdatedAt)}`
-                  : 'No transactions recorded at this site'}
-              </MetaChip>
-              <MetaChip>{`Site ${siteCode}`}</MetaChip>
-              <MetaChip>{`${formatNumber(data.transactionCount)} transactions in scope`}</MetaChip>
-            </div>
-          )
         }
       />
 
@@ -534,60 +509,69 @@ const FuelDashboardPage = () => {
                 </SectionCard>
               </div>
 
-              <div className="grid gap-5 xl:grid-cols-2">
-                <SectionCard
-                  title="Open cases by type"
-                  subtitle="Every open case at this site, counted by the service"
-                >
-                  <DataState
-                    loading={anomalyCounts.initialising}
-                    error={anomalyCounts.error}
-                    empty={anomalyBars.length === 0}
-                    emptyTitle="No open cases"
-                    emptyHint="There is nothing to break down."
-                    onRetry={anomalyCounts.refetch}
-                    minHeight={260}
-                  >
-                    <AnomalyMixChart bars={anomalyBars} />
-                  </DataState>
-                </SectionCard>
-
-                <SectionCard
-                  title="Awaiting reconciliation"
-                  subtitle="Received, not yet judged against a policy"
-                  actions={
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      endIcon="chevron-right"
-                      onClick={() => navigate(fuelPaths.reconciliation)}
+              <SectionCard flush>
+                <Tabs
+                  variant="pill"
+                  className="px-5 pt-5"
+                  value={attentionTab}
+                  onChange={(value) => setAttentionTab(value as 'cases' | 'reconciliation')}
+                  items={[
+                    { value: 'cases', label: 'Open cases by type', count: anomalyBars.length },
+                    {
+                      value: 'reconciliation',
+                      label: 'Awaiting reconciliation',
+                      count: unreconciled.data?.totalElements ?? 0,
+                    },
+                  ]}
+                />
+                {attentionTab === 'cases' ? (
+                  <div className="px-5 pb-5 pt-4">
+                    <DataState
+                      loading={anomalyCounts.initialising}
+                      error={anomalyCounts.error}
+                      empty={anomalyBars.length === 0}
+                      emptyTitle="No open cases"
+                      emptyHint="There is nothing to break down."
+                      onRetry={anomalyCounts.refetch}
+                      minHeight={260}
                     >
-                      Reconcile
-                    </Button>
-                  }
-                  flush
-                >
-                  <DataState
-                    loading={unreconciled.initialising}
-                    error={unreconciled.error}
-                    empty={(unreconciled.data?.totalElements ?? 0) === 0}
-                    emptyTitle="Everything has been reconciled"
-                    emptyHint="No transaction at this site is still in the received state."
-                    onRetry={unreconciled.refetch}
-                    minHeight={160}
-                  >
-                    <DataTable
-                      rows={unreconciled.data?.content ?? []}
-                      columns={unreconciledColumns}
-                      getRowId={(row) => row.id}
-                      loading={unreconciled.loading}
-                      onRowClick={(row) => navigate(fuelPaths.transactionDetail(row.id))}
-                      caption="Fuel transactions at this site that have been received but not reconciled, with their cost."
-                      dense
-                    />
-                  </DataState>
-                </SectionCard>
-              </div>
+                      <AnomalyMixChart bars={anomalyBars} />
+                    </DataState>
+                  </div>
+                ) : (
+                  <div className="pb-2 pt-3">
+                    <div className="flex justify-end px-5 pb-2">
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        endIcon="chevron-right"
+                        onClick={() => navigate(fuelPaths.reconciliation)}
+                      >
+                        Reconcile
+                      </Button>
+                    </div>
+                    <DataState
+                      loading={unreconciled.initialising}
+                      error={unreconciled.error}
+                      empty={(unreconciled.data?.totalElements ?? 0) === 0}
+                      emptyTitle="Everything has been reconciled"
+                      emptyHint="No transaction at this site is still in the received state."
+                      onRetry={unreconciled.refetch}
+                      minHeight={160}
+                    >
+                      <DataTable
+                        rows={unreconciled.data?.content ?? []}
+                        columns={unreconciledColumns}
+                        getRowId={(row) => row.id}
+                        loading={unreconciled.loading}
+                        onRowClick={(row) => navigate(fuelPaths.transactionDetail(row.id))}
+                        caption="Fuel transactions at this site that have been received but not reconciled, with their cost."
+                        dense
+                      />
+                    </DataState>
+                  </div>
+                )}
+              </SectionCard>
             </div>
           )}
         </DataState>

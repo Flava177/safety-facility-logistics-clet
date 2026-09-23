@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import cardWatermark from 'assets/adinkra-hene-navy.png';
 import Icon, { IconName } from './Icon';
 import { cn } from './cn';
 
@@ -43,7 +44,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
 
   const inner = (
     <>
-      <div className="flex items-start justify-between gap-4">
+      <div className="relative z-1 flex items-start justify-between gap-4">
         <div className="min-w-0">
           <p className="truncate text-theme-sm font-medium text-gray-600">{label}</p>
           <p className="mt-1.5 text-title-sm leading-none font-bold text-gray-900 tabular-nums">
@@ -62,7 +63,7 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
         </span>
       </div>
 
-      <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
+      <div className="relative z-1 mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
         {caption ? (
           <p className={cn('text-theme-sm', palette.caption)}>{caption}</p>
         ) : (
@@ -78,9 +79,20 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
     </>
   );
 
+  // Adinkra Hene watermark, engraved faintly into the tile - the Metric Card's own treatment
+  // (`metric-card.css`), scaled down for this card's smaller footprint.
+  const watermark = (
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -right-4 -bottom-4 z-0 h-24 w-24 bg-contain bg-no-repeat opacity-[0.06]"
+      style={{ backgroundImage: `url(${cardWatermark})` }}
+    />
+  );
+
   if (!onClick) {
     return (
-      <div className="flex flex-col rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-theme-md">
+      <div className="relative flex flex-col overflow-hidden rounded-lg border border-gray-200 bg-white px-5 py-4 shadow-theme-md">
+        {watermark}
         {inner}
       </div>
     );
@@ -91,8 +103,9 @@ const StatCard = ({ label, value, icon, tone = 'neutral', caption, onClick }: St
       type="button"
       onClick={onClick}
       aria-label={`${label}: ${value}. Show the records behind this figure.`}
-      className="group flex w-full flex-col rounded-lg border border-gray-200 bg-white px-5 py-4 text-left shadow-theme-md transition-all hover:-translate-y-1 hover:border-gold-300 hover:bg-gold-25 hover:shadow-theme-xl"
+      className="group relative flex w-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white px-5 py-4 text-left shadow-theme-md transition-all hover:-translate-y-1 hover:border-gold-300 hover:bg-gold-25 hover:shadow-theme-xl"
     >
+      {watermark}
       {inner}
     </button>
   );

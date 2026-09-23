@@ -1,0 +1,47 @@
+/* Video Card — Figma "Video Card" section: Property 1 = Default/Completed */
+
+.video-card {
+  position: relative;
+  z-index: 0;
+  width: 320px;
+  border: 1.5px solid var(--color-cloud-grey-100);
+  border-radius: var(--radius-xl);
+  overflow: hidden;
+  font-family: var(--font-ui);
+  background: var(--color-surface);
+}
+/* Adinkra Hene watermark, engraved faintly into the body area (real asset,
+   see docs/adinkra/ and examples/brand-assets/) — the opaque .thumb above
+   it naturally covers the top portion, so it only shows through where the
+   card's own light background is visible. */
+.video-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -16px;
+  bottom: -16px;
+  width: 90px;
+  height: 90px;
+  background-image: url("img/adinkra-hene-navy.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: .06;
+  pointer-events: none;
+}
+.video-card .thumb {
+  position: relative;
+  aspect-ratio: 16 / 10;
+  background: linear-gradient(135deg, var(--color-deep-teal-500), var(--color-clet-navy-700));
+}
+.video-card .duration {
+  position: absolute; right: var(--space-2); bottom: var(--space-2);
+  background: rgba(0,0,0,.6); color: #fff;
+  font-size: 11px; line-height: 16.5px; padding: 2px 6px; border-radius: 4px;
+}
+.video-card .completed-badge {
+  position: absolute; left: var(--space-2); top: var(--space-2);
+  background: var(--color-success-bg); color: var(--color-green-700);
+  font-size: var(--text-c1-size); padding: 2px 8px; border-radius: var(--radius-full);
+}
+.video-card .body { padding: var(--space-4); }
+.video-card .title { font-weight: 600; font-size: 14px; }

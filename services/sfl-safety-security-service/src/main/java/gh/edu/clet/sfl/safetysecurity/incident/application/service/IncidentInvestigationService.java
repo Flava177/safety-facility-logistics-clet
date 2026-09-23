@@ -14,6 +14,7 @@ import gh.edu.clet.sfl.safetysecurity.platform.application.port.AuditPort;
 import gh.edu.clet.sfl.safetysecurity.platform.application.port.IntegrationEventPublisher;
 import java.time.Clock;
 import java.time.Instant;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -101,6 +102,14 @@ public class IncidentInvestigationService {
                 incident.id().toString(), incident.siteCode(), actor,
                 Map.of("incidentId", incident.id().toString(), "evidenceId", saved.id().toString()));
         return saved;
+    }
+
+    @Transactional(readOnly = true)
+    public List<IncidentEvidence> evidence(UUID incidentId, ActorContext actor) {
+        SecurityIncident incident = requireIncident(incidentId);
+        access.require(actor, SflPermission.INCIDENT_REPORT_READ, incident.siteCode(), "SecurityIncident",
+                incident.id().toString());
+        return repository.findEvidence(incidentId);
     }
 
     private SecurityIncident requireIncident(UUID id) {

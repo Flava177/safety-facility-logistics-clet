@@ -1,0 +1,61 @@
+/* Date Picker — Figma "Day Labels" + "Day Cells" + "Period Range" + "Date Selector" + "Date & Range Picker" sections */
+
+.date-field { position: relative; width: 328px; font-family: var(--font-ui); }
+.date-selector {
+  display: flex; align-items: center; gap: 6px;
+  width: 100%; height: 40px; padding: 10px 8px;
+  border-radius: var(--radius-md);
+  background: var(--color-info-bg);
+  border: none; cursor: pointer;
+  font-size: 14px; color: var(--color-text-body);
+}
+.date-selector svg { width: 18px; height: 18px; color: var(--color-text-muted); flex: none; }
+
+.date-picker-popover {
+  position: absolute; top: calc(100% + 8px); left: 0;
+  width: 368px;
+  background: var(--color-surface);
+  border-radius: var(--radius-xl);
+  box-shadow: var(--shadow-500);
+  padding: var(--space-4);
+  z-index: 30;
+}
+.date-picker-popover[hidden] { display: none; }
+
+.date-picker-nav { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-3); font-weight: 600; }
+.date-picker-nav button { background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; }
+
+.date-grid { display: grid; grid-template-columns: repeat(7, 40px); gap: 8px; }
+.day-label { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; font-size: 14px; color: var(--color-text-muted); }
+
+.day-cell {
+  width: 40px; height: 40px;
+  border-radius: var(--radius-md);
+  border: none;
+  background: var(--color-cloud-grey-100);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  cursor: pointer;
+  position: relative;
+}
+.day-cell:hover:not(:disabled) { background: var(--color-surface); border: 1px solid var(--color-border-default); }
+.day-cell[aria-pressed="true"] { background: var(--color-primary); color: #fff; font-weight: 500; }
+.day-cell:disabled { color: var(--color-cloud-grey-700); cursor: not-allowed; background: var(--color-surface); }
+.day-cell.out-of-month { background: transparent; color: var(--color-cloud-grey-700); }
+.day-cell[data-marked="true"]::after {
+  content: ""; position: absolute; bottom: 4px; left: 50%; transform: translateX(-50%);
+  width: 4px; height: 4px; border-radius: 50%; background: var(--color-clet-gold-500);
+}
+.day-cell[aria-pressed="true"][data-marked="true"]::after { background: #fff; }
+
+.period-range-row { display: flex; gap: 8px; margin-top: var(--space-3); }
+.period-range-btn {
+  flex: 1; height: 36px; border-radius: var(--radius-md); border: none;
+  background: var(--color-surface); font-family: var(--font-ui); font-size: 14px; font-weight: 500; cursor: pointer;
+}
+.period-range-btn:hover { background: var(--color-info-bg); }
+
+/* Range Picker — simplified static preview (see intro copy: use a maintained date-range library in production) */
+.range-picker { display: flex; gap: var(--space-6); background: var(--color-surface); border-radius: var(--radius-xl); padding: var(--space-4); width: fit-content; }
+.day-cell.in-range { background: var(--color-deep-teal-50); border-radius: 0; }
+.day-cell.range-start, .day-cell.range-end { background: var(--color-primary); color: #fff; border-radius: var(--radius-md); }

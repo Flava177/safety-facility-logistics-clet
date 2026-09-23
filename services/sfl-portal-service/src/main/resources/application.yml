@@ -3,6 +3,14 @@ spring:
   application:
     name: sfl-portal-service
 
+sfl:
+  portal:
+    # true opens the portal in a browser once it is ready. The run configuration sets it; it stays
+    # false for servers and CI. See PortalStartupReporter.
+    open-browser: ${SFL_PORTAL_OPEN_BROWSER:false}
+    # The address to print and open - see PortalStartupReporter for why this is not just server.port.
+    public-url: ${SFL_PORTAL_PUBLIC_URL:http://localhost:${server.port:8090}/home}
+
 server:
   port: ${SFL_PORTAL_PORT:8090}
   tomcat:

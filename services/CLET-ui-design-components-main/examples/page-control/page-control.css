@@ -1,0 +1,13 @@
+/* Page Control — Figma "Page Control" + "Page Control (Item)" sections: carousel/onboarding position indicator */
+
+.page-control { display: flex; gap: 10px; align-items: center; list-style: none; margin: 0; padding: 0; }
+.page-control-dot {
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  background: var(--color-primary);
+  border: none; padding: 0; cursor: pointer;
+}
+.page-control-dot[data-state="default"] { opacity: 1; }
+.page-control-dot[data-state="reduced-1"] { opacity: .5; }
+.page-control-dot[data-state="reduced-2"] { opacity: .25; }
+.page-control-dot[aria-current="true"] { width: 20px; border-radius: var(--radius-full); }

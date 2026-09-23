@@ -3,6 +3,23 @@ import { cleanup } from '@testing-library/react';
 import { afterEach, vi } from 'vitest';
 
 /**
+ * Node 26 exposes an experimental global `localStorage` accessor of its own. In a jsdom worker it
+ * shadows jsdom's working storage object with `undefined`, so tests fail before rendering anything.
+ * Pin the test global to the browser object the configured environment owns.
+ */
+const storageValues = new Map<string, string>();
+const testStorage: Storage = {
+  get length() { return storageValues.size; },
+  clear: () => storageValues.clear(),
+  getItem: (key) => storageValues.get(key) ?? null,
+  key: (index) => [...storageValues.keys()][index] ?? null,
+  removeItem: (key) => { storageValues.delete(key); },
+  setItem: (key, value) => { storageValues.set(key, String(value)); },
+};
+Object.defineProperty(window, 'localStorage', { configurable: true, value: testStorage });
+Object.defineProperty(globalThis, 'localStorage', { configurable: true, value: testStorage });
+
+/**
  * Test bootstrap.
  *
  * `cleanup` after every test is what keeps one test's DOM out of the next one's queries - without

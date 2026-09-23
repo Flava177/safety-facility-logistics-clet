@@ -1,0 +1,111 @@
+/**
+ * Global page shell for the examples/* site: a persistent sidebar for
+ * navigating between pages, plus `.app-main`, the container that used to
+ * be `body` in demo.css (background, padding, content centering).
+ *
+ * This is page chrome for the example site, not a design-system component.
+ * It borrows its look from the real "Side Navigation Bar" component
+ * (see ../side-navigation/), but is kept as its own copy here rather than
+ * sharing that folder's CSS, so side-navigation/ stays self-contained and
+ * copy-paste portable on its own, per docs/design-system.md.
+ */
+html, body { margin: 0; }
+body {
+  display: flex;
+  align-items: stretch;
+  min-height: 100vh;
+}
+
+.app-sidebar {
+  flex: none;
+  width: 248px;
+  background: var(--color-surface-dark);
+  padding: var(--space-6) var(--space-3);
+  position: sticky;
+  top: 0;
+  align-self: flex-start;
+  height: 100vh;
+  overflow-y: auto;
+  overflow-x: hidden;
+  font-family: var(--font-ui);
+}
+/* Adinkra Hene watermark, engraved faintly into the rail (real asset, see
+   docs/adinkra/ and examples/brand-assets/) — decorative only. */
+.app-sidebar::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("img/adinkra-background-inverted.png");
+  background-size: 240px 240px;
+  background-repeat: repeat;
+  opacity: .06;
+  pointer-events: none;
+  z-index: 0;
+}
+.app-sidebar > * { position: relative; z-index: 1; }
+.app-brand {
+  display: block;
+  color: #fff;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: var(--text-s2-size);
+  text-decoration: none;
+  padding: 0 12px;
+  margin-bottom: var(--space-6);
+}
+.app-nav-group { margin-bottom: var(--space-4); }
+.app-nav-group:last-child { margin-bottom: 0; }
+.app-nav-group-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, .5);
+  padding: 4px 12px;
+  margin: 0 0 var(--space-2) 0;
+  border-radius: var(--radius-sm);
+}
+.app-nav-group-toggle:hover { color: rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .06); }
+.app-nav-group-toggle:focus-visible { outline: 2px solid var(--color-clet-gold-500); outline-offset: -2px; }
+.app-nav-group-toggle .chev {
+  width: 12px;
+  height: 12px;
+  flex: none;
+  transition: transform 120ms ease;
+}
+.app-nav-group-toggle[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+.app-nav-group ul[hidden] { display: none; }
+.app-sidebar ul { list-style: none; margin: 0; padding: 0; }
+.app-sidebar a {
+  display: block;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+  border-radius: var(--radius-md);
+  color: rgba(255, 255, 255, .75);
+  font-size: 14px;
+  text-decoration: none;
+}
+.app-sidebar a:hover { background: rgba(255, 255, 255, .08); color: #fff; }
+.app-sidebar a:focus-visible { outline: 2px solid var(--color-clet-gold-500); outline-offset: -2px; }
+.app-sidebar a[aria-current="page"] { background: var(--color-surface); color: var(--color-primary); font-weight: 600; }
+
+.app-main {
+  flex: 1;
+  min-width: 0;
+  font-family: var(--font-ui);
+  background: var(--color-surface-neutral);
+  color: var(--color-text-body);
+  padding: var(--space-8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}

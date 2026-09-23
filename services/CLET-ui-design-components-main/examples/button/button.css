@@ -1,0 +1,80 @@
+/**
+ * Button — reference implementation of the Figma "Button" component
+ * (Design System page > Button section > "Buttons" frame, 150 variants:
+ * Size × State × Content × Style). Values below are read directly off the
+ * component nodes; see docs/design-system.md#button for the full table.
+ *
+ * Variant axes -> code mapping:
+ *   Size    -> [data-size]     giant | large | medium | small | tiny
+ *   Style   -> [data-style]    filled | outline | clear
+ *   Content -> icon-only vs. icon+label is just "does .btn-icon have a sibling"
+ *   State   -> native CSS state (:hover/:focus-visible/:active/[disabled]),
+ *              not a separate class — states are behavior, not variants you pick.
+ */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-2);
+  border-radius: var(--radius-md);
+  border: var(--border-width-hairline) solid transparent;
+  font-family: var(--font-ui);
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 120ms ease, border-color 120ms ease, color 120ms ease;
+}
+
+.btn:focus-visible {
+  outline: var(--border-width-emphasis) solid var(--color-deep-teal-400);
+  outline-offset: 2px;
+}
+
+.btn[disabled] {
+  cursor: not-allowed;
+  opacity: 0.45; /* not captured as a distinct fill in the source file — confirm exact value with design */
+}
+
+.btn .btn-icon {
+  width: 1em;
+  height: 1em;
+  flex: none;
+}
+
+/* ---- Size (padding + type scale pulled straight from the component) ---- */
+.btn[data-size="giant"]  { padding: var(--space-4) var(--space-6); font-size: var(--text-h6-size); line-height: var(--text-b1-line); }
+.btn[data-size="large"]  { padding: 14px var(--space-5); font-size: var(--text-s2-size); line-height: var(--text-s2-line); }
+.btn[data-size="medium"] { padding: var(--space-3) var(--space-4); font-size: var(--text-b3-size); line-height: 16px; }
+.btn[data-size="small"]  { padding: var(--space-2) var(--space-3); font-size: var(--text-c1-size); line-height: var(--text-c1-line); }
+.btn[data-size="tiny"]   { padding: 6px var(--space-2); font-size: 10px; line-height: 12px; }
+
+/* icon-only buttons are square: padding == (target size - icon size) / 2 */
+.btn.btn-icon-only[data-size="giant"]  { padding: var(--space-4); }
+.btn.btn-icon-only[data-size="large"]  { padding: var(--space-3); }
+.btn.btn-icon-only[data-size="medium"] { padding: var(--space-2); }
+.btn.btn-icon-only[data-size="small"]  { padding: var(--space-1); }
+.btn.btn-icon-only[data-size="tiny"]   { padding: 4px; }
+
+/* ---- Style ---- */
+.btn[data-style="filled"] {
+  background: var(--color-primary);
+  color: var(--color-on-primary);
+}
+.btn[data-style="filled"]:hover:not([disabled])  { background: var(--color-primary-hover); }
+.btn[data-style="filled"]:active:not([disabled]) { background: var(--color-primary-pressed); }
+
+.btn[data-style="outline"] {
+  background: transparent;
+  border-color: var(--color-primary);
+  border-width: var(--border-width-control);
+  color: var(--color-primary);
+}
+.btn[data-style="outline"]:hover:not([disabled])  { background: var(--color-surface-neutral); }
+.btn[data-style="outline"]:active:not([disabled]) { background: var(--color-surface-neutral-hover); }
+
+.btn[data-style="clear"] {
+  background: transparent;
+  color: var(--color-primary);
+}
+.btn[data-style="clear"]:hover:not([disabled])  { background: var(--color-surface-neutral); }
+.btn[data-style="clear"]:active:not([disabled]) { background: var(--color-surface-neutral-hover); }

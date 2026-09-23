@@ -87,7 +87,7 @@ export const allProgrammes = Object.keys(programmes) as ProgrammeCode[];
  * no-entitlement page told a refused requester they could not see "Facility management", which is not
  * what they came for.
  */
-export type SystemCode = 'S152' | 'S153' | 'S159' | 'S166' | 'S168' | 'S171' | 'S174';
+export type SystemCode = 'S152' | 'S153' | 'S159' | 'S160' | 'S163' | 'S166' | 'S168' | 'S171' | 'S174';
 
 export interface SflSystem {
   code: SystemCode;
@@ -101,6 +101,8 @@ export const systems: Record<SystemCode, SflSystem> = {
   S152: { code: 'S152', label: 'Facility management', programme: 'IFIMP' },
   S153: { code: 'S153', label: 'Maintenance management', programme: 'IFIMP' },
   S159: { code: 'S159', label: 'Room & resource booking', programme: 'IFIMP' },
+  S160: { code: 'S160', label: 'Visitor management', programme: 'SSEMP' },
+  S163: { code: 'S163', label: 'HSE incidents & near misses', programme: 'SSEMP' },
   S166: { code: 'S166', label: 'Fleet & vehicle management', programme: 'FTLMP' },
   S168: { code: 'S168', label: 'Fuel & driver logbooks', programme: 'FTLMP' },
   S171: { code: 'S171', label: 'Courier & dispatch', programme: 'FTLMP' },
@@ -149,6 +151,9 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   SOC_OPERATOR: ['SSEMP'],
   EMERGENCY_COORDINATOR: ['SSEMP'],
   HSE_MANAGER: ['SSEMP'],
+  RECEPTION_OFFICER: ['SSEMP'],
+  VISITOR_HOST: ['SSEMP'],
+  INCIDENT_INVESTIGATOR: ['SSEMP'],
   // Command sits over the emergency workflow - it approves activations and records after-action
   // approval - and over facility incident response with it.
   COMMAND_ROLE: ['SSEMP', 'IFIMP'],
@@ -238,17 +243,20 @@ export const roleSystems: Record<string, SystemCode[]> = {
 
   // SFL.SSEMP - S174 is its own deployable, split by ADR 0004
   EMERGENCY_COORDINATOR: ['S174'],
-  SECURITY_DIRECTOR: ['S174'],
-  SOC_OPERATOR: ['S174'],
+  SECURITY_DIRECTOR: ['S160', 'S163', 'S174'],
+  RECEPTION_OFFICER: ['S160'],
+  VISITOR_HOST: ['S160'],
+  SOC_OPERATOR: ['S160', 'S163', 'S174'],
+  INCIDENT_INVESTIGATOR: ['S163'],
   // An HSE manager reads the estate to place an incident and judge a location's standing. It takes
   // the matrix's shared READ_ONLY set, which carries FACILITIES_BOOKING_READ - so the diary is
   // readable, and nothing in the section can book, approve or turn a room around.
-  HSE_MANAGER: ['S152', 'S153', 'S159', 'S174'],
+  HSE_MANAGER: ['S152', 'S153', 'S159', 'S163', 'S174'],
 
   // Roles that span programmes at the system grain too
   SECURITY_OFFICER: ['S171', 'S174'],
-  COMMAND_ROLE: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171', 'S174'],
-  INTEGRATION_ENGINEER: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171', 'S174'],
+  COMMAND_ROLE: ['S152', 'S153', 'S159', 'S160', 'S163', 'S166', 'S168', 'S171', 'S174'],
+  INTEGRATION_ENGINEER: ['S152', 'S153', 'S159', 'S160', 'S163', 'S166', 'S168', 'S171', 'S174'],
   SERVICE_INTEGRATION: ['S152', 'S153', 'S159', 'S166', 'S168', 'S171'],
 };
 

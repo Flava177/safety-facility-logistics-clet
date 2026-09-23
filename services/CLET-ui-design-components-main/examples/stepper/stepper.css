@@ -1,0 +1,23 @@
+/* Stepper (quantity) — Figma "Stepper" section: Style=Filled/Outline. Distinct from Progress Stepper (navigation). */
+
+.qty-stepper {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 0 12px;
+  height: 32px;
+  border-radius: var(--radius-md);
+  font-family: var(--font-ui);
+  font-size: 14px;
+}
+.qty-stepper[data-style="filled"]  { background: var(--color-deep-teal-50); }
+.qty-stepper[data-style="outline"] { background: var(--color-surface); border: var(--border-width-hairline) solid var(--color-primary); }
+
+.qty-stepper button {
+  width: 20px; height: 20px;
+  display: inline-flex; align-items: center; justify-content: center;
+  border: none; background: none; padding: 0; cursor: pointer; color: var(--color-primary);
+}
+.qty-stepper button:disabled { color: var(--color-cloud-grey-700); cursor: not-allowed; }
+.qty-stepper button svg { width: 14px; height: 14px; }
+.qty-stepper output { min-width: 16px; text-align: center; }

@@ -1,0 +1,31 @@
+/* Avatar — Figma "Avatar" (Size=XS/SM/MD/LG) + "Profile Favicon" (nav-bar instance) */
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--radius-full);
+  background: var(--color-surface-dark);
+  color: #FFFFFF;
+  font-family: var(--font-caption);
+  font-weight: 600;
+  overflow: hidden;
+  flex: none;
+}
+.avatar img { width: 100%; height: 100%; object-fit: cover; }
+
+.avatar[data-size="xs"] { width: 24px; height: 24px; font-size: 8px; }
+.avatar[data-size="sm"] { width: 32px; height: 32px; font-size: 11px; }
+.avatar[data-size="md"] { width: 44px; height: 44px; font-size: 14px; }
+.avatar[data-size="lg"] { width: 56px; height: 56px; font-size: 18px; }
+
+/* Profile Favicon: the top-nav-specific instance — its own border + neutral fill */
+.avatar-profile {
+  width: 44px; height: 44px;
+  border-radius: var(--radius-avatar);
+  border: var(--border-width-hairline) solid var(--color-clet-navy-500);
+  background: var(--color-surface-neutral);
+  color: var(--color-clet-navy-500);
+  font-family: var(--font-caption);
+  font-size: 14px;
+}

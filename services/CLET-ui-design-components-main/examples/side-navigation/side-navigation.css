@@ -1,0 +1,84 @@
+/* Side Navigation Bar — Figma "Side nav Items" + "COLLAPSED Side nav Items" + "Side Menu" (rail) */
+
+.side-menu {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  padding: 16px;
+  background: var(--color-surface-dark);
+  min-height: 600px;
+  width: 259px;
+  transition: width 160ms ease;
+  font-family: var(--font-ui);
+}
+.side-menu[data-collapsed="true"] { width: 76px; }
+.side-menu[data-theme="gold"] { background: var(--color-surface-dark-gold); }
+
+/* Adinkra Hene watermark, engraved faintly into the rail (real asset, see
+   docs/adinkra/ and examples/brand-assets/) — decorative only. */
+.side-menu::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("img/adinkra-background-inverted.png");
+  background-size: 220px 220px;
+  background-repeat: repeat;
+  opacity: .06;
+  pointer-events: none;
+  z-index: 0;
+}
+.side-menu > * { position: relative; z-index: 1; }
+
+.side-menu-header { display: flex; align-items: center; justify-content: space-between; }
+.side-menu-header .brand { color: #fff; font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; }
+.side-menu[data-collapsed="true"] .brand { display: none; }
+.side-menu-header button { background: none; border: none; color: rgba(255,255,255,.7); cursor: pointer; }
+
+.side-nav-section { display: flex; flex-direction: column; gap: 4px; }
+
+.side-nav-section-label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  font-weight: 600;
+  color: rgba(255, 255, 255, .5);
+  padding: 4px 16px;
+  margin: 0 0 4px 0;
+  border-radius: var(--radius-sm);
+}
+.side-nav-section-label:hover { color: rgba(255, 255, 255, .85); background: rgba(255, 255, 255, .06); }
+.side-nav-section-label .chev { width: 12px; height: 12px; flex: none; transition: transform 120ms ease; }
+.side-nav-section-label[aria-expanded="false"] .chev { transform: rotate(-90deg); }
+/* Collapsed rail: no room for section labels, so hide them and always show
+   every item as a flat icon stack instead of leaving whole groups hidden. */
+.side-menu[data-collapsed="true"] .side-nav-section-label { display: none; }
+.side-menu[data-collapsed="true"] .side-nav-group[data-expanded="false"] { display: flex; }
+
+.side-nav-group { display: flex; flex-direction: column; gap: 4px; }
+.side-nav-group[data-expanded="false"] { display: none; }
+
+.side-nav-item {
+  display: flex; align-items: center; gap: 8px;
+  height: 36px; padding: 8px 16px;
+  border-radius: var(--radius-md);
+  color: rgba(255,255,255,.75);
+  font-size: 14px; line-height: 20px;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.side-nav-item svg { width: 18px; height: 18px; flex: none; }
+.side-nav-item:hover { background: rgba(255,255,255,.08); color: #fff; }
+.side-nav-item[aria-current="page"] { background: var(--color-surface); color: var(--color-primary); }
+.side-menu[data-collapsed="true"] .side-nav-item { justify-content: center; padding: 8px 12px; }
+.side-menu[data-collapsed="true"] .side-nav-item span.label { display: none; }

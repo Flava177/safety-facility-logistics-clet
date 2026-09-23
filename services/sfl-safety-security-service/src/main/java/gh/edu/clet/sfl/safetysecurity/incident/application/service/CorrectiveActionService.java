@@ -14,6 +14,7 @@ import gh.edu.clet.sfl.safetysecurity.platform.application.port.IntegrationEvent
 import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import org.springframework.stereotype.Service;
@@ -83,6 +84,14 @@ public class CorrectiveActionService {
     public CorrectiveAction cancel(TransitionCorrectiveAction command) {
         return transition(command, SflPermission.INCIDENT_CAPA_MANAGE,
                 (a, actorId, at) -> a.cancel(command.notes(), actorId, at), null);
+    }
+
+    @Transactional(readOnly = true)
+    public List<CorrectiveAction> list(UUID incidentId, ActorContext actor) {
+        SecurityIncident incident = requireIncident(incidentId);
+        access.require(actor, SflPermission.INCIDENT_REPORT_READ, incident.siteCode(), "SecurityIncident",
+                incident.id().toString());
+        return repository.findCorrectiveActions(incidentId);
     }
 
     private CorrectiveAction transition(TransitionCorrectiveAction command, SflPermission permission,

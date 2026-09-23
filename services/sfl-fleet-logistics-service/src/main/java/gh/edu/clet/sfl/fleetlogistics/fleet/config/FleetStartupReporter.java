@@ -15,23 +15,30 @@ import org.springframework.stereotype.Component;
  * <p>The twin of the facilities and safety-security reporters. This one used to be different: it
  * owned the dashboard bundle and reported on whether it had been built. It no longer does -
  * {@code sfl-portal-service} serves the portal, and fleet is an API like the other two.
+ *
+ * <p>Swagger and the dashboard screens open independently - {@code sfl.fleet.open-swagger} and
+ * {@code sfl.fleet.open-dashboard} - so the compound run can open every service's API tab without
+ * also opening three copies of the same dashboard: only this run config's dashboard flag is on.
  */
 @Component
 class FleetStartupReporter {
 
     private static final Logger log = LoggerFactory.getLogger(FleetStartupReporter.class);
 
-    private final boolean openBrowser;
+    private final boolean openSwagger;
+    private final boolean openDashboard;
     private final String port;
     private final String contextPath;
     private final String dashboardBaseUrl;
 
     FleetStartupReporter(
-            @Value("${sfl.fleet.open-browser:false}") boolean openBrowser,
+            @Value("${sfl.fleet.open-swagger:false}") boolean openSwagger,
+            @Value("${sfl.fleet.open-dashboard:false}") boolean openDashboard,
             @Value("${server.port:8093}") String port,
             @Value("${server.servlet.context-path:}") String contextPath,
             @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8093}/home}") String dashboardBaseUrl) {
-        this.openBrowser = openBrowser;
+        this.openSwagger = openSwagger;
+        this.openDashboard = openDashboard;
         this.port = port;
         this.contextPath = contextPath;
         this.dashboardBaseUrl = dashboardBaseUrl.replaceAll("/+$", "");
@@ -50,13 +57,13 @@ class FleetStartupReporter {
         log.info("    Fleet screens      : {}", screens);
         log.info("");
 
-        if (!openBrowser) {
-            return;
+        // Screens first so they end up as the focused tab when both open.
+        if (openDashboard) {
+            open(screens);
         }
-        // Screens first so they end up as the focused tab. This service serves them itself, from its
-        // own jar on its own port, so nothing else has to be running for the tab to work.
-        open(screens);
-        open(swagger);
+        if (openSwagger) {
+            open(swagger);
+        }
     }
 
     private void open(String url) {

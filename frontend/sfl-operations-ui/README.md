@@ -1,12 +1,15 @@
 # SFL Operations UI
 
-The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). Six
+The shared React front end for the **Safety, Facilities & Logistics Directorate** (CLET). Nine
 systems have screens, across three services:
 
 | System | Module | Service | Port |
 | --- | --- | --- | --- |
 | S152 - Facility management (CAFM/IWMS) | `modules/facilities` | `sfl-facilities-service` | `8091` |
 | S153 - Maintenance management (CMMS) | `modules/facilities` | `sfl-facilities-service` | `8091` |
+| S159 - Room and resource booking | `modules/booking` | `sfl-facilities-service` | `8091` |
+| S160 - Visitor management | `modules/visitor` | `sfl-safety-security-service` | `8092` |
+| S163 - HSE incident and near-miss | `modules/incident` | `sfl-safety-security-service` | `8092` |
 | S166 - Fleet and vehicle management | `modules/fleet` | `sfl-fleet-logistics-service` | `8093` |
 | S168 - Fuel and driver logbooks | `modules/fuel` | `sfl-fleet-logistics-service` | `8093` |
 | S171 - Courier and dispatch | `modules/dispatch` | `sfl-fleet-logistics-service` | `8093` |
@@ -15,8 +18,8 @@ systems have screens, across three services:
 S166 was first and is the reference module. As of ADR 0006 this dashboard is the **only** interface -
 all five per-service static pages are now redirects into it.
 
-Built on the Aurora React template (MUI v7, Vite, TypeScript, MUI X Data Grid, ECharts), rebranded
-to the SFL palette:
+Built with React 19, Vite, TypeScript, Tailwind CSS and Recharts, with a shared component kit and
+the CLET SFL palette:
 
 | Token        | Value     | Used for                                             |
 | ------------ | --------- | ---------------------------------------------------- |

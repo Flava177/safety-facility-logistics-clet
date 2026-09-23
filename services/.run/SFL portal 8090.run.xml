@@ -1,0 +1,28 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    The portal owns no datasource and no broker (see its application.yml), so unlike the three
+    platform services it has no "SFL infrastructure" before-launch step - there is nothing for it
+    to wait on.
+
+    This is the one origin whose /api/v1/system/info answers platform "ALL" (see shared/platform.ts
+    and PortalStartupReporter), so it is the only origin whose sign-in page lists all twenty-two
+    seeded accounts rather than the subset entitled to a single platform. The API configurations do
+    not open their bundled dashboard copies; this portal is the one dashboard opened by the compound.
+    It resolves permissions from all three APIs and filters navigation for the signed-in actor.
+  -->
+  <configuration default="false" name="SFL portal 8090" type="SpringBootApplicationConfigurationType" factoryName="Spring Boot">
+    <option name="ALTERNATIVE_JRE_PATH" value="temurin-17" />
+    <option name="ALTERNATIVE_JRE_PATH_ENABLED" value="true" />
+    <option name="ACTIVE_PROFILES" value="local" />
+    <envs>
+      <env name="SFL_PORTAL_PORT" value="8090" />
+      <env name="SFL_PORTAL_OPEN_BROWSER" value="true" />
+    </envs>
+    <module name="sfl-portal-service" />
+    <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.portal.PortalServiceApplication" />
+    <option name="WORKING_DIRECTORY" value="$MODULE_WORKING_DIR$" />
+    <method v="2">
+      <option name="Make" enabled="true" />
+    </method>
+  </configuration>
+</component>

@@ -1,0 +1,17 @@
+/* Pagination — Figma "Pagination (Item)" + "Pagination" bar sections */
+
+.pagination { display: flex; gap: 8px; list-style: none; margin: 0; padding: 0; }
+.pagination-item {
+  width: 48px; height: 48px;
+  border-radius: 24px;
+  border: 1.5px solid transparent;
+  background: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  font-family: var(--font-ui); font-size: 16px; color: var(--color-text-body);
+  cursor: pointer;
+}
+.pagination-item svg { width: 20px; height: 20px; }
+.pagination-item:hover:not(:disabled) { background: var(--color-surface-neutral); }
+.pagination-item:focus-visible { outline: 2px solid var(--color-deep-teal-400); outline-offset: 2px; }
+.pagination-item[aria-current="page"] { background: var(--color-primary); color: #fff; }
+.pagination-item:disabled { color: var(--color-cloud-grey-600); cursor: not-allowed; }

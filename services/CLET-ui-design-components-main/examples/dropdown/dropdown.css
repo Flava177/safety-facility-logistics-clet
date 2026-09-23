@@ -1,0 +1,51 @@
+/* Dropdown — Figma "Dropdown" trigger + "Expanded Menu (Item)" sections */
+
+.dropdown { position: relative; width: 350px; font-family: var(--font-ui); }
+
+.dropdown-trigger {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px;
+  border-radius: var(--radius-lg);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  background: var(--color-surface);
+  font-size: 16px; line-height: 24px; color: var(--color-text-body);
+  cursor: pointer;
+}
+.dropdown-trigger:hover { border-color: var(--color-cloud-grey-700); }
+.dropdown-trigger:focus-visible { outline: none; border-color: var(--color-primary); box-shadow: 0 0 0 3px var(--color-deep-teal-50); }
+.dropdown-trigger[aria-expanded="true"] { border-color: var(--color-primary); }
+.dropdown-trigger .chev { width: 18px; height: 18px; color: var(--color-text-muted); transition: transform 120ms ease; flex: none; }
+.dropdown-trigger[aria-expanded="true"] .chev { transform: rotate(180deg); }
+.dropdown-trigger:disabled { background: var(--color-surface-neutral); color: var(--color-text-muted); cursor: not-allowed; }
+
+.dropdown-menu {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-400);
+  padding: 4px;
+  list-style: none;
+  margin: 0;
+  z-index: 20;
+}
+.dropdown-menu[hidden] { display: none; }
+
+.dropdown-item {
+  display: flex; align-items: center; gap: 12px;
+  width: 100%;
+  padding: 12px 16px 12px 12px;
+  border: none; background: none;
+  border-radius: var(--radius-md);
+  font-size: 16px; line-height: 24px; color: var(--color-text-body);
+  text-align: left; cursor: pointer;
+}
+.dropdown-item:hover, .dropdown-item:focus-visible { background: var(--color-surface-neutral); outline: none; }
+.dropdown-item[aria-selected="true"] { font-weight: 600; }
+.dropdown-item[data-destructive="true"] { color: var(--color-red-500); }
+.dropdown-item:disabled { color: var(--color-cloud-grey-700); cursor: not-allowed; }
+.dropdown-item .check {
+  width: 18px; height: 18px; border-radius: 4px; border: 1.5px solid var(--color-primary); flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+}
+.dropdown-item[aria-selected="true"] .check { background: var(--color-primary); color: #fff; }

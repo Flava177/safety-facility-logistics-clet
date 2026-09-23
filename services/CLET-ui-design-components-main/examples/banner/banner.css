@@ -1,0 +1,22 @@
+/* Banner — Figma "Banner" section: Status=Info/Success/Warning/Danger (full-width, persistent) */
+
+.banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-4);
+  width: 100%;
+  padding: 14px var(--space-5);
+  font-family: var(--font-caption);
+  font-size: 13px;
+  border-radius: var(--radius-sm);
+}
+.banner-message { display: flex; align-items: center; gap: var(--space-3); }
+.banner svg { width: 18px; height: 18px; flex: none; }
+.banner-close { background: none; border: none; padding: 2px; cursor: pointer; color: inherit; opacity: .7; }
+.banner-close:hover { opacity: 1; }
+
+.banner[data-status="info"]    { background: var(--color-info-bg);    color: var(--color-clet-navy-500); }
+.banner[data-status="success"] { background: var(--color-success-bg); color: var(--color-green-700); }
+.banner[data-status="warning"] { background: var(--color-warning-bg); color: var(--color-yellow-800); }
+.banner[data-status="danger"]  { background: var(--color-danger-bg);  color: var(--color-red-500); }

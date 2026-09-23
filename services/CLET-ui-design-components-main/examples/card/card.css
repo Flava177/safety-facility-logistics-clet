@@ -1,0 +1,61 @@
+/* Cards + Surface Card — Figma "Cards" section */
+
+.card {
+  position: relative;
+  z-index: 0; /* pins its own stacking context so the watermark below stays behind THIS card's content only */
+  overflow: hidden;
+  width: 345px;
+  background: var(--color-surface);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.card .card-title { font-family: var(--font-ui); font-weight: 600; font-size: 16px; }
+.card .card-body { font-family: var(--font-caption); font-size: var(--text-b3-size); color: var(--color-text-muted); }
+.card .card-action {
+  align-self: flex-start;
+  background: none; border: none; padding: 0; cursor: pointer;
+  color: var(--color-primary); font-family: var(--font-ui); font-weight: 600; font-size: 14px;
+}
+
+/* Surface Card: the plainer, low-emphasis wrapper used inside denser layouts (e.g. Table) */
+.surface-card {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+  width: 320px;
+  background: var(--color-surface-neutral);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  border-radius: var(--radius-lg);
+  padding: var(--space-4);
+  font-family: var(--font-ui);
+  font-weight: 600;
+  font-size: 10px;
+  color: var(--color-text-body);
+}
+
+/* Adinkra Hene watermark, engraved faintly into every card (real asset, see
+   docs/adinkra/ and examples/brand-assets/), one mark per card rather than
+   the tiled pattern used on the sidebars, since a card is a single surface.
+   z-index: -1 keeps it behind the card's own in-flow content (including
+   surface-card's bare text node, which has no element to "lift" above it)
+   while the card's own z-index: 0 above stops it leaking behind anything
+   else on the page. */
+.card::before, .surface-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -20px;
+  bottom: -20px;
+  width: 110px;
+  height: 110px;
+  background-image: url("img/adinkra-hene-navy.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: .06;
+  pointer-events: none;
+}
+.surface-card::before { width: 60px; height: 60px; right: -10px; bottom: -10px; }

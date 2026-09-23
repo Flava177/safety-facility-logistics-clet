@@ -209,7 +209,6 @@ const IntegrationHealthPage = () => {
     <div>
       <PageHeader
         title="Integration health"
-        subtitle="Signed telematics intake: what has been processed, rejected or dead-lettered."
         crumbs={[{ label: 'Fleet', to: fleetPaths.dashboard }, { label: 'Integration health' }]}
         actions={
           <Button variant="outline" startIcon="refresh" onClick={refreshAll}>

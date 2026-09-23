@@ -1,0 +1,18 @@
+/* Inline Alert — Figma "Inline Alert" section: Status=Info/Success/Warning/Danger (field-level guidance) */
+
+.inline-alert {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 440px;
+  padding: 10px 14px;
+  border-radius: var(--radius-sm);
+  font-family: var(--font-caption);
+  font-size: var(--text-c1-size);
+}
+.inline-alert svg { width: 14px; height: 14px; flex: none; }
+
+.inline-alert[data-status="info"]    { background: var(--color-info-bg);    color: var(--color-clet-navy-500); }
+.inline-alert[data-status="success"] { background: var(--color-success-bg); color: var(--color-green-700); }
+.inline-alert[data-status="warning"] { background: var(--color-warning-bg); color: var(--color-yellow-800); }
+.inline-alert[data-status="danger"]  { background: var(--color-danger-bg);  color: var(--color-red-500); }

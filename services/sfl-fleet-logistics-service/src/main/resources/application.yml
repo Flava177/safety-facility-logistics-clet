@@ -131,9 +131,11 @@ sfl:
       connect-timeout: ${SFL_JWKS_CONNECT_TIMEOUT:PT3S}
       read-timeout: ${SFL_JWKS_READ_TIMEOUT:PT3S}
   fleet:
-    # true opens Swagger and the operations dashboard in a browser once the service is ready.
-    # The local start script sets it; it stays false for servers and CI.
-    open-browser: ${SFL_FLEET_OPEN_BROWSER:false}
+    # true opens Swagger / the operations dashboard in a browser once the service is ready. The run
+    # configuration sets these; they stay false for servers, CI, and for a config that is only one
+    # member of the "SFL all services" compound and should not also open its own dashboard tab.
+    open-swagger: ${SFL_FLEET_OPEN_SWAGGER:false}
+    open-dashboard: ${SFL_FLEET_OPEN_DASHBOARD:false}
     messaging:
       # local    - events are delivered to the in-process transport and logged (no broker provisioned).
       # rabbitmq - events are published to the sfl.events exchange.

@@ -82,6 +82,15 @@ describe('programme entitlement', () => {
       expect(systemsFor(['INTEGRATION_ENGINEER'])).toEqual(allSystems);
     });
 
+    it('maps the two implemented SSEMP workflows to the roles their backend matrices grant', () => {
+      expect(systemsFor(['RECEPTION_OFFICER'])).toEqual(['S160']);
+      expect(systemsFor(['VISITOR_HOST'])).toEqual(['S160']);
+      expect(systemsFor(['INCIDENT_INVESTIGATOR'])).toEqual(['S163']);
+      expect(systemsFor(['SOC_OPERATOR'])).toEqual(['S160', 'S163', 'S174']);
+      expect(systemsFor(['SECURITY_DIRECTOR'])).toEqual(['S160', 'S163', 'S174']);
+      expect(programmesFor(['INCIDENT_INVESTIGATOR'])).toEqual(['SSEMP']);
+    });
+
     it('places S152 in IFIMP', () => {
       expect(systems.S152.programme).toBe('IFIMP');
       expect(systems.S152.label).toBe('Facility management');

@@ -19,6 +19,7 @@ import SectionCard from 'shared/components/SectionCard';
 import SiteSelect, { defaultSite } from 'shared/components/SiteSelect';
 import StatCard from 'shared/components/StatCard';
 import StatusChip from 'shared/components/StatusChip';
+import Tabs from 'shared/components/Tabs';
 import { EnumSelect } from 'shared/components/fields';
 import { formatDate, formatDateTime, formatNumber } from 'shared/components/format';
 import { useApiQuery } from 'shared/hooks/useApiQuery';
@@ -64,6 +65,7 @@ const FuelReconciliationPage = () => {
   const [scope, setScope] = useState<Scope>('RECEIVED');
   const [running, setRunning] = useState(false);
   const [outcomes, setOutcomes] = useState<RunOutcome[]>([]);
+  const [guidanceTab, setGuidanceTab] = useState<'rules' | 'policies'>('rules');
 
   const filterKey = siteCode + '|' + scope;
   const paging = useServerPage(filterKey);
@@ -458,79 +460,85 @@ const FuelReconciliationPage = () => {
           </DataState>
         </SectionCard>
 
-        <div className="grid gap-5 xl:grid-cols-2">
-          <SectionCard
-            title="The rules a run applies"
-            subtitle="In the order the service evaluates them"
-          >
-            <ol className="space-y-2.5">
-              {RECONCILIATION_RULES.map((rule) => (
-                <li key={rule} className="flex items-start gap-2.5">
-                  <Icon name="scale" size={14} className="mt-1 shrink-0 text-gray-500" />
-                  <div className="min-w-0">
-                    <p className="text-theme-sm font-medium text-gray-900">{humanise(rule)}</p>
-                    <p className="text-theme-xs text-gray-600">{RULE_DESCRIPTIONS[rule]}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-            <p className="mt-3 text-theme-xs text-gray-600">
-              Transcribed from the service’s reconciliation routine. Three of them only run when the
-              policy supplies the relevant limit, and two only when a previous transaction exists for
-              the vehicle. Which ones actually ran is recorded against each transaction and shown on
-              its detail screen.
-            </p>
-          </SectionCard>
-
-          <SectionCard
-            title="Policies in force"
-            subtitle="A run reads the one covering the transaction’s own timestamp"
-          >
-            <DataState
-              loading={policies.initialising}
-              error={policies.error}
-              empty={activePolicies.length === 0}
-              emptyTitle="No policy in force"
-              emptyHint="Reconciliation cannot run without one."
-              onRetry={policies.refetch}
-              minHeight={180}
-            >
-              <ul className="space-y-3">
-                {activePolicies.map((policy: FuelPolicy) => (
-                  <li
-                    key={policy.id}
-                    className="rounded-md border border-gray-200 px-3.5 py-3"
-                  >
-                    <div className="flex flex-wrap items-baseline justify-between gap-2">
-                      <p className="text-theme-sm font-semibold text-gray-900">
-                        {policy.name}
-                        <span className="ml-1.5 font-normal text-gray-600">
-                          version {policy.policyVersion}
-                        </span>
-                      </p>
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        endIcon="chevron-right"
-                        onClick={() => navigate(fuelPaths.policyDetail(policy.id))}
-                      >
-                        Open
-                      </Button>
+        <SectionCard flush>
+          <Tabs
+            variant="pill"
+            className="px-5 pt-5"
+            value={guidanceTab}
+            onChange={(value) => setGuidanceTab(value as 'rules' | 'policies')}
+            items={[
+              { value: 'rules', label: 'The rules a run applies', count: RECONCILIATION_RULES.length },
+              { value: 'policies', label: 'Policies in force', count: activePolicies.length },
+            ]}
+          />
+          {guidanceTab === 'rules' ? (
+            <div className="px-5 pb-5 pt-4">
+              <ol className="space-y-2.5">
+                {RECONCILIATION_RULES.map((rule) => (
+                  <li key={rule} className="flex items-start gap-2.5">
+                    <Icon name="scale" size={14} className="mt-1 shrink-0 text-gray-500" />
+                    <div className="min-w-0">
+                      <p className="text-theme-sm font-medium text-gray-900">{humanise(rule)}</p>
+                      <p className="text-theme-xs text-gray-600">{RULE_DESCRIPTIONS[rule]}</p>
                     </div>
-                    <p className="mt-0.5 text-theme-xs text-gray-600">
-                      From {formatDate(policy.effectiveFrom)}
-                      {policy.effectiveTo
-                        ? ` to ${formatDate(policy.effectiveTo)}`
-                        : ', with no end date'}{' '}
-                      · max {policy.maxPerTransaction} per transaction · SLA{' '}
-                      {policy.anomalySlaHours} hours
-                    </p>
                   </li>
                 ))}
-              </ul>
-            </DataState>
-          </SectionCard>
-        </div>
+              </ol>
+              <p className="mt-3 text-theme-xs text-gray-600">
+                Transcribed from the service’s reconciliation routine. Three of them only run when
+                the policy supplies the relevant limit, and two only when a previous transaction
+                exists for the vehicle. Which ones actually ran is recorded against each transaction
+                and shown on its detail screen.
+              </p>
+            </div>
+          ) : (
+            <div className="px-5 pb-5 pt-4">
+              <DataState
+                loading={policies.initialising}
+                error={policies.error}
+                empty={activePolicies.length === 0}
+                emptyTitle="No policy in force"
+                emptyHint="Reconciliation cannot run without one."
+                onRetry={policies.refetch}
+                minHeight={180}
+              >
+                <ul className="space-y-3">
+                  {activePolicies.map((policy: FuelPolicy) => (
+                    <li
+                      key={policy.id}
+                      className="rounded-md border border-gray-200 px-3.5 py-3"
+                    >
+                      <div className="flex flex-wrap items-baseline justify-between gap-2">
+                        <p className="text-theme-sm font-semibold text-gray-900">
+                          {policy.name}
+                          <span className="ml-1.5 font-normal text-gray-600">
+                            version {policy.policyVersion}
+                          </span>
+                        </p>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          endIcon="chevron-right"
+                          onClick={() => navigate(fuelPaths.policyDetail(policy.id))}
+                        >
+                          Open
+                        </Button>
+                      </div>
+                      <p className="mt-0.5 text-theme-xs text-gray-600">
+                        From {formatDate(policy.effectiveFrom)}
+                        {policy.effectiveTo
+                          ? ` to ${formatDate(policy.effectiveTo)}`
+                          : ', with no end date'}{' '}
+                        · max {policy.maxPerTransaction} per transaction · SLA{' '}
+                        {policy.anomalySlaHours} hours
+                      </p>
+                    </li>
+                  ))}
+                </ul>
+              </DataState>
+            </div>
+          )}
+        </SectionCard>
       </div>
     </div>
   );

@@ -1,0 +1,28 @@
+/* Combobox Autocomplete — Figma "Combobox Trigger" section: State=Placeholder/Focus/Filled/Error/Disabled */
+
+.combobox { position: relative; width: 320px; font-family: var(--font-caption); }
+.combobox-input-wrap {
+  display: flex; align-items: center; justify-content: space-between; gap: 8px;
+  height: 40px; padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  background: var(--color-surface);
+}
+.combobox-input-wrap:focus-within { border-color: #051B2C; }
+.combobox[data-status="error"] .combobox-input-wrap { border-color: var(--color-red-500); }
+.combobox-input-wrap input {
+  border: none; outline: none; flex: 1; font-family: var(--font-caption); font-size: 13px; background: transparent; color: var(--color-text-body);
+}
+.combobox-input-wrap input:disabled { color: var(--color-text-muted); }
+.combobox[data-disabled="true"] .combobox-input-wrap { background: var(--color-surface-neutral); }
+.combobox-input-wrap svg { width: 16px; height: 16px; color: var(--color-text-muted); flex: none; }
+
+.combobox-listbox {
+  position: absolute; top: calc(100% + 4px); left: 0; right: 0;
+  background: var(--color-surface); border-radius: var(--radius-md); box-shadow: var(--shadow-400);
+  list-style: none; margin: 0; padding: 4px; max-height: 220px; overflow-y: auto; z-index: 20;
+}
+.combobox-listbox[hidden] { display: none; }
+.combobox-option { padding: 10px 12px; border-radius: 6px; font-size: 13px; cursor: pointer; }
+.combobox-option:hover, .combobox-option[aria-selected="true"] { background: var(--color-surface-neutral); }
+.combobox-empty { padding: 10px 12px; font-size: 13px; color: var(--color-text-muted); }
