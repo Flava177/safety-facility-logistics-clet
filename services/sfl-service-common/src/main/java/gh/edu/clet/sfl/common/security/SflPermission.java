@@ -285,5 +285,20 @@ public enum SflPermission {
     INTRUSION_PANEL_HEALTH_READ,
     INTRUSION_DISPATCH_RECORD,
     INTRUSION_DISPATCH_READ,
-    INTRUSION_REPORT_READ
+    INTRUSION_REPORT_READ,
+
+    // Fire-Safety & Life-Safety Monitoring permissions (SRS S162a). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.lifesafety.domain.policy.LifeSafetyPermissionMatrix). S162a is
+    // observe-only by design - there is no "actuate"/"arm"/"disarm" permission here, unlike S160a/S162.
+    LIFESAFETY_EVENT_READ,
+    LIFESAFETY_FASTLANE_READ,
+    LIFESAFETY_INSPECTION_MANAGE,
+    LIFESAFETY_INSPECTION_READ,
+    LIFESAFETY_COMPLIANCE_EXCEPTION_READ,
+    LIFESAFETY_COMPLIANCE_EXCEPTION_RESOLVE,
+    LIFESAFETY_COVERAGE_MANAGE,
+    LIFESAFETY_COVERAGE_READ,
+    LIFESAFETY_MUSTER_READ,
+    LIFESAFETY_MUSTER_CHECKIN
 }

@@ -4,7 +4,6 @@ import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeam
 import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeamPorts.AudienceDirectoryPort;
 import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeamPorts.CctvEvidencePort;
 import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeamPorts.IncidentLinkPort;
-import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeamPorts.LifeSafetyEventPort;
 import gh.edu.clet.sfl.safetysecurity.emergency.application.port.IntegrationSeamPorts.ReportingPort;
 import java.util.Map;
 import java.util.Optional;
@@ -14,12 +13,16 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Component;
 
 /**
- * Phase-1 recorded implementations of the S174 integration seams. Life-safety is OBSERVE-ONLY and
- * lockdown/CCTV are SEAM-ONLY: this adapter records context references but performs no certified
- * life-safety actuation (Arch §0E). Real vendor adapters replace these without any domain change.
+ * Phase-1 recorded implementations of the remaining S174 integration seams. Lockdown/CCTV are
+ * SEAM-ONLY: this adapter records context references but performs no certified life-safety actuation
+ * (Arch §0E). {@code LifeSafetyEventPort} used to be stubbed here too (an always-empty Phase-1
+ * placeholder); now that S162a exists to observe something, {@code
+ * lifesafety.infrastructure.integration.LifeSafetyEventPortAdapter} is its real implementation, so
+ * this class no longer declares it - the real vendor adapter this class's own javadoc anticipated
+ * turned out to be one of this codebase's own later modules rather than an outside vendor.
  */
 @Component
-public class RecordedIntegrationSeams implements AudienceDirectoryPort, IncidentLinkPort, LifeSafetyEventPort,
+public class RecordedIntegrationSeams implements AudienceDirectoryPort, IncidentLinkPort,
         AccessControlLockdownPort, CctvEvidencePort, ReportingPort {
 
     private static final Logger log = LoggerFactory.getLogger(RecordedIntegrationSeams.class);
@@ -32,11 +35,6 @@ public class RecordedIntegrationSeams implements AudienceDirectoryPort, Incident
     @Override
     public boolean incidentExists(String incidentReference, String siteCode) {
         return incidentReference != null && !incidentReference.isBlank();
-    }
-
-    @Override
-    public Optional<String> latestLifeSafetyEvent(String siteCode) {
-        return Optional.empty(); // Observe-only seam; no live fire/intrusion feed in Phase 1.
     }
 
     @Override

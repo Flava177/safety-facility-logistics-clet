@@ -106,12 +106,14 @@ class SafetySecurityConfiguration {
                         // S160a's integration endpoints are authenticated at the application layer by HMAC
                         // and source allowlist (SRS-SFL-S160a-01), the same reasoning as the emergency
                         // provider-callbacks line above: a door controller or an HRMS batch job has no SFL
-                        // bearer token to present. S161's CCTV and S162's intrusion-panel integration
-                        // endpoints are authenticated the same way (SRS-SFL-S161-01/04, SRS-SFL-S162-01):
-                        // a VMS or an alarm panel has no SFL bearer token either.
+                        // bearer token to present. S161's CCTV, S162's intrusion-panel and S162a's
+                        // life-safety-feed integration endpoints are authenticated the same way
+                        // (SRS-SFL-S161-01/04, SRS-SFL-S162-01, SRS-SFL-S162a-01): a VMS, an alarm panel or
+                        // a fire panel gateway has no SFL bearer token either.
                         .requestMatchers("/", "/index.html", "/emergency/**",
                                 "/api/v1/emergency/provider-callbacks/**", "/api/v1/access-control/integration/**",
-                                "/api/v1/cctv/integration/**", "/api/v1/intrusion/integration/**")
+                                "/api/v1/cctv/integration/**", "/api/v1/intrusion/integration/**",
+                                "/api/v1/life-safety/integration/**")
                         .permitAll()
                         .anyRequest().authenticated())
                 .oauth2ResourceServer(
