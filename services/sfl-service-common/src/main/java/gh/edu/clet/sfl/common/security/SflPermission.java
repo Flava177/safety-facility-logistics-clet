@@ -269,5 +269,21 @@ public enum SflPermission {
     CCTV_DISCLOSURE_CREATE,
     CCTV_DISCLOSURE_APPROVE,
     CCTV_DISCLOSURE_READ,
-    CCTV_RETENTION_MANAGE
+    CCTV_RETENTION_MANAGE,
+
+    // Intrusion Detection & Alarm Monitoring permissions (SRS S162). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.intrusion.domain.policy.IntrusionPermissionMatrix).
+    INTRUSION_ALARM_READ,
+    INTRUSION_ALARM_ACKNOWLEDGE,
+    INTRUSION_ALARM_RESOLVE,
+    INTRUSION_ALARM_LINK_EVIDENCE,
+    INTRUSION_ALARM_LINK_INCIDENT,
+    INTRUSION_ZONE_READ,
+    INTRUSION_ZONE_MANAGE,
+    INTRUSION_ZONE_DISARM,
+    INTRUSION_PANEL_HEALTH_READ,
+    INTRUSION_DISPATCH_RECORD,
+    INTRUSION_DISPATCH_READ,
+    INTRUSION_REPORT_READ
 }

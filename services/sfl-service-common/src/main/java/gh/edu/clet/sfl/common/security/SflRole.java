@@ -53,4 +53,8 @@ public enum SflRole {
     // SOC_OPERATOR, INTEGRATION_ENGINEER, AUDITOR, COMPLIANCE_OFFICER, EMERGENCY_COORDINATOR and
     // SFL_ADMIN already exist and are reused rather than duplicated - see AccessControlPermissionMatrix.
     ACCESS_CONTROL_ADMINISTRATOR
+
+    // Intrusion Detection & Alarm Monitoring (SRS S162) needed no new role: SECURITY_DIRECTOR,
+    // SOC_OPERATOR, COMMAND_ROLE (the NECC escalation target), INTEGRATION_ENGINEER, AUDITOR and
+    // SFL_ADMIN already name every user story S162-01..05 describes - see IntrusionPermissionMatrix.
 }

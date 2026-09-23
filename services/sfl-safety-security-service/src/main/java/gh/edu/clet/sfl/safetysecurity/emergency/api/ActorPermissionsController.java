@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.policy.AccessControlP
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.policy.CctvPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.policy.EmergencyPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.policy.IncidentPermissionMatrix;
+import gh.edu.clet.sfl.safetysecurity.intrusion.domain.policy.IntrusionPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.policy.VisitorPermissionMatrix;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletRequest;
@@ -32,7 +33,7 @@ import org.springframework.web.bind.annotation.RestController;
  * simply learns nothing about S174 permissions and stops narrowing, rather than hiding every emergency
  * screen from a coordinator who is entitled to all of them.
  *
- * <p><strong>Also answers for S160, S163, S160a and S161</strong>, and will for S162-S162a as they are
+ * <p><strong>Also answers for S160, S163, S160a, S161 and S162</strong>, and will for S162a as it is
  * built. Those modules share this deployable with S174 (one process, one port, {@code
  * services/README.md}'s "SFL.SSEMP" row), and the frontend's {@code actorPermissions.ts} already has
  * exactly one URL per platform, not per module - its own comment on the {@code SSEMP} entry says
@@ -70,7 +71,8 @@ public class ActorPermissionsController {
                         || VisitorPermissionMatrix.grants(roles, permission)
                         || IncidentPermissionMatrix.grants(roles, permission)
                         || AccessControlPermissionMatrix.grants(roles, permission)
-                        || CctvPermissionMatrix.grants(roles, permission))
+                        || CctvPermissionMatrix.grants(roles, permission)
+                        || IntrusionPermissionMatrix.grants(roles, permission))
                 .map(Enum::name)
                 .sorted()
                 .toList());
