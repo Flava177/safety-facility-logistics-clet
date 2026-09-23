@@ -46,5 +46,11 @@ public enum SflRole {
     // enum constants changes no existing signature and no existing service behaviour. HSE_MANAGER,
     // COMPLIANCE_OFFICER, SECURITY_DIRECTOR, AUDITOR and SFL_ADMIN already exist and are reused rather
     // than duplicated - see IncidentPermissionMatrix.
-    INCIDENT_INVESTIGATOR
+    INCIDENT_INVESTIGATOR,
+
+    // Physical Access Control Integration user classes (SRS S160a). Added for the S160a slice; adding
+    // enum constants changes no existing signature and no existing service behaviour. SECURITY_DIRECTOR,
+    // SOC_OPERATOR, INTEGRATION_ENGINEER, AUDITOR, COMPLIANCE_OFFICER, EMERGENCY_COORDINATOR and
+    // SFL_ADMIN already exist and are reused rather than duplicated - see AccessControlPermissionMatrix.
+    ACCESS_CONTROL_ADMINISTRATOR
 }

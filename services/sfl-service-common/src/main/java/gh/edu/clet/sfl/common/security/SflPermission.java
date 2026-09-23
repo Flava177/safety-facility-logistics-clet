@@ -236,5 +236,21 @@ public enum SflPermission {
     INCIDENT_CAPA_MANAGE,
     INCIDENT_CAPA_VERIFY,
     INCIDENT_CLOSE,
-    INCIDENT_REPORT_EXPORT
+    INCIDENT_REPORT_EXPORT,
+
+    // Physical Access Control Integration permissions (SRS S160a). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.policy.AccessControlPermissionMatrix).
+    ACCESS_EVENT_READ,
+    ACCESS_EXCEPTION_READ,
+    ACCESS_EXCEPTION_ACKNOWLEDGE,
+    ACCESS_PROVISIONING_READ,
+    ACCESS_PROVISIONING_MANAGE,
+    ACCESS_OVERRIDE_CREATE,
+    ACCESS_OVERRIDE_BREAK_GLASS,
+    ACCESS_OVERRIDE_READ,
+    ACCESS_ZONE_MANAGE,
+    ACCESS_ZONE_READ,
+    ACCESS_OCCUPANCY_READ,
+    ACCESS_REPORT_READ
 }
