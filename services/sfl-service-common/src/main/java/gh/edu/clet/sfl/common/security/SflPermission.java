@@ -252,5 +252,22 @@ public enum SflPermission {
     ACCESS_ZONE_MANAGE,
     ACCESS_ZONE_READ,
     ACCESS_OCCUPANCY_READ,
-    ACCESS_REPORT_READ
+    ACCESS_REPORT_READ,
+
+    // CCTV / Video Management System Integration permissions (SRS S161). Additive only. The role ->
+    // permission mapping lives in the safety-security service
+    // (gh.edu.clet.sfl.safetysecurity.cctv.domain.policy.CctvPermissionMatrix).
+    CCTV_CAMERA_READ,
+    CCTV_EVIDENCE_REQUEST_CREATE,
+    CCTV_EVIDENCE_REQUEST_APPROVE,
+    CCTV_EVIDENCE_REQUEST_READ,
+    CCTV_EVIDENCE_ITEM_READ,
+    CCTV_LIVE_VIEW_START,
+    CCTV_LIVE_VIEW_READ,
+    CCTV_ANALYTICS_ALERT_READ,
+    CCTV_ANALYTICS_ALERT_ACKNOWLEDGE,
+    CCTV_DISCLOSURE_CREATE,
+    CCTV_DISCLOSURE_APPROVE,
+    CCTV_DISCLOSURE_READ,
+    CCTV_RETENTION_MANAGE
 }

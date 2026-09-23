@@ -4,6 +4,8 @@ import gh.edu.clet.sfl.common.api.ApiResponse;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.policy.AccessControlPermissionMatrix;
+import gh.edu.clet.sfl.safetysecurity.cctv.domain.policy.CctvPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.emergency.domain.policy.EmergencyPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.policy.IncidentPermissionMatrix;
 import gh.edu.clet.sfl.safetysecurity.visitor.domain.policy.VisitorPermissionMatrix;
@@ -30,13 +32,13 @@ import org.springframework.web.bind.annotation.RestController;
  * simply learns nothing about S174 permissions and stops narrowing, rather than hiding every emergency
  * screen from a coordinator who is entitled to all of them.
  *
- * <p><strong>Also answers for S160 and S163</strong>, and will for S160a-S162a as they are built. Those modules
- * share this deployable with S174 (one process, one port, {@code services/README.md}'s "SFL.SSEMP"
- * row), and the frontend's {@code actorPermissions.ts} already has exactly one URL per platform, not
- * per module - its own comment on the {@code SSEMP} entry says "S174's matrix today, joined by
- * S160-S163 as they are built." So this stays one route that unions every SSEMP module's matrix,
- * rather than each module adding its own {@code .../actor/permissions} the way a separate deployable
- * would.
+ * <p><strong>Also answers for S160, S163, S160a and S161</strong>, and will for S162-S162a as they are
+ * built. Those modules share this deployable with S174 (one process, one port, {@code
+ * services/README.md}'s "SFL.SSEMP" row), and the frontend's {@code actorPermissions.ts} already has
+ * exactly one URL per platform, not per module - its own comment on the {@code SSEMP} entry says
+ * "S174's matrix today, joined by S160-S163 as they are built." So this stays one route that unions
+ * every SSEMP module's matrix, rather than each module adding its own {@code .../actor/permissions}
+ * the way a separate deployable would.
  *
  * <p><strong>Authorised like any other API route.</strong> It is not on either security chain's
  * permit-all list, so in production it falls to {@code anyRequest().authenticated()} and answers for
@@ -66,7 +68,9 @@ public class ActorPermissionsController {
         return ApiResponse.ok(Arrays.stream(SflPermission.values())
                 .filter(permission -> EmergencyPermissionMatrix.grants(roles, permission)
                         || VisitorPermissionMatrix.grants(roles, permission)
-                        || IncidentPermissionMatrix.grants(roles, permission))
+                        || IncidentPermissionMatrix.grants(roles, permission)
+                        || AccessControlPermissionMatrix.grants(roles, permission)
+                        || CctvPermissionMatrix.grants(roles, permission))
                 .map(Enum::name)
                 .sorted()
                 .toList());

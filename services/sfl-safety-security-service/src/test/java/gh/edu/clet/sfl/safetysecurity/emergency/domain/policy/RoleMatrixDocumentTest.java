@@ -4,6 +4,10 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.policy.AccessControlPermissionMatrix;
+import gh.edu.clet.sfl.safetysecurity.cctv.domain.policy.CctvPermissionMatrix;
+import gh.edu.clet.sfl.safetysecurity.incident.domain.policy.IncidentPermissionMatrix;
+import gh.edu.clet.sfl.safetysecurity.visitor.domain.policy.VisitorPermissionMatrix;
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -18,13 +22,15 @@ import java.util.stream.Collectors;
 import org.junit.jupiter.api.Test;
 
 /**
- * The SSEMP section of {@code docs/ROLE_MATRIX_DRAFT.md} is generated from this matrix, and this
- * test is what makes that true rather than aspirational.
+ * The SSEMP section of {@code docs/ROLE_MATRIX_DRAFT.md} is generated from every SSEMP module's
+ * matrix, and this test is what makes that true rather than aspirational.
  *
  * <p>The union is built the way {@code ActorPermissionsController} builds it - one question per
- * permission, because {@link EmergencyPermissionMatrix} exposes a predicate and not a set - so the
- * document and the endpoint cannot disagree about a role. See the facilities module's copy of this
- * test for why the document is generated rather than written, and why there are three of these
+ * permission, asked of every module's matrix in turn, because each one exposes a predicate and not a
+ * set - so the document and the endpoint cannot disagree about a role. Lives in the {@code emergency}
+ * package because that is where the controller and the first version of this test lived (S174 shipped
+ * first); it documents every SSEMP module now, not only its own. See the facilities module's copy of
+ * this test for why the document is generated rather than written, and why there are three of these
  * rather than one.
  *
  * <p>Regenerate with:
@@ -67,9 +73,10 @@ class RoleMatrixDocumentTest {
         }
 
         assertThat(actual)
-                .as("The %s section of %s no longer matches %s.%nRegenerate it with:%n  %s%nThen read"
-                                + " the diff - if it is not the change you meant, the matrix is wrong.",
-                        SECTION, DOC, EmergencyPermissionMatrix.class.getSimpleName(), REGENERATE)
+                .as("The %s section of %s no longer matches the union of every SSEMP module's permission"
+                                + " matrix.%nRegenerate it with:%n  %s%nThen read the diff - if it is not the"
+                                + " change you meant, a matrix is wrong.",
+                        SECTION, DOC, REGENERATE)
                 .isEqualTo(expected);
     }
 
@@ -79,7 +86,11 @@ class RoleMatrixDocumentTest {
         Set<SflRole> roles = Set.of(role);
         EnumSet<SflPermission> held = EnumSet.noneOf(SflPermission.class);
         for (SflPermission permission : SflPermission.values()) {
-            if (EmergencyPermissionMatrix.grants(roles, permission)) {
+            if (EmergencyPermissionMatrix.grants(roles, permission)
+                    || VisitorPermissionMatrix.grants(roles, permission)
+                    || IncidentPermissionMatrix.grants(roles, permission)
+                    || AccessControlPermissionMatrix.grants(roles, permission)
+                    || CctvPermissionMatrix.grants(roles, permission)) {
                 held.add(permission);
             }
         }
@@ -91,8 +102,8 @@ class RoleMatrixDocumentTest {
         out.append("## SSEMP - Safety, Security & Emergency\n");
         out.append("\n");
         out.append("Served by `sfl-safety-security-service` on port 8092, and by the portal on 8090.\n");
-        out.append("Generated from `EmergencyPermissionMatrix.grants(roles, permission)`, asked once per\n");
-        out.append("permission - the same union `ActorPermissionsController` returns.\n");
+        out.append("Generated from every SSEMP module's `PermissionMatrix.grants(roles, permission)`, asked\n");
+        out.append("once per permission - the same union `ActorPermissionsController` returns.\n");
         List<SflRole> nothing = new ArrayList<>();
         for (SflRole role : rolesByName()) {
             Set<SflPermission> held = heldBy(role);
