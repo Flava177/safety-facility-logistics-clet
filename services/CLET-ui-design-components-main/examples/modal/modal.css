@@ -1,0 +1,19 @@
+/* Pop-Up (modal) — Figma "Pop-Up" section: Button Layout=Vertical/Horizontal × Content */
+
+dialog.modal {
+  width: 350px;
+  border: 1.5px solid var(--color-surface-neutral);
+  border-radius: var(--radius-lg);
+  background: var(--color-surface-neutral);
+  padding: var(--space-6);
+  font-family: var(--font-ui);
+}
+dialog.modal::backdrop { background: rgba(5, 27, 44, .45); }
+
+.modal-title { font-weight: 600; font-size: 16px; line-height: 24px; margin: 0 0 var(--space-2) 0; }
+.modal-body { font-size: 14px; color: var(--color-text-muted); margin: 0 0 var(--space-6) 0; }
+.modal-body + .field { margin-bottom: var(--space-6); }
+
+.modal-actions { display: flex; gap: var(--space-3); }
+.modal-actions[data-layout="vertical"] { flex-direction: column; }
+.modal-actions[data-layout="horizontal"] { flex-direction: row; justify-content: flex-end; }

@@ -108,6 +108,12 @@ sfl:
   service-boundary:
     schema: safety_security,emergency_notification
     owns: "Safety, Security & Emergency Management Platform (SFL.SSEMP) - S160, S160a, S161, S162, S162a, S163 and S174"
+  safety-security:
+    # true opens Swagger / the operations dashboard in a browser once the service is ready. The run
+    # configuration sets these; they stay false for servers, CI, and for a config that is only one
+    # member of the "SFL all services" compound and should not also open its own dashboard tab.
+    open-swagger: ${SFL_SAFETY_SECURITY_OPEN_SWAGGER:false}
+    open-dashboard: ${SFL_SAFETY_SECURITY_OPEN_DASHBOARD:false}
   emergency:
     # Outbound delivery uses a self-contained transactional outbox; failed deliveries dead-letter and
     # are replayable. `local` records delivery without a broker and is the single-node default. Any

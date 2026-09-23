@@ -170,6 +170,26 @@ const statusTones: Record<string, Tone> = {
   DEGRADED: 'caution',
   // Drill run.
   RUNNING: 'active',
+
+  // Visitor management (S160).
+  PRE_REGISTERED: 'caution',
+  CONFIRMED: 'ready',
+  CHECKED_IN: 'active',
+  CHECKED_OUT: 'ready',
+  NO_SHOW: 'blocked',
+  MEETING: 'neutral',
+  INTERVIEW: 'accent',
+  EVENT: 'active',
+  DELIVERY: 'neutral',
+  MAINTENANCE_CONTRACTOR: 'caution',
+
+  // HSE incident and near-miss management (S163).
+  TRIAGE: 'caution',
+  INVESTIGATING: 'active',
+  EMERGENCY: 'blocked',
+  VERIFIED: 'ready',
+  NEAR_MISS: 'caution',
+  INCIDENT: 'blocked',
 };
 
 export const toneFor = (value: string | null | undefined): Tone =>

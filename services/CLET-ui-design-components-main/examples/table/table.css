@@ -1,0 +1,26 @@
+/* Table — Figma "Table" component (top-level symbol, 1117×732) */
+
+.table-card {
+  width: 100%;
+  max-width: 1117px;
+  background: var(--color-surface);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  border-radius: var(--radius-2xl);
+  padding: var(--space-6);
+}
+.table-header {
+  font-family: var(--font-display);
+  font-size: var(--text-h5-size);
+  line-height: var(--text-h5-line);
+  margin: 0 0 var(--space-4) 0;
+}
+table.data-table { width: 100%; border-collapse: collapse; font-family: var(--font-ui); }
+table.data-table th, table.data-table td { text-align: left; padding: var(--space-3) var(--space-3); }
+table.data-table thead th {
+  font-size: var(--text-c1-size); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--color-text-muted); border-bottom: var(--border-width-hairline) solid var(--color-border-default);
+}
+table.data-table tbody tr { border-bottom: var(--border-width-hairline) solid var(--color-cloud-grey-300); }
+table.data-table tbody tr:last-child { border-bottom: none; }
+table.data-table tbody tr:hover { background: var(--color-surface-neutral); }
+table.data-table td { font-size: 14px; }

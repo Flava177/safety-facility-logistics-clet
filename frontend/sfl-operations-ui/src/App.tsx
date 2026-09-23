@@ -121,6 +121,15 @@ const EmergencyIntegrationPage = lazy(
   () => import('modules/emergency/pages/EmergencyIntegrationPage'),
 );
 
+const VisitorDashboardPage = lazy(() => import('modules/visitor/pages/VisitorDashboardPage'));
+const VisitorVisitsPage = lazy(() => import('modules/visitor/pages/VisitorVisitsPage'));
+const VisitorVisitDetailPage = lazy(() => import('modules/visitor/pages/VisitorVisitDetailPage'));
+const VisitorRollCallPage = lazy(() => import('modules/visitor/pages/VisitorRollCallPage'));
+
+const IncidentDashboardPage = lazy(() => import('modules/incident/pages/IncidentDashboardPage'));
+const IncidentsPage = lazy(() => import('modules/incident/pages/IncidentsPage'));
+const IncidentDetailPage = lazy(() => import('modules/incident/pages/IncidentDetailPage'));
+
 /**
  * The router basename comes from Vite's `BASE_URL`, which is set by `base` in `vite.config.ts`.
  * Keeping it derived means the mount point is stated once: move the bundle and the routes follow.
@@ -386,9 +395,23 @@ const App = () => {
               land that is not a collision. The service is named for the platform; the segment is
               named for the system, which is the same split FTLMP and IFIMP now use.
             */}
-            <Route path="safetysecurity" element={<SystemRoutes system="S174" />}>
-              <Route index element={<Navigate to="emergency" replace />} />
-              <Route path="emergency">
+            <Route path="safetysecurity">
+              <Route path="visitors" element={<SystemRoutes system="S160" />}>
+                <Route index element={<VisitorDashboardPage />} />
+                <Route path="visits">
+                  <Route index element={<VisitorVisitsPage />} />
+                  <Route path=":visitId" element={<VisitorVisitDetailPage />} />
+                </Route>
+                <Route path="roll-call" element={<VisitorRollCallPage />} />
+              </Route>
+              <Route path="incidents" element={<SystemRoutes system="S163" />}>
+                <Route index element={<IncidentDashboardPage />} />
+                <Route path="cases">
+                  <Route index element={<IncidentsPage />} />
+                  <Route path=":incidentId" element={<IncidentDetailPage />} />
+                </Route>
+              </Route>
+              <Route path="emergency" element={<SystemRoutes system="S174" />}>
               <Route index element={<EmergencyDashboardPage />} />
               <Route path="activations">
                 <Route index element={<ActivationsPage />} />

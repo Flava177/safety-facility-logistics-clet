@@ -1,0 +1,33 @@
+/* Divider — Figma "Divider" section: Type=Plain/Labelled × Orientation=Horizontal/Vertical */
+
+.divider {
+  border: none;
+  background: var(--color-border-default);
+  margin: 0;
+}
+.divider[data-orientation="horizontal"] { width: 100%; height: 1px; }
+.divider[data-orientation="vertical"]   { width: 1px; height: 60px; display: inline-block; }
+
+.divider-labelled {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 400px;
+}
+.divider-labelled[data-orientation="vertical"] {
+  flex-direction: column;
+  width: auto;
+  height: 60px;
+}
+.divider-labelled .divider-line {
+  flex: 1;
+  border: none;
+  background: var(--color-border-default);
+}
+.divider-labelled[data-orientation="horizontal"] .divider-line { height: 1px; }
+.divider-labelled[data-orientation="vertical"] .divider-line { width: 1px; flex: 1; }
+.divider-labelled .divider-label {
+  font-size: var(--text-c1-size);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}

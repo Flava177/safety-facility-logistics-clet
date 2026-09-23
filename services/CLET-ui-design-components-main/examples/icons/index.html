@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Iconography: CLET Design System reference implementation</title>
+<link rel="stylesheet" href="../../tokens/tokens.css" />
+<link rel="stylesheet" href="../_shared/demo.css" />
+<link rel="stylesheet" href="../_shared/shell.css" />
+<script src="../_shared/shell.js" defer></script>
+<style>
+  .icon-tile { display:flex; flex-direction:column; align-items:center; gap:6px; padding:12px; border-radius:var(--radius-md); border:1px solid var(--color-border-default); font-size:11px; color:var(--color-text-muted); }
+  .icon-tile svg { width:24px; height:24px; color:var(--color-text-body); }
+  .icon-grid { display:grid; grid-template-columns: repeat(auto-fill, minmax(90px, 1fr)); gap: var(--space-3); max-width:900px; }
+  pre { background: var(--color-clet-navy-900); color: #E7EDF1; padding: var(--space-4); border-radius: var(--radius-md); overflow-x: auto; font-size: 13px; }
+</style>
+</head>
+<body>
+<nav class="app-sidebar" aria-label="Component pages">
+  <a class="app-brand" href="../index.html">CLET UI Design Components</a>
+  <div class="app-nav-group">
+    <ul>
+      <li><a href="../index.html">Overview</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-actions" data-group="actions" data-contains-current="false">Actions<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-actions">
+      <li><a href="../button/index.html">Button</a></li>
+      <li><a href="../tag-chip/index.html">Tag Chip</a></li>
+      <li><a href="../pagination/index.html">Pagination</a></li>
+      <li><a href="../page-control/index.html">Page Control</a></li>
+      <li><a href="../breadcrumb/index.html">Breadcrumb</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-form-input" data-group="form-input" data-contains-current="false">Form & input<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-form-input">
+      <li><a href="../text-input/index.html">Text Input</a></li>
+      <li><a href="../text-area/index.html">Text Area / Rich Text</a></li>
+      <li><a href="../dropdown/index.html">Dropdown</a></li>
+      <li><a href="../combobox/index.html">Combobox Autocomplete</a></li>
+      <li><a href="../checkbox/index.html">Checkbox</a></li>
+      <li><a href="../radio/index.html">Radio</a></li>
+      <li><a href="../toggle/index.html">Toggle</a></li>
+      <li><a href="../date-picker/index.html">Date Picker</a></li>
+      <li><a href="../file-upload/index.html">File Upload</a></li>
+      <li><a href="../stepper/index.html">Stepper (quantity)</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-navigation" data-group="navigation" data-contains-current="false">Navigation<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-navigation">
+      <li><a href="../tabs/index.html">Tabs</a></li>
+      <li><a href="../top-nav-bar/index.html">Top Nav bar</a></li>
+      <li><a href="../side-navigation/index.html">Side Navigation Bar</a></li>
+      <li><a href="../progress-stepper/index.html">Progress Stepper</a></li>
+      <li><a href="../progress-bar/index.html">Progress Bar</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-feedback-status" data-group="feedback-status" data-contains-current="false">Feedback & status<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-feedback-status">
+      <li><a href="../tooltip/index.html">Tooltip</a></li>
+      <li><a href="../modal/index.html">Pop-Up (modal)</a></li>
+      <li><a href="../toast/index.html">Toast</a></li>
+      <li><a href="../banner/index.html">Banner</a></li>
+      <li><a href="../inline-alert/index.html">Inline Alert</a></li>
+      <li><a href="../empty-state/index.html">Empty State</a></li>
+      <li><a href="../skeleton/index.html">Skeleton</a></li>
+      <li><a href="../loader/index.html">Loader</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-data-layout" data-group="data-layout" data-contains-current="false">Data display & layout<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-data-layout">
+      <li><a href="../list/index.html">List</a></li>
+      <li><a href="../card/index.html">Cards / Surface Card</a></li>
+      <li><a href="../video-card/index.html">Video Card</a></li>
+      <li><a href="../table/index.html">Table</a></li>
+      <li><a href="../avatar/index.html">Avatar / Profile Favicon</a></li>
+      <li><a href="../timeline/index.html">Timeline</a></li>
+      <li><a href="../description-list/index.html">Description List</a></li>
+      <li><a href="../metric-card/index.html">Metric Card</a></li>
+      <li><a href="../accordion/index.html">Accordion</a></li>
+      <li><a href="../drawer/index.html">Drawer Sheet</a></li>
+      <li><a href="../divider/index.html">Divider</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-brand-icons" data-group="brand-icons" data-contains-current="true">Brand assets & iconography<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-brand-icons">
+      <li><a href="../brand-assets/index.html">Brand assets</a></li>
+      <li><a href="../icons/index.html" aria-current="page">Iconography</a></li>
+    </ul>
+  </div>
+</nav>
+<main class="app-main">
+
+  <h1 class="demo-title">Iconography</h1>
+  <p class="demo-intro">The Figma file's "Icons" page is the complete <a href="https://phosphoricons.com" target="_blank" rel="noopener">Phosphor Icons</a> set: 18,144 symbols across 18 categories. Don't export these one at a time; install the package and reference icons by name. The tiles below are generic placeholders (this reference doesn't have Phosphor's actual SVG paths) standing in for real Phosphor icons; swap them for the real package.</p>
+
+  <section class="demo-section">
+    <h2>Install</h2>
+    <pre>npm install @phosphor-icons/react
+# or, framework-agnostic:
+npm install phosphor-icons</pre>
+  </section>
+
+  <section class="demo-section">
+    <h2>Usage (React)</h2>
+    <pre>import { ArrowLeft, ArrowRight, Check } from "@phosphor-icons/react";
+
+&lt;Button&gt;&lt;ArrowLeft size={20} /&gt; Back&lt;/Button&gt;</pre>
+  </section>
+
+  <section class="demo-section">
+    <h2>Categories (18)</h2>
+    <p class="note">Arrows, Brands, Commerce, Communication, Design, Development, Education, Games, Health &amp; Wellness, Maps &amp; Travel, Math &amp; Finance, Media, Office &amp; Editing, People, Security &amp; Warnings, System &amp; Devices, Time, Weather &amp; Nature.</p>
+  </section>
+
+  <section class="demo-section">
+    <h2>Placeholder set used across these example pages</h2>
+    <div class="icon-grid">
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>arrow-left</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></svg>arrow-right</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></svg>arrow-up</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9l6 6 6-6"/></svg>chevron-down</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6L6 18M6 6l12 12"/></svg>x</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 6L9 17l-5-5"/></svg>check</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.3-4.3"/></svg>search</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>calendar</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 4-6 8-6s8 2 8 6"/></svg>user</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg>info</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 9v4m0 4h.01M10.3 3.9L2.6 17a2 2 0 0 0 1.7 3h15.4a2 2 0 0 0 1.7-3L13.7 3.9a2 2 0 0 0-3.4 0z"/></svg>warning</span>
+      <span class="icon-tile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="7" width="16" height="13" rx="2"/><path d="M9 3h6l1 4H8z"/></svg>trash</span>
+    </div>
+  </section>
+
+</main>
+</body>
+</html>

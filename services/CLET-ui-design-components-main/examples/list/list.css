@@ -1,0 +1,28 @@
+/* List — Figma "List (Left Item)" + "List (Right Item)" sections. A row = one Left Item + one Right Item. */
+
+.list { list-style: none; margin: 0; padding: 0; width: 500px; border: var(--border-width-hairline) solid var(--color-border-default); border-radius: var(--radius-lg); overflow: hidden; background: var(--color-surface); }
+.list-row {
+  display: flex; align-items: center; justify-content: space-between; gap: 12px;
+  padding: 12px;
+  border-bottom: var(--border-width-hairline) solid var(--color-border-default);
+  font-family: var(--font-ui);
+}
+.list-row:last-child { border-bottom: none; }
+.list-row:hover { background: var(--color-surface-neutral); }
+
+.list-leading { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.list-leading .icon-slot {
+  width: 24px; height: 24px; border-radius: 50%; background: var(--color-surface-neutral);
+  display: inline-flex; align-items: center; justify-content: center; color: var(--color-primary); flex: none;
+}
+.list-leading .icon-slot svg { width: 14px; height: 14px; }
+.list-title { font-size: 16px; line-height: 24px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.list-subtitle { font-size: var(--text-c1-size); color: var(--color-text-muted); }
+
+.list-trailing { display: flex; align-items: center; gap: 8px; flex: none; }
+.list-trailing .badge {
+  min-width: 20px; height: 20px; padding: 0 6px; border-radius: var(--radius-full);
+  background: var(--color-surface-neutral); color: var(--color-text-body);
+  font-size: 12px; display: inline-flex; align-items: center; justify-content: center;
+}
+.list-trailing svg { width: 18px; height: 18px; color: var(--color-text-muted); }

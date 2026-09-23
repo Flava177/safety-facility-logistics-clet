@@ -1,4 +1,4 @@
-import { ReactNode, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router';
 import dayjs from 'dayjs';
 import { DashboardDrilldownRow, TripResponse, WorkflowItemResponse } from 'modules/fleet/api/dto';
@@ -62,27 +62,6 @@ const bucketByDay = (
 
   return [...buckets.values()];
 };
-
-/**
- * Page-header metadata: when the snapshot was taken, what it covers, what it reconciled.
- *
- * These are facts about the query rather than statuses, so they carry no tone - three coloured chips
- * directly above a KPI row is the loudest thing the header can do, and it spends attention on
- * provenance instead of on the numbers. Staleness is the one thing here that is a status, and it is
- * marked with an icon and a name assistive technology can read: the previous build said it by
- * turning the chip amber, which makes colour the only carrier of the meaning (SC 1.4.1).
- */
-const MetaChip = ({ children, stale }: { children: ReactNode; stale?: boolean }) => (
-  <span className="inline-flex items-center gap-1.5 rounded-full bg-gray-100 px-2.5 py-1 text-theme-xs font-medium text-gray-700">
-    {stale && (
-      <>
-        <Icon name="alert-triangle" size={13} className="shrink-0 text-warning-700" />
-        <span className="sr-only">May be out of date.</span>
-      </>
-    )}
-    {children}
-  </span>
-);
 
 /**
  * The Fleet operations workspace.
@@ -325,19 +304,6 @@ const FleetDashboardPage = () => {
             Refresh
           </Button>
         }
-        meta={
-          snapshot.data && (
-            <div className="flex flex-wrap items-center gap-2">
-              <MetaChip stale={snapshot.data.stale}>
-                {`Snapshot ${formatDateTime(snapshot.data.generatedAt)}`}
-              </MetaChip>
-              <MetaChip>{`Scope ${snapshot.data.scopeKey}`}</MetaChip>
-              <MetaChip>
-                {`${snapshot.data.reconciliation.vehicles} vehicles · ${snapshot.data.reconciliation.trips} trips`}
-              </MetaChip>
-            </div>
-          )
-        }
       />
 
       {/*
@@ -563,7 +529,8 @@ const FleetDashboardPage = () => {
                   ]}
                   value={exceptionsTab}
                   onChange={(value) => setExceptionsTab(value as 'escalated' | 'compliance')}
-                  className="px-5"
+                  variant="pill"
+                  className="px-5 pb-3"
                 />
                 {exceptionsTab === 'escalated' ? (
                   <DataState

@@ -6,12 +6,13 @@ shared kernel.
 | Module                        | Platform | Systems                          | Schemas                                 | Port   |
 | ----------------------------- | -------- | -------------------------------- | --------------------------------------- | ------ |
 | `sfl-facilities-service`      | IFIMP    | S152, S153, S159                 | `facilities`                            | `8091` |
-| `sfl-safety-security-service` | SSEMP    | S174; S160–S163 not built        | `safety_security`, `emergency_notification` | `8092` |
+| `sfl-safety-security-service` | SSEMP    | S160, S163, S174                 | `safety_security`, `emergency_notification` | `8092` |
 | `sfl-fleet-logistics-service` | FTLMP    | S166, S168_fuel, S171, AVAMP-Lite | `fleet_logistics`, `asset_visibility`   | `8093` |
 | `sfl-service-common`          | -        | Shared kernel                    | -                                       | -      |
 
-Of SSEMP only S174 is built; S160–S163 are foundation and migration, and four of the six are
-Buy-and-Integrate under `docs/phase-1-system-classification.md`.
+SSEMP implements S160 Visitor Management, S163 HSE Incident/Near-Miss Reporting and S174 Emergency
+Notification. S160a, S161, S162 and S162a remain Buy-and-Integrate scope under
+`docs/phase-1-system-classification.md`.
 `sfl-fleet-logistics-service` additionally packages and serves the React dashboard at `/ui`.
 
 ### Why three, and why five schemas

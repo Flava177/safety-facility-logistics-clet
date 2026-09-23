@@ -1,0 +1,38 @@
+/* Text Input — Figma "Text Input [1.0]" section: Type (12, content variants) × State (6) */
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  width: 300px;
+  font-family: var(--font-ui);
+}
+.field label { font-size: var(--text-c1-size); font-weight: 600; color: var(--color-text-body); }
+.field-input-wrap { position: relative; display: flex; align-items: center; }
+.field-input-wrap svg {
+  position: absolute; left: 12px; width: 16px; height: 16px; color: var(--color-text-muted); pointer-events: none;
+}
+.field-input-wrap:has(svg) input { padding-left: 36px; }
+
+.field input {
+  width: 100%;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 20px;
+  padding: 10px 12px;
+  border-radius: var(--radius-md);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  background: var(--color-surface);
+  color: var(--color-text-body);
+}
+.field input::placeholder { color: var(--color-cloud-grey-700); }
+.field input:hover { border-color: var(--color-cloud-grey-700); }
+.field input:focus-visible {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px var(--color-deep-teal-50);
+}
+.field input:disabled { background: var(--color-surface-neutral); color: var(--color-text-muted); cursor: not-allowed; }
+.field input[aria-invalid="true"] { border-color: var(--color-red-500); }
+.field .helper { font-size: 12px; color: var(--color-text-muted); }
+.field .helper[data-tone="error"] { color: var(--color-red-500); }

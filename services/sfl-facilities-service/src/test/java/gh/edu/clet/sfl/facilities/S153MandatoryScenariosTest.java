@@ -1045,6 +1045,35 @@ class S153MandatoryScenariosTest {
     // Fixtures
     // =========================================================================================
 
+    @Test
+    @DisplayName("a leaking examination-hall air conditioner is reported, repaired, evidenced and closed")
+    void examination_hall_air_conditioner_repair_runs_end_to_end() {
+        FacilityFault reported = faults.report(new MaintenanceCommands.ReportFault("MAIN", hall.id(), null,
+                generator.id(), "Air conditioner leaking above candidate seating",
+                "Water is dripping onto the rear row before the afternoon examination", null,
+                FaultPriority.HIGH, requester, SourceChannel.MOBILE, null, null));
+        FacilityFault assessed = faults.triage(new MaintenanceCommands.TriageFault(reported.id(),
+                FaultPriority.HIGH, "Isolate the unit and repair the blocked drain line", null, supervisor,
+                SourceChannel.WEB));
+        WorkOrder order = workOrders.createFromFault(new MaintenanceCommands.CreateWorkOrderFromFault(
+                assessed.id(), null, "technician", supervisor, SourceChannel.WEB, null, null));
+        order = workOrders.transition(new MaintenanceCommands.TransitionWorkOrder(order.id(),
+                MaintenanceCommands.TransitionWorkOrder.Transition.START, "Area made safe", null, technician,
+                SourceChannel.MOBILE));
+        MaintenanceEvidence completionPhoto = attachEvidence(order);
+        order = workOrders.transition(new MaintenanceCommands.TransitionWorkOrder(order.id(),
+                MaintenanceCommands.TransitionWorkOrder.Transition.COMPLETE,
+                "Drain line cleared and unit tested for thirty minutes", null, technician,
+                SourceChannel.MOBILE));
+        WorkOrder closed = workOrders.close(new MaintenanceCommands.CloseWorkOrder(order.id(),
+                "No further leak observed; hall returned to service", null, supervisor, SourceChannel.WEB));
+
+        assertThat(completionPhoto.workOrderId()).isEqualTo(closed.id());
+        assertThat(closed.status()).isEqualTo(WorkOrderStatus.CLOSED);
+        assertThat(maintenance.findFault(reported.id()).orElseThrow().status())
+                .isEqualTo(FacilityFaultStatus.RESOLVED);
+    }
+
     private FacilityFault report(FaultPriority priority) {
         return faults.report(new MaintenanceCommands.ReportFault("MAIN", hall.id(), null, null,
                 priority + " fault in Hall A", "Reported from the floor", null, priority, manager,

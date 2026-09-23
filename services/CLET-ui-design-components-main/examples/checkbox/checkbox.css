@@ -1,0 +1,45 @@
+/* Checkbox — Figma "Checkbox" + "Checkbox + Text" sections */
+
+.checkbox {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 24px; height: 24px;
+  border-radius: var(--radius-sm);
+  border: 1.5px solid var(--color-primary);
+  background: var(--color-surface);
+  display: inline-grid;
+  place-content: center;
+  cursor: pointer;
+  flex: none;
+  margin: 0;
+}
+.checkbox::before {
+  content: "";
+  width: 14px; height: 14px;
+  transform: scale(0);
+  transition: transform 100ms ease;
+  background: var(--color-primary);
+  clip-path: polygon(14% 44%, 0 65%, 50% 100%, 100% 16%, 80% 0%, 43% 62%);
+}
+.checkbox:checked::before { transform: scale(1); }
+.checkbox:checked { background: var(--color-surface); }
+.checkbox:indeterminate::before {
+  transform: scale(1);
+  clip-path: none;
+  width: 12px; height: 3px;
+  border-radius: 2px;
+}
+.checkbox:hover { border-color: var(--color-primary-hover); }
+.checkbox:focus-visible { outline: 2px solid var(--color-deep-teal-400); outline-offset: 2px; }
+.checkbox:disabled { border-color: var(--color-cloud-grey-600); cursor: not-allowed; opacity: .5; }
+
+.checkbox-field {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-4);
+  font-family: var(--font-ui);
+  font-size: 16px;
+  cursor: pointer;
+}
+.checkbox-field[data-text-side="right"] { flex-direction: row; }
+.checkbox-field[data-text-side="left"] { flex-direction: row-reverse; }

@@ -1,0 +1,21 @@
+/* Drawer Sheet — Figma "Drawer" section: Size=Default(420)/Large(620), slides in from an edge */
+
+dialog.drawer {
+  position: fixed;
+  top: 0; right: 0; margin: 0;
+  height: 100vh;
+  max-height: 100vh;
+  border: none;
+  background: var(--color-surface);
+  padding: var(--space-6);
+  font-family: var(--font-ui);
+  box-shadow: var(--shadow-700);
+}
+dialog.drawer::backdrop { background: rgba(5, 27, 44, .45); }
+dialog.drawer[data-size="default"] { width: 420px; }
+dialog.drawer[data-size="large"]   { width: 620px; }
+
+.drawer-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-4); }
+.drawer-title { font-weight: 700; font-size: 16px; }
+.drawer-close { border: none; background: none; cursor: pointer; color: var(--color-text-muted); padding: 4px; }
+.drawer-body { font-size: var(--text-b3-size); color: var(--color-text-muted); font-family: var(--font-caption); }

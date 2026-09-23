@@ -1,0 +1,113 @@
+/**
+ * CLET Design System — design tokens
+ * Generated from tokens.json (source of truth). Regenerate both together —
+ * see docs/design-system.md > Maintenance & Updates.
+ */
+:root {
+  /* ---- Color ramps ---- */
+  --color-clet-navy-50: #EBECEE;  --color-clet-navy-100: #C0C4CA; --color-clet-navy-200: #A1A8B1;
+  --color-clet-navy-300: #76808D; --color-clet-navy-400: #5C6777; --color-clet-navy-500: #334155;
+  --color-clet-navy-600: #2E3B4D; --color-clet-navy-700: #242E3C; --color-clet-navy-800: #1C242F;
+  --color-clet-navy-900: #151B24;
+
+  --color-clet-gold-50: #F8F5E7;  --color-clet-gold-100: #E9DEB4; --color-clet-gold-200: #DECF8F;
+  --color-clet-gold-300: #CFB95C; --color-clet-gold-400: #C6AB3D; --color-clet-gold-500: #B8960C;
+  --color-clet-gold-600: #A7890B; --color-clet-gold-700: #836B09; --color-clet-gold-800: #655307;
+  --color-clet-gold-900: #4D3F05;
+
+  --color-cloud-grey-50: #FCFDFE;  --color-cloud-grey-100: #F6F8FA; --color-cloud-grey-200: #F2F4F8;
+  --color-cloud-grey-300: #ECF0F5; --color-cloud-grey-400: #E8EDF3; --color-cloud-grey-500: #E2E8F0;
+  --color-cloud-grey-600: #CED3DA; --color-cloud-grey-700: #A0A5AA; --color-cloud-grey-800: #7C8084;
+  --color-cloud-grey-900: #5F6165;
+
+  --color-deep-teal-50: #E7EDF1;  --color-deep-teal-100: #B4C7D2; --color-deep-teal-200: #8FACBC;
+  --color-deep-teal-300: #5C869E; --color-deep-teal-400: #3D6E8B; --color-deep-teal-500: #0C4A6E;
+  --color-deep-teal-600: #0B4364; --color-deep-teal-700: #09354E; --color-deep-teal-800: #07293D;
+  --color-deep-teal-900: #051F2E;
+
+  --color-green-50: #E6EFEA;  --color-green-100: #B0CEBD; --color-green-200: #8AB79D;
+  --color-green-300: #549670; --color-green-400: #338154; --color-green-500: #006229;
+  --color-green-600: #005925; --color-green-700: #00461D; --color-green-800: #003617; --color-green-900: #002911;
+
+  --color-red-50: #F2E6E6;  --color-red-100: #D6B2B2; --color-red-200: #C28C8D;
+  --color-red-300: #A6585A; --color-red-400: #953839; --color-red-500: #7A0608;
+  --color-red-600: #6F0507; --color-red-700: #570406; --color-red-800: #430304; --color-red-900: #330303;
+
+  --color-yellow-50: #FFF9E9;  --color-yellow-100: #FEEBBB; --color-yellow-200: #FDE29A;
+  --color-yellow-300: #FCD46C; --color-yellow-400: #FCCC50; --color-yellow-500: #FBBF24;
+  --color-yellow-600: #E4AE21; --color-yellow-700: #B2881A; --color-yellow-800: #8A6914; --color-yellow-900: #69500F;
+
+  /* ---- Semantic aliases (map these, not raw ramps, in components) ---- */
+  --color-primary: var(--color-deep-teal-500);
+  --color-primary-hover: var(--color-deep-teal-600);
+  --color-primary-pressed: var(--color-deep-teal-700);
+  --color-on-primary: #FFFFFF;
+
+  --color-surface: #FFFFFF;
+  --color-surface-neutral: var(--color-cloud-grey-100);
+  --color-surface-neutral-hover: var(--color-cloud-grey-200);
+  --color-surface-dark: #051B2C;
+  --color-surface-dark-gold: var(--color-clet-gold-700);
+
+  --color-border-default: var(--color-cloud-grey-500);
+  --color-text-body: var(--color-clet-navy-500);
+  --color-text-muted: var(--color-clet-navy-300);
+
+  --color-success-bg: var(--color-green-50);
+  --color-success-border: var(--color-green-500);
+  --color-success-icon: var(--color-green-700);
+  --color-danger-bg: var(--color-red-50);
+  --color-danger-border: var(--color-red-500);
+  --color-danger-icon: var(--color-red-500);
+  --color-warning-bg: var(--color-yellow-50);
+  --color-warning-border: var(--color-yellow-600);
+  --color-warning-icon: var(--color-yellow-800);
+  --color-info-bg: var(--color-cloud-grey-200);
+  --color-info-border: var(--color-cloud-grey-500);
+  --color-info-icon: var(--color-deep-teal-500);
+
+  /* ---- Spacing (px) ---- */
+  --space-1: 4px;  --space-1-5: 6px; --space-2: 8px;  --space-2-5: 10px;
+  --space-3: 12px; --space-3-5: 14px; --space-4: 16px; --space-5: 20px;
+  --space-6: 24px; --space-8: 32px; --space-9: 36px; --space-10: 40px; --space-12: 48px; --space-18: 72px;
+
+  /* ---- Corner radius (px) ---- */
+  --radius-sm: 6px; --radius-md: 8px; --radius-lg: 12px; --radius-xl: 16px;
+  --radius-2xl: 20px; --radius-3xl: 24px; --radius-avatar: 44px; --radius-full: 200px;
+
+  /* ---- Borders ---- */
+  --border-width-hairline: 1px;
+  --border-width-control: 1.5px;
+  --border-width-emphasis: 2px;
+
+  /* ---- Elevation ---- */
+  --shadow-100: 0px 4px 4px -2px rgba(19,25,39,0.08), 0px 2px 4px -2px rgba(19,25,39,0.12);
+  --shadow-200: 0px 8px 8px -4px rgba(19,25,39,0.08), 0px 4px 6px -4px rgba(19,25,39,0.12);
+  --shadow-300: 0px 8px 16px -6px rgba(19,25,39,0.08), 0px 6px 8px -6px rgba(19,25,39,0.12);
+  --shadow-400: 0px 8px 24px -4px rgba(19,25,39,0.08), 0px 6px 12px -6px rgba(19,25,39,0.12);
+  --shadow-500: 0px 10px 32px -4px rgba(19,25,39,0.10), 0px 6px 14px -6px rgba(19,25,39,0.12);
+  --shadow-600: 0px 12px 42px -4px rgba(19,25,39,0.12), 0px 8px 18px -6px rgba(19,25,39,0.12);
+  --shadow-700: 0px 14px 64px -4px rgba(19,25,39,0.12), 0px 8px 22px -6px rgba(19,25,39,0.12);
+  --shadow-800: 0px 18px 88px -4px rgba(19,25,39,0.14), 0px 8px 28px -6px rgba(19,25,39,0.12);
+
+  /* ---- Typography ---- */
+  --font-display: "Roboto Serif", serif;
+  --font-ui: "Matimo", "Inter", sans-serif;
+  --font-caption: "Lato", sans-serif;
+
+  --text-h1-size: 48px; --text-h1-line: 64px;
+  --text-h2-size: 40px; --text-h2-line: 52px;
+  --text-h3-size: 32px; --text-h3-line: 40px;
+  --text-h4-size: 28px; --text-h4-line: 36px;
+  --text-h5-size: 24px; --text-h5-line: 32px;
+  --text-h6-size: 20px; --text-h6-line: 28px;
+  --text-s1-size: 18px; --text-s1-line: 28px;
+  --text-s2-size: 16px; --text-s2-line: 24px;
+  --text-b1-size: 16px; --text-b1-line: 24px;
+  --text-b2-size: 16px; --text-b2-line: 24px;
+  --text-b3-size: 14px; --text-b3-line: 20px;
+  --text-b4-size: 14px; --text-b4-line: 20px;
+  --text-c1-size: 12px; --text-c1-line: 16px;
+  --text-c2-size: 12px; --text-c2-line: 16px;
+  --text-label-size: 12px; --text-label-line: 16px;
+}

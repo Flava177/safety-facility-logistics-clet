@@ -25,27 +25,33 @@ import org.springframework.stereotype.Component;
  *
  * <h2>Opening a browser</h2>
  *
- * <p>Off unless {@code sfl.facilities.open-browser} says otherwise, which the run configuration sets
- * and nothing else does - a test run or a container start that opened tabs would be a defect. The
- * twin of the fleet reporter's behaviour, and it fails silently for the same reason: a convenience
- * must never be able to take the service down.
+ * <p>Swagger and the dashboard screens open independently - {@code sfl.facilities.open-swagger} and
+ * {@code sfl.facilities.open-dashboard} - so a run configuration that is one member of a larger
+ * compound (see {@code SFL all services (compound)}) can open this service's API tab without also
+ * opening its own copy of the dashboard, leaving that to whichever one config in the group is meant
+ * to. Both default off, which the run configuration overrides and nothing else does - a test run or a
+ * container start that opened tabs would be a defect. The twin of the fleet reporter's behaviour, and
+ * it fails silently for the same reason: a convenience must never be able to take the service down.
  */
 @Component
 class FacilitiesStartupReporter {
 
     private static final Logger log = LoggerFactory.getLogger(FacilitiesStartupReporter.class);
 
-    private final boolean openBrowser;
+    private final boolean openSwagger;
+    private final boolean openDashboard;
     private final String port;
     private final String contextPath;
     private final String dashboardBaseUrl;
 
     FacilitiesStartupReporter(
-            @Value("${sfl.facilities.open-browser:false}") boolean openBrowser,
+            @Value("${sfl.facilities.open-swagger:false}") boolean openSwagger,
+            @Value("${sfl.facilities.open-dashboard:false}") boolean openDashboard,
             @Value("${server.port:8091}") String port,
             @Value("${server.servlet.context-path:}") String contextPath,
             @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8091}/home}") String dashboardBaseUrl) {
-        this.openBrowser = openBrowser;
+        this.openSwagger = openSwagger;
+        this.openDashboard = openDashboard;
         this.port = port;
         this.contextPath = contextPath;
         this.dashboardBaseUrl = dashboardBaseUrl.replaceAll("/+$", "");
@@ -64,13 +70,13 @@ class FacilitiesStartupReporter {
         log.info("    Facilities screens : {}", screens);
         log.info("");
 
-        if (!openBrowser) {
-            return;
+        // Screens first so they end up as the focused tab when both open.
+        if (openDashboard) {
+            open(screens);
         }
-        // Screens first so they end up as the focused tab. This service serves them itself, from its
-        // own jar on its own port, so nothing else has to be running for the tab to work.
-        open(screens);
-        open(swagger);
+        if (openSwagger) {
+            open(swagger);
+        }
     }
 
     private void open(String url) {

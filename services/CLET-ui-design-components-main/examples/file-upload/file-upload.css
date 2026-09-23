@@ -1,0 +1,55 @@
+/* File Upload — Figma "File Upload Area" + "File Upload Cards" + "File Format Icons" + "Image Upload" */
+
+.upload-area {
+  width: 400px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+  padding: 32px;
+  border-radius: var(--radius-lg);
+  border: 1.5px dashed var(--color-cloud-grey-600);
+  background: var(--color-surface-neutral);
+  text-align: center;
+  font-family: var(--font-ui);
+  cursor: pointer;
+}
+.upload-area:hover, .upload-area.dragover { background: var(--color-cloud-grey-200); border-color: var(--color-primary); }
+.upload-area svg { width: 32px; height: 32px; color: var(--color-text-muted); }
+.upload-area .upload-cta { font-weight: 600; font-size: 16px; }
+.upload-area .upload-hint { font-size: var(--text-c1-size); color: var(--color-text-muted); }
+.upload-area input[type="file"] { display: none; }
+
+.upload-card {
+  width: 400px;
+  display: flex; align-items: center; gap: var(--space-4);
+  padding: 16px; padding-left: 14px;
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border-default);
+  background: var(--color-surface);
+  font-family: var(--font-ui);
+}
+.upload-card[data-status="error"] { border-color: var(--color-red-500); }
+
+.file-format-icon {
+  width: 40px; height: 40px; border-radius: var(--radius-sm);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 11px; font-weight: 600; color: #fff; flex: none;
+}
+.file-format-icon[data-color="red"] { background: var(--color-red-500); }
+.file-format-icon[data-color="gray"] { background: var(--color-cloud-grey-700); }
+
+.upload-card-body { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.upload-card-name { font-weight: 600; font-size: 16px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.upload-card-meta { font-size: var(--text-c1-size); color: var(--color-text-muted); }
+.upload-card-bar { height: 4px; border-radius: var(--radius-full); background: var(--color-cloud-grey-400); overflow: hidden; }
+.upload-card-bar > span { display: block; height: 100%; background: var(--color-primary); }
+.upload-card[data-status="error"] .upload-card-meta { color: var(--color-red-500); }
+.upload-card-remove { background: none; border: none; color: var(--color-text-muted); cursor: pointer; }
+
+/* Image Upload — avatar-style single-image field */
+.image-upload { display: flex; align-items: center; gap: 20px; width: 352px; font-family: var(--font-ui); }
+.image-upload[data-alignment="vertical"] { flex-direction: column; }
+.image-upload-preview {
+  width: 56px; height: 56px; border-radius: 50%;
+  background: var(--color-surface-neutral); color: var(--color-text-muted);
+  display: flex; align-items: center; justify-content: center; overflow: hidden; flex: none;
+}
+.image-upload-preview svg { width: 24px; height: 24px; }

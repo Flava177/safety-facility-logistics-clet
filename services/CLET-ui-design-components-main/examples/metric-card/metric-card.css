@@ -1,0 +1,58 @@
+/* Metric Card — Figma "Metric card" section: Property 1=default/without sub/rise/drop/neutral */
+
+.metric-card {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
+  width: 272px;
+  background: var(--color-surface);
+  border-radius: var(--radius-3xl);
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: var(--shadow-100);
+}
+/* Adinkra Hene watermark, engraved faintly (real asset, see docs/adinkra/
+   and examples/brand-assets/); z-index: -1 keeps it behind the card's own
+   content, contained by the card's own z-index: 0 stacking context above. */
+.metric-card::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  right: -18px;
+  bottom: -18px;
+  width: 90px;
+  height: 90px;
+  background-image: url("img/adinkra-hene-navy.png");
+  background-size: contain;
+  background-repeat: no-repeat;
+  opacity: .06;
+  pointer-events: none;
+}
+.metric-card .metric-label {
+  font-family: var(--font-caption);
+  font-weight: 500;
+  font-size: 16px;
+  line-height: 24px;
+  color: var(--color-text-muted);
+}
+.metric-card .metric-value {
+  font-family: var(--font-display);
+  font-size: var(--text-h5-size);
+  line-height: var(--text-h5-line);
+}
+.metric-card .metric-sub {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-caption);
+  font-size: var(--text-c1-size);
+  width: fit-content;
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+.metric-card .metric-sub svg { width: 12px; height: 12px; }
+.metric-card[data-trend="rise"]    .metric-sub { color: var(--color-green-700); background: var(--color-success-bg); }
+.metric-card[data-trend="drop"]    .metric-sub { color: var(--color-red-500);   background: var(--color-danger-bg); }
+.metric-card[data-trend="neutral"] .metric-sub { color: var(--color-text-muted); background: var(--color-surface-neutral); }

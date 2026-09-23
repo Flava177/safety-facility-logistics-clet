@@ -27,6 +27,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import java.net.URI;
 import java.time.LocalDate;
+import java.util.List;
 import java.util.UUID;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -124,6 +125,12 @@ public class SecurityIncidentController {
                 .body(ApiResponse.ok(saved));
     }
 
+    @GetMapping("/{incidentId}/evidence")
+    @Operation(summary = "List the evidence references attached to a case")
+    public ApiResponse<List<IncidentEvidence>> evidence(@PathVariable UUID incidentId, HttpServletRequest http) {
+        return ApiResponse.ok(investigation.evidence(incidentId, actors.resolve(http)));
+    }
+
     @PostMapping("/{incidentId}/corrective-actions")
     @Operation(summary = "Open a CAPA item", description = "SRS-SFL-S163-04: owner, due date, whether "
             + "it is mandatory for closure.")
@@ -135,6 +142,13 @@ public class SecurityIncidentController {
         return ResponseEntity
                 .created(URI.create("/api/v1/incidents/" + incidentId + "/corrective-actions/" + saved.id()))
                 .body(ApiResponse.ok(saved));
+    }
+
+    @GetMapping("/{incidentId}/corrective-actions")
+    @Operation(summary = "List corrective and preventive actions for a case")
+    public ApiResponse<List<CorrectiveAction>> correctiveActions(@PathVariable UUID incidentId,
+            HttpServletRequest http) {
+        return ApiResponse.ok(correctiveActions.list(incidentId, actors.resolve(http)));
     }
 
     @PatchMapping("/{incidentId}/corrective-actions/{correctiveActionId}")

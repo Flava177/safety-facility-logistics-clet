@@ -1,0 +1,269 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Button: CLET Design System reference implementation</title>
+<link rel="stylesheet" href="../../tokens/tokens.css" />
+<link rel="stylesheet" href="button.css" />
+<link rel="stylesheet" href="../_shared/shell.css" />
+<script src="../_shared/shell.js" defer></script>
+<style>
+  .app-main {
+    font-family: var(--font-ui); background: var(--color-surface-neutral); padding: var(--space-8);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  section { margin-bottom: var(--space-8); width: 100%; display: flex; flex-direction: column; align-items: center; }
+  h1 { font-family: var(--font-display); font-size: var(--text-h3-size); line-height: var(--text-h3-line); margin-bottom: var(--space-2); text-align: center; }
+  h2 { font-family: var(--font-display); font-size: var(--text-h6-size); margin-bottom: var(--space-3); text-align: center; }
+  p.intro { max-width: 60ch; color: var(--color-text-body); text-align: center; }
+  svg.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }
+  table.btn-grid { border-collapse: collapse; background: var(--color-surface); border: var(--border-width-hairline) solid var(--color-border-default); border-radius: var(--radius-lg); overflow: hidden; }
+  table.btn-grid th, table.btn-grid td { padding: var(--space-4); text-align: left; vertical-align: middle; border-bottom: var(--border-width-hairline) solid var(--color-border-default); }
+  table.btn-grid tr:last-child td { border-bottom: none; }
+  table.btn-grid th { font-size: var(--text-c1-size); text-transform: uppercase; letter-spacing: .04em; color: var(--color-text-muted); background: var(--color-surface-neutral); }
+  table.btn-grid td:first-child { font-size: var(--text-b3-size); color: var(--color-text-muted); white-space: nowrap; }
+  .states dt { font-family: var(--font-ui); font-weight: 600; }
+  .states dd { margin: 0 0 var(--space-3) 0; color: var(--color-text-body); }
+</style>
+</head>
+<body>
+<nav class="app-sidebar" aria-label="Component pages">
+  <a class="app-brand" href="../index.html">CLET UI Design Components</a>
+  <div class="app-nav-group">
+    <ul>
+      <li><a href="../index.html">Overview</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-actions" data-group="actions" data-contains-current="true">Actions<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-actions">
+      <li><a href="../button/index.html" aria-current="page">Button</a></li>
+      <li><a href="../tag-chip/index.html">Tag Chip</a></li>
+      <li><a href="../pagination/index.html">Pagination</a></li>
+      <li><a href="../page-control/index.html">Page Control</a></li>
+      <li><a href="../breadcrumb/index.html">Breadcrumb</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-form-input" data-group="form-input" data-contains-current="false">Form & input<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-form-input">
+      <li><a href="../text-input/index.html">Text Input</a></li>
+      <li><a href="../text-area/index.html">Text Area / Rich Text</a></li>
+      <li><a href="../dropdown/index.html">Dropdown</a></li>
+      <li><a href="../combobox/index.html">Combobox Autocomplete</a></li>
+      <li><a href="../checkbox/index.html">Checkbox</a></li>
+      <li><a href="../radio/index.html">Radio</a></li>
+      <li><a href="../toggle/index.html">Toggle</a></li>
+      <li><a href="../date-picker/index.html">Date Picker</a></li>
+      <li><a href="../file-upload/index.html">File Upload</a></li>
+      <li><a href="../stepper/index.html">Stepper (quantity)</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-navigation" data-group="navigation" data-contains-current="false">Navigation<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-navigation">
+      <li><a href="../tabs/index.html">Tabs</a></li>
+      <li><a href="../top-nav-bar/index.html">Top Nav bar</a></li>
+      <li><a href="../side-navigation/index.html">Side Navigation Bar</a></li>
+      <li><a href="../progress-stepper/index.html">Progress Stepper</a></li>
+      <li><a href="../progress-bar/index.html">Progress Bar</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-feedback-status" data-group="feedback-status" data-contains-current="false">Feedback & status<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-feedback-status">
+      <li><a href="../tooltip/index.html">Tooltip</a></li>
+      <li><a href="../modal/index.html">Pop-Up (modal)</a></li>
+      <li><a href="../toast/index.html">Toast</a></li>
+      <li><a href="../banner/index.html">Banner</a></li>
+      <li><a href="../inline-alert/index.html">Inline Alert</a></li>
+      <li><a href="../empty-state/index.html">Empty State</a></li>
+      <li><a href="../skeleton/index.html">Skeleton</a></li>
+      <li><a href="../loader/index.html">Loader</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-data-layout" data-group="data-layout" data-contains-current="false">Data display & layout<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-data-layout">
+      <li><a href="../list/index.html">List</a></li>
+      <li><a href="../card/index.html">Cards / Surface Card</a></li>
+      <li><a href="../video-card/index.html">Video Card</a></li>
+      <li><a href="../table/index.html">Table</a></li>
+      <li><a href="../avatar/index.html">Avatar / Profile Favicon</a></li>
+      <li><a href="../timeline/index.html">Timeline</a></li>
+      <li><a href="../description-list/index.html">Description List</a></li>
+      <li><a href="../metric-card/index.html">Metric Card</a></li>
+      <li><a href="../accordion/index.html">Accordion</a></li>
+      <li><a href="../drawer/index.html">Drawer Sheet</a></li>
+      <li><a href="../divider/index.html">Divider</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-brand-icons" data-group="brand-icons" data-contains-current="false">Brand assets & iconography<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-brand-icons">
+      <li><a href="../brand-assets/index.html">Brand assets</a></li>
+      <li><a href="../icons/index.html">Iconography</a></li>
+    </ul>
+  </div>
+</nav>
+<main class="app-main">
+
+  <!-- shared icon sprite: mirrors the ArrowLeft / ArrowRight / ArrowUp instances used inside the Figma "Buttons" frame -->
+  <svg class="sprite" aria-hidden="true">
+    <symbol id="icon-arrow-left" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 12H5M12 19l-7-7 7-7"/></symbol>
+    <symbol id="icon-arrow-right" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14M12 5l7 7-7 7"/></symbol>
+    <symbol id="icon-arrow-up" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 19V5M5 12l7-7 7 7"/></symbol>
+  </svg>
+  <h1>Button</h1>
+  <p class="intro">Every Size × Style × Content combination the Figma "Buttons" frame defines (Disabled included per style). Copy <code>button.css</code> and this markup pattern into your project, then swap the icon sprite for your own. Hover, click, and Tab through the buttons below: Hover/Focus/Press aren't separate markup, they're the browser's native states (see <a href="#states">States</a>).</p>
+
+  <section id="filled">
+    <h2>Filled</h2>
+    <table class="btn-grid">
+      <thead><tr><th>Size</th><th>Label only</th><th>Icon + label</th><th>Icon only</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Giant</td>
+          <td><button class="btn" data-style="filled" data-size="giant">Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="giant"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="giant" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Large</td>
+          <td><button class="btn" data-style="filled" data-size="large">Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="large"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="large" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Medium</td>
+          <td><button class="btn" data-style="filled" data-size="medium">Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="medium"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="medium" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Small</td>
+          <td><button class="btn" data-style="filled" data-size="small">Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="small"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="small" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Tiny</td>
+          <td><button class="btn" data-style="filled" data-size="tiny">Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="tiny"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="tiny" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Disabled</td>
+          <td><button class="btn" data-style="filled" data-size="medium" disabled>Button</button></td>
+          <td><button class="btn" data-style="filled" data-size="medium" disabled><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="filled" data-size="medium" disabled aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="outline">
+    <h2>Outline</h2>
+    <table class="btn-grid">
+      <thead><tr><th>Size</th><th>Label only</th><th>Icon + label</th><th>Icon only</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Giant</td>
+          <td><button class="btn" data-style="outline" data-size="giant">Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="giant"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="giant" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Large</td>
+          <td><button class="btn" data-style="outline" data-size="large">Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="large"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="large" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Medium</td>
+          <td><button class="btn" data-style="outline" data-size="medium">Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="medium"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="medium" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Small</td>
+          <td><button class="btn" data-style="outline" data-size="small">Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="small"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="small" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Tiny</td>
+          <td><button class="btn" data-style="outline" data-size="tiny">Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="tiny"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="tiny" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Disabled</td>
+          <td><button class="btn" data-style="outline" data-size="medium" disabled>Button</button></td>
+          <td><button class="btn" data-style="outline" data-size="medium" disabled><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="outline" data-size="medium" disabled aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="clear">
+    <h2>Clear</h2>
+    <table class="btn-grid">
+      <thead><tr><th>Size</th><th>Label only</th><th>Icon + label</th><th>Icon only</th></tr></thead>
+      <tbody>
+        <tr>
+          <td>Giant</td>
+          <td><button class="btn" data-style="clear" data-size="giant">Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="giant"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="giant" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Large</td>
+          <td><button class="btn" data-style="clear" data-size="large">Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="large"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="large" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Medium</td>
+          <td><button class="btn" data-style="clear" data-size="medium">Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="medium"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="medium" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Small</td>
+          <td><button class="btn" data-style="clear" data-size="small">Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="small"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="small" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Tiny</td>
+          <td><button class="btn" data-style="clear" data-size="tiny">Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="tiny"><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="tiny" aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+        <tr>
+          <td>Disabled</td>
+          <td><button class="btn" data-style="clear" data-size="medium" disabled>Button</button></td>
+          <td><button class="btn" data-style="clear" data-size="medium" disabled><svg class="btn-icon"><use href="#icon-arrow-left"/></svg>Button<svg class="btn-icon"><use href="#icon-arrow-right"/></svg></button></td>
+          <td><button class="btn btn-icon-only" data-style="clear" data-size="medium" disabled aria-label="Scroll up"><svg class="btn-icon"><use href="#icon-arrow-up"/></svg></button></td>
+        </tr>
+      </tbody>
+    </table>
+  </section>
+
+  <section id="states">
+    <h2>States</h2>
+    <p class="intro">Figma's "State" variant axis (Default / Hover / Focus / Press / Disabled) is not separate markup here; it's native browser state. This is intentional: it keeps assistive tech, keyboard users, and mouse users all in sync automatically, instead of a JS-driven "state" prop that can drift out of sync with what's actually focused/pressed.</p>
+    <dl class="states">
+      <dt>Default</dt><dd>Try it: the resting look of every button above.</dd>
+      <dt>Hover</dt><dd>Try it: move your pointer over any button above.</dd>
+      <dt>Focus</dt><dd>Try it: press Tab until a button above gets the focus ring (<code>:focus-visible</code>).</dd>
+      <dt>Press</dt><dd>Try it: click and hold any button above (<code>:active</code>).</dd>
+      <dt>Disabled</dt><dd>See the "Disabled" row in each table above (<code>[disabled]</code>): non-interactive, 45% opacity.</dd>
+    </dl>
+  </section>
+
+</main>
+</body>
+</html>

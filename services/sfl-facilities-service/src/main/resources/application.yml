@@ -135,6 +135,11 @@ sfl:
       connect-timeout: ${SFL_JWKS_CONNECT_TIMEOUT:PT3S}
       read-timeout: ${SFL_JWKS_READ_TIMEOUT:PT3S}
   facilities:
+    # true opens Swagger / the operations dashboard in a browser once the service is ready. The run
+    # configuration sets these; they stay false for servers, CI, and for a config that is only one
+    # member of the "SFL all services" compound and should not also open its own dashboard tab.
+    open-swagger: ${SFL_FACILITIES_OPEN_SWAGGER:false}
+    open-dashboard: ${SFL_FACILITIES_OPEN_DASHBOARD:false}
     messaging:
       # `local` records delivery without a broker and is the single-node default. Any environment with a
       # consumer must set `rabbitmq` deliberately - selecting it without a RabbitTemplate fails at

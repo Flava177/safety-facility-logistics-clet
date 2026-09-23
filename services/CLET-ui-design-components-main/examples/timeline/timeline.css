@@ -1,0 +1,34 @@
+/* Timeline — Figma "Timeline Event" section: State=Completed/Current/Future */
+
+.timeline { list-style: none; margin: 0; padding: 0; width: 432px; }
+.timeline-event {
+  display: flex;
+  gap: var(--space-4);
+  position: relative;
+  padding-bottom: var(--space-6);
+}
+.timeline-event:last-child { padding-bottom: 0; }
+.timeline-event::before {
+  content: "";
+  position: absolute;
+  left: 11px; top: 24px; bottom: 0;
+  width: 2px;
+  background: var(--color-border-default);
+}
+.timeline-event:last-child::before { display: none; }
+
+.timeline-dot {
+  flex: none; width: 24px; height: 24px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  border: 2px solid var(--color-border-default);
+  background: var(--color-surface);
+}
+.timeline-dot svg { width: 12px; height: 12px; }
+
+.timeline-event[data-state="completed"] .timeline-dot { background: var(--color-success-bg); border-color: var(--color-green-500); color: var(--color-green-700); }
+.timeline-event[data-state="current"] .timeline-dot   { background: var(--color-primary); border-color: var(--color-primary); }
+.timeline-event[data-state="future"] .timeline-dot    { background: var(--color-surface); border-color: var(--color-border-default); }
+
+.timeline-content { font-family: var(--font-caption); font-size: 13px; padding-top: 2px; }
+.timeline-event[data-state="future"] .timeline-content { color: var(--color-text-muted); }
+.timeline-date { display: block; font-size: var(--text-c1-size); color: var(--color-text-muted); margin-top: 2px; }

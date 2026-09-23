@@ -7,6 +7,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CloseTripCommand;
+import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.AcknowledgeTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.CreateTripCommand;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.FleetWorkflowCommands;
 import gh.edu.clet.sfl.fleetlogistics.fleet.application.command.IntegrationCommands;
@@ -52,11 +53,14 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.EvidenceRetentionClass;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SourceChannel;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripStatus;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.TripAcknowledgementState;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleCategory;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceStatus;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowPriority;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.WorkflowSeverity;
+import gh.edu.clet.sfl.fleetlogistics.fuel.application.service.FuelCardService;
+import gh.edu.clet.sfl.fleetlogistics.fuel.domain.model.FuelCard;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -112,10 +116,46 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     @Autowired private FleetIntegrationApplicationService integrations;
     @Autowired private FleetDashboardApplicationService dashboard;
     @Autowired private FleetEvidenceApplicationService evidence;
+    @Autowired private FuelCardService fuelCards;
     @Autowired private JdbcTemplate jdbc;
     @Autowired private MutableClock clock;
 
     private Instant now;
+
+    @Test
+    @DisplayName("a real examination delivery is set up from vehicle registration through driver acceptance and fuel card issue")
+    void examination_delivery_is_ready_for_the_driver_and_fuelled() {
+        String site = uniqueSite();
+        Vehicle vehicle = registerVehicle(site, uniqueRegistration());
+        giveMandatoryCompliance(vehicle, site);
+        DriverProfileReference driver = registerDriver(site);
+
+        Trip assigned = createTrip(vehicle, driver, site, now.plus(Duration.ofHours(2)),
+                now.plus(Duration.ofHours(8)));
+        ActorContext driverActor = actor(driver.staffReference(), Set.of(SflRole.FLEET_DRIVER), site, false);
+        Trip accepted = trips.acknowledge(new AcknowledgeTripCommand(assigned.id(),
+                TripAcknowledgementState.CONFIRMED, null, assigned.metadata().version(), driverActor,
+                SourceChannel.MOBILE));
+        FuelCard card = fuelCards.issue(new FuelCardService.IssueCard(site, "****2468", "CLET Fuel",
+                vehicle.id(), driver.id(), today(), null, new java.math.BigDecimal("1500"),
+                new java.math.BigDecimal("5000"), new java.math.BigDecimal("800"),
+                "Issued for examination logistics", officer(site), SourceChannel.WEB));
+        trips.recordInspection(new RecordInspectionCommand(accepted.id(), null, InspectionType.PRE_TRIP,
+                42_050L, null, List.of(), "Tyres, brakes, lights and fluids checked", driverActor,
+                SourceChannel.MOBILE, uniqueKey()));
+        Trip started = trips.start(new StartTripCommand(accepted.id(), 42_050L, null, driverActor,
+                SourceChannel.MOBILE));
+        Trip completed = trips.close(new CloseTripCommand(started.id(),
+                "Examination papers delivered to Kumasi Centre and signed for", UUID.randomUUID(), 42_540L,
+                started.metadata().version(), driverActor, SourceChannel.MOBILE));
+
+        assertThat(accepted.acknowledgement().state()).isEqualTo(TripAcknowledgementState.CONFIRMED);
+        assertThat(card.status()).isEqualTo(FuelCard.Status.ACTIVE);
+        assertThat(card.vehicleId()).isEqualTo(vehicle.id());
+        assertThat(card.driverId()).isEqualTo(driver.id());
+        assertThat(completed.status()).isEqualTo(TripStatus.COMPLETED);
+        assertThat(completed.distanceCovered()).isEqualTo(490L);
+    }
 
     @BeforeEach
     void resetDatabaseAndClock() {

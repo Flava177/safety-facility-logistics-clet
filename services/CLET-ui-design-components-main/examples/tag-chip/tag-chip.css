@@ -1,0 +1,25 @@
+/* Tag Chip — Figma "Tag Chip" section: Variant=Neutral/Success/Danger × Removable=True/False */
+
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-radius: var(--radius-full);
+  padding: 4px var(--space-2);
+  padding-right: 8px;
+  font-family: var(--font-caption);
+  font-weight: 600;
+  font-size: var(--text-c1-size);
+  line-height: var(--text-c1-line);
+}
+.tag-chip[data-variant="neutral"] { background: var(--color-surface-neutral); color: var(--color-clet-navy-500); }
+.tag-chip[data-variant="success"] { background: var(--color-success-bg); color: var(--color-green-700); }
+.tag-chip[data-variant="danger"]  { background: var(--color-danger-bg);  color: var(--color-red-500); }
+
+.tag-chip-remove {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border: none; background: transparent; padding: 0;
+  color: inherit; cursor: pointer; border-radius: 50%;
+}
+.tag-chip-remove:hover { background: rgba(0,0,0,.08); }
+.tag-chip-remove svg { width: 10px; height: 10px; }

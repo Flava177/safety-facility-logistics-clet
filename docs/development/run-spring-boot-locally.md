@@ -11,11 +11,11 @@ owning its own schemas, its own migrations and its own API boundary.
 | Service | Port | Runtime database | DB port |
 |---|---:|---|---:|
 | `sfl-facilities-service` - IFIMP: S152, S153, S159 | 8091 | `sfl_facilities_service` | 5441 |
-| `sfl-safety-security-service` - SSEMP: S174; S160–S163 not built | 8092 | `sfl_safety_security_service` | 5442 |
+| `sfl-safety-security-service` - SSEMP: S160, S163, S174 | 8092 | `sfl_safety_security_service` | 5442 |
 | `sfl-fleet-logistics-service` - FTLMP: S166, S168_fuel, S171, AVAMP-Lite. Serves `/ui` | 8093 | `sfl__fleet_vehicle_service` | 5443 |
 
-`sfl-safety-security-service` serves S174 in full. Its other six systems are unbuilt scope, not a
-broken build - four of them are Buy-and-Integrate and depend on procurement rather than code.
+`sfl-safety-security-service` serves S160, S163 and S174. Its other four systems are unbuilt scope,
+not a broken build - all four are Buy-and-Integrate and depend on procurement rather than code.
 
 > It could not start at all until 1 August 2026: the module had **no `@SpringBootApplication` class**,
 > so `spring-boot:run` failed with *"Unable to find a suitable main class"*. Four documents described it

@@ -252,6 +252,19 @@ export const emergencyPaths = {
   integrations: '/safetysecurity/emergency/integrations',
 };
 
+export const visitorPaths = {
+  dashboard: '/safetysecurity/visitors',
+  visits: '/safetysecurity/visitors/visits',
+  visitDetail: (visitId: string) => `/safetysecurity/visitors/visits/${visitId}`,
+  rollCall: '/safetysecurity/visitors/roll-call',
+};
+
+export const incidentPaths = {
+  dashboard: '/safetysecurity/incidents',
+  cases: '/safetysecurity/incidents/cases',
+  detail: (incidentId: string) => `/safetysecurity/incidents/cases/${incidentId}`,
+};
+
 /**
  * Personal landings - the "what do I have to do today" views.
  *
@@ -944,6 +957,61 @@ export const navSections: NavSection[] = [
         icon: 'cloud',
         description: 'Scanner and carrier feeds, outbound publication',
         permission: 'DISPATCH_INTEGRATION_REPLAY',
+      },
+    ],
+  },
+  {
+    heading: 'Visitor management',
+    programme: 'SSEMP',
+    system: 'S160',
+    items: [
+      {
+        label: 'Visitor dashboard',
+        to: visitorPaths.dashboard,
+        icon: 'user-plus',
+        description: 'Arrivals, approvals and watchlist flags',
+        permission: 'VISITOR_VISIT_READ',
+        capability: ['VISITOR_VISIT_CREATE', 'VISITOR_VISIT_APPROVE', 'VISITOR_BADGE_ASSIGN', 'VISITOR_REPORT_READ'],
+      },
+      {
+        label: 'Visit register',
+        to: visitorPaths.visits,
+        icon: 'calendar',
+        matchPrefix: visitorPaths.visits,
+        description: 'Pre-registration through check-out',
+        permission: 'VISITOR_VISIT_READ',
+        capability: ['VISITOR_VISIT_CREATE', 'VISITOR_VISIT_APPROVE', 'VISITOR_CHECKIN', 'VISITOR_CHECKOUT', 'VISITOR_REPORT_READ'],
+      },
+      {
+        label: 'Visitor roll call',
+        to: visitorPaths.rollCall,
+        icon: 'users',
+        description: 'People currently checked in by site',
+        permission: 'VISITOR_ROLLCALL_READ',
+      },
+    ],
+  },
+  {
+    heading: 'Incident management',
+    programme: 'SSEMP',
+    system: 'S163',
+    items: [
+      {
+        label: 'Incident dashboard',
+        to: incidentPaths.dashboard,
+        icon: 'shield-check',
+        description: 'Case standing and severity concentration',
+        permission: 'INCIDENT_REPORT_READ',
+        capability: ['INCIDENT_TRIAGE', 'INCIDENT_INVESTIGATE', 'INCIDENT_REPORT_EXPORT'],
+      },
+      {
+        label: 'Incidents & near misses',
+        to: incidentPaths.cases,
+        icon: 'alert-triangle',
+        matchPrefix: incidentPaths.cases,
+        description: 'Report, investigate, correct and close',
+        permission: 'INCIDENT_REPORT_READ',
+        capability: ['INCIDENT_REPORT_CREATE', 'INCIDENT_TRIAGE', 'INCIDENT_INVESTIGATE', 'INCIDENT_CAPA_MANAGE'],
       },
     ],
   },

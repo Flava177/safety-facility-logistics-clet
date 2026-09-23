@@ -1,0 +1,46 @@
+/* Tooltip — Figma "Tooltip" section: Position=Bottom/Top/Left/Right */
+
+.tooltip-wrap {
+  position: relative;
+  display: inline-block;
+}
+.tooltip {
+  position: absolute;
+  z-index: 10;
+  background: var(--color-primary);
+  color: #FFFFFF;
+  border-radius: var(--radius-md);
+  padding: 6px var(--space-2);
+  font-family: var(--font-ui);
+  font-size: var(--text-b3-size);
+  line-height: var(--text-b3-line);
+  white-space: nowrap;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.tooltip-wrap:hover .tooltip,
+.tooltip-wrap:focus-within .tooltip {
+  opacity: 1;
+}
+
+.tooltip[data-position="top"] {
+  bottom: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tooltip[data-position="bottom"] {
+  top: calc(100% + var(--space-2));
+  left: 50%;
+  transform: translateX(-50%);
+}
+.tooltip[data-position="left"] {
+  right: calc(100% + var(--space-2));
+  top: 50%;
+  transform: translateY(-50%);
+}
+.tooltip[data-position="right"] {
+  left: calc(100% + var(--space-2));
+  top: 50%;
+  transform: translateY(-50%);
+}

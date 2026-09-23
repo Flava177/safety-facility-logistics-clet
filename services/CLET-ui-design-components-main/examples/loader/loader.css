@@ -1,0 +1,19 @@
+/* Loader — Figma "Loader" section: Size=Giant/Large/Medium/Small/Tiny (spinner only, no color axis) */
+
+.loader {
+  display: inline-block;
+  border-radius: 50%;
+  border: 3px solid var(--color-cloud-grey-400);
+  border-top-color: var(--color-primary);
+  animation: loader-spin 0.8s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .loader { animation-duration: 1.6s; }
+}
+@keyframes loader-spin { to { transform: rotate(360deg); } }
+
+.loader[data-size="giant"]  { width: 56px; height: 56px; border-width: 5px; }
+.loader[data-size="large"]  { width: 40px; height: 40px; border-width: 4px; }
+.loader[data-size="medium"] { width: 32px; height: 32px; border-width: 3px; }
+.loader[data-size="small"]  { width: 28px; height: 28px; border-width: 3px; }
+.loader[data-size="tiny"]   { width: 24px; height: 24px; border-width: 2px; }

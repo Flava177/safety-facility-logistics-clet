@@ -1,0 +1,129 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Loader: CLET Design System reference implementation</title>
+<link rel="stylesheet" href="../../tokens/tokens.css" />
+<link rel="stylesheet" href="../_shared/demo.css" />
+<link rel="stylesheet" href="loader.css" />
+<link rel="stylesheet" href="../_shared/shell.css" />
+<script src="../_shared/shell.js" defer></script>
+</head>
+<body>
+<nav class="app-sidebar" aria-label="Component pages">
+  <a class="app-brand" href="../index.html">CLET UI Design Components</a>
+  <div class="app-nav-group">
+    <ul>
+      <li><a href="../index.html">Overview</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-actions" data-group="actions" data-contains-current="false">Actions<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-actions">
+      <li><a href="../button/index.html">Button</a></li>
+      <li><a href="../tag-chip/index.html">Tag Chip</a></li>
+      <li><a href="../pagination/index.html">Pagination</a></li>
+      <li><a href="../page-control/index.html">Page Control</a></li>
+      <li><a href="../breadcrumb/index.html">Breadcrumb</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-form-input" data-group="form-input" data-contains-current="false">Form & input<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-form-input">
+      <li><a href="../text-input/index.html">Text Input</a></li>
+      <li><a href="../text-area/index.html">Text Area / Rich Text</a></li>
+      <li><a href="../dropdown/index.html">Dropdown</a></li>
+      <li><a href="../combobox/index.html">Combobox Autocomplete</a></li>
+      <li><a href="../checkbox/index.html">Checkbox</a></li>
+      <li><a href="../radio/index.html">Radio</a></li>
+      <li><a href="../toggle/index.html">Toggle</a></li>
+      <li><a href="../date-picker/index.html">Date Picker</a></li>
+      <li><a href="../file-upload/index.html">File Upload</a></li>
+      <li><a href="../stepper/index.html">Stepper (quantity)</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-navigation" data-group="navigation" data-contains-current="false">Navigation<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-navigation">
+      <li><a href="../tabs/index.html">Tabs</a></li>
+      <li><a href="../top-nav-bar/index.html">Top Nav bar</a></li>
+      <li><a href="../side-navigation/index.html">Side Navigation Bar</a></li>
+      <li><a href="../progress-stepper/index.html">Progress Stepper</a></li>
+      <li><a href="../progress-bar/index.html">Progress Bar</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-feedback-status" data-group="feedback-status" data-contains-current="true">Feedback & status<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-feedback-status">
+      <li><a href="../tooltip/index.html">Tooltip</a></li>
+      <li><a href="../modal/index.html">Pop-Up (modal)</a></li>
+      <li><a href="../toast/index.html">Toast</a></li>
+      <li><a href="../banner/index.html">Banner</a></li>
+      <li><a href="../inline-alert/index.html">Inline Alert</a></li>
+      <li><a href="../empty-state/index.html">Empty State</a></li>
+      <li><a href="../skeleton/index.html">Skeleton</a></li>
+      <li><a href="../loader/index.html" aria-current="page">Loader</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-data-layout" data-group="data-layout" data-contains-current="false">Data display & layout<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-data-layout">
+      <li><a href="../list/index.html">List</a></li>
+      <li><a href="../card/index.html">Cards / Surface Card</a></li>
+      <li><a href="../video-card/index.html">Video Card</a></li>
+      <li><a href="../table/index.html">Table</a></li>
+      <li><a href="../avatar/index.html">Avatar / Profile Favicon</a></li>
+      <li><a href="../timeline/index.html">Timeline</a></li>
+      <li><a href="../description-list/index.html">Description List</a></li>
+      <li><a href="../metric-card/index.html">Metric Card</a></li>
+      <li><a href="../accordion/index.html">Accordion</a></li>
+      <li><a href="../drawer/index.html">Drawer Sheet</a></li>
+      <li><a href="../divider/index.html">Divider</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-brand-icons" data-group="brand-icons" data-contains-current="false">Brand assets & iconography<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-brand-icons">
+      <li><a href="../brand-assets/index.html">Brand assets</a></li>
+      <li><a href="../icons/index.html">Iconography</a></li>
+    </ul>
+  </div>
+</nav>
+<main class="app-main">
+
+  <h1 class="demo-title">Loader</h1>
+  <p class="demo-intro">Indeterminate spinner, Size-only (no color/state axis). Use inside a button or small region for short waits; prefer Skeleton for full-region loads.</p>
+
+  <section class="demo-section">
+    <h2>Sizes</h2>
+    <div class="demo-row">
+      <span class="loader" data-size="giant" role="status"><span class="sr-only">Loading…</span></span>
+      <span class="loader" data-size="large" role="status"><span class="sr-only">Loading…</span></span>
+      <span class="loader" data-size="medium" role="status"><span class="sr-only">Loading…</span></span>
+      <span class="loader" data-size="small" role="status"><span class="sr-only">Loading…</span></span>
+      <span class="loader" data-size="tiny" role="status"><span class="sr-only">Loading…</span></span>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <h2>Inside a button</h2>
+    <div class="demo-row">
+      <button class="btn-preview">
+        <span class="loader" data-size="tiny" role="status" style="border-color: rgba(255,255,255,.4); border-top-color:#fff;"></span>
+        Submitting…
+      </button>
+    </div>
+  </section>
+
+  <style>
+    .sr-only { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); white-space:nowrap; }
+    .btn-preview {
+      display:inline-flex; align-items:center; gap:var(--space-2);
+      background:var(--color-primary); color:#fff; border:none; border-radius:var(--radius-md);
+      padding:var(--space-3) var(--space-4); font-family:var(--font-ui); font-weight:600; font-size:14px;
+    }
+  </style>
+
+</main>
+</body>
+</html>

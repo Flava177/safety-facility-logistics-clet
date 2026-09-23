@@ -20,7 +20,7 @@ FTLMP rather than as a deployable of its own.
 
 ## Release 1 scope
 
-Release 1 is closed as a **7-system demo build**, not the full 13-system Phase 1.
+The repository now contains **nine implemented systems**, not the full 13-system Phase 1.
 
 **Built and demoable**
 
@@ -29,13 +29,15 @@ Release 1 is closed as a **7-system demo build**, not the full 13-system Phase 1
 | S152   | Facility management - CAFM / IWMS |
 | S153   | Maintenance management - CMMS     |
 | S159   | Room & resource booking           |
+| S160   | Visitor management                |
+| S163   | HSE incident and near-miss        |
 | S166   | Fleet & vehicle management        |
 | S168   | Fuel management & driver logbooks |
 | S171   | Mailroom, courier & dispatch      |
 | S174   | Emergency mass notification       |
 
-**Not in the demo** - S160 visitor management, S160a access control, S161 CCTV/VMS,
-S162 intrusion, S162a fire & life safety, S163 HSE incident and near-miss.
+**Not implemented** - S160a access control, S161 CCTV/VMS, S162 intrusion and S162a fire & life
+safety. These are Buy-and-Integrate systems rather than replacements for specialist platforms.
 
 S174 uses a recorded outbound adapter in this build. Real notification delivery is deferred to the
 integration with the external Comms system.
@@ -46,7 +48,7 @@ integration with the external Comms system.
 services/                            Java 17 · Spring Boot 4.1 · Maven multi-module
   sfl-facilities-service             IFIMP  - S152, S153, S159                    :8091
                                      schema: facilities
-  sfl-safety-security-service        SSEMP  - S174 built; S160-S163 not built     :8092
+  sfl-safety-security-service        SSEMP  - S160, S163, S174                    :8092
                                      schemas: safety_security, emergency_notification
   sfl-fleet-logistics-service        FTLMP  - S166, S168, S171, AVAMP; serves /ui :8093
                                      schemas: fleet_logistics, asset_visibility

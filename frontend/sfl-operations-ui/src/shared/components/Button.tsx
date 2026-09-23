@@ -69,7 +69,9 @@ const Button = forwardRef<HTMLButtonElement, ButtonProps>(
       // technology should hear that rather than infer it from a spinner it cannot see.
       aria-busy={loading || undefined}
       className={cn(
-        'inline-flex shrink-0 items-center justify-center rounded-md font-medium whitespace-nowrap transition-colors',
+        // CLET design system's control corner radius (8px) - Tailwind's own `rounded-md` bucket is
+        // 6px and reads visibly squarer next to the rest of the CLET-toned surfaces.
+        'inline-flex shrink-0 items-center justify-center rounded-[var(--radius-control)] font-medium whitespace-nowrap transition-colors',
         'disabled:cursor-not-allowed disabled:opacity-60',
         variant === 'link' ? 'h-auto gap-1 px-0 text-theme-sm' : sizes[size],
         variants[variant],
@@ -116,7 +118,7 @@ export const IconButton = ({
     aria-label={label}
     title={label}
     className={cn(
-      'inline-flex h-9 w-9 items-center justify-center rounded-md text-gray-600 transition-colors',
+      'inline-flex h-9 w-9 items-center justify-center rounded-[var(--radius-control)] text-gray-600 transition-colors',
       tone === 'default' ? 'border border-gray-500 bg-white hover:bg-gray-50' : 'hover:bg-gray-100',
       'hover:text-gray-900 disabled:cursor-not-allowed disabled:opacity-60',
       className,

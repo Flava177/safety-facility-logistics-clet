@@ -1,4 +1,5 @@
 import { ReactNode } from 'react';
+import cardWatermark from 'assets/adinkra-hene-navy.png';
 import { cn } from './cn';
 
 interface SectionCardProps {
@@ -31,14 +32,22 @@ const SectionCard = ({
 }: SectionCardProps) => (
   <section
     className={cn(
-      'flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-md',
+      'relative flex h-full flex-col overflow-hidden rounded-lg border border-gray-200 bg-white shadow-theme-md',
       className,
     )}
   >
+    {/* Adinkra Hene watermark, engraved faintly into the card - the same treatment the design
+        system's own Cards component uses (`card.css`), one mark per card rather than the
+        repeating pattern the dark side-navigation uses. */}
+    <div
+      aria-hidden="true"
+      className="pointer-events-none absolute -right-5 -bottom-5 z-0 h-28 w-28 bg-contain bg-no-repeat opacity-[0.06]"
+      style={{ backgroundImage: `url(${cardWatermark})` }}
+    />
     {(title || actions) && (
       <header
         className={cn(
-          'flex shrink-0 flex-wrap items-start justify-between gap-3 px-5 pt-5',
+          'relative z-1 flex shrink-0 flex-wrap items-start justify-between gap-3 px-5 pt-5',
           flush ? 'pb-1' : 'pb-0',
         )}
       >
@@ -49,7 +58,11 @@ const SectionCard = ({
         {actions && <div className="flex shrink-0 items-center gap-2">{actions}</div>}
       </header>
     )}
-    <div className={cn('min-w-0 flex-1', flush ? 'p-0' : 'p-5', bodyClassName)}>{children}</div>
+    <div
+      className={cn('relative z-1 min-w-0 flex-1', flush ? 'p-0' : 'p-5', bodyClassName)}
+    >
+      {children}
+    </div>
   </section>
 );
 

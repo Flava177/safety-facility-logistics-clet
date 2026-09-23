@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Date Picker: CLET Design System reference implementation</title>
+<link rel="stylesheet" href="../../tokens/tokens.css" />
+<link rel="stylesheet" href="../_shared/demo.css" />
+<link rel="stylesheet" href="date-picker.css" />
+<link rel="stylesheet" href="../_shared/shell.css" />
+<script src="../_shared/shell.js" defer></script>
+</head>
+<body>
+<nav class="app-sidebar" aria-label="Component pages">
+  <a class="app-brand" href="../index.html">CLET UI Design Components</a>
+  <div class="app-nav-group">
+    <ul>
+      <li><a href="../index.html">Overview</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-actions" data-group="actions" data-contains-current="false">Actions<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-actions">
+      <li><a href="../button/index.html">Button</a></li>
+      <li><a href="../tag-chip/index.html">Tag Chip</a></li>
+      <li><a href="../pagination/index.html">Pagination</a></li>
+      <li><a href="../page-control/index.html">Page Control</a></li>
+      <li><a href="../breadcrumb/index.html">Breadcrumb</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-form-input" data-group="form-input" data-contains-current="true">Form & input<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-form-input">
+      <li><a href="../text-input/index.html">Text Input</a></li>
+      <li><a href="../text-area/index.html">Text Area / Rich Text</a></li>
+      <li><a href="../dropdown/index.html">Dropdown</a></li>
+      <li><a href="../combobox/index.html">Combobox Autocomplete</a></li>
+      <li><a href="../checkbox/index.html">Checkbox</a></li>
+      <li><a href="../radio/index.html">Radio</a></li>
+      <li><a href="../toggle/index.html">Toggle</a></li>
+      <li><a href="../date-picker/index.html" aria-current="page">Date Picker</a></li>
+      <li><a href="../file-upload/index.html">File Upload</a></li>
+      <li><a href="../stepper/index.html">Stepper (quantity)</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-navigation" data-group="navigation" data-contains-current="false">Navigation<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-navigation">
+      <li><a href="../tabs/index.html">Tabs</a></li>
+      <li><a href="../top-nav-bar/index.html">Top Nav bar</a></li>
+      <li><a href="../side-navigation/index.html">Side Navigation Bar</a></li>
+      <li><a href="../progress-stepper/index.html">Progress Stepper</a></li>
+      <li><a href="../progress-bar/index.html">Progress Bar</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-feedback-status" data-group="feedback-status" data-contains-current="false">Feedback & status<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-feedback-status">
+      <li><a href="../tooltip/index.html">Tooltip</a></li>
+      <li><a href="../modal/index.html">Pop-Up (modal)</a></li>
+      <li><a href="../toast/index.html">Toast</a></li>
+      <li><a href="../banner/index.html">Banner</a></li>
+      <li><a href="../inline-alert/index.html">Inline Alert</a></li>
+      <li><a href="../empty-state/index.html">Empty State</a></li>
+      <li><a href="../skeleton/index.html">Skeleton</a></li>
+      <li><a href="../loader/index.html">Loader</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-data-layout" data-group="data-layout" data-contains-current="false">Data display & layout<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-data-layout">
+      <li><a href="../list/index.html">List</a></li>
+      <li><a href="../card/index.html">Cards / Surface Card</a></li>
+      <li><a href="../video-card/index.html">Video Card</a></li>
+      <li><a href="../table/index.html">Table</a></li>
+      <li><a href="../avatar/index.html">Avatar / Profile Favicon</a></li>
+      <li><a href="../timeline/index.html">Timeline</a></li>
+      <li><a href="../description-list/index.html">Description List</a></li>
+      <li><a href="../metric-card/index.html">Metric Card</a></li>
+      <li><a href="../accordion/index.html">Accordion</a></li>
+      <li><a href="../drawer/index.html">Drawer Sheet</a></li>
+      <li><a href="../divider/index.html">Divider</a></li>
+    </ul>
+  </div>
+  <div class="app-nav-group">
+    <button type="button" class="app-nav-group-toggle" aria-expanded="true" aria-controls="nav-group-brand-icons" data-group="brand-icons" data-contains-current="false">Brand assets & iconography<svg class="chev" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+    <ul id="nav-group-brand-icons">
+      <li><a href="../brand-assets/index.html">Brand assets</a></li>
+      <li><a href="../icons/index.html">Iconography</a></li>
+    </ul>
+  </div>
+</nav>
+<main class="app-main">
+
+  <h1 class="demo-title">Date Picker</h1>
+  <p class="demo-intro">Five sub-parts composed together: Day Labels, Day Cells, Period Range shortcuts, the Date Selector field, and the assembled Date & Range Picker (368×484 single / 936×484 range). Don't hand-roll date math. This demo uses plain JS <code>Date</code> for illustration only; wrap a maintained library (<code>react-day-picker</code>, <code>@internationalized/date</code>) in production and re-skin it with these tokens.</p>
+
+  <section class="demo-section">
+    <h2>Single date: click the field to open</h2>
+    <div class="date-field">
+      <button class="date-selector" id="date-selector" aria-haspopup="dialog" aria-expanded="false">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="5" width="18" height="16" rx="2"/><path d="M8 3v4M16 3v4M3 10h18"/></svg>
+        <span id="date-selector-label">Aug, 2023</span>
+      </button>
+      <div class="date-picker-popover" id="date-popover" hidden>
+        <div class="date-picker-nav">
+          <button aria-label="Previous month" id="prev-month"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg></button>
+          <span id="month-label">August 2023</span>
+          <button aria-label="Next month" id="next-month"><svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg></button>
+        </div>
+        <div class="date-grid" id="day-labels"></div>
+        <div class="date-grid" id="day-cells" style="margin-top:8px;"></div>
+        <div class="period-range-row">
+          <button class="period-range-btn" id="range-today">Today</button>
+          <button class="period-range-btn" id="range-clear">Clear</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="demo-section">
+    <h2>Range Picker (static preview)</h2>
+    <div class="range-picker" id="range-preview"></div>
+  </section>
+
+  <script>
+    const dayLabels = ['Su','Mo','Tu','We','Th','Fr','Sa'];
+    let viewDate = new Date(2023, 7, 1); // August 2023, matching the source file's sample copy
+    let selected = null;
+    const disabledDates = [10, 11];
+    const markedDates = [15];
+
+    function renderLabels(container) {
+      container.innerHTML = dayLabels.map(d => `<span class="day-label">${d}</span>`).join('');
+    }
+    function buildMonthCells(year, month, { onSelect, selectedDay, rangeStart, rangeEnd } = {}) {
+      const first = new Date(year, month, 1);
+      const startOffset = first.getDay();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const cells = [];
+      for (let i = 0; i < startOffset; i++) cells.push('<span></span>');
+      for (let d = 1; d <= daysInMonth; d++) {
+        const disabled = disabledDates.includes(d);
+        const marked = markedDates.includes(d);
+        const pressed = selectedDay === d;
+        const cls = ['day-cell'];
+        if (rangeStart === d) cls.push('range-start');
+        else if (rangeEnd === d) cls.push('range-end');
+        else if (rangeStart && rangeEnd && d > rangeStart && d < rangeEnd) cls.push('in-range');
+        cells.push(`<button type="button" class="${cls.join(' ')}" ${disabled ? 'disabled' : ''} data-day="${d}" data-marked="${marked}" aria-pressed="${pressed}">${d}</button>`);
+      }
+      return cells.join('');
+    }
+    function renderCalendar() {
+      renderLabels(document.getElementById('day-labels'));
+      document.getElementById('day-cells').innerHTML = buildMonthCells(viewDate.getFullYear(), viewDate.getMonth(), { selectedDay: selected });
+      document.getElementById('month-label').textContent = viewDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+    document.getElementById('day-cells').addEventListener('click', (e) => {
+      const btn = e.target.closest('.day-cell');
+      if (!btn || btn.disabled) return;
+      selected = Number(btn.dataset.day);
+      renderCalendar();
+      const label = viewDate.toLocaleDateString('en-US', { month: 'short', year: 'numeric', day: 'numeric' });
+      document.getElementById('date-selector-label').textContent = label;
+    });
+    document.getElementById('prev-month').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() - 1); renderCalendar(); });
+    document.getElementById('next-month').addEventListener('click', () => { viewDate.setMonth(viewDate.getMonth() + 1); renderCalendar(); });
+    document.getElementById('range-today').addEventListener('click', () => { viewDate = new Date(2023, 7, 1); selected = 1; renderCalendar(); });
+    document.getElementById('range-clear').addEventListener('click', () => { selected = null; renderCalendar(); });
+
+    const trigger = document.getElementById('date-selector');
+    const popover = document.getElementById('date-popover');
+    trigger.addEventListener('click', () => {
+      const willOpen = popover.hidden;
+      popover.hidden = !willOpen;
+      trigger.setAttribute('aria-expanded', String(willOpen));
+      if (willOpen) renderCalendar();
+    });
+    document.addEventListener('click', (e) => {
+      if (!trigger.contains(e.target) && !popover.contains(e.target)) { popover.hidden = true; trigger.setAttribute('aria-expanded', 'false'); }
+    });
+
+    // Range preview: two static calendars, 13th-22nd July 2023 highlighted (matches source sample copy)
+    const rangePreview = document.getElementById('range-preview');
+    [6, 7].forEach((month) => { // July (6), August (7) 2023
+      const wrap = document.createElement('div');
+      const labels = document.createElement('div');
+      labels.className = 'date-grid';
+      renderLabels(labels);
+      const cells = document.createElement('div');
+      cells.className = 'date-grid';
+      cells.style.marginTop = '8px';
+      cells.innerHTML = buildMonthCells(2023, month, month === 6 ? { rangeStart: 13, rangeEnd: 31 } : { rangeStart: 1, rangeEnd: 22 });
+      const heading = document.createElement('div');
+      heading.className = 'date-picker-nav';
+      heading.style.justifyContent = 'center';
+      heading.textContent = new Date(2023, month, 1).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+      wrap.append(heading, labels, cells);
+      rangePreview.append(wrap);
+    });
+  </script>
+
+</main>
+</body>
+</html>

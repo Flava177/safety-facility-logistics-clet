@@ -1,0 +1,77 @@
+/**
+ * Shared page chrome for the component demo pages under examples/*.
+ * Not part of the design system itself — this is just scaffolding so each
+ * demo page (title, section headings, grid layout) doesn't repeat the same
+ * boilerplate. Copy the *component* CSS next to it, not this file.
+ */
+* { box-sizing: border-box; }
+/* body itself is the app shell (sidebar + main) — see shell.css. Everything
+   that used to live on `body` here (background, padding, centering) now
+   lives on `.app-main`, the element that wraps a page's actual content. */
+a { color: var(--color-primary); }
+code { background: var(--color-cloud-grey-200); padding: 0 4px; border-radius: 4px; font-size: .9em; }
+
+.demo-nav {
+  display: flex; align-items: center; gap: var(--space-3);
+  margin-bottom: var(--space-6); font-size: var(--text-c1-size);
+  text-align: center;
+}
+
+h1.demo-title {
+  font-family: var(--font-display);
+  font-size: var(--text-h3-size);
+  line-height: var(--text-h3-line);
+  margin: 0 0 var(--space-2) 0;
+  text-align: center;
+}
+p.demo-intro { max-width: 68ch; margin: 0 0 var(--space-8) 0; text-align: center; }
+
+section.demo-section {
+  margin-bottom: var(--space-8);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+section.demo-section > h2 {
+  font-family: var(--font-display);
+  font-size: var(--text-h6-size);
+  margin: 0 0 var(--space-3) 0;
+  text-align: center;
+}
+section.demo-section > p.note { font-size: var(--text-b3-size); margin: 0 0 var(--space-3) 0; max-width: 68ch; text-align: center; }
+
+.demo-row {
+  display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+  margin-bottom: var(--space-3);
+}
+.demo-col {
+  display: flex; flex-direction: column; gap: var(--space-4);
+}
+.demo-grid {
+  display: grid; gap: var(--space-4);
+}
+
+table.demo-grid-table {
+  border-collapse: collapse; background: var(--color-surface);
+  border: var(--border-width-hairline) solid var(--color-border-default);
+  border-radius: var(--radius-lg); overflow: hidden;
+}
+table.demo-grid-table th, table.demo-grid-table td {
+  padding: var(--space-4); text-align: left; vertical-align: middle;
+  border-bottom: var(--border-width-hairline) solid var(--color-border-default);
+}
+table.demo-grid-table tr:last-child td { border-bottom: none; }
+table.demo-grid-table th {
+  font-size: var(--text-c1-size); text-transform: uppercase; letter-spacing: .04em;
+  color: var(--color-text-muted); background: var(--color-surface-neutral);
+}
+table.demo-grid-table td:first-child { font-size: var(--text-b3-size); color: var(--color-text-muted); white-space: nowrap; }
+
+.swatch {
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: var(--radius-md); border: var(--border-width-hairline) solid var(--color-border-default);
+  font-size: var(--text-c1-size); color: var(--color-text-muted);
+}
+
+svg.sprite { position: absolute; width: 0; height: 0; overflow: hidden; }

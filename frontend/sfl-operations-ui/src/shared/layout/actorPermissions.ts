@@ -136,6 +136,8 @@ const REVIEWER_PERMISSIONS: SflPermission[] = [
   'DISPATCH_REPORT_EXPORT',
   'EMERGENCY_EVIDENCE_EXPORT',
   'EMERGENCY_REPORT_EXPORT',
+  'VISITOR_REPORT_READ',
+  'INCIDENT_REPORT_EXPORT',
 ];
 
 /** Whether the actor holds at least one of these. */

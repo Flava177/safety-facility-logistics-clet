@@ -14,24 +14,27 @@ import org.springframework.stereotype.Component;
  *
  * <p>The twin of the facilities and fleet reporters - see {@code FacilitiesStartupReporter} for why
  * all three do this, why the dashboard line names 8093 rather than this service's own port, and why
- * opening a browser is off unless a run configuration asks for it.
+ * swagger and the dashboard screens open independently rather than behind one flag.
  */
 @Component
 class SafetySecurityStartupReporter {
 
     private static final Logger log = LoggerFactory.getLogger(SafetySecurityStartupReporter.class);
 
-    private final boolean openBrowser;
+    private final boolean openSwagger;
+    private final boolean openDashboard;
     private final String port;
     private final String contextPath;
     private final String dashboardBaseUrl;
 
     SafetySecurityStartupReporter(
-            @Value("${sfl.safety-security.open-browser:false}") boolean openBrowser,
+            @Value("${sfl.safety-security.open-swagger:false}") boolean openSwagger,
+            @Value("${sfl.safety-security.open-dashboard:false}") boolean openDashboard,
             @Value("${server.port:8092}") String port,
             @Value("${server.servlet.context-path:}") String contextPath,
             @Value("${sfl.dashboard.base-url:http://localhost:${server.port:8092}/home}") String dashboardBaseUrl) {
-        this.openBrowser = openBrowser;
+        this.openSwagger = openSwagger;
+        this.openDashboard = openDashboard;
         this.port = port;
         this.contextPath = contextPath;
         this.dashboardBaseUrl = dashboardBaseUrl.replaceAll("/+$", "");
@@ -50,13 +53,13 @@ class SafetySecurityStartupReporter {
         log.info("    Emergency screens  : {}", screens);
         log.info("");
 
-        if (!openBrowser) {
-            return;
+        // Screens first so they end up as the focused tab when both open.
+        if (openDashboard) {
+            open(screens);
         }
-        // Screens first so they end up as the focused tab. This service serves them itself, from its
-        // own jar on its own port, so nothing else has to be running for the tab to work.
-        open(screens);
-        open(swagger);
+        if (openSwagger) {
+            open(swagger);
+        }
     }
 
     private void open(String url) {

@@ -1,0 +1,24 @@
+/* Progress Bar — Figma "Progress Bar" section: Position (label side) × State (Active/Disabled) × Procent */
+
+.progress-bar-field {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  width: 387px;
+  font-family: var(--font-ui);
+  font-size: 14px;
+  line-height: 20px;
+}
+.progress-bar-field[data-label-position="right"] { flex-direction: row; }
+.progress-bar-field[data-label-position="left"] { flex-direction: row-reverse; }
+
+.progress-bar-track {
+  flex: 1;
+  height: 8px;
+  border-radius: var(--radius-full);
+  background: var(--color-cloud-grey-400);
+  overflow: hidden;
+}
+.progress-bar-fill { height: 100%; background: var(--color-primary); border-radius: var(--radius-full); transition: width 200ms ease; }
+.progress-bar-field[data-state="disabled"] .progress-bar-fill { background: var(--color-cloud-grey-700); }
+.progress-bar-field[data-state="disabled"] { color: var(--color-text-muted); }

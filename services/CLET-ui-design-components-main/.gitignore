@@ -1,0 +1,4 @@
+# Figma binary exports are large local source files (100MB+), not meant to
+# live in git history. Keep the .fig locally; docs/tokens/examples generated
+# from it are what's tracked. See .claude/skills/clet-ui-design-components/.
+*.fig

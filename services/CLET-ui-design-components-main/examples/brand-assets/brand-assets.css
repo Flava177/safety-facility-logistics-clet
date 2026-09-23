@@ -1,0 +1,39 @@
+/* Brand assets — placeholders only. Real artwork (logos, seals, Adinkra symbols, directorate
+   marks) must be exported from Figma as SVG; the vector paths aren't reconstructable from the
+   file's node metadata, so this page shows correct sizing/spacing/naming, not the actual marks. */
+
+.asset-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-4); max-width: 900px; }
+.asset-placeholder {
+  aspect-ratio: 1;
+  border-radius: var(--radius-md);
+  border: 1px dashed var(--color-cloud-grey-700);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+  font-family: var(--font-ui); font-size: 11px; text-align: center; padding: var(--space-2);
+  color: #fff;
+}
+.asset-placeholder .name { font-size: 10px; opacity: .85; }
+.asset-placeholder[data-tone="navy"]  { background: var(--color-clet-navy-500); }
+.asset-placeholder[data-tone="gold"]  { background: var(--color-clet-gold-500); }
+.asset-placeholder[data-tone="white"] { background: var(--color-surface); color: var(--color-clet-navy-500); border-style: solid; }
+.asset-placeholder[data-tone="mixed"] { background: linear-gradient(135deg, var(--color-clet-navy-500) 50%, var(--color-clet-gold-500) 50%); }
+
+/* Adinkra Symbols — real artwork (exported PNGs in ./img/, copied from
+   docs/adinkra/), unlike the placeholder tiles above. Shown large, in the
+   three color treatments the asset set actually ships in. */
+.adinkra-grid { display: flex; gap: var(--space-6); flex-wrap: wrap; }
+.adinkra-tile {
+  width: 220px; height: 220px;
+  border-radius: var(--radius-lg);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: var(--space-3);
+  padding: var(--space-4);
+}
+.adinkra-tile img { width: 100%; height: 100%; object-fit: contain; }
+.adinkra-tile .name { font-family: var(--font-ui); font-size: 12px; }
+.adinkra-tile[data-tone="gold"]     { background: var(--color-clet-gold-50); }
+.adinkra-tile[data-tone="navy"]     { background: var(--color-surface); border: var(--border-width-hairline) solid var(--color-border-default); }
+.adinkra-tile[data-tone="inverted"] { background: var(--color-surface-dark); }
+.adinkra-tile[data-tone="gold"] .name     { color: var(--color-clet-gold-800); }
+.adinkra-tile[data-tone="navy"] .name     { color: var(--color-clet-navy-500); }
+.adinkra-tile[data-tone="inverted"] .name { color: #fff; }
+
+.adinkra-tile.adinkra-tile--pattern { width: 260px; height: 260px; }

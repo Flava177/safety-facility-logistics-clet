@@ -14,6 +14,9 @@
       <env name="SFL_RABBITMQ_PORT" value="5672" />
       <env name="SFL_RABBITMQ_USERNAME" value="sfl" />
       <env name="SFL_RABBITMQ_PASSWORD" value="sfl" />
+      <env name="SFL_RABBITMQ_HEALTH_ENABLED" value="true" />
+      <env name="SFL_FACILITIES_OPEN_SWAGGER" value="true" />
+      <env name="SFL_FACILITIES_OPEN_DASHBOARD" value="false" />
     </envs>
     <module name="sfl-facilities-service" />
     <option name="SPRING_BOOT_MAIN_CLASS" value="gh.edu.clet.sfl.facilities.FacilitiesServiceApplication" />
