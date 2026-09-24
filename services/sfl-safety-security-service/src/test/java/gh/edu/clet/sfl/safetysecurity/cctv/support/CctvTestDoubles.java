@@ -6,7 +6,7 @@ import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvRepository;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvVendorGatewayPort;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvIncidentSeedingPort;
-import gh.edu.clet.sfl.safetysecurity.cctv.application.port.SiemForwarderPort;
+import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvSiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.AlertStatus;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.AnalyticsAlert;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.Camera;
@@ -211,7 +211,7 @@ public final class CctvTestDoubles {
         }
     }
 
-    public static final class FakeSiemForwarder implements SiemForwarderPort {
+    public static final class FakeSiemForwarder implements CctvSiemForwarderPort {
         public final List<AnalyticsAlert> forwarded = new ArrayList<>();
 
         @Override

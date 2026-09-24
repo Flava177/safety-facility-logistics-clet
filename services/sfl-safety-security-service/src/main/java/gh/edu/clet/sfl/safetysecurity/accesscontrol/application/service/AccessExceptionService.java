@@ -4,7 +4,7 @@ import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlRepository;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlIncidentSeedingPort;
-import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.SiemForwarderPort;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlSiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.event.AccessControlEventType;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.exception.AccessControlException;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessException;
@@ -30,14 +30,14 @@ import org.springframework.transaction.annotation.Transactional;
 public class AccessExceptionService {
 
     private final AccessControlRepository repository;
-    private final SiemForwarderPort siem;
+    private final AccessControlSiemForwarderPort siem;
     private final AccessControlIncidentSeedingPort incidentSeeding;
     private final AuditPort audit;
     private final IntegrationEventPublisher events;
     private final AccessControlAccessPolicy access;
     private final Clock clock;
 
-    public AccessExceptionService(AccessControlRepository repository, SiemForwarderPort siem,
+    public AccessExceptionService(AccessControlRepository repository, AccessControlSiemForwarderPort siem,
             AccessControlIncidentSeedingPort incidentSeeding, AuditPort audit, IntegrationEventPublisher events,
             AccessControlAccessPolicy access, Clock clock) {
         this.repository = repository;

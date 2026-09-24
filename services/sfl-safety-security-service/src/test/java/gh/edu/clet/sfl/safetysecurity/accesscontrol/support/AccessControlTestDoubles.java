@@ -6,7 +6,7 @@ import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlRepository;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlVendorGatewayPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlIncidentSeedingPort;
-import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.SiemForwarderPort;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlSiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessEvent;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessEventKind;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessException;
@@ -208,7 +208,7 @@ public final class AccessControlTestDoubles {
         }
     }
 
-    public static final class FakeSiemForwarder implements SiemForwarderPort {
+    public static final class FakeSiemForwarder implements AccessControlSiemForwarderPort {
         public final List<AccessException> forwarded = new java.util.ArrayList<>();
 
         @Override
