@@ -27,8 +27,8 @@ class AnalyticsAlertServiceTest {
     private static final String SOURCE = "CCTV-VMS-VENDOR";
     private final CctvTestDoubles.InMemoryCctvRepository repository = new CctvTestDoubles.InMemoryCctvRepository();
     private final CctvTestDoubles.FakeSiemForwarder siem = new CctvTestDoubles.FakeSiemForwarder();
-    private final CctvTestDoubles.FakeIncidentSeedingPort incidentSeeding =
-            new CctvTestDoubles.FakeIncidentSeedingPort();
+    private final CctvTestDoubles.FakeCctvIncidentSeedingPort incidentSeeding =
+            new CctvTestDoubles.FakeCctvIncidentSeedingPort();
     private final CctvTestDoubles.FakeAuditPort audit = new CctvTestDoubles.FakeAuditPort();
     private final CctvTestDoubles.FakeEventPublisher events = new CctvTestDoubles.FakeEventPublisher();
     private final CctvAccessPolicy access = new CctvAccessPolicy();

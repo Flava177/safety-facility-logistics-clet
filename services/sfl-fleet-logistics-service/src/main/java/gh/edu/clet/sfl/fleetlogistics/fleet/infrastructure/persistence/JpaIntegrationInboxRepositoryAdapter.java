@@ -29,7 +29,7 @@ class JpaIntegrationInboxRepositoryAdapter implements IntegrationInboxRepository
                     return existing;
                 })
                 .orElseGet(() -> IntegrationInboxMessageEntity.from(message));
-        return messages.save(entity).toDomain();
+        return messages.saveAndFlush(entity).toDomain();
     }
 
     @Override

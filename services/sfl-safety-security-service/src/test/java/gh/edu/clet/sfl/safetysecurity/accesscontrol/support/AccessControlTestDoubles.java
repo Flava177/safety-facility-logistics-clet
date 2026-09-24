@@ -5,7 +5,7 @@ import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlRepository;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlVendorGatewayPort;
-import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.IncidentSeedingPort;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlIncidentSeedingPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.SiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessEvent;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessEventKind;
@@ -218,7 +218,7 @@ public final class AccessControlTestDoubles {
         }
     }
 
-    public static final class FakeIncidentSeedingPort implements IncidentSeedingPort {
+    public static final class FakeAccessControlIncidentSeedingPort implements AccessControlIncidentSeedingPort {
         public final List<String> descriptions = new java.util.ArrayList<>();
         public UUID nextIncidentId = UUID.randomUUID();
 

@@ -139,11 +139,11 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
         FuelCard card = fuelCards.issue(new FuelCardService.IssueCard(site, "****2468", "CLET Fuel",
                 vehicle.id(), driver.id(), today(), null, new java.math.BigDecimal("1500"),
                 new java.math.BigDecimal("5000"), new java.math.BigDecimal("800"),
-                "Issued for examination logistics", officer(site), SourceChannel.WEB));
+                "Issued for examination logistics", manager(site), SourceChannel.WEB));
         trips.recordInspection(new RecordInspectionCommand(accepted.id(), null, InspectionType.PRE_TRIP,
                 42_050L, null, List.of(), "Tyres, brakes, lights and fluids checked", driverActor,
                 SourceChannel.MOBILE, uniqueKey()));
-        Trip started = trips.start(new StartTripCommand(accepted.id(), 42_050L, null, driverActor,
+        Trip started = trips.start(new StartTripCommand(accepted.id(), 42_050L, null, officer(site),
                 SourceChannel.MOBILE));
         Trip completed = trips.close(new CloseTripCommand(started.id(),
                 "Examination papers delivered to Kumasi Centre and signed for", UUID.randomUUID(), 42_540L,

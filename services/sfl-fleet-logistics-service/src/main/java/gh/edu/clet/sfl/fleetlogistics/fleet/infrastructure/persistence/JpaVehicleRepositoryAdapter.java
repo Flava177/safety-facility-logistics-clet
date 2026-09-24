@@ -37,7 +37,7 @@ class JpaVehicleRepositoryAdapter implements VehicleRepository {
                     return existing;
                 })
                 .orElseGet(() -> VehicleEntity.from(vehicle));
-        return vehicles.save(entity).toDomain();
+        return vehicles.saveAndFlush(entity).toDomain();
     }
 
     @Override

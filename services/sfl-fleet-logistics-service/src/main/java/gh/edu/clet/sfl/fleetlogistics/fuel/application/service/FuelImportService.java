@@ -83,11 +83,11 @@ public class FuelImportService {
         List<FuelImportRow> rows = new ArrayList<>();
         int accepted = 0;
         for (int n = 1; n < lines.size(); n++) {
-            Map<String, String> row = map(headers, parse(lines.get(n)));
             // Row number counts the header as line one, so it matches what the operator sees when
             // they open the file to fix it.
             int rowNumber = n + 1;
             try {
+                Map<String, String> row = map(headers, parse(lines.get(n)));
                 var tx = fuel.capture(toCommand(siteCode, source, row, batchId + "-" + n, actor));
                 rows.add(
                         new FuelImportRow(

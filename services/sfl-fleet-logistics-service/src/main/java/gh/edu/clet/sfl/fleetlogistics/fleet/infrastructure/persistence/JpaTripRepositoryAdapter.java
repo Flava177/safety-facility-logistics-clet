@@ -32,7 +32,7 @@ class JpaTripRepositoryAdapter implements TripRepository {
                     return existing;
                 })
                 .orElseGet(() -> TripEntity.from(trip));
-        return trips.save(entity).toDomain();
+        return trips.saveAndFlush(entity).toDomain();
     }
 
     @Override

@@ -3,7 +3,7 @@ package gh.edu.clet.sfl.safetysecurity.accesscontrol.infrastructure.integration;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
-import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.IncidentSeedingPort;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlIncidentSeedingPort;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentReportingService;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.model.IncidentSource;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.model.SourceChannel;
@@ -12,7 +12,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds a security incident (S163) from an access exception - see {@code IncidentSeedingPort}'s
+ * Seeds a security incident (S163) from an access exception - see {@code AccessControlIncidentSeedingPort}'s
  * javadoc for why this in-process call to {@code IncidentReportingService} is the approved contract
  * rather than a bare cross-module call: it lives in {@code infrastructure.integration}, behind a port,
  * exactly like every other module boundary crossing in this codebase, and it is the only class in
@@ -25,13 +25,13 @@ import org.springframework.stereotype.Component;
  * raised the underlying exception.
  */
 @Component
-public class IncidentSeedingAdapter implements IncidentSeedingPort {
+public class AccessControlIncidentSeedingAdapter implements AccessControlIncidentSeedingPort {
 
     private static final String SEEDING_ACTOR_ID = "system:access-control-exception-seeding";
 
     private final IncidentReportingService incidentReporting;
 
-    public IncidentSeedingAdapter(IncidentReportingService incidentReporting) {
+    public AccessControlIncidentSeedingAdapter(IncidentReportingService incidentReporting) {
         this.incidentReporting = incidentReporting;
     }
 

@@ -28,7 +28,7 @@ class JpaEvidenceRepositoryAdapter implements EvidenceRepository {
                     return existing;
                 })
                 .orElseGet(() -> EvidenceReferenceEntity.from(reference));
-        return evidence.save(entity).toDomain();
+        return evidence.saveAndFlush(entity).toDomain();
     }
 
     @Override

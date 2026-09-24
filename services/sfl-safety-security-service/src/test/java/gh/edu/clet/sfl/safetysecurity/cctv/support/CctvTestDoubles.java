@@ -5,7 +5,7 @@ import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvRepository;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvVendorGatewayPort;
-import gh.edu.clet.sfl.safetysecurity.cctv.application.port.IncidentSeedingPort;
+import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvIncidentSeedingPort;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.SiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.AlertStatus;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.AnalyticsAlert;
@@ -221,7 +221,7 @@ public final class CctvTestDoubles {
         }
     }
 
-    public static final class FakeIncidentSeedingPort implements IncidentSeedingPort {
+    public static final class FakeCctvIncidentSeedingPort implements CctvIncidentSeedingPort {
         public final List<String> descriptions = new ArrayList<>();
         public UUID nextIncidentId = UUID.randomUUID();
 

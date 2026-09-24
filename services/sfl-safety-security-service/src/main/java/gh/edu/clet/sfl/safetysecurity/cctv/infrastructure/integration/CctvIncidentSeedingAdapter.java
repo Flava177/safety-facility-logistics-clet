@@ -3,7 +3,7 @@ package gh.edu.clet.sfl.safetysecurity.cctv.infrastructure.integration;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflRole;
 import gh.edu.clet.sfl.common.security.SiteScopedPrincipal;
-import gh.edu.clet.sfl.safetysecurity.cctv.application.port.IncidentSeedingPort;
+import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvIncidentSeedingPort;
 import gh.edu.clet.sfl.safetysecurity.incident.application.service.IncidentReportingService;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.model.IncidentSource;
 import gh.edu.clet.sfl.safetysecurity.incident.domain.model.SourceChannel;
@@ -12,7 +12,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Component;
 
 /**
- * Seeds a security incident (S163) from a video-analytics alert - see {@code IncidentSeedingPort}'s
+ * Seeds a security incident (S163) from a video-analytics alert - see {@code CctvIncidentSeedingPort}'s
  * javadoc. Lives in {@code infrastructure.integration}, behind a port, exactly like S160a's own
  * adapter of the same name; this is the only class in S161 that imports anything from the
  * {@code incident} package, and it uses {@code IncidentSource.CCTV_SEED}, which that module already
@@ -22,13 +22,13 @@ import org.springframework.stereotype.Component;
  * the triggering actor is the HMAC-authenticated integration call, which carries no SFL roles.
  */
 @Component
-public class IncidentSeedingAdapter implements IncidentSeedingPort {
+public class CctvIncidentSeedingAdapter implements CctvIncidentSeedingPort {
 
     private static final String SEEDING_ACTOR_ID = "system:cctv-analytics-alert-seeding";
 
     private final IncidentReportingService incidentReporting;
 
-    public IncidentSeedingAdapter(IncidentReportingService incidentReporting) {
+    public CctvIncidentSeedingAdapter(IncidentReportingService incidentReporting) {
         this.incidentReporting = incidentReporting;
     }
 
