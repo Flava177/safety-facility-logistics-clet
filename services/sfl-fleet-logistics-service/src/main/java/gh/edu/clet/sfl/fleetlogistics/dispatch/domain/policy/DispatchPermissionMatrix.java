@@ -29,7 +29,6 @@ public final class DispatchPermissionMatrix {
                 SflPermission.DISPATCH_INBOUND_REGISTER, SflPermission.DISPATCH_EXCEPTION_READ,
                 SflPermission.DISPATCH_EXCEPTION_MANAGE, SflPermission.DISPATCH_REPORT_READ);
         m.put(SflRole.DISPATCH_CONTROLLER, EnumSet.copyOf(controller));
-        m.put(SflRole.LOGISTICS_COORDINATOR, EnumSet.copyOf(controller));
         m.put(SflRole.FLEET_LOGISTICS_OFFICER, EnumSet.copyOf(controller));
         m.put(SflRole.CENTRE_MANAGER, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
                 SflPermission.DISPATCH_CUSTODY_RECORD, SflPermission.DISPATCH_RECEIPT_CONFIRM,
@@ -41,9 +40,7 @@ public final class DispatchPermissionMatrix {
         m.put(SflRole.SECURITY_OFFICER, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
                 SflPermission.DISPATCH_EXCEPTION_READ, SflPermission.DISPATCH_EXCEPTION_ESCALATE,
                 SflPermission.DISPATCH_REPORT_READ));
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
-                SflPermission.DISPATCH_EXCEPTION_READ, SflPermission.DISPATCH_REPORT_READ,
-                SflPermission.DISPATCH_REPORT_EXPORT));
+        // Merged with the former AUDITOR role - identical here except for exception approval.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
                 SflPermission.DISPATCH_EXCEPTION_READ, SflPermission.DISPATCH_EXCEPTION_APPROVE,
                 SflPermission.DISPATCH_REPORT_READ, SflPermission.DISPATCH_REPORT_EXPORT));
@@ -53,8 +50,12 @@ public final class DispatchPermissionMatrix {
         m.put(SflRole.COMMAND_ROLE, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
                 SflPermission.DISPATCH_EXCEPTION_READ, SflPermission.DISPATCH_EXCEPTION_ESCALATE,
                 SflPermission.DISPATCH_REPORT_READ));
+        // DTI_ADMIN is the technical administrator: read everything (matching COMPLIANCE_OFFICER's
+        // read/export baseline) plus integration replay - not exception approval/management, which is
+        // a business decision for SFL_ADMIN/COMPLIANCE_OFFICER/the controller roles to make.
         m.put(SflRole.DTI_ADMIN, EnumSet.of(SflPermission.DISPATCH_ITEM_READ, SflPermission.DISPATCH_MANIFEST_READ,
-                SflPermission.DISPATCH_REPORT_READ, SflPermission.DISPATCH_INTEGRATION_REPLAY));
+                SflPermission.DISPATCH_EXCEPTION_READ, SflPermission.DISPATCH_REPORT_READ,
+                SflPermission.DISPATCH_REPORT_EXPORT, SflPermission.DISPATCH_INTEGRATION_REPLAY));
         m.put(SflRole.INTEGRATION_ENGINEER, EnumSet.of(SflPermission.DISPATCH_INTEGRATION_INGEST,
                 SflPermission.DISPATCH_INTEGRATION_REPLAY));
         m.put(SflRole.SERVICE_INTEGRATION, EnumSet.of(SflPermission.DISPATCH_INTEGRATION_INGEST));

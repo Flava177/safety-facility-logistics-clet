@@ -20,7 +20,8 @@ import java.util.Set;
  *   <li>Fleet or Logistics Officer - {@link SflRole#FLEET_LOGISTICS_OFFICER}</li>
  *   <li>Fleet Manager - {@link SflRole#FLEET_MANAGER}</li>
  *   <li>Driver / limited mobile user - {@link SflRole#FLEET_DRIVER}</li>
- *   <li>Auditor - {@link SflRole#AUDITOR}; Compliance Officer - {@link SflRole#COMPLIANCE_OFFICER}</li>
+ *   <li>Compliance Officer (read, audit and export approval - formerly split from AUDITOR, merged
+ *       since the two were identical here except for export approval) - {@link SflRole#COMPLIANCE_OFFICER}</li>
  *   <li>System Administrator - {@link SflRole#SFL_ADMIN}, {@link SflRole#DTI_ADMIN}</li>
  *   <li>Read-only management/reporting - {@link SflRole#FLEET_REPORTING_VIEWER}, {@link SflRole#COMMAND_ROLE}</li>
  *   <li>Service integration principal - {@link SflRole#SERVICE_INTEGRATION}, {@link SflRole#INTEGRATION_ENGINEER}</li>
@@ -148,17 +149,17 @@ public final class FleetPermissionMatrix {
                 SflPermission.FLEET_INSPECTION_RECORD,
                 SflPermission.FLEET_EVIDENCE_REGISTER));
 
-        // Auditor: read everything in scope, replay the audit chain, request exports.
-        matrix.put(SflRole.AUDITOR, union(READ_ONLY, EnumSet.of(
+        // Compliance Officer (merged with the former AUDITOR role - identical everywhere except this
+        // one export-approval/legal-hold extra, so the two were one role wearing two names): read
+        // everything in scope, replay the audit chain, request and approve exports, override a legal
+        // hold.
+        matrix.put(SflRole.COMPLIANCE_OFFICER, union(READ_ONLY, EnumSet.of(
                 SflPermission.FLEET_EVIDENCE_READ,
                 SflPermission.FLEET_EVIDENCE_EXPORT_REQUEST,
                 SflPermission.FLEET_AUDIT_READ,
                 SflPermission.FLEET_AUDIT_INTEGRITY_CHECK,
                 SflPermission.FLEET_DASHBOARD_DRILLDOWN,
-                SflPermission.FLEET_INTEGRATION_HEALTH_READ)));
-
-        // Compliance Officer: the auditor view plus export approval and legal-hold override.
-        matrix.put(SflRole.COMPLIANCE_OFFICER, union(matrix.get(SflRole.AUDITOR), EnumSet.of(
+                SflPermission.FLEET_INTEGRATION_HEALTH_READ,
                 SflPermission.FLEET_EVIDENCE_EXPORT_APPROVE,
                 SflPermission.FLEET_EVIDENCE_LEGAL_HOLD_OVERRIDE,
                 SflPermission.FLEET_REPORT_EXPORT)));

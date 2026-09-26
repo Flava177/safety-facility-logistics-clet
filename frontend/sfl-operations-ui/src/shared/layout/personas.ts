@@ -64,7 +64,6 @@ const BROADER_THAN_DISPATCH_PERSONA = [
   'FLEET_MANAGER',
   'FLEET_LOGISTICS_OFFICER',
   'DISPATCH_CONTROLLER',
-  'LOGISTICS_COORDINATOR',
   'SFL_ADMIN',
   'DTI_ADMIN',
 ];
@@ -97,11 +96,11 @@ const predicates: Record<PersonaCode, () => boolean> = {
   centre: () => has('CENTRE_MANAGER') && hasNoneOf(...BROADER_THAN_DISPATCH_PERSONA),
 
   /**
-   * Auditor and compliance, who are cross-programme by design (`crossProgrammeRoles`) and therefore
-   * see every module - which is exactly why one consolidated assurance view beats four per-module
-   * ones. Not excluded by admin roles: an administrator who is also an auditor still audits.
+   * Compliance, who is cross-programme by design (`crossProgrammeRoles`) and therefore sees every
+   * module - which is exactly why one consolidated assurance view beats four per-module ones. Not
+   * excluded by admin roles: an administrator who is also a compliance officer still audits.
    */
-  assurance: () => has('AUDITOR') || has('COMPLIANCE_OFFICER'),
+  assurance: () => has('COMPLIANCE_OFFICER'),
 };
 
 /** Whether the current actor is this persona. */

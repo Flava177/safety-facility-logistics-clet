@@ -316,7 +316,7 @@ class EmergencyMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSupp
                 .isInstanceOf(IllegalStateException.class);
 
         var other = routineDraft(f, t.id(), a.id());
-        assertThatThrownBy(() -> activations.cancel(other.id(), "read-only actor", actor(f.site(), SflRole.AUDITOR),
+        assertThatThrownBy(() -> activations.cancel(other.id(), "read-only actor", actor(f.site(), SflRole.COMPLIANCE_OFFICER),
                 SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
                 .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
                         .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
@@ -344,7 +344,7 @@ class EmergencyMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSupp
                 f.director(), SourceChannel.WEB);
 
         assertThatThrownBy(() -> activations.reopen(closed.id(), "audit-only actor",
-                actor(f.site(), SflRole.AUDITOR), SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
+                actor(f.site(), SflRole.COMPLIANCE_OFFICER), SourceChannel.WEB)).isInstanceOf(EmergencyException.class)
                 .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
                         .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
 
@@ -444,7 +444,7 @@ class EmergencyMandatoryScenariosEndToEndTest extends SafetySecurityPostgresSupp
         assertThatThrownBy(() -> activations.degradedFallback(draft.id(), "draft path", f.director(),
                 SourceChannel.EDGE)).isInstanceOf(IllegalStateException.class);
         assertThatThrownBy(() -> activations.degradedFallback(live.id(), "read-only actor",
-                actor(f.site(), SflRole.AUDITOR), SourceChannel.EDGE)).isInstanceOf(EmergencyException.class)
+                actor(f.site(), SflRole.COMPLIANCE_OFFICER), SourceChannel.EDGE)).isInstanceOf(EmergencyException.class)
                 .satisfies(e -> assertThat(((EmergencyException) e).errorCode())
                         .isEqualTo(EmergencyErrorCode.EMERGENCY_UNAUTHORIZED_SCOPE));
     }

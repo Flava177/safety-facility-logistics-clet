@@ -107,9 +107,11 @@ class IncidentClosureServiceTest {
         SecurityIncident investigating = investigatingIncident();
         repository.saveIncident(investigating);
 
-        // AUDITOR holds INCIDENT_REPORT_READ/EXPORT but not INCIDENT_CLOSE (see IncidentPermissionMatrix).
+        // COMPLIANCE_OFFICER holds INCIDENT_REPORT_READ/EXPORT but not INCIDENT_CLOSE (see
+        // IncidentPermissionMatrix).
         assertThatThrownBy(() -> closure.close(new IncidentClosureService.Close(investigating.id(), "Not my call.",
-                investigating.metadata().version(), IncidentTestDoubles.actor("auditor-1", SflRole.AUDITOR, SITE),
+                investigating.metadata().version(),
+                IncidentTestDoubles.actor("auditor-1", SflRole.COMPLIANCE_OFFICER, SITE),
                 SourceChannel.WEB)))
                 .isInstanceOf(IncidentException.class)
                 .satisfies(e -> assertThat(((IncidentException) e).errorCode())

@@ -9,7 +9,6 @@ public enum SflRole {
     IFIMP_REQUESTER,
     VENDOR_TECHNICIAN,
     COMMAND_ROLE,
-    AUDITOR,
     DTI_ADMIN,
     INTEGRATION_ENGINEER,
 
@@ -25,7 +24,6 @@ public enum SflRole {
     // Mailroom / Courier and Dispatch Tracking user classes (SRS S171). Added for the S171 slice;
     // adding enum constants changes no existing signature and no existing service behaviour.
     DISPATCH_CONTROLLER,
-    LOGISTICS_COORDINATOR,
     CENTRE_MANAGER,
     MAILROOM_OFFICER,
     SECURITY_OFFICER,
@@ -44,17 +42,17 @@ public enum SflRole {
 
     // HSE Incident / Near-Miss Reporting user classes (SRS S163). Added for the S163 slice; adding
     // enum constants changes no existing signature and no existing service behaviour. HSE_MANAGER,
-    // COMPLIANCE_OFFICER, SECURITY_DIRECTOR, AUDITOR and SFL_ADMIN already exist and are reused rather
+    // COMPLIANCE_OFFICER, SECURITY_DIRECTOR and SFL_ADMIN already exist and are reused rather
     // than duplicated - see IncidentPermissionMatrix.
     INCIDENT_INVESTIGATOR,
 
     // Physical Access Control Integration user classes (SRS S160a). Added for the S160a slice; adding
     // enum constants changes no existing signature and no existing service behaviour. SECURITY_DIRECTOR,
-    // SOC_OPERATOR, INTEGRATION_ENGINEER, AUDITOR, COMPLIANCE_OFFICER, EMERGENCY_COORDINATOR and
+    // SOC_OPERATOR, INTEGRATION_ENGINEER, COMPLIANCE_OFFICER, EMERGENCY_COORDINATOR and
     // SFL_ADMIN already exist and are reused rather than duplicated - see AccessControlPermissionMatrix.
     ACCESS_CONTROL_ADMINISTRATOR
 
     // Intrusion Detection & Alarm Monitoring (SRS S162) needed no new role: SECURITY_DIRECTOR,
-    // SOC_OPERATOR, COMMAND_ROLE (the NECC escalation target), INTEGRATION_ENGINEER, AUDITOR and
+    // SOC_OPERATOR, COMMAND_ROLE (the NECC escalation target), INTEGRATION_ENGINEER and
     // SFL_ADMIN already name every user story S162-01..05 describes - see IntrusionPermissionMatrix.
 }

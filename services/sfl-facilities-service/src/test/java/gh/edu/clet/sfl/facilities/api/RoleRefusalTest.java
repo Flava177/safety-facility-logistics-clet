@@ -45,8 +45,8 @@ class RoleRefusalTest {
                 Arguments.of(SflRole.FACILITIES_MANAGER,
                         SflPermission.FACILITIES_SITE_MANAGE,
                         SflPermission.FACILITIES_READINESS_OVERRIDE),
-                // An auditor proves; an auditor does not operate.
-                Arguments.of(SflRole.AUDITOR,
+                // Compliance proves; compliance does not operate.
+                Arguments.of(SflRole.COMPLIANCE_OFFICER,
                         SflPermission.FACILITIES_EVIDENCE_EXPORT,
                         SflPermission.FACILITIES_WORK_ORDER_CREATE));
     }

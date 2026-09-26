@@ -35,8 +35,9 @@ const REPORTING_VIEWER = [
   'FLEET_DASHBOARD_DRILLDOWN',
 ];
 
-/** What an auditor holds that a reporting viewer does not. */
-const AUDITOR = [...REPORTING_VIEWER, 'FLEET_AUDIT_READ', 'FLEET_AUDIT_INTEGRITY_CHECK', 'FUEL_REPORT_EXPORT'];
+/** What a compliance officer holds that a reporting viewer does not. */
+const COMPLIANCE_OFFICER = [...REPORTING_VIEWER, 'FLEET_AUDIT_READ', 'FLEET_AUDIT_INTEGRITY_CHECK',
+  'FUEL_REPORT_EXPORT'];
 
 const holding = (granted: string[]) =>
   permits.mockImplementation((p) => p === undefined || granted.includes(p));
@@ -74,17 +75,17 @@ describe('a reporting viewer', () => {
   });
 
   it('cannot reach the audit trail or replay the hash chain', () => {
-    // Reading the audit trail is an auditor's grant, and replaying the chain narrower still - a
-    // fleet manager does not audit their own service.
+    // Reading the audit trail is a compliance officer's grant, and replaying the chain narrower
+    // still - a fleet manager does not audit their own service.
     expect(access.canReadAudit()).toBe(false);
     expect(access.canVerifyAuditChain()).toBe(false);
   });
 });
 
-describe('an auditor', () => {
+describe('a compliance officer', () => {
   beforeEach(() => {
     permits.mockReset();
-    holding(AUDITOR);
+    holding(COMPLIANCE_OFFICER);
   });
 
   it('may replay the chain and export, and still writes nothing', () => {

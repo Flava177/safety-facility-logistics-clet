@@ -115,14 +115,13 @@ export const allSystems = Object.keys(systems) as SystemCode[];
  * Roles that see every programme.
  *
  * Two kinds, both deliberate. **Platform administration** - `SFL_ADMIN`, `DTI_ADMIN` - is the
- * superadmin case the rule exists to make meaningful. **Cross-cutting oversight** - audit and
- * compliance - genuinely spans all four: an auditor who could see only one programme could not do
- * the job, and both roles read and export rather than operate, so breadth costs little.
+ * superadmin case the rule exists to make meaningful. **Cross-cutting oversight** - compliance -
+ * genuinely spans all four: a compliance officer who could see only one programme could not do
+ * the job, and the role reads and exports rather than operates, so breadth costs little.
  */
 export const crossProgrammeRoles: readonly string[] = [
   'SFL_ADMIN',
   'DTI_ADMIN',
-  'AUDITOR',
   'COMPLIANCE_OFFICER',
 ];
 
@@ -154,6 +153,11 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   RECEPTION_OFFICER: ['SSEMP'],
   VISITOR_HOST: ['SSEMP'],
   INCIDENT_INVESTIGATOR: ['SSEMP'],
+  // S160a Physical Access Control. No system code or screens exist for it yet (see `systems`
+  // below), so this role has no entry in `roleSystems` either - `systemsFor`'s own documented
+  // fallback widens it to every SSEMP system that currently has screens, which is the intended
+  // behaviour until S160a gets its own module.
+  ACCESS_CONTROL_ADMINISTRATOR: ['SSEMP'],
   // Command sits over the emergency workflow - it approves activations and records after-action
   // approval - and over facility incident response with it.
   COMMAND_ROLE: ['SSEMP', 'IFIMP'],
@@ -164,7 +168,6 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   FLEET_DRIVER: ['FTLMP'],
   FLEET_REPORTING_VIEWER: ['FTLMP'],
   DISPATCH_CONTROLLER: ['FTLMP'],
-  LOGISTICS_COORDINATOR: ['FTLMP'],
   MAILROOM_OFFICER: ['FTLMP'],
   // A centre manager receives consignments and books the rooms they are for.
   CENTRE_MANAGER: ['FTLMP', 'IFIMP'],

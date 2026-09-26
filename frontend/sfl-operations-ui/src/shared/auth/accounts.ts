@@ -15,7 +15,7 @@
  *
  * <h2>The real path already exists beside it</h2>
  *
- * `deploy/idp/sfl-realm.json` carries the same twenty-two accounts with the same addresses and
+ * `deploy/idp/sfl-realm.json` carries the same twenty accounts with the same addresses and
  * password, and `oidc.ts` exchanges them for a genuine token. When a service runs with security
  * on, that is the path - and `session.ts` stores either kind identically, so nothing downstream cares
  * which one signed you in. The roles below and the roles in the realm are the same roles.
@@ -85,14 +85,6 @@ export const seededAccounts: SeededAccount[] = [
     roles: ['DISPATCH_CONTROLLER'],
     sites: ['CLET-HQ'],
     description: 'Courier items, manifests, custody and exceptions',
-  },
-  {
-    email: 'logisticscoordinator@clet.gh',
-    username: 'logistics.coordinator',
-    displayName: 'Logistics Coordinator',
-    roles: ['LOGISTICS_COORDINATOR'],
-    sites: ['CLET-HQ'],
-    description: 'Courier and dispatch coordination',
   },
   {
     email: 'mailroomofficer@clet.gh',
@@ -205,20 +197,12 @@ export const seededAccounts: SeededAccount[] = [
     description: 'Oversight across every programme and site',
   },
   {
-    email: 'auditor@clet.gh',
-    username: 'nana.auditor',
-    displayName: 'Nana Auditor',
-    roles: ['AUDITOR'],
-    sites: ['*'],
-    description: 'Read and prove - audit, evidence, chain replay',
-  },
-  {
     email: 'complianceofficer@clet.gh',
     username: 'esi.compliance',
     displayName: 'Esi Compliance',
     roles: ['COMPLIANCE_OFFICER'],
     sites: ['*'],
-    description: 'The auditor view plus export approval',
+    description: 'Read and prove - audit, evidence, chain replay, export approval',
   },
   {
     email: 'sfladmin@clet.gh',
@@ -239,7 +223,7 @@ export const findAccount = (email: string): SeededAccount | undefined => {
 /**
  * The accounts that can actually work on the origin serving this bundle.
  *
- * <p>The sign-in page used to list all twenty-two on every service, which reads as an invitation and
+ * <p>The sign-in page used to list all twenty on every service, which reads as an invitation and
  * is not one: signing into the facilities service as a driver produced a session with no facilities
  * capability and an empty dashboard, and nothing on the page had said that would happen. On the
  * portal the full list is right, because the portal serves all three platforms.

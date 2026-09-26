@@ -58,9 +58,13 @@ public final class LifeSafetyPermissionMatrix {
         m.put(SflRole.INTEGRATION_ENGINEER, EnumSet.of(SflPermission.LIFESAFETY_EVENT_READ,
                 SflPermission.LIFESAFETY_FASTLANE_READ));
 
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.LIFESAFETY_EVENT_READ, SflPermission.LIFESAFETY_FASTLANE_READ,
-                SflPermission.LIFESAFETY_INSPECTION_READ, SflPermission.LIFESAFETY_COMPLIANCE_EXCEPTION_READ,
-                SflPermission.LIFESAFETY_COVERAGE_READ, SflPermission.LIFESAFETY_MUSTER_READ));
+        // Compliance Officer (merged with the former AUDITOR role - this module is observe-only, so
+        // there was never an approval action to distinguish them here; the two were one role wearing
+        // two names).
+        m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.LIFESAFETY_EVENT_READ,
+                SflPermission.LIFESAFETY_FASTLANE_READ, SflPermission.LIFESAFETY_INSPECTION_READ,
+                SflPermission.LIFESAFETY_COMPLIANCE_EXCEPTION_READ, SflPermission.LIFESAFETY_COVERAGE_READ,
+                SflPermission.LIFESAFETY_MUSTER_READ));
 
         m.replaceAll((r, p) -> Set.copyOf(p));
         return Map.copyOf(m);

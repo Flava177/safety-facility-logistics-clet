@@ -8,10 +8,10 @@ import { facilitiesPaths, fleetPaths } from 'shared/layout/navigation';
  *
  * ## Why one view and not four
  *
- * `AUDITOR` and `COMPLIANCE_OFFICER` are in `crossProgrammeRoles`, so they are entitled to every
- * system by design. That is precisely the argument for a consolidated landing: an auditor's question
- * is "is the record trustworthy", and answering it by visiting four per-module audit screens in turn
- * makes the platform's shape the auditor's problem.
+ * `COMPLIANCE_OFFICER` is in `crossProgrammeRoles`, so it is entitled to every system by design.
+ * That is precisely the argument for a consolidated landing: a compliance officer's question is "is
+ * the record trustworthy", and answering it by visiting four per-module audit screens in turn makes
+ * the platform's shape the compliance officer's problem.
  *
  * ## Why it links rather than duplicates
  *

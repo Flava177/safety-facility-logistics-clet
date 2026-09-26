@@ -56,10 +56,9 @@ public final class IncidentPermissionMatrix {
 
         // Compliance Officer (D.9 step 8): dashboards and statutory/management exports, not the case
         // workflow itself. Already exists as a role (added for S168/fleet compliance reporting).
+        // Merged with the former AUDITOR role - identical here.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.INCIDENT_REPORT_READ,
                 SflPermission.INCIDENT_REPORT_EXPORT));
-
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.INCIDENT_REPORT_READ, SflPermission.INCIDENT_REPORT_EXPORT));
 
         m.replaceAll((r, p) -> Set.copyOf(p));
         return Map.copyOf(m);

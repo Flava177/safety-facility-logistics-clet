@@ -51,7 +51,7 @@ class AccessOverrideServiceTest {
         Clock clock = Clock.fixed(Instant.parse("2026-09-22T10:00:00Z"), ZoneOffset.UTC);
         AccessOverrideService service = new AccessOverrideService(repository, vendorGateway, audit, events, access,
                 clock);
-        ActorContext auditor = AccessControlTestDoubles.actor("auditor-1", SflRole.AUDITOR, SITE);
+        ActorContext auditor = AccessControlTestDoubles.actor("auditor-1", SflRole.COMPLIANCE_OFFICER, SITE);
 
         assertThatThrownBy(() -> service.request(new AccessOverrideService.RequestOverride(SITE, "door:main-gate",
                 "Vendor delivery", "security-director-1", Instant.parse("2026-09-22T10:00:00Z"),

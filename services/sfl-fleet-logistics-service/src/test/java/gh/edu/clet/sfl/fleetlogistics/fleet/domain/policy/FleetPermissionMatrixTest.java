@@ -66,32 +66,21 @@ class FleetPermissionMatrixTest {
     }
 
     @Test
-    @DisplayName("an auditor reads and replays but never changes operational records")
-    void auditor_reads_and_replays_only() {
-        Set<SflRole> auditor = Set.of(SflRole.AUDITOR);
-
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_AUDIT_READ)).isTrue();
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_AUDIT_INTEGRITY_CHECK)).isTrue();
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_EVIDENCE_READ)).isTrue();
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_EVIDENCE_EXPORT_REQUEST)).isTrue();
-
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_VEHICLE_MANAGE)).isFalse();
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_TRIP_MANAGE)).isFalse();
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_WORKFLOW_MANAGE)).isFalse();
-        // Approving an export you requested yourself is the separation of duties the SRS relies on.
-        assertThat(FleetPermissionMatrix.grants(auditor, SflPermission.FLEET_EVIDENCE_EXPORT_APPROVE)).isFalse();
-    }
-
-    @Test
-    @DisplayName("a compliance officer approves exports and can override a legal hold")
-    void compliance_officer_approves_exports() {
+    @DisplayName("a compliance officer reads and replays and also approves exports and legal holds")
+    void compliance_officer_reads_and_approves_exports() {
         Set<SflRole> compliance = Set.of(SflRole.COMPLIANCE_OFFICER);
 
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_AUDIT_READ)).isTrue();
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_AUDIT_INTEGRITY_CHECK)).isTrue();
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_EVIDENCE_READ)).isTrue();
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_EVIDENCE_EXPORT_REQUEST)).isTrue();
         assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_EVIDENCE_EXPORT_APPROVE)).isTrue();
         assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_EVIDENCE_LEGAL_HOLD_OVERRIDE))
                 .isTrue();
-        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_AUDIT_INTEGRITY_CHECK)).isTrue();
+
         assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_VEHICLE_MANAGE)).isFalse();
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_TRIP_MANAGE)).isFalse();
+        assertThat(FleetPermissionMatrix.grants(compliance, SflPermission.FLEET_WORKFLOW_MANAGE)).isFalse();
     }
 
     @Test

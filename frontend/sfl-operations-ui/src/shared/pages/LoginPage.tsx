@@ -35,7 +35,7 @@ const LoginPage = () => {
   const [error, setError] = useState<string | null>(null);
   const [accountsOpen, setAccountsOpen] = useState(false);
   /*
-    Only the accounts that can work on this origin. The full twenty-two appear on the portal,
+    Only the accounts that can work on this origin. The full twenty appear on the portal,
     which serves all three platforms; on a single service the rest would be an invitation to a
     session with no capability and an empty dashboard.
   */

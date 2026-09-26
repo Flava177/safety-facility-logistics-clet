@@ -46,8 +46,7 @@ public final class VisitorPermissionMatrix {
                 SflPermission.VISITOR_ROLLCALL_READ, SflPermission.VISITOR_WATCHLIST_OVERRIDE,
                 SflPermission.VISITOR_REPORT_READ));
 
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.VISITOR_VISIT_READ, SflPermission.VISITOR_REPORT_READ));
-
+        // Merged with the former AUDITOR role - identical here.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.VISITOR_VISIT_READ,
                 SflPermission.VISITOR_REPORT_READ));
 

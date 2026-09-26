@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 /**
  * Which seeded accounts belong on which origin.
  *
- * <p>The sign-in page used to list all twenty-two on every service, which reads as an invitation and
+ * <p>The sign-in page used to list all twenty on every service, which reads as an invitation and
  * was not one: signing into the facilities service as a driver produced a session with no facilities
  * capability and an empty dashboard, and nothing on the page had warned that would happen. On the
  * portal the full list is right, because the portal serves all three platforms.
@@ -72,15 +72,16 @@ describe('accounts for the serving platform', () => {
   });
 
   it('an account entitled to two platforms appears on both', () => {
-    // An auditor works across programmes. Two services, two lists, the same person on each - and a
-    // different set of screens once they are in, which is the scoping rule doing its job.
-    const auditor = findAccount('auditor@clet.gh');
-    expect(auditor).toBeDefined();
+    // A compliance officer works across programmes. Two services, two lists, the same person on
+    // each - and a different set of screens once they are in, which is the scoping rule doing its
+    // job.
+    const complianceOfficer = findAccount('complianceofficer@clet.gh');
+    expect(complianceOfficer).toBeDefined();
 
     serving.value = 'IFIMP';
-    expect(accountIsForeignToPlatform(auditor!)).toBe(false);
+    expect(accountIsForeignToPlatform(complianceOfficer!)).toBe(false);
 
     serving.value = 'FTLMP';
-    expect(accountIsForeignToPlatform(auditor!)).toBe(false);
+    expect(accountIsForeignToPlatform(complianceOfficer!)).toBe(false);
   });
 });

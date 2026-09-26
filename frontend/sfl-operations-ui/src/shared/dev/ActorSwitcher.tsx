@@ -144,13 +144,9 @@ const PRESETS: Preset[] = [
     },
   },
   {
-    label: 'Auditor',
-    detail: 'Cross-programme by design. Lands on assurance - four chains, deliberately not merged.',
-    actor: { ...base, user: 'nana.auditor', displayName: 'Nana Auditor', roles: 'AUDITOR' },
-  },
-  {
     label: 'Compliance officer',
-    detail: 'Assurance too, plus the integrity check a facilities director deliberately does not hold.',
+    detail: 'Cross-programme by design. Lands on assurance - four chains, deliberately not merged, '
+      + 'plus the integrity check a facilities director deliberately does not hold.',
     actor: {
       ...base,
       user: 'esi.compliance',

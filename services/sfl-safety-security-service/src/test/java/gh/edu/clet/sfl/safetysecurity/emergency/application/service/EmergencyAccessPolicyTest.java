@@ -27,11 +27,11 @@ class EmergencyAccessPolicyTest {
     private static final String SITE = "E2E-HQ";
 
     @Test
-    void an_auditor_may_read_and_export_evidence_but_may_not_create_an_activation() {
-        // AUDITOR is granted read/export permissions (see EmergencyPermissionMatrix) but not
-        // EMERGENCY_ACTIVATION_CREATE - firing a notification is an operational role's job, not a
-        // read-only auditor's.
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+    void a_compliance_officer_may_read_and_export_evidence_but_may_not_create_an_activation() {
+        // COMPLIANCE_OFFICER is granted read/export permissions (see EmergencyPermissionMatrix) but not
+        // EMERGENCY_ACTIVATION_CREATE - firing a notification is an operational role's job, not
+        // compliance's.
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThat(policy.has(auditor, SflPermission.EMERGENCY_ACTIVATION_READ)).isTrue();
 

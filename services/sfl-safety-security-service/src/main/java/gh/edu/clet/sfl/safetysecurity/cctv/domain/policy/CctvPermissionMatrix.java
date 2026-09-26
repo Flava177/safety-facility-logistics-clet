@@ -50,19 +50,17 @@ public final class CctvPermissionMatrix {
                 SflPermission.CCTV_DISCLOSURE_READ));
 
         // Compliance Officer stands in for the SRS's "Data Protection Officer" (S161-05 user story):
-        // retention/legal-hold and disclosure governance, read-only elsewhere.
+        // retention/legal-hold and disclosure governance, read-only elsewhere. Merged with the former
+        // AUDITOR role, which additionally held analytics-alert read - folded in below rather than
+        // dropped.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.CCTV_CAMERA_READ,
                 SflPermission.CCTV_EVIDENCE_REQUEST_READ, SflPermission.CCTV_EVIDENCE_ITEM_READ,
-                SflPermission.CCTV_DISCLOSURE_APPROVE, SflPermission.CCTV_DISCLOSURE_READ,
-                SflPermission.CCTV_RETENTION_MANAGE));
+                SflPermission.CCTV_ANALYTICS_ALERT_READ, SflPermission.CCTV_DISCLOSURE_APPROVE,
+                SflPermission.CCTV_DISCLOSURE_READ, SflPermission.CCTV_RETENTION_MANAGE));
 
         // Integration Engineer: reads what has been ingested; never approves a request or a disclosure.
         m.put(SflRole.INTEGRATION_ENGINEER, EnumSet.of(SflPermission.CCTV_CAMERA_READ,
                 SflPermission.CCTV_ANALYTICS_ALERT_READ));
-
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.CCTV_CAMERA_READ, SflPermission.CCTV_EVIDENCE_REQUEST_READ,
-                SflPermission.CCTV_EVIDENCE_ITEM_READ, SflPermission.CCTV_ANALYTICS_ALERT_READ,
-                SflPermission.CCTV_DISCLOSURE_READ));
 
         m.replaceAll((r, p) -> Set.copyOf(p));
         return Map.copyOf(m);

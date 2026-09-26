@@ -21,7 +21,7 @@ class AccessControlAccessPolicyTest {
 
     @Test
     void an_auditor_may_read_events_but_may_not_manage_zones() {
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThat(policy.has(auditor, SflPermission.ACCESS_EVENT_READ)).isTrue();
 
@@ -33,7 +33,7 @@ class AccessControlAccessPolicyTest {
 
     @Test
     void an_soc_operator_denied_override_authority_gets_the_not_authorised_error_code() {
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThatThrownBy(() -> policy.requireOverrideAuthority(auditor, SflPermission.ACCESS_OVERRIDE_CREATE, SITE,
                 "override-1"))

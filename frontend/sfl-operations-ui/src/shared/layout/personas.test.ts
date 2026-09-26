@@ -79,10 +79,10 @@ describe('personas', () => {
     expect(isPersona('centre')).toBe(true);
   });
 
-  it('keeps assurance for an auditor who is also an administrator', async () => {
+  it('keeps assurance for a compliance officer who is also an administrator', async () => {
     // Deliberately not excluded by admin roles, unlike every other persona: an administrator who is
-    // also an auditor still audits, and the assurance view is read-only anyway.
-    const { isPersona } = await withRoles('AUDITOR,SFL_ADMIN');
+    // also a compliance officer still audits, and the assurance view is read-only anyway.
+    const { isPersona } = await withRoles('COMPLIANCE_OFFICER,SFL_ADMIN');
     expect(isPersona('assurance')).toBe(true);
   });
 

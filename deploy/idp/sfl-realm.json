@@ -40,10 +40,6 @@
         "description": "SflRole.COMMAND_ROLE"
       },
       {
-        "name": "AUDITOR",
-        "description": "SflRole.AUDITOR"
-      },
-      {
         "name": "DTI_ADMIN",
         "description": "SflRole.DTI_ADMIN"
       },
@@ -78,10 +74,6 @@
       {
         "name": "DISPATCH_CONTROLLER",
         "description": "SflRole.DISPATCH_CONTROLLER"
-      },
-      {
-        "name": "LOGISTICS_COORDINATOR",
-        "description": "SflRole.LOGISTICS_COORDINATOR"
       },
       {
         "name": "CENTRE_MANAGER",
@@ -372,29 +364,6 @@
       "email": "emergencycoordinator@clet.gh"
     },
     {
-      "username": "nana.auditor",
-      "enabled": true,
-      "emailVerified": true,
-      "firstName": "Nana",
-      "lastName": "Auditor",
-      "attributes": {
-        "site_scopes": [
-          "CLET-HQ"
-        ]
-      },
-      "credentials": [
-        {
-          "type": "password",
-          "value": "Password@Clet1",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "AUDITOR"
-      ],
-      "email": "auditor@clet.gh"
-    },
-    {
       "username": "esi.compliance",
       "enabled": true,
       "emailVerified": true,
@@ -461,29 +430,6 @@
       ],
       "realmRoles": [
         "DISPATCH_CONTROLLER"
-      ]
-    },
-    {
-      "username": "logistics.coordinator",
-      "enabled": true,
-      "email": "logisticscoordinator@clet.gh",
-      "emailVerified": true,
-      "firstName": "Logistics",
-      "lastName": "Coordinator",
-      "attributes": {
-        "site_scopes": [
-          "CLET-HQ"
-        ]
-      },
-      "credentials": [
-        {
-          "type": "password",
-          "value": "Password@Clet1",
-          "temporary": false
-        }
-      ],
-      "realmRoles": [
-        "LOGISTICS_COORDINATOR"
       ]
     },
     {

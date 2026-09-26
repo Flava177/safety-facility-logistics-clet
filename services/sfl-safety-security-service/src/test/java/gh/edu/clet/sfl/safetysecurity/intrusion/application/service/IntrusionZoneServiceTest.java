@@ -87,7 +87,7 @@ class IntrusionZoneServiceTest {
         ActorContext director = IntrusionTestDoubles.actor("director-1", SflRole.SECURITY_DIRECTOR, SITE);
         service.define(new IntrusionZoneService.DefineZone(SITE, "VAULT-1", "Exam Vault", null,
                 "Mon-Fri 07:00-19:00", true, director));
-        ActorContext auditor = IntrusionTestDoubles.actor("auditor-1", SflRole.AUDITOR, SITE);
+        ActorContext auditor = IntrusionTestDoubles.actor("auditor-1", SflRole.COMPLIANCE_OFFICER, SITE);
 
         assertThatThrownBy(() -> service.requestDisarm(new IntrusionZoneService.RequestDisarm(SITE, "VAULT-1",
                 "Maintenance access", "security-director-1", Instant.parse("2026-09-22T10:00:00Z"),

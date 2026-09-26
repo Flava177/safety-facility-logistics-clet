@@ -106,7 +106,7 @@ describe('programme entitlement', () => {
 
   describe('the rules the model turns on', () => {
     it('gives a cross-programme role everything', () => {
-      expect(systemsFor(['AUDITOR'])).toEqual(allSystems);
+      expect(systemsFor(['COMPLIANCE_OFFICER'])).toEqual(allSystems);
       // Three, not four: AVAMP was retired as a programme. It had no deployable of its own - its
       // entities live in the fleet service's `asset_visibility` schema - and no screens, so
       // entitlement to it granted nothing the shell could show.

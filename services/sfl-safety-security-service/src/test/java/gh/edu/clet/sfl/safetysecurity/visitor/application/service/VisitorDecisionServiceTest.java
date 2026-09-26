@@ -100,10 +100,11 @@ class VisitorDecisionServiceTest {
         String hostId = "host-1";
         VisitorVisit registered = registeredMeeting(hostId, "reception-1");
 
-        // AUDITOR holds VISITOR_VISIT_READ/VISITOR_REPORT_READ but not VISITOR_VISIT_APPROVE (see
-        // VisitorPermissionMatrix).
+        // COMPLIANCE_OFFICER holds VISITOR_VISIT_READ/VISITOR_REPORT_READ but not VISITOR_VISIT_APPROVE
+        // (see VisitorPermissionMatrix).
         assertThatThrownBy(() -> decisions.decide(new VisitorDecisionService.DecideVisit(registered.id(), true, null,
-                null, registered.metadata().version(), VisitorTestDoubles.actor("auditor-1", SflRole.AUDITOR, SITE),
+                null, registered.metadata().version(),
+                VisitorTestDoubles.actor("auditor-1", SflRole.COMPLIANCE_OFFICER, SITE),
                 SourceChannel.WEB)))
                 .isInstanceOf(VisitorException.class)
                 .satisfies(e -> assertThat(((VisitorException) e).errorCode())

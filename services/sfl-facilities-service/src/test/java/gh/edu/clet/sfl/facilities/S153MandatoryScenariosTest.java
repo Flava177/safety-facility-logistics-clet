@@ -153,7 +153,7 @@ class S153MandatoryScenariosTest {
         vendorTechnician = TestDoubles.actor("acme.tech", Set.of(SflRole.VENDOR_TECHNICIAN), "MAIN");
         otherVendorTechnician = TestDoubles.actor("other.tech", Set.of(SflRole.VENDOR_TECHNICIAN), "MAIN");
         requester = TestDoubles.actor("lecturer", Set.of(SflRole.IFIMP_REQUESTER), "MAIN");
-        auditor = TestDoubles.actor("auditor", Set.of(SflRole.AUDITOR), "MAIN");
+        auditor = TestDoubles.actor("auditor", Set.of(SflRole.COMPLIANCE_OFFICER), "MAIN");
         system = TestDoubles.actor("system", Set.of(SflRole.SFL_ADMIN), "*", "MAIN");
 
         Site site = estate.createSite(new FacilitiesCommands.CreateSite("MAIN", "CLET Headquarters", null,

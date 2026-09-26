@@ -880,7 +880,7 @@ class FleetCriticalScenariosEndToEndTest extends FleetPostgresSupport {
     }
 
     private static ActorContext auditor() {
-        return actor("auditor@clet.edu.gh", Set.of(SflRole.AUDITOR), "*", false);
+        return actor("auditor@clet.edu.gh", Set.of(SflRole.COMPLIANCE_OFFICER), "*", false);
     }
 
     private static ActorContext integrationPrincipal(String site) {
