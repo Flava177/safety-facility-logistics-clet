@@ -3,8 +3,8 @@ package gh.edu.clet.sfl.safetysecurity.cctv.application.service;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvRepository;
-import gh.edu.clet.sfl.safetysecurity.cctv.application.port.IncidentSeedingPort;
-import gh.edu.clet.sfl.safetysecurity.cctv.application.port.SiemForwarderPort;
+import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvIncidentSeedingPort;
+import gh.edu.clet.sfl.safetysecurity.cctv.application.port.CctvSiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.event.CctvEventType;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.exception.CctvException;
 import gh.edu.clet.sfl.safetysecurity.cctv.domain.model.AlertSeverity;
@@ -34,15 +34,15 @@ public class AnalyticsAlertService {
 
     private final CctvRepository repository;
     private final CctvIntegrationInbox inbox;
-    private final SiemForwarderPort siem;
-    private final IncidentSeedingPort incidentSeeding;
+    private final CctvSiemForwarderPort siem;
+    private final CctvIncidentSeedingPort incidentSeeding;
     private final AuditPort audit;
     private final IntegrationEventPublisher events;
     private final CctvAccessPolicy access;
     private final Clock clock;
 
-    public AnalyticsAlertService(CctvRepository repository, CctvIntegrationInbox inbox, SiemForwarderPort siem,
-            IncidentSeedingPort incidentSeeding, AuditPort audit, IntegrationEventPublisher events,
+    public AnalyticsAlertService(CctvRepository repository, CctvIntegrationInbox inbox, CctvSiemForwarderPort siem,
+            CctvIncidentSeedingPort incidentSeeding, AuditPort audit, IntegrationEventPublisher events,
             CctvAccessPolicy access, Clock clock) {
         this.repository = repository;
         this.inbox = inbox;

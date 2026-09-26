@@ -58,6 +58,16 @@ export const canAcknowledgeTrips = (): boolean => permits('FLEET_TRIP_ACKNOWLEDG
 export const canAssignTrips = (): boolean => permits('FLEET_TRIP_ASSIGN');
 export const canCloseTrips = (): boolean => permits('FLEET_TRIP_CLOSE');
 export const canCancelTrips = (): boolean => permits('FLEET_TRIP_CANCEL');
+/**
+ * Start a trip assigned to you.
+ *
+ * The mirror image of `canManageTrips`, the same way `canAcknowledgeTrips` mirrors it for
+ * confirmation: this is one driver's answer about their own trip, not a dispatcher's power over
+ * anybody's. Necessary and not sufficient - the service also requires the signed-in identity to be
+ * the driver on that trip - so a screen must check the trip is genuinely theirs (see
+ * {@link canAcknowledgeTrips}'s doc) before offering the control.
+ */
+export const canStartOwnTrip = (): boolean => permits('FLEET_TRIP_START_OWN');
 export const canRecordInspections = (): boolean => permits('FLEET_INSPECTION_RECORD');
 
 export const canManageWorkflow = (): boolean => permits('FLEET_WORKFLOW_MANAGE');

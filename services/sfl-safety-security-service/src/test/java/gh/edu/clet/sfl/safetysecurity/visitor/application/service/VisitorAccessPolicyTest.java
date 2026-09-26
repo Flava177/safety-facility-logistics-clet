@@ -30,7 +30,7 @@ class VisitorAccessPolicyTest {
         // AUDITOR is granted VISITOR_VISIT_READ and VISITOR_REPORT_READ (see VisitorPermissionMatrix)
         // but not VISITOR_VISIT_CREATE - registering a visit is Reception's or a Host's operation, not
         // a read-only role's.
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThat(policy.has(auditor, SflPermission.VISITOR_VISIT_READ)).isTrue();
 
@@ -48,7 +48,7 @@ class VisitorAccessPolicyTest {
         // rejection - a permission failure there must surface as VISITOR_UNAUTHORIZED_APPROVAL, not
         // the generic VISITOR_UNAUTHORIZED_SCOPE, so a client can distinguish "wrong resource" from
         // "not allowed to decide on visits at all".
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThatThrownBy(() -> policy.requireApproval(auditor, SflPermission.VISITOR_VISIT_APPROVE, SITE,
                 "VisitorVisit", "visit-1"))

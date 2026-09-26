@@ -23,8 +23,8 @@ class AccessExceptionServiceTest {
     private final AccessControlTestDoubles.InMemoryAccessControlRepository repository =
             new AccessControlTestDoubles.InMemoryAccessControlRepository();
     private final AccessControlTestDoubles.FakeSiemForwarder siem = new AccessControlTestDoubles.FakeSiemForwarder();
-    private final AccessControlTestDoubles.FakeIncidentSeedingPort incidentSeeding =
-            new AccessControlTestDoubles.FakeIncidentSeedingPort();
+    private final AccessControlTestDoubles.FakeAccessControlIncidentSeedingPort incidentSeeding =
+            new AccessControlTestDoubles.FakeAccessControlIncidentSeedingPort();
     private final AccessControlTestDoubles.FakeAuditPort audit = new AccessControlTestDoubles.FakeAuditPort();
     private final AccessControlTestDoubles.FakeEventPublisher events = new AccessControlTestDoubles.FakeEventPublisher();
     private final AccessControlAccessPolicy access = new AccessControlAccessPolicy();

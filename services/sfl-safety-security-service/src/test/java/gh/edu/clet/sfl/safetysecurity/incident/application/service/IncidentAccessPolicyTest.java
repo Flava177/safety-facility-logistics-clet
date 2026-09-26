@@ -30,7 +30,7 @@ class IncidentAccessPolicyTest {
         // AUDITOR is granted INCIDENT_REPORT_READ and INCIDENT_REPORT_EXPORT (see
         // IncidentPermissionMatrix) but not INCIDENT_CLOSE - closure is the Investigator's hard-rule-1
         // gated operation (SRS §D.9 step 6), not a read-only role's.
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThat(policy.has(auditor, SflPermission.INCIDENT_REPORT_READ)).isTrue();
 

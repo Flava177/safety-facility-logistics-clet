@@ -13,9 +13,12 @@ import gh.edu.clet.sfl.fleetlogistics.fleet.application.service.FleetDashboardAp
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.DashboardDataStaleException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.exception.RestrictedDrilldownException;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.AuditAction;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.DateTimeRange;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.IntegrationInboxMessage;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.IntegrationMessageStatus;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.OperatingMode;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.SiteCode;
+import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Trip;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.Vehicle;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleLocationSnapshot;
 import gh.edu.clet.sfl.fleetlogistics.fleet.domain.model.VehicleServiceStatus;
@@ -108,6 +111,33 @@ class FleetDashboardApplicationServiceTest {
         assertThatThrownBy(() -> service.drilldown("SERVICE_DUE", filter("ACCRA"),
                 FleetTestDoubles.driver("driver@clet.edu.gh", "ACCRA")))
                 .isInstanceOf(RestrictedDrilldownException.class);
+    }
+
+    @Test
+    @DisplayName("assignment conflicts: the tile's count and the drilldown agree, including a driver "
+            + "double-booked across two vehicles")
+    void assignment_conflicts_count_and_drilldown_agree_on_a_driver_only_conflict() {
+        UUID driverId = UUID.fromString("22222222-2222-2222-2222-222222222222");
+        UUID vehicleA = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+        UUID vehicleB = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+        DateTimeRange period = DateTimeRange.of(NOW.plus(Duration.ofHours(1)), NOW.plus(Duration.ofHours(5)));
+
+        // Same driver, two different vehicles - a double-booking the old drilldown missed because it
+        // only ever grouped by vehicleId.
+        trips.save(Trip.plan(UUID.randomUUID(), "TRP-A", ACCRA, "Deliver examination materials", "Accra HQ",
+                        "Kumasi Centre", OperatingMode.EXAMINATION, period, FleetFixtures.metadata())
+                .assign(vehicleA, driverId, FleetFixtures.metadata()));
+        trips.save(Trip.plan(UUID.randomUUID(), "TRP-B", ACCRA, "Deliver examination materials", "Accra HQ",
+                        "Kumasi Centre", OperatingMode.EXAMINATION, period, FleetFixtures.metadata())
+                .assign(vehicleB, driverId, FleetFixtures.metadata()));
+
+        OperationsDashboardSnapshot snapshot = service.operations(filter("ACCRA"),
+                FleetTestDoubles.fleetManager("ACCRA"), false);
+        var drilldown = service.drilldown("ASSIGNMENT_CONFLICTS", filter("ACCRA"),
+                FleetTestDoubles.fleetManager("ACCRA"));
+
+        assertThat(snapshot.indicators().assignmentConflicts()).isEqualTo(2);
+        assertThat(drilldown).hasSize(2);
     }
 
     @Test

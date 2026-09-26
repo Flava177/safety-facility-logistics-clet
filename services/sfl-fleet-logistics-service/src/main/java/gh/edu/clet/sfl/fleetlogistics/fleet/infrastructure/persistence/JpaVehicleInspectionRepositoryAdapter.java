@@ -32,7 +32,7 @@ class JpaVehicleInspectionRepositoryAdapter implements VehicleInspectionReposito
                     return existing;
                 })
                 .orElseGet(() -> VehicleInspectionEntity.from(inspection, objectMapper));
-        return inspections.save(entity).toDomain(objectMapper);
+        return inspections.saveAndFlush(entity).toDomain(objectMapper);
     }
 
     @Override

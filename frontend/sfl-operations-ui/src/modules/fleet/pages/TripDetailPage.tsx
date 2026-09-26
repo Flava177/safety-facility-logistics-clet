@@ -10,6 +10,7 @@ import {
   canCloseTrips,
   canManageTrips,
   canRecordInspections,
+  canStartOwnTrip,
 } from 'modules/fleet/api/access';
 import {
   AcknowledgeTripDialog,
@@ -76,6 +77,17 @@ const permitted = (trip: TripResponse) => ({
  */
 const answerable = (trip: TripResponse) =>
   trip.status === 'ASSIGNED' && canAcknowledgeTrips() && !canManageTrips();
+
+/**
+ * Whether to offer the driver's own start control.
+ *
+ * The same reasoning as {@link answerable}: `canStartOwnTrip()` alone is not enough, because a dual-
+ * role actor who also holds the dispatcher's `FLEET_TRIP_MANAGE` can load a trip that is not theirs,
+ * and the service refuses their own-scoped start on it. `!canManageTrips()` is what makes "I could
+ * load this trip" mean "this trip is mine" for a driver-only actor.
+ */
+const startableOwn = (trip: TripResponse) =>
+  trip.status === 'ASSIGNED' && canStartOwnTrip() && !canManageTrips();
 
 /** A related record rendered as a navigable tile - the assignment's vehicle and driver. */
 const linkTile = 'block rounded-xl border border-gray-200 p-3 transition hover:border-brand-500';
@@ -253,7 +265,7 @@ const TripDetailPage = () => {
                     Record inspection
                   </Button>
                 )}
-                {permitted(trip.data).start && tripActions.manage && (
+                {permitted(trip.data).start && (tripActions.manage || startableOwn(trip.data)) && (
                   <Button variant="accent" startIcon="play" onClick={() => setDialog('start')}>
                     Start trip
                   </Button>

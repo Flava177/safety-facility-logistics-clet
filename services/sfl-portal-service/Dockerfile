@@ -11,7 +11,11 @@ COPY frontend frontend
 COPY services/sfl-facilities-service/pom.xml services/sfl-facilities-service/pom.xml
 COPY services/sfl-safety-security-service/pom.xml services/sfl-safety-security-service/pom.xml
 COPY services/sfl-fleet-logistics-service/pom.xml services/sfl-fleet-logistics-service/pom.xml
-RUN mvn -f services/pom.xml -pl sfl-portal-service -am package -DskipTests
+# -Pui is the profile that actually builds the dashboard (install-node-and-npm, npm install, npm run
+# build) - without it, copy-operations-ui below copies from a dist/ that was never built, and since
+# that copy step treats a missing dist/ as optional rather than fatal, the image had been building
+# successfully with an empty dashboard.
+RUN mvn -f services/pom.xml -pl sfl-portal-service -am -Pui package -DskipTests
 
 FROM eclipse-temurin:17-jre
 RUN groupadd -r spring && useradd -r -g spring spring

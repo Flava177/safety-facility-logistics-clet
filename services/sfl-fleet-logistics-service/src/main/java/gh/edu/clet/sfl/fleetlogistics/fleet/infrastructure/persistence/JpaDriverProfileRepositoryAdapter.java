@@ -32,7 +32,7 @@ class JpaDriverProfileRepositoryAdapter implements DriverProfileRepository {
                     return existing;
                 })
                 .orElseGet(() -> DriverProfileEntity.from(driver));
-        return drivers.save(entity).toDomain();
+        return drivers.saveAndFlush(entity).toDomain();
     }
 
     @Override

@@ -80,8 +80,11 @@ public final class FleetTestDoubles {
         return actor(subject, Set.of(SflRole.FLEET_DRIVER), Set.of(sites));
     }
 
+    // A second compliance-officer identity, distinct from complianceOfficer() below, so tests can
+    // exercise separation-of-duty (requester != approver) now that AUDITOR is merged into
+    // COMPLIANCE_OFFICER.
     public static ActorContext auditor(String... sites) {
-        return actor("auditor@clet.edu.gh", Set.of(SflRole.AUDITOR), Set.of(sites));
+        return actor("auditor@clet.edu.gh", Set.of(SflRole.COMPLIANCE_OFFICER), Set.of(sites));
     }
 
     public static ActorContext complianceOfficer(String... sites) {

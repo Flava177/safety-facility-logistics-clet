@@ -17,7 +17,7 @@ import { NotifierProvider } from 'shared/components/Notifier';
  * rule that it must be *their* trip is `TripApplicationServiceTest`, where it belongs.
  */
 
-const tripsApi = vi.hoisted(() => ({ search: vi.fn(), close: vi.fn() }));
+const tripsApi = vi.hoisted(() => ({ search: vi.fn(), start: vi.fn(), close: vi.fn() }));
 const driverLogbooksApi = vi.hoisted(() => ({ search: vi.fn() }));
 const fuelTransactionsApi = vi.hoisted(() => ({ search: vi.fn() }));
 const evidenceFilesApi = vi.hoisted(() => ({ upload: vi.fn() }));
@@ -83,6 +83,7 @@ describe('DriverDayPage assignments', () => {
     searchEvidenceChoices.mockResolvedValue([]);
     evidenceFilesApi.upload.mockResolvedValue({ id: 'evidence-1' });
     tripsApi.search.mockResolvedValue(page([trip()]));
+    tripsApi.start.mockResolvedValue(trip({ status: 'IN_PROGRESS' }));
     tripsApi.close.mockResolvedValue(trip({ status: 'COMPLETED' }));
   });
 
@@ -93,13 +94,32 @@ describe('DriverDayPage assignments', () => {
     expect(screen.getByRole('button', { name: /complete trip/i })).toBeInTheDocument();
   });
 
-  it('does not offer completion on a trip that has not been started', async () => {
+  it('offers to start a trip that has not begun, not to complete it', async () => {
     tripsApi.search.mockResolvedValue(page([trip({ status: 'ASSIGNED' })]));
     renderPage();
 
-    // The service refuses a closure from ASSIGNED, so offering the button would offer a refusal.
-    expect(await screen.findByText('Not started')).toBeInTheDocument();
+    // The service refuses a closure from ASSIGNED, so offering that button would offer a refusal;
+    // it accepts a start from here, which is the transition this status is actually waiting on.
+    expect(await screen.findByRole('button', { name: /start trip/i })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /complete trip/i })).not.toBeInTheDocument();
+  });
+
+  it('starts the trip on its own odometer reading', async () => {
+    tripsApi.search.mockResolvedValue(page([trip({ status: 'ASSIGNED' })]));
+    renderPage();
+
+    await userEvent.click(await screen.findByRole('button', { name: /start trip/i }));
+
+    const dialog = await screen.findByRole('dialog', { name: /start trip/i });
+    await userEvent.type(within(dialog).getByLabelText(/start odometer/i), '42000');
+    await userEvent.click(within(dialog).getByRole('button', { name: /start trip/i }));
+
+    await waitFor(() =>
+      expect(tripsApi.start).toHaveBeenCalledWith(
+        'trip-1',
+        expect.objectContaining({ startOdometer: 42000, expectedVersion: 1 }),
+      ),
+    );
   });
 
   it('completes the trip and points the driver at the logbook', async () => {

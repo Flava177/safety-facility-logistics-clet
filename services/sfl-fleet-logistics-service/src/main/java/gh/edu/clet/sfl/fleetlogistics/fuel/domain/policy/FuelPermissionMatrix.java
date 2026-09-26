@@ -60,15 +60,7 @@ public final class FuelPermissionMatrix {
                         SflPermission.FUEL_TRANSACTION_READ,
                         SflPermission.FUEL_ANOMALY_READ,
                         SflPermission.FUEL_REPORT_READ));
-        m.put(
-                SflRole.AUDITOR,
-                EnumSet.of(
-                        SflPermission.FUEL_CARD_READ,
-                        SflPermission.FUEL_TRANSACTION_READ,
-                        SflPermission.FUEL_LOGBOOK_READ,
-                        SflPermission.FUEL_ANOMALY_READ,
-                        SflPermission.FUEL_REPORT_READ,
-                        SflPermission.FUEL_REPORT_EXPORT));
+        // Merged with the former AUDITOR role - identical here except for anomaly approval.
         m.put(
                 SflRole.COMPLIANCE_OFFICER,
                 EnumSet.of(
@@ -79,12 +71,19 @@ public final class FuelPermissionMatrix {
                         SflPermission.FUEL_ANOMALY_APPROVE,
                         SflPermission.FUEL_REPORT_READ,
                         SflPermission.FUEL_REPORT_EXPORT));
+        // DTI_ADMIN is the technical administrator: the same read baseline plus policy read and
+        // integration replay - not anomaly approval or reconciliation, which stay business
+        // decisions.
         m.put(
                 SflRole.DTI_ADMIN,
                 EnumSet.of(
+                        SflPermission.FUEL_CARD_READ,
                         SflPermission.FUEL_TRANSACTION_READ,
                         SflPermission.FUEL_POLICY_READ,
+                        SflPermission.FUEL_LOGBOOK_READ,
+                        SflPermission.FUEL_ANOMALY_READ,
                         SflPermission.FUEL_REPORT_READ,
+                        SflPermission.FUEL_REPORT_EXPORT,
                         SflPermission.FUEL_INTEGRATION_REPLAY));
         m.put(
                 SflRole.INTEGRATION_ENGINEER,

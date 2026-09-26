@@ -1,0 +1,24 @@
+# Every Java service Dockerfile does `COPY services/<module> services/<module>` from the repo root,
+# then runs `mvn package` without a `clean` first. Without this file, a developer's own stale
+# `target/` directory - compiled classes and resources from whatever the source tree looked like the
+# last time they ran `mvn` on their host - gets copied straight into the build context and merged
+# with the freshly-compiled output inside the container. A renamed or deleted source file (a Flyway
+# migration, in particular - Flyway validates by filename, not content, so two files that both claim
+# the same version number fail the build at startup) leaves its stale compiled copy behind, and no
+# --no-cache rebuild fixes it, because the contamination is in the build context Docker reads from,
+# not in Docker's own layer cache.
+target/
+**/target/
+
+# The frontend dashboard is built fresh inside the Docker build (frontend-maven-plugin's -Pui
+# profile), never from a pre-built host copy - a stale host dist/ or a host-installed node_modules
+# (often built for the host's OS/architecture, not the container's) must not leak in either.
+frontend/sfl-operations-ui/node_modules/
+frontend/sfl-operations-ui/dist/
+
+# Editor/VCS/OS noise that never belongs in a build context.
+.git/
+.idea/
+.vscode/
+.DS_Store
+*.log

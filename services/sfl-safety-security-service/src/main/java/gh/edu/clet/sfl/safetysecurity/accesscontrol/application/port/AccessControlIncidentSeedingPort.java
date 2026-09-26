@@ -8,11 +8,11 @@ import java.util.UUID;
  * ("Incident ... seeded from security/life-safety events"). A port rather than a direct call to
  * {@code IncidentReportingService.report(...)}: the classification doc's implementation rule
  * ("direct module-to-module business calls should be avoided except through approved contracts")
- * treats this cross-module seed as exactly such an approved contract - see {@code IncidentSeedingAdapter}.
+ * treats this cross-module seed as exactly such an approved contract - see {@code AccessControlIncidentSeedingAdapter}.
  * Also publishes {@code AccessException} as an integration event on the shared outbox, so a future
  * drainer can seed the incident instead once one exists, without this port needing to change.
  */
-public interface IncidentSeedingPort {
+public interface AccessControlIncidentSeedingPort {
 
     UUID seed(String siteCode, String description, ActorContext actor);
 }

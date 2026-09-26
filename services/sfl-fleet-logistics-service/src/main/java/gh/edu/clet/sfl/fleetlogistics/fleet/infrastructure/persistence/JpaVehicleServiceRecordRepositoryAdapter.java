@@ -28,7 +28,7 @@ class JpaVehicleServiceRecordRepositoryAdapter implements VehicleServiceRecordRe
                     return existing;
                 })
                 .orElseGet(() -> VehicleServiceRecordEntity.from(record));
-        return serviceRecords.save(entity).toDomain();
+        return serviceRecords.saveAndFlush(entity).toDomain();
     }
 
     @Override

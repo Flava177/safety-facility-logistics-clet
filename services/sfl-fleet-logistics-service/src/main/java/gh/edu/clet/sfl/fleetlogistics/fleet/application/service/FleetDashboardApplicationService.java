@@ -37,6 +37,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -92,12 +93,7 @@ public class FleetDashboardApplicationService {
         List<ComplianceDocument> scopedCompliance = complianceDocuments.findInScope(scope).stream()
                 .filter(document -> filter.siteCode() == null || document.siteCode().value().equals(filter.siteCode()))
                 .toList();
-        List<Trip> scopedTrips = trips.findAllInScope(scope).stream()
-                .filter(trip -> filter.siteCode() == null || trip.siteCode().value().equals(filter.siteCode()))
-                .filter(trip -> filter.operatingMode() == null || trip.operatingMode() == filter.operatingMode())
-                .filter(trip -> filter.from() == null || !trip.plannedPeriod().end().isBefore(filter.from()))
-                .filter(trip -> filter.to() == null || !trip.plannedPeriod().start().isAfter(filter.to()))
-                .toList();
+        List<Trip> scopedTrips = scopedTrips(scope, filter);
         List<FleetWorkflowItem> scopedWorkflow = workflowItems.findAllInScope(scope).stream()
                 .filter(item -> filter.siteCode() == null || item.siteCode().value().equals(filter.siteCode()))
                 .filter(item -> filter.workflowStatus() == null || item.status() == filter.workflowStatus())
@@ -115,7 +111,7 @@ public class FleetDashboardApplicationService {
                 .filter(vehicle -> vehicle.serviceStatus() == VehicleServiceStatus.DUE
                         || vehicle.serviceStatus() == VehicleServiceStatus.OVERDUE)
                 .count();
-        long assignmentConflicts = assignmentConflicts(scopedTrips);
+        long assignmentConflicts = conflictingTrips(scopedTrips).size();
         long readinessBlockers = scopedVehicles.stream()
                 .filter(vehicle -> vehicle.serviceStatus().blocksAssignment()
                         || vehicle.availabilityStatus() == VehicleAvailabilityStatus.UNAVAILABLE
@@ -184,14 +180,9 @@ public class FleetDashboardApplicationService {
                     .map(vehicle -> row(actor, vehicle.siteCode(), "Vehicle", vehicle.id().toString(),
                             vehicle.registrationNumber().value() + " readiness blocked"))
                     .toList();
-            case "ASSIGNMENT_CONFLICTS" -> trips.findAllInScope(scope).stream()
-                    .filter(Trip::holdsAssignment)
-                    .collect(Collectors.groupingBy(Trip::vehicleId))
-                    .values().stream()
-                    .filter(group -> group.size() > 1)
-                    .flatMap(List::stream)
-                    .map(trip -> row(actor, trip.siteCode(), "Trip", trip.id().toString(),
-                            trip.tripNumber() + " conflicts on vehicle"))
+            case "ASSIGNMENT_CONFLICTS" -> conflictingTrips(scopedTrips(scope, filter)).stream()
+                    .map(conflict -> row(actor, conflict.trip().siteCode(), "Trip", conflict.trip().id().toString(),
+                            conflict.trip().tripNumber() + " conflicts on " + conflict.describe()))
                     .toList();
             default -> List.of();
         };
@@ -227,15 +218,49 @@ public class FleetDashboardApplicationService {
         return SiteScopeFilter.of(java.util.Set.of(filter.siteCode()));
     }
 
-    private static long assignmentConflicts(List<Trip> trips) {
-        return countDuplicates(trips.stream().filter(Trip::holdsAssignment).map(Trip::vehicleId).toList())
-                + countDuplicates(trips.stream().filter(Trip::holdsAssignment).map(Trip::driverId).toList());
+    private List<Trip> scopedTrips(SiteScopeFilter scope, DashboardFilter filter) {
+        return trips.findAllInScope(scope).stream()
+                .filter(trip -> filter.siteCode() == null || trip.siteCode().value().equals(filter.siteCode()))
+                .filter(trip -> filter.operatingMode() == null || trip.operatingMode() == filter.operatingMode())
+                .filter(trip -> filter.from() == null || !trip.plannedPeriod().end().isBefore(filter.from()))
+                .filter(trip -> filter.to() == null || !trip.plannedPeriod().start().isAfter(filter.to()))
+                .toList();
     }
 
-    private static long countDuplicates(List<UUID> ids) {
+    /**
+     * Trips that share a vehicle or a driver with another live assignment.
+     *
+     * <p>Backs both the dashboard tile's count and its drilldown from the one list, so the two can
+     * never disagree the way a tile counted by vehicle-or-driver duplicates but a drilldown grouped by
+     * vehicle alone once did: a count could be non-zero from a driver double-booking two different
+     * vehicles, with nothing for the drilldown to show.
+     */
+    private static List<ConflictingTrip> conflictingTrips(List<Trip> trips) {
+        List<Trip> assigned = trips.stream().filter(Trip::holdsAssignment).toList();
+        Set<UUID> conflictingVehicles = duplicated(assigned.stream().map(Trip::vehicleId).toList());
+        Set<UUID> conflictingDrivers = duplicated(assigned.stream().map(Trip::driverId).toList());
+        return assigned.stream()
+                .filter(trip -> conflictingVehicles.contains(trip.vehicleId())
+                        || conflictingDrivers.contains(trip.driverId()))
+                .map(trip -> new ConflictingTrip(trip, conflictingVehicles.contains(trip.vehicleId()),
+                        conflictingDrivers.contains(trip.driverId())))
+                .toList();
+    }
+
+    private static Set<UUID> duplicated(List<UUID> ids) {
         return ids.stream().filter(java.util.Objects::nonNull)
                 .collect(Collectors.groupingBy(Function.identity(), Collectors.counting()))
-                .values().stream().filter(count -> count > 1).mapToLong(Long::longValue).sum();
+                .entrySet().stream().filter(entry -> entry.getValue() > 1).map(Map.Entry::getKey)
+                .collect(Collectors.toSet());
+    }
+
+    private record ConflictingTrip(Trip trip, boolean vehicleConflict, boolean driverConflict) {
+        private String describe() {
+            if (vehicleConflict && driverConflict) {
+                return "vehicle and driver";
+            }
+            return driverConflict ? "driver" : "vehicle";
+        }
     }
 
     private static boolean hasExpiredCompliance(Vehicle vehicle, List<ComplianceDocument> documents, LocalDate today) {

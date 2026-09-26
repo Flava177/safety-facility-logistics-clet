@@ -280,8 +280,17 @@ export const DistributeInboundDialog = ({
       signatureStorageReference: maxLength('Signature reference', 500),
       signatureFileName: maxLength('Signature file name', 255),
       signatureSha256: maxLength('Signature checksum', 128),
-      
+
     },
+    // The service refuses distribution with neither evidence, so this must be an either/or - not a
+    // requirement pinned to a single field, which would reject a signature-only submission.
+    crossFieldValidate: (values) =>
+      values.distributionReference.trim() || values.signatureStorageReference.trim()
+        ? {}
+        : {
+            distributionReference:
+              'A distribution acknowledgement is required: fill this in, or register a signature below.',
+          },
     onSubmit: async (values) => {
       await inboundMailApi.distribute(item.id, {
         acknowledgedBy: values.acknowledgedBy.trim(),
@@ -321,13 +330,17 @@ export const DistributeInboundDialog = ({
           label="Distribution reference"
           value={form.values.distributionReference}
           onChange={(value) => form.setValue('distributionReference', value)}
-          {...form.fieldProps('distributionReference', 'Optional internal reference.')}
+          {...form.fieldProps(
+            'distributionReference',
+            'Internal reference. Required if no signature evidence is registered below.',
+          )}
         />
       </div>
 
       <Alert variant="info" title="Signature evidence">
-        Optional, and the only proof the acknowledgement happened. Register the signature in the
-        evidence store first, then paste its storage reference here.
+        Required unless a distribution reference is given above - between the two, this is the only
+        proof the acknowledgement happened. Register the signature in the evidence store first, then
+        paste its storage reference here.
       </Alert>
 
       <div className={twoColumn}>

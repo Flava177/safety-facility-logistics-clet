@@ -54,7 +54,7 @@ class IncidentChildRecordsReadServiceTest {
         CorrectiveAction capa = repository.saveCorrectiveAction(CorrectiveAction.open(UUID.randomUUID(), incident,
                 "Install a guard.", "owner-1", LocalDate.now(clock).plusDays(7), true, "investigator-1",
                 clock.instant()));
-        var reader = IncidentTestDoubles.actor("auditor-1", SflRole.AUDITOR, SITE);
+        var reader = IncidentTestDoubles.actor("auditor-1", SflRole.COMPLIANCE_OFFICER, SITE);
 
         assertThat(investigation.evidence(incident.id(), reader)).containsExactly(evidence);
         assertThat(correctiveActions.list(incident.id(), reader)).containsExactly(capa);

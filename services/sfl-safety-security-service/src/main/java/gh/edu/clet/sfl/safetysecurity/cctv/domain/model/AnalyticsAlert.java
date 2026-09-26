@@ -6,7 +6,7 @@ import java.util.UUID;
 
 /**
  * A video-analytics alert raised to the SOC queue - SRS-SFL-S161-04. Can, in turn, seed a security
- * incident (S163, {@code IncidentSource.CCTV_SEED}) - see {@code IncidentSeedingPort}. Mirrors
+ * incident (S163, {@code IncidentSource.CCTV_SEED}) - see {@code CctvIncidentSeedingPort}. Mirrors
  * {@code accesscontrol.domain.model.AccessException}'s shape.
  */
 public record AnalyticsAlert(UUID id, String siteCode, String cameraId, AlertType type, AlertSeverity severity,

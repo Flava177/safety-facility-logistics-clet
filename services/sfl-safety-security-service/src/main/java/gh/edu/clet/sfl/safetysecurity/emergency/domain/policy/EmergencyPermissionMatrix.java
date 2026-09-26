@@ -65,16 +65,15 @@ public final class EmergencyPermissionMatrix {
                 SflPermission.EMERGENCY_ACTIVATION_APPROVE, SflPermission.EMERGENCY_AFTER_ACTION_APPROVE,
                 SflPermission.EMERGENCY_ALL_CLEAR_SEND, SflPermission.EMERGENCY_REPORT_READ));
 
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.EMERGENCY_ACTIVATION_READ,
+        // Merged with the former AUDITOR role - each held permissions the other lacked (AUDITOR:
+        // template/scenario/audience read; COMPLIANCE_OFFICER: activation and after-action approval),
+        // so the merge is the union of both, not either original set alone.
+        m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.EMERGENCY_ACTIVATION_READ,
                 SflPermission.EMERGENCY_TEMPLATE_READ, SflPermission.EMERGENCY_SCENARIO_READ,
-                SflPermission.EMERGENCY_AUDIENCE_READ, SflPermission.EMERGENCY_EVIDENCE_READ,
+                SflPermission.EMERGENCY_AUDIENCE_READ, SflPermission.EMERGENCY_ACTIVATION_APPROVE,
+                SflPermission.EMERGENCY_AFTER_ACTION_APPROVE, SflPermission.EMERGENCY_EVIDENCE_READ,
                 SflPermission.EMERGENCY_EVIDENCE_EXPORT, SflPermission.EMERGENCY_REPORT_READ,
                 SflPermission.EMERGENCY_REPORT_EXPORT));
-
-        m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.EMERGENCY_ACTIVATION_READ,
-                SflPermission.EMERGENCY_ACTIVATION_APPROVE, SflPermission.EMERGENCY_AFTER_ACTION_APPROVE,
-                SflPermission.EMERGENCY_EVIDENCE_READ, SflPermission.EMERGENCY_EVIDENCE_EXPORT,
-                SflPermission.EMERGENCY_REPORT_READ, SflPermission.EMERGENCY_REPORT_EXPORT));
 
         m.put(SflRole.INTEGRATION_ENGINEER, EnumSet.of(SflPermission.EMERGENCY_ACTIVATION_READ,
                 SflPermission.EMERGENCY_INTEGRATION_INGEST, SflPermission.EMERGENCY_INTEGRATION_REPLAY,

@@ -26,7 +26,7 @@ class JpaEvidenceExportRequestRepositoryAdapter implements EvidenceExportRequest
                     return existing;
                 })
                 .orElseGet(() -> EvidenceExportRequestEntity.from(request));
-        return requests.save(entity).toDomain();
+        return requests.saveAndFlush(entity).toDomain();
     }
 
     @Override

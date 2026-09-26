@@ -46,7 +46,7 @@ class JpaFleetWorkflowRepositoryAdapter implements FleetWorkflowRepository, SlaR
                     return existing;
                 })
                 .orElseGet(() -> FleetWorkflowItemEntity.from(item));
-        return items.save(entity).toDomain();
+        return items.saveAndFlush(entity).toDomain();
     }
 
     @Override

@@ -51,12 +51,13 @@ public final class AccessControlPermissionMatrix {
         // Emergency Coordinator (S160a-06 user story): occupancy/muster only.
         m.put(SflRole.EMERGENCY_COORDINATOR, EnumSet.of(SflPermission.ACCESS_OCCUPANCY_READ));
 
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.ACCESS_EVENT_READ, SflPermission.ACCESS_EXCEPTION_READ,
-                SflPermission.ACCESS_PROVISIONING_READ, SflPermission.ACCESS_OVERRIDE_READ,
-                SflPermission.ACCESS_ZONE_READ, SflPermission.ACCESS_REPORT_READ));
-
+        // Merged with the former AUDITOR role - AUDITOR's set was the broader of the two here
+        // (exception/provisioning/zone read), so the merge is that set, not COMPLIANCE_OFFICER's
+        // narrower original one.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.ACCESS_EVENT_READ,
-                SflPermission.ACCESS_REPORT_READ, SflPermission.ACCESS_OVERRIDE_READ));
+                SflPermission.ACCESS_EXCEPTION_READ, SflPermission.ACCESS_PROVISIONING_READ,
+                SflPermission.ACCESS_OVERRIDE_READ, SflPermission.ACCESS_ZONE_READ,
+                SflPermission.ACCESS_REPORT_READ));
 
         m.replaceAll((r, p) -> Set.copyOf(p));
         return Map.copyOf(m);

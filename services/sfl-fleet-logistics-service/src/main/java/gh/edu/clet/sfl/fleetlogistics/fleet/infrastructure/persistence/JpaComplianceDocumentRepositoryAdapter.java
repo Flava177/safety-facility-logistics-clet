@@ -31,7 +31,7 @@ class JpaComplianceDocumentRepositoryAdapter implements ComplianceDocumentReposi
                     return existing;
                 })
                 .orElseGet(() -> ComplianceDocumentEntity.from(document));
-        return complianceDocuments.save(entity).toDomain();
+        return complianceDocuments.saveAndFlush(entity).toDomain();
     }
 
     @Override

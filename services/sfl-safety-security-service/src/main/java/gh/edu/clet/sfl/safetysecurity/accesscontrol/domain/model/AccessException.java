@@ -8,7 +8,7 @@ import java.util.UUID;
  * A security-relevant access exception raised to the SOC queue - SRS-SFL-S160a-04. May be seeded from
  * an {@link AccessEvent} (a denial, forced-open, tailgating indicator) or from a reader-health signal
  * (offline/tampered - {@link ExceptionRuleCode#READER_OFFLINE}), or from an anti-passback detection
- * (S160a-06). Can, in turn, seed a security incident (S163) - see {@code IncidentSeedingPort}.
+ * (S160a-06). Can, in turn, seed a security incident (S163) - see {@code AccessControlIncidentSeedingPort}.
  */
 public record AccessException(UUID id, String siteCode, UUID eventId, String readerId, String zoneCode,
         ExceptionRuleCode ruleCode, ExceptionSeverity severity, ExceptionStatus status, UUID seededIncidentId,

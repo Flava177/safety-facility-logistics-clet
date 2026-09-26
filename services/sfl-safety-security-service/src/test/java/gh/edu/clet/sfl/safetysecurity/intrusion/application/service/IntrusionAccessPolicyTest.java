@@ -21,7 +21,7 @@ class IntrusionAccessPolicyTest {
 
     @Test
     void an_auditor_may_read_alarms_but_may_not_manage_zones() {
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThat(policy.has(auditor, SflPermission.INTRUSION_ALARM_READ)).isTrue();
 
@@ -34,7 +34,7 @@ class IntrusionAccessPolicyTest {
 
     @Test
     void an_auditor_denied_disarm_authority_gets_the_not_authorised_error_code() {
-        ActorContext auditor = actor(SflRole.AUDITOR, Set.of(SITE));
+        ActorContext auditor = actor(SflRole.COMPLIANCE_OFFICER, Set.of(SITE));
 
         assertThatThrownBy(() -> policy.requireDisarmAuthority(auditor, SflPermission.INTRUSION_ZONE_DISARM, SITE,
                 "zone-1"))

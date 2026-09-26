@@ -43,10 +43,10 @@ import java.util.Set;
  *   <li>{@link SflRole#COMMAND_ROLE} and {@link SflRole#CENTRE_MANAGER} hold
  *       {@link SflPermission#FACILITIES_OPERATING_MODE_CHANGE}. Declaring examination mode is a
  *       centre-level operational decision, and NFR 23.3 requires it to be role-restricted.</li>
- *   <li>{@link SflRole#AUDITOR} and {@link SflRole#COMPLIANCE_OFFICER} read everything and change
- *       nothing, and they alone hold {@link SflPermission#FACILITIES_AUDIT_INTEGRITY_CHECK} alongside
- *       the administrators - an integrity failure is escalated to compliance, so compliance must be
- *       able to run the check.</li>
+ *   <li>{@link SflRole#COMPLIANCE_OFFICER} (merged with the former AUDITOR role, identical here)
+ *       reads everything and changes nothing, and holds {@link SflPermission#FACILITIES_AUDIT_INTEGRITY_CHECK}
+ *       alongside the administrators - an integrity failure is escalated to compliance, so compliance
+ *       must be able to run the check.</li>
  * </ul>
  */
 public final class FacilitiesPermissionMatrix {
@@ -99,12 +99,13 @@ public final class FacilitiesPermissionMatrix {
     private static Map<SflRole, Set<SflPermission>> buildMatrix() {
         Map<SflRole, Set<SflPermission>> matrix = new EnumMap<>(SflRole.class);
 
-        // Platform administration - everything S152 defines.
+        // Platform administration - everything S152 defines. SFL_ADMIN is the business/system
+        // administrator and holds it all; DTI_ADMIN is the technical administrator and does not - see
+        // its own grant below, alongside COMPLIANCE_OFFICER, which it matches.
         Set<SflPermission> administrator = EnumSet.allOf(SflPermission.class).stream()
                 .filter(permission -> permission.name().startsWith("FACILITIES_"))
                 .collect(java.util.stream.Collectors.toCollection(() -> EnumSet.noneOf(SflPermission.class)));
         matrix.put(SflRole.SFL_ADMIN, Set.copyOf(administrator));
-        matrix.put(SflRole.DTI_ADMIN, Set.copyOf(administrator));
 
         // Facilities director - the whole estate, including mode changes and overrides, but not
         // platform configuration, which is an administrative concern.
@@ -315,8 +316,14 @@ public final class FacilitiesPermissionMatrix {
                 // requires an approved reason with every export and audits the act itself, which is
                 // why no operational role holds this and every holder of it is a reviewer.
                 SflPermission.FACILITIES_EVIDENCE_EXPORT);
-        matrix.put(SflRole.AUDITOR, assurance);
+        // Merged with the former AUDITOR role - identical here.
         matrix.put(SflRole.COMPLIANCE_OFFICER, assurance);
+
+        // DTI_ADMIN is the technical administrator: the same read-and-verify breadth as COMPLIANCE_OFFICER, plus
+        // the one technical write this service defines (registering a device reference, the same
+        // action INTEGRATION_ENGINEER/SERVICE_INTEGRATION hold below) - not estate management, mode
+        // changes, readiness overrides, or any other business decision, which stay SFL_ADMIN's alone.
+        matrix.put(SflRole.DTI_ADMIN, union(assurance, SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER));
 
         // Integration principals - maintain the feeds that carry device and asset data in, and need
         // to see whether what they sent landed. They do not operate the estate.

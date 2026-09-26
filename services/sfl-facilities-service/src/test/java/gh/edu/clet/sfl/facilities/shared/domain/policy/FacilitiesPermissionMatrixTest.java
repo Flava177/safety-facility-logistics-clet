@@ -117,7 +117,7 @@ class FacilitiesPermissionMatrixTest {
 
     @Test
     void assurance_roles_read_everything_and_change_nothing() {
-        for (SflRole role : Set.of(SflRole.AUDITOR, SflRole.COMPLIANCE_OFFICER)) {
+        for (SflRole role : Set.of(SflRole.COMPLIANCE_OFFICER)) {
             Set<SflPermission> granted = FacilitiesPermissionMatrix.permissionsFor(role);
 
             assertThat(granted).contains(SflPermission.FACILITIES_AUDIT_READ,

@@ -1,7 +1,7 @@
 package gh.edu.clet.sfl.safetysecurity.accesscontrol.infrastructure.integration;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
-import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.SiemForwarderPort;
+import gh.edu.clet.sfl.safetysecurity.accesscontrol.application.port.AccessControlSiemForwarderPort;
 import gh.edu.clet.sfl.safetysecurity.accesscontrol.domain.model.AccessException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,9 +10,9 @@ import org.springframework.stereotype.Component;
 /** Phase-1 recorded SIEM forward. No SIEM is configured, so it honestly records the exception as not
  * forwarded rather than fabricating delivery - the same stance {@code RecordedWatchlistGateway} takes. */
 @Component
-public class RecordedSiemForwarder implements SiemForwarderPort {
+public class RecordedAccessControlSiemForwarder implements AccessControlSiemForwarderPort {
 
-    private static final Logger log = LoggerFactory.getLogger(RecordedSiemForwarder.class);
+    private static final Logger log = LoggerFactory.getLogger(RecordedAccessControlSiemForwarder.class);
 
     @Override
     public ForwardResult forward(AccessException exception, ActorContext actor) {

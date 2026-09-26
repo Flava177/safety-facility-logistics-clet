@@ -87,9 +87,13 @@ public final class AssetVisibilityPermissionMatrix {
     private static Map<SflRole, Set<SflPermission>> buildMatrix() {
         Map<SflRole, Set<SflPermission>> matrix = new EnumMap<>(SflRole.class);
 
-        // Platform administration.
+        // Platform administration. SFL_ADMIN is the business/system administrator and holds the full
+        // read-and-manage grant; DTI_ADMIN is the technical administrator - read-only here, since this
+        // module defines no separate audit or integration permission for a technical role to hold
+        // instead (INTEGRATION_ENGINEER/SERVICE_INTEGRATION are granted the write grant directly below
+        // because AVAMP's only write is the integration feed itself, not a distinct technical action).
         matrix.put(SflRole.SFL_ADMIN, READ_AND_MANAGE);
-        matrix.put(SflRole.DTI_ADMIN, READ_AND_MANAGE);
+        matrix.put(SflRole.DTI_ADMIN, READ_ONLY);
 
         // The integration principals. AVAMP exists to be fed by the device and asset feeds, so these
         // two are what writes to it in anger; everything else is a human correcting a record.
@@ -114,10 +118,9 @@ public final class AssetVisibilityPermissionMatrix {
         matrix.put(SflRole.FLEET_MANAGER, READ_ONLY);
         matrix.put(SflRole.FLEET_LOGISTICS_OFFICER, READ_ONLY);
         matrix.put(SflRole.DISPATCH_CONTROLLER, READ_ONLY);
-        matrix.put(SflRole.LOGISTICS_COORDINATOR, READ_ONLY);
 
         // Read and prove. Breadth is cheap because they change nothing.
-        matrix.put(SflRole.AUDITOR, READ_ONLY);
+        // Merged with the former AUDITOR role - identical here.
         matrix.put(SflRole.COMPLIANCE_OFFICER, READ_ONLY);
 
         return Map.copyOf(matrix);

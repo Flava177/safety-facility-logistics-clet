@@ -10,7 +10,13 @@ COPY services/sfl-fleet-logistics-service services/sfl-fleet-logistics-service
 COPY services/sfl-facilities-service/pom.xml services/sfl-facilities-service/pom.xml
 COPY services/sfl-safety-security-service/pom.xml services/sfl-safety-security-service/pom.xml
 COPY services/sfl-portal-service/pom.xml services/sfl-portal-service/pom.xml
-RUN mvn -f services/pom.xml -pl sfl-fleet-logistics-service -am package -DskipTests
+# Every service ships the dashboard (see the pom's copy-operations-ui comment) - -Pui is the profile
+# that actually builds it (install-node-and-npm, npm install, npm run build), bound at the top of the
+# reactor. Without frontend/ in the build context and without -Pui here, this image builds successfully
+# but ships with an empty dashboard - the copy-resources step treats a missing dist/ as optional, not
+# fatal, so this failure mode is silent.
+COPY frontend frontend
+RUN mvn -f services/pom.xml -pl sfl-fleet-logistics-service -am -Pui package -DskipTests
 
 FROM eclipse-temurin:17-jre
 RUN groupadd -r spring && useradd -r -g spring spring

@@ -88,6 +88,12 @@ const ActivationDetailPage = () => {
   const records = useSiteRecords(activation ? siteOf(activation.siteCode) : '');
 
   const totals = useMemo(() => totalsFor(channels), [channels]);
+  /*
+    Distinct people, not messages. `NotificationChannel.targetCount` is the same recipient count
+    copied onto every channel row, so summing it across channels (as `totals.target` does) counts a
+    two-channel send twice - correct for "messages handed to gateways", wrong for "recipients targeted".
+  */
+  const recipients = records.audienceReach(activation?.audienceGroupIds ?? []);
 
   const run = async (label: string, action: () => Promise<unknown>, success: string) => {
     setWorking(label);
@@ -385,7 +391,7 @@ const ActivationDetailPage = () => {
               <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
                 <StatCard
                   label="Recipients targeted"
-                  value={formatNumber(totals.target || records.audienceReach(activation.audienceGroupIds))}
+                  value={formatNumber(recipients)}
                   icon="users"
                   caption={`${activation.audienceGroupIds.length} audience group${activation.audienceGroupIds.length === 1 ? '' : 's'}`}
                 />
@@ -400,11 +406,11 @@ const ActivationDetailPage = () => {
                   value={formatNumber(query.data?.acknowledgements ?? 0)}
                   icon="check-circle"
                   tone={
-                    totals.target > 0 && (query.data?.acknowledgements ?? 0) < totals.target
+                    recipients > 0 && (query.data?.acknowledgements ?? 0) < recipients
                       ? 'caution'
                       : 'neutral'
                   }
-                  caption={`${percentOf(query.data?.acknowledgements ?? 0, totals.target)} of those targeted`}
+                  caption={`${percentOf(query.data?.acknowledgements ?? 0, recipients)} of those targeted`}
                 />
                 <StatCard
                   label="Time to send"

@@ -48,12 +48,12 @@ public final class IntrusionPermissionMatrix {
         m.put(SflRole.INTEGRATION_ENGINEER, EnumSet.of(SflPermission.INTRUSION_ALARM_READ,
                 SflPermission.INTRUSION_PANEL_HEALTH_READ, SflPermission.INTRUSION_ZONE_READ));
 
-        m.put(SflRole.AUDITOR, EnumSet.of(SflPermission.INTRUSION_ALARM_READ, SflPermission.INTRUSION_ZONE_READ,
-                SflPermission.INTRUSION_PANEL_HEALTH_READ, SflPermission.INTRUSION_DISPATCH_READ,
-                SflPermission.INTRUSION_REPORT_READ));
-
+        // Merged with the former AUDITOR role - AUDITOR's set was the broader of the two here
+        // (zone/panel-health/dispatch read), so the merge is that set, not COMPLIANCE_OFFICER's
+        // narrower original one.
         m.put(SflRole.COMPLIANCE_OFFICER, EnumSet.of(SflPermission.INTRUSION_ALARM_READ,
-                SflPermission.INTRUSION_REPORT_READ));
+                SflPermission.INTRUSION_ZONE_READ, SflPermission.INTRUSION_PANEL_HEALTH_READ,
+                SflPermission.INTRUSION_DISPATCH_READ, SflPermission.INTRUSION_REPORT_READ));
 
         m.replaceAll((r, p) -> Set.copyOf(p));
         return Map.copyOf(m);

@@ -118,6 +118,19 @@ public enum SflPermission {
      * driver holds this permission, so a permission check alone would wave all of them through.
      */
     FLEET_TRIP_CLOSE_OWN,
+    /**
+     * Start a trip that is assigned to you, and only that one.
+     *
+     * <p>Scoped the same way as {@link #FLEET_TRIP_CLOSE_OWN}: it answers for one trip, the actor's
+     * own, and grants nothing over anybody else's. Deliberately not {@link #FLEET_TRIP_MANAGE}, which
+     * starts any trip at a site and belongs to a dispatcher.
+     *
+     * <p>There is deliberately no equivalent {@code FLEET_TRIP_CANCEL_OWN}: cancelling - as opposed to
+     * declining before it starts ({@link #FLEET_TRIP_ACKNOWLEDGE}'s deferral) or finishing it
+     * ({@link #FLEET_TRIP_CLOSE_OWN}) - stays a dispatcher's call, made with the fleet office's view of
+     * the wider schedule a driver does not have.
+     */
+    FLEET_TRIP_START_OWN,
     FLEET_TRIP_CANCEL,
     FLEET_TRIP_CLOSE,
     FLEET_INSPECTION_RECORD,
