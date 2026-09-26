@@ -100,7 +100,7 @@ const emptyPolicy = (siteCode: string): PolicyValues => ({
 const valuesOf = (policy: FuelPolicy): PolicyValues => ({
   // `SiteCodeValue` is a branded string; the form holds a plain one because the edit dialog never
   // sends it back.
-  siteCode: String(policy.siteCode),
+  siteCode: policy.siteCode.value,
   name: policy.name,
   effectiveFrom: toLocalDateTime(policy.effectiveFrom),
   effectiveTo: toLocalDateTime(policy.effectiveTo),
@@ -591,7 +591,7 @@ export const EditPolicyDialog = ({ open, onClose, onSaved, policy }: EditPolicyD
           the version to {Number(policy.policyVersion) + 1}.
         </Alert>
       ) : (
-        <Alert variant="info" title={`${policy.siteCode} · version ${policy.policyVersion}`}>
+        <Alert variant="info" title={`${policy.siteCode.value} · version ${policy.policyVersion}`}>
           Widening the period is checked against the other active policies at this site, this one
           excepted. Transactions reconciled before now keep the version they were judged under.
         </Alert>

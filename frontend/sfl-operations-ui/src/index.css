@@ -365,7 +365,13 @@
 }
 
 .flatpickr-months .flatpickr-month {
-  @apply h-auto bg-transparent text-gray-900;
+  /*
+    No h-auto: this container keeps flatpickr's own overflow: hidden, for the month-slide
+    animation. Its children (the caption, the prev/next arrows) are all absolutely positioned and so
+    never contribute to an auto height - collapsing this to h-auto collapses it to 0 and the hidden
+    overflow then clips the whole header, caption included.
+  */
+  @apply bg-transparent text-gray-900;
 }
 
 .flatpickr-current-month {
