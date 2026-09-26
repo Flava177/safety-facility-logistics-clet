@@ -10,7 +10,7 @@ import { driverLogbooksApi, fuelTransactionsApi } from 'modules/fuel/api/fuelApi
 import type { DriverLogbook, FuelTransaction } from 'modules/fuel/api/dto';
 import { tripsApi } from 'modules/fleet/api/fleetApi';
 import type { TripResponse } from 'modules/fleet/api/dto';
-import { CloseTripDialog } from 'modules/fleet/dialogs/tripDialogs';
+import { CloseTripDialog, StartTripDialog } from 'modules/fleet/dialogs/tripDialogs';
 import Button from 'shared/components/Button';
 import { useNotifier } from 'shared/components/Notifier';
 
@@ -49,6 +49,7 @@ const DriverDayPage = () => {
   const { notifySuccess } = useNotifier();
   const site = defaultSite;
   const [completing, setCompleting] = useState<TripResponse | null>(null);
+  const [starting, setStarting] = useState<TripResponse | null>(null);
 
   /*
     The driver's own trips, narrowed by the service and not by this screen.
@@ -111,24 +112,28 @@ const DriverDayPage = () => {
       ? [
           {
             key: 'action',
-            header: 'Finish',
+            header: 'Action',
             align: 'right' as const,
-            cell: (row: TripResponse) => (
-              /*
-                Only once it is under way. A trip still ASSIGNED has not been started, and the
-                service refuses a closure from that state - so offering the button there would be
-                offering a refusal.
-              */
-              row.status === 'IN_PROGRESS' ? (
-                <Button size="sm" variant="primary" onClick={() => setCompleting(row)}>
-                  Complete trip
-                </Button>
-              ) : (
-                <span className="text-theme-xs text-gray-500">
-                  {row.status === 'ASSIGNED' ? 'Not started' : 'On hold'}
-                </span>
-              )
-            ),
+            cell: (row: TripResponse) => {
+              // A trip still ASSIGNED is started, not closed; one still IN_PROGRESS is finished, not
+              // started - offering the wrong one would be offering a transition the service refuses
+              // from that state.
+              if (row.status === 'ASSIGNED') {
+                return (
+                  <Button size="sm" variant="accent" onClick={() => setStarting(row)}>
+                    Start trip
+                  </Button>
+                );
+              }
+              if (row.status === 'IN_PROGRESS') {
+                return (
+                  <Button size="sm" variant="primary" onClick={() => setCompleting(row)}>
+                    Complete trip
+                  </Button>
+                );
+              }
+              return <span className="text-theme-xs text-gray-500">On hold</span>;
+            },
           },
         ]
       : []),
@@ -247,6 +252,17 @@ const DriverDayPage = () => {
           />
         </DataState>
       </section>
+      {starting && (
+        <StartTripDialog
+          open
+          trip={starting}
+          onClose={() => setStarting(null)}
+          onSaved={() => {
+            trips.refetch();
+            notifySuccess('Trip started.');
+          }}
+        />
+      )}
       {completing && (
         <CloseTripDialog
           open

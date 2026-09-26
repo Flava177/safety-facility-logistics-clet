@@ -129,22 +129,27 @@ public final class FleetPermissionMatrix {
         /*
           Driver / limited mobile user: sees the work assigned to them and records inspections.
 
-          FLEET_TRIP_ACKNOWLEDGE is their only write against the trip register, and it is narrow by
-          construction - it answers for one trip, the one assigned to them, and the record check in
-          TripApplicationService.acknowledge enforces that. Note what is still absent: no
-          FLEET_TRIP_MANAGE, so a driver cannot create a trip, start one, hold one or close one; no
-          FLEET_TRIP_ASSIGN, so they cannot assign a trip to themselves or anybody else; no
-          FLEET_DRIVER_MANAGE, so they cannot register a driver, including themselves; no
-          FLEET_VEHICLE_MANAGE, so the vehicle register is readable and not writable.
+          FLEET_TRIP_ACKNOWLEDGE is their only write against the trip register that answers for
+          nothing beyond a single confirmation or deferral; FLEET_TRIP_START_OWN and
+          FLEET_TRIP_CLOSE_OWN extend that same "one trip, the one assigned to them" scoping to
+          starting and finishing the journey, with the record check in TripApplicationService
+          enforcing the binding on both. Note what is still absent: no FLEET_TRIP_CANCEL (or an "own"
+          equivalent of it) - cancelling a trip, as opposed to declining it before it starts or
+          finishing it, stays the fleet office's call; no FLEET_TRIP_MANAGE, so a driver cannot create
+          a trip, hold one or start somebody else's; no FLEET_TRIP_ASSIGN, so they cannot assign a
+          trip to themselves or anybody else; no FLEET_DRIVER_MANAGE, so they cannot register a
+          driver, including themselves; no FLEET_VEHICLE_MANAGE, so the vehicle register is readable
+          and not writable.
         */
         matrix.put(SflRole.FLEET_DRIVER, EnumSet.of(
                 SflPermission.FLEET_VEHICLE_READ,
                 SflPermission.FLEET_DRIVER_READ,
                 SflPermission.FLEET_TRIP_READ,
                 SflPermission.FLEET_TRIP_ACKNOWLEDGE,
-                // Their own trip only - the service checks the binding as well as the permission.
-                // The driver is the one person who knows the journey is over and the only one at the
-                // vehicle to read the closing odometer off it.
+                // Their own trip only - the service checks the binding as well as the permission in
+                // each case. The driver is the one person standing at the vehicle: to release it when
+                // the journey starts, and to read the closing odometer off it when it is over.
+                SflPermission.FLEET_TRIP_START_OWN,
                 SflPermission.FLEET_TRIP_CLOSE_OWN,
                 SflPermission.FLEET_INSPECTION_RECORD,
                 SflPermission.FLEET_EVIDENCE_REGISTER));

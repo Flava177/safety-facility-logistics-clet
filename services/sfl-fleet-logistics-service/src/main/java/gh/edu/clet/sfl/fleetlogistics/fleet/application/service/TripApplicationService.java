@@ -217,12 +217,28 @@ public class TripApplicationService {
         return assigned;
     }
 
-    /** SRS-SFL-S166-02: start an assigned trip, gated on a valid pre-trip inspection. */
+    /**
+     * SRS-SFL-S166-02: start an assigned trip, gated on a valid pre-trip inspection.
+     *
+     * <h2>Two ways to be allowed, and they are not the same permission</h2>
+     *
+     * <p>A dispatcher holds {@link SflPermission#FLEET_TRIP_MANAGE} and may start any trip at a site
+     * they are scoped to. A driver holds {@link SflPermission#FLEET_TRIP_START_OWN} and may start
+     * exactly one: the trip they are assigned to. See {@link #close(CloseTripCommand)} for why the
+     * binding is checked as well as the permission, and why the supervising permission is tried first.
+     */
     @Transactional
     public Trip start(StartTripCommand command) {
         Trip existing = requireTrip(command.tripId());
-        accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_MANAGE, existing.siteCode(), RESOURCE_TYPE,
-                existing.id().toString());
+        if (accessPolicy.has(command.actor(), SflPermission.FLEET_TRIP_MANAGE)) {
+            accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_MANAGE, existing.siteCode(),
+                    RESOURCE_TYPE, existing.id().toString());
+        } else {
+            accessPolicy.require(command.actor(), SflPermission.FLEET_TRIP_START_OWN, existing.siteCode(),
+                    RESOURCE_TYPE, existing.id().toString());
+            requireOwnAssignment(existing, command.actor(), SflPermission.FLEET_TRIP_START_OWN,
+                    "Only the driver assigned to this trip can start it");
+        }
         requireExpectedVersion(existing, command.expectedVersion());
 
         Vehicle vehicle = lockVehicle(existing.vehicleId());
@@ -319,9 +335,10 @@ public class TripApplicationService {
     /**
      * Refuses unless the actor is the driver bound to this trip.
      *
-     * <p>Shared by acknowledgement and by a driver's own closure. The permission and the refusal
-     * wording differ between them - one is about answering for a trip, the other about finishing it -
-     * so both are passed in rather than the message being written twice and drifting.
+     * <p>Shared by acknowledgement and by a driver's own start and closure. The permission and the
+     * refusal wording differ between them - one is about answering for a trip, the others about
+     * starting or finishing it - so both are passed in rather than the message being written three
+     * times and drifting.
      */
     private void requireOwnAssignment(Trip trip, ActorContext actor, SflPermission permission, String refusal) {
         /*
@@ -330,7 +347,7 @@ public class TripApplicationService {
           on somebody's behalf, because nobody may. Passing FLEET_TRIP_ACKNOWLEDGE there would be worse
           than useless: every driver holds it, so every driver would resolve as a supervisor and be
           waved through with no binding at all, which is the exact opposite of the rule. The same is
-          true of FLEET_TRIP_CLOSE_OWN.
+          true of FLEET_TRIP_START_OWN and FLEET_TRIP_CLOSE_OWN.
         */
         UUID boundDriverId = driverScopes.resolve(actor, true) instanceof DriverScope.Own own
                 ? own.driverId()
@@ -372,7 +389,15 @@ public class TripApplicationService {
         return saved;
     }
 
-    /** SRS-SFL-S166-02: cancel. Privileged, and the reason is mandatory. */
+    /**
+     * SRS-SFL-S166-02: cancel. Privileged, and the reason is mandatory.
+     *
+     * <p>Deliberately one path, not two: unlike {@link #start(StartTripCommand)} and
+     * {@link #close(CloseTripCommand)}, there is no driver-scoped "own" variant here. A driver who
+     * cannot take an assigned trip defers it ({@link #acknowledge(AcknowledgeTripCommand)}); calling
+     * the trip off entirely is the fleet office's decision, made with a view of the wider schedule a
+     * driver does not have.
+     */
     @Transactional
     public Trip cancel(CancelTripCommand command) {
         Trip existing = requireTrip(command.tripId());
