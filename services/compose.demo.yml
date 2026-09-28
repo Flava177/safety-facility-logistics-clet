@@ -1,0 +1,115 @@
+# Local, self-contained demonstration stack. It deliberately does not start the production-style
+# OIDC provider or RabbitMQ: each service uses the in-process event transport and accepts the
+# dashboard's X-SFL-* demo headers. Do not deploy this file to a shared or public environment.
+#
+# From the repository root:
+#   docker compose -f services/compose.demo.yml up --build
+#
+# The Docker build context must remain the repository root because each service packages the
+# shared Maven module and the React dashboard from ../frontend.
+name: sfl-demo
+
+services:
+  facilities-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: sfl_facilities_service
+      POSTGRES_USER: sfl
+      POSTGRES_PASSWORD: sfl
+    volumes:
+      - facilities-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_facilities_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  safety-security-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: sfl_safety_security_service
+      POSTGRES_USER: sfl
+      POSTGRES_PASSWORD: sfl
+    volumes:
+      - safety-security-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl_safety_security_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  fleet-logistics-db:
+    image: postgres:16-bookworm
+    environment:
+      POSTGRES_DB: sfl__fleet_vehicle_service
+      POSTGRES_USER: sfl
+      POSTGRES_PASSWORD: sfl
+    volumes:
+      - fleet-logistics-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U sfl -d sfl__fleet_vehicle_service"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+
+  facilities:
+    image: sfl-demo-facilities:latest
+    build:
+      context: ..
+      dockerfile: services/sfl-facilities-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_FACILITIES_DB_URL: jdbc:postgresql://facilities-db:5432/sfl_facilities_service
+      SFL_FACILITIES_DB_USERNAME: sfl
+      SFL_FACILITIES_DB_PASSWORD: sfl
+      SFL_SECURITY_ENABLED: "false"
+      SFL_FACILITIES_EVENT_TRANSPORT: local
+      SFL_RABBITMQ_HEALTH_ENABLED: "false"
+    ports:
+      - "8091:8080"
+    depends_on:
+      facilities-db:
+        condition: service_healthy
+
+  safety-security:
+    image: sfl-demo-safety-security:latest
+    build:
+      context: ..
+      dockerfile: services/sfl-safety-security-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_SAFETY_SECURITY_DB_URL: jdbc:postgresql://safety-security-db:5432/sfl_safety_security_service
+      SFL_SAFETY_SECURITY_DB_USERNAME: sfl
+      SFL_SAFETY_SECURITY_DB_PASSWORD: sfl
+      SFL_SECURITY_ENABLED: "false"
+      SFL_EMERGENCY_EVENT_TRANSPORT: local
+      SFL_RABBITMQ_HEALTH_ENABLED: "false"
+    ports:
+      - "8092:8080"
+    depends_on:
+      safety-security-db:
+        condition: service_healthy
+
+  fleet-logistics:
+    image: sfl-demo-fleet-logistics:latest
+    build:
+      context: ..
+      dockerfile: services/sfl-fleet-logistics-service/Dockerfile
+    environment:
+      SFL_PORT: 8080
+      SFL_FLEET_LOGISTICS_DB_URL: jdbc:postgresql://fleet-logistics-db:5432/sfl__fleet_vehicle_service
+      SFL_FLEET_LOGISTICS_DB_USERNAME: sfl
+      SFL_FLEET_LOGISTICS_DB_PASSWORD: sfl
+      SFL_SECURITY_ENABLED: "false"
+      SFL_FLEET_EVENT_TRANSPORT: local
+      SFL_RABBITMQ_HEALTH_ENABLED: "false"
+    ports:
+      - "8093:8080"
+    depends_on:
+      fleet-logistics-db:
+        condition: service_healthy
+
+volumes:
+  facilities-data:
+  safety-security-data:
+  fleet-logistics-data:

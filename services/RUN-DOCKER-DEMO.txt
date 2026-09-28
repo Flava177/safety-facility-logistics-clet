@@ -1,0 +1,53 @@
+Run the SFL demo with Docker
+============================
+
+This is the simplest way to run the complete local demo. It needs only Docker Desktop; Java,
+Maven, Node.js, PostgreSQL, RabbitMQ and an identity-provider installation are not required on the
+host machine.
+
+From the repository root, run:
+
+    docker compose -f services/compose.demo.yml up --build
+
+The first run downloads base images and compiles the services and dashboard, so it can take several
+minutes. Later starts need only:
+
+    docker compose -f services/compose.demo.yml up
+
+Open one of the following after the logs say the service has started:
+
+    Facilities:          http://localhost:8091/home/facilities
+    Safety and security: http://localhost:8092/home/safetysecurity/emergency
+    Fleet and logistics: http://localhost:8093/home/fleet
+
+API documentation is at http://localhost:8091/swagger-ui.html, http://localhost:8092/swagger-ui.html,
+and http://localhost:8093/swagger-ui.html.
+
+The demo configuration disables real authentication and uses in-process events. It is appropriate
+only for a trusted developer machine or a presentation; it must not be exposed to a network or used
+as a production deployment.
+
+Stop it while keeping its data:
+
+    docker compose -f services/compose.demo.yml down
+
+To erase all demo data and start from empty databases:
+
+    docker compose -f services/compose.demo.yml down -v
+
+Sharing pre-built images
+------------------------
+
+The recipient can simply clone the repository and run the command above. If they need an offline
+copy, build it once, then export the three application images:
+
+    docker compose -f services/compose.demo.yml build
+    docker image save -o sfl-demo-images.tar sfl-demo-facilities:latest sfl-demo-safety-security:latest sfl-demo-fleet-logistics:latest
+
+They can import that archive on another machine with:
+
+    docker image load -i sfl-demo-images.tar
+    docker compose -f services/compose.demo.yml up
+
+They still need the repository because Compose needs the stack configuration. Docker will pull the
+PostgreSQL image on first start unless it is also separately exported.
