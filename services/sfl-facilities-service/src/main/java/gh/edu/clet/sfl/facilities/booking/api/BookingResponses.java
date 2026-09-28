@@ -8,6 +8,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.Booking;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingApproval;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingStatus;
+import gh.edu.clet.sfl.facilities.booking.domain.CleaningRequirement;
 import gh.edu.clet.sfl.facilities.booking.domain.NoShowRecord;
 import gh.edu.clet.sfl.facilities.booking.domain.ReadinessHoldReason;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceAllocation;
@@ -68,6 +69,7 @@ public final class BookingResponses {
             Instant readinessHeldAt,
             boolean overridden,
             String overrideReason,
+            CleaningRequirement cleaningRequirement,
             RecordLifecycleStatus lifecycleStatus,
             Metadata metadata) {
 
@@ -82,7 +84,7 @@ public final class BookingResponses {
                     booking.approvalRequired(), booking.approvalId(), booking.confirmedAt(),
                     booking.startedAt(), booking.completedAt(), booking.closureReason(),
                     booking.readinessHoldReason(), booking.readinessHeldAt(), booking.wasOverridden(),
-                    booking.overrideReason(), booking.lifecycleStatus(),
+                    booking.overrideReason(), booking.cleaningRequirement(), booking.lifecycleStatus(),
                     Metadata.from(booking.metadata()));
         }
     }

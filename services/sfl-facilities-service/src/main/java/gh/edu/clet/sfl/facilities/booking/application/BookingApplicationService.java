@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.booking.application;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SflPermission;
 import gh.edu.clet.sfl.common.security.SflRole;
+import gh.edu.clet.sfl.facilities.booking.application.ports.BookingLifecycleObserver;
 import gh.edu.clet.sfl.facilities.booking.application.ports.BookingRepository;
 import gh.edu.clet.sfl.facilities.booking.domain.BookableResource;
 import gh.edu.clet.sfl.facilities.booking.domain.Booking;
@@ -87,10 +88,24 @@ public class BookingApplicationService {
     private final ServiceOutbox outbox;
     private final Clock clock;
     private final BookingLifecycleCommands lifecycle;
+    private final List<BookingLifecycleObserver> observers;
 
     public BookingApplicationService(BookingRepository bookings, FacilitiesRepository facilities,
             BookingConfiguration configuration, FacilitiesAuthorization authorization, AuditPort audit,
             IdempotencyPort idempotency, ServiceOutbox outbox, Clock clock) {
+        this(bookings, facilities, configuration, authorization, audit, idempotency, outbox, clock, List.of());
+    }
+
+    /**
+     * @param observers everything outside S159 that reacts to a booking becoming real, moving or going
+     *        away - see {@link BookingLifecycleObserver}. Empty is a valid deployment.
+     */
+    @org.springframework.beans.factory.annotation.Autowired
+    public BookingApplicationService(BookingRepository bookings, FacilitiesRepository facilities,
+            BookingConfiguration configuration, FacilitiesAuthorization authorization, AuditPort audit,
+            IdempotencyPort idempotency, ServiceOutbox outbox, Clock clock,
+            List<BookingLifecycleObserver> observers) {
+        this.observers = List.copyOf(observers);
         this.bookings = bookings;
         this.facilities = facilities;
         this.configuration = configuration;
@@ -220,7 +235,20 @@ public class BookingApplicationService {
         audit.record(actor, channel, AuditAction.BOOKING_CONFIRMED, "Booking", confirmed.id().toString(),
                 confirmed.siteCode(), booking, confirmed);
         publish("sfl.ifimp.booking-confirmed.v1", confirmed, actor);
+        observers.forEach(observer -> observer.bookingConfirmed(confirmed, actor));
         return confirmed;
+    }
+
+    /** Tells every observer a confirmed booking has moved. Package-visible for the lifecycle commands. */
+    void notifyRescheduled(Booking moved, ActorContext actor) {
+        if (moved.status() == gh.edu.clet.sfl.facilities.booking.domain.BookingStatus.CONFIRMED) {
+            observers.forEach(observer -> observer.bookingRescheduled(moved, actor));
+        }
+    }
+
+    /** Tells every observer a booking will not happen - cancelled, or swept as a no-show. */
+    void notifyWithdrawn(Booking withdrawn, String reason, ActorContext actor) {
+        observers.forEach(observer -> observer.bookingWithdrawn(withdrawn, reason, actor));
     }
 
     /**

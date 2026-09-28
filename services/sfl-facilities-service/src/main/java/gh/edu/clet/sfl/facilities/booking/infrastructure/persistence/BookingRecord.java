@@ -4,6 +4,7 @@ import gh.edu.clet.sfl.facilities.booking.domain.Booking;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingStatus;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingWindow;
+import gh.edu.clet.sfl.facilities.booking.domain.CleaningRequirement;
 import gh.edu.clet.sfl.facilities.booking.domain.ReadinessHoldReason;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
 import gh.edu.clet.sfl.facilities.shared.infrastructure.persistence.RecordMetadataEmbeddable;
@@ -101,6 +102,9 @@ public class BookingRecord extends VersionedRecord {
     @Column(name = "override_reason", length = 2000)
     private String overrideReason;
     @Enumerated(EnumType.STRING)
+    @Column(name = "cleaning_requirement", nullable = false, length = 20)
+    private CleaningRequirement cleaningRequirement;
+    @Enumerated(EnumType.STRING)
     @Column(name = "lifecycle_status", nullable = false, length = 20)
     private RecordLifecycleStatus lifecycleStatus;
     @Embedded
@@ -145,6 +149,7 @@ public class BookingRecord extends VersionedRecord {
         readinessHoldReason = booking.readinessHoldReason();
         readinessHeldAt = booking.readinessHeldAt();
         overrideReason = booking.overrideReason();
+        cleaningRequirement = booking.cleaningRequirement();
         lifecycleStatus = booking.lifecycleStatus();
         metadata = RecordMetadataEmbeddable.from(booking.metadata());
     }
@@ -154,7 +159,7 @@ public class BookingRecord extends VersionedRecord {
                 new BookingWindow(startsAt, endsAt, setupMinutes, teardownMinutes), status,
                 expectedAttendees, requestedBy, requestedFor, requestedAt, approvalRequired, approvalId,
                 confirmedAt, startedAt, completedAt, closureReason, readinessHoldReason, readinessHeldAt,
-                overrideReason, lifecycleStatus, metadata.toDomain(recordVersion()));
+                overrideReason, cleaningRequirement, lifecycleStatus, metadata.toDomain(recordVersion()));
     }
 
     public UUID getId() {

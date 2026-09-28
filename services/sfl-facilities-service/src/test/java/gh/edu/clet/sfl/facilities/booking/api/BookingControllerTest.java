@@ -127,6 +127,6 @@ class BookingControllerTest {
     private static Booking booking() {
         return Booking.request(UUID.randomUUID(), "BK-MAIN-000001", "MAIN", UUID.randomUUID(), "HALL-A",
                 BookingPurpose.LECTURE, "Contracts revision", null, BookingWindow.of(NINE, TEN), 40, null,
-                false, null, "requester", NOW, SourceChannel.WEB, "corr-1");
+                false, null, null, "requester", NOW, SourceChannel.WEB, "corr-1");
     }
 }

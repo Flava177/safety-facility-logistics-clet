@@ -50,7 +50,19 @@ public enum SflRole {
     // enum constants changes no existing signature and no existing service behaviour. SECURITY_DIRECTOR,
     // SOC_OPERATOR, INTEGRATION_ENGINEER, COMPLIANCE_OFFICER, EMERGENCY_COORDINATOR and
     // SFL_ADMIN already exist and are reused rather than duplicated - see AccessControlPermissionMatrix.
-    ACCESS_CONTROL_ADMINISTRATOR
+    ACCESS_CONTROL_ADMINISTRATOR,
+
+    // Phase 2 IFIMP user classes (SRS CLET/DTI/CL9/SFL/SRS/2026/002 §2.3). Added for S156, S157, S158,
+    // S173 and S176; adding enum constants changes no existing signature and no existing service
+    // behaviour. Only user classes the SRS names as their own role are added: the Cleaning Supervisor
+    // and Facilities Officer personas map to FACILITIES_MANAGER, a Unit Head raising a space-change
+    // request and an occupant raising a cleaning request map to IFIMP_REQUESTER - see
+    // FacilitiesPermissionMatrix for each grant and the user story behind it.
+    FACILITIES_ENGINEER,
+    ENERGY_SUSTAINABILITY_OFFICER,
+    SPACE_PLANNING_OFFICER,
+    CONSTRUCTION_PROJECT_MANAGER,
+    EVENT_LOGISTICS_COORDINATOR
 
     // Intrusion Detection & Alarm Monitoring (SRS S162) needed no new role: SECURITY_DIRECTOR,
     // SOC_OPERATOR, COMMAND_ROLE (the NECC escalation target), INTEGRATION_ENGINEER and

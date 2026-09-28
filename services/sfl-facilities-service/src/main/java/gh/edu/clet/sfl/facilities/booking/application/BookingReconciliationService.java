@@ -179,6 +179,7 @@ public class BookingReconciliationService {
             audit.record(actor, SourceChannel.SCHEDULER, AuditAction.BOOKING_NO_SHOW_RECORDED, "Booking",
                     marked.id().toString(), marked.siteCode(), candidate, record);
             publish("sfl.ifimp.booking-no-show.v1", marked, actor);
+            booking.notifyWithdrawn(marked, "Booking recorded as a no-show.", actor);
             recorded++;
         }
         return new NoShowSweep(recorded, candidates.size(), at);

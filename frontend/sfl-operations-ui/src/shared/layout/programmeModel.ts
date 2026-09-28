@@ -143,6 +143,13 @@ export const roleProgrammes: Record<string, ProgrammeCode[]> = {
   IFIMP_TECHNICIAN: ['IFIMP'],
   IFIMP_REQUESTER: ['IFIMP'],
   VENDOR_TECHNICIAN: ['IFIMP'],
+  // Phase 2 IFIMP user classes (S156, S157, S158, S173, S176). Backend only so far - no screens -
+  // so none has a `roleSystems` entry; `systemsFor`'s documented fallback applies until they do.
+  FACILITIES_ENGINEER: ['IFIMP'],
+  ENERGY_SUSTAINABILITY_OFFICER: ['IFIMP'],
+  SPACE_PLANNING_OFFICER: ['IFIMP'],
+  CONSTRUCTION_PROJECT_MANAGER: ['IFIMP'],
+  EVENT_LOGISTICS_COORDINATOR: ['IFIMP'],
 
   // SFL.SSEMP - safety, security and emergency, including S174
   SECURITY_DIRECTOR: ['SSEMP'],

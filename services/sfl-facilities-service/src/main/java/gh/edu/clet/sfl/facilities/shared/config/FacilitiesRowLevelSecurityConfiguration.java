@@ -3,6 +3,7 @@ package gh.edu.clet.sfl.facilities.shared.config;
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.common.security.SiteScopeGuc;
 import gh.edu.clet.sfl.facilities.shared.api.FacilitiesActorResolver;
+import gh.edu.clet.sfl.facilities.shared.application.PlatformThreads;
 import jakarta.servlet.http.HttpServletRequest;
 import java.util.Set;
 import javax.sql.DataSource;
@@ -46,12 +47,18 @@ class FacilitiesRowLevelSecurityConfiguration {
     /**
      * The scopes of whoever is on this request, or none.
      *
-     * <p>Returning an empty set outside a request is the correct answer, not a gap: a scheduled sweep
-     * runs as a service account whose principal carries {@code *} explicitly, so it is scoped by
-     * having a scope rather than by the absence of one. Anything genuinely actor-less has no business
-     * reading site-scoped rows.
+     * <p>Outside a request the answer depends on the thread. A scheduled sweep or the broker listener
+     * runs on a {@link PlatformThreads platform thread} and scopes to {@code *}, matching the service
+     * account it acts as; anything else genuinely actor-less scopes to nothing and reads no rows.
      */
-    private static Set<String> currentScopes(ObjectProvider<FacilitiesActorResolver> actorResolver) {
+    static Set<String> currentScopes(ObjectProvider<FacilitiesActorResolver> actorResolver) {
+        // Platform work first. A scheduler, drainer or broker-listener thread - or a block explicitly
+        // run as platform work, such as recording a rejected vendor message - is the service account's
+        // own and scopes to every site. Before Phase 2 there was no such branch, and under sfl_app every
+        // sweep and the outbox drainer would have read zero rows, silently. See PlatformThreads.
+        if (PlatformThreads.isPlatformThread()) {
+            return Set.of(SiteScopeGuc.ALL_SITES);
+        }
         if (!(RequestContextHolder.getRequestAttributes() instanceof ServletRequestAttributes attributes)) {
             return Set.of();
         }

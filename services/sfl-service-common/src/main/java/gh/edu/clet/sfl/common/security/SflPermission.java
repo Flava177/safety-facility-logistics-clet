@@ -313,5 +313,67 @@ public enum SflPermission {
     LIFESAFETY_COVERAGE_MANAGE,
     LIFESAFETY_COVERAGE_READ,
     LIFESAFETY_MUSTER_READ,
-    LIFESAFETY_MUSTER_CHECKIN
+    LIFESAFETY_MUSTER_CHECKIN,
+
+    // Phase 2 IFIMP permissions (SRS CLET/DTI/CL9/SFL/SRS/2026/002 §3.1). Additive only. All carry the
+    // FACILITIES_ prefix because they are granted by the facilities service's own matrix
+    // (gh.edu.clet.sfl.facilities.shared.domain.policy.FacilitiesPermissionMatrix) - which is also
+    // what gives SFL_ADMIN every one of them without a second list to keep in step.
+    //
+    // Split by authority, not by screen: where the SRS makes a decision a distinct authorised act -
+    // disabling a BMS rule, verifying a held meter reading, approving an occupancy override, an
+    // escalated variation approval - it has its own permission and is never implied by another.
+
+    // S156 Building Management System / IoT
+    FACILITIES_BMS_READ,
+    FACILITIES_BMS_TELEMETRY_INGEST,
+    FACILITIES_BMS_RULE_MANAGE,
+    FACILITIES_BMS_RULE_OVERRIDE,
+    FACILITIES_BMS_DEVICE_MANAGE,
+    FACILITIES_BMS_QUARANTINE_RESOLVE,
+
+    // S157 Energy & Sustainability Monitoring
+    FACILITIES_ENERGY_READ,
+    FACILITIES_ENERGY_READING_INGEST,
+    FACILITIES_ENERGY_METER_MANAGE,
+    FACILITIES_ENERGY_READING_ENTER,
+    FACILITIES_ENERGY_READING_VERIFY,
+    FACILITIES_ENERGY_BUDGET_MANAGE,
+
+    // S158 Space Planning & Move Management
+    FACILITIES_SPACE_PLAN_READ,
+    FACILITIES_SPACE_PLAN_MANAGE,
+    FACILITIES_SPACE_PLAN_COMMIT,
+    FACILITIES_OCCUPANCY_STANDARD_MANAGE,
+    FACILITIES_OCCUPANCY_OVERRIDE_APPROVE,
+    FACILITIES_SPACE_CHANGE_REQUEST,
+    FACILITIES_SPACE_CHANGE_DECIDE,
+
+    // S169 Cleaning & Janitorial Schedule Management
+    FACILITIES_CLEANING_READ,
+    FACILITIES_CLEANING_SCHEDULE_MANAGE,
+    FACILITIES_CLEANING_REQUEST,
+    FACILITIES_CLEANING_TASK_EXECUTE,
+    FACILITIES_CLEANING_TASK_SUPERVISE,
+    FACILITIES_CLEANING_FEEDBACK_SUBMIT,
+    FACILITIES_CLEANING_VENDOR_MANAGE,
+
+    // S173 Event Logistics & Set-Up Workflow
+    FACILITIES_EVENT_READ,
+    FACILITIES_EVENT_COORDINATE,
+    FACILITIES_EVENT_HANDOFF_INGEST,
+    FACILITIES_EVENT_RISK_CATEGORY_MANAGE,
+
+    // S176 Construction Project Management
+    FACILITIES_PROJECT_READ,
+    FACILITIES_PROJECT_MANAGE,
+    FACILITIES_PROJECT_APPROVE,
+    FACILITIES_PROJECT_HANDOVER,
+    FACILITIES_PROJECT_CLOSE,
+    FACILITIES_VARIATION_APPROVE,
+    FACILITIES_VARIATION_ESCALATED_APPROVE,
+    FACILITIES_CONTRACTOR_MANAGE,
+
+    // Phase 2 vendor-integration governance (SRS CORR-07, §5.2)
+    FACILITIES_VENDOR_INTEGRATION_READ
 }

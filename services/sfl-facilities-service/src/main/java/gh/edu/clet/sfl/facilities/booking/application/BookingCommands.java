@@ -2,6 +2,7 @@ package gh.edu.clet.sfl.facilities.booking.application;
 
 import gh.edu.clet.sfl.common.security.ActorContext;
 import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
+import gh.edu.clet.sfl.facilities.booking.domain.CleaningRequirement;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTaskStatus;
 import gh.edu.clet.sfl.facilities.shared.domain.audit.SourceChannel;
@@ -50,6 +51,7 @@ public final class BookingCommands {
             String requestedFor,
             Map<UUID, Integer> resources,
             String overrideReason,
+            CleaningRequirement cleaningRequirement,
             ActorContext actor,
             SourceChannel channel,
             String idempotencyKey,

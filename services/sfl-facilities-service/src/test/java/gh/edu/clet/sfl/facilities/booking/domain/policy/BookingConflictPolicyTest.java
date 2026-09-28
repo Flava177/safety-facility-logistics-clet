@@ -168,7 +168,7 @@ class BookingConflictPolicyTest {
     private static Booking booking(UUID roomId, BookingWindow window) {
         reference++;
         return Booking.request(UUID.randomUUID(), String.format("BK-MAIN-%06d", reference), "MAIN", roomId,
-                "HALL-A", BookingPurpose.LECTURE, "Contract law", null, window, 60, null, false, null,
+                "HALL-A", BookingPurpose.LECTURE, "Contract law", null, window, 60, null, false, null, null,
                 "lecturer", NINE, SourceChannel.WEB, null);
     }
 

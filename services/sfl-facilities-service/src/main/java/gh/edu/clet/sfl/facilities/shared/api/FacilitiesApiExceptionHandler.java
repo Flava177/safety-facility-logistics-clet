@@ -78,7 +78,38 @@ class FacilitiesApiExceptionHandler {
             Map.entry(FacilitiesErrorCode.OPERATING_MODE_TRANSITION_INVALID, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.CLOSURE_EVIDENCE_MISSING, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.INVALID_PARENT_REFERENCE, HttpStatus.BAD_REQUEST),
-            Map.entry(FacilitiesErrorCode.AUDIT_CHAIN_FAILURE, HttpStatus.INTERNAL_SERVER_ERROR));
+            Map.entry(FacilitiesErrorCode.AUDIT_CHAIN_FAILURE, HttpStatus.INTERNAL_SERVER_ERROR),
+            // Phase 2. A forged or malformed vendor message is an authentication failure, not a bad
+            // request: the sender must not be told which check it failed, only that it failed.
+            Map.entry(FacilitiesErrorCode.VENDOR_MESSAGE_REJECTED, HttpStatus.UNAUTHORIZED),
+            Map.entry(FacilitiesErrorCode.BMS_TELEMETRY_REJECTED, HttpStatus.UNAUTHORIZED),
+            // Quarantine is acceptance for review, not refusal - see S156-01 - hence 202.
+            Map.entry(FacilitiesErrorCode.BMS_LOCATION_UNRESOLVABLE, HttpStatus.ACCEPTED),
+            Map.entry(FacilitiesErrorCode.BMS_DEVICE_UNREGISTERED, HttpStatus.ACCEPTED),
+            Map.entry(FacilitiesErrorCode.BMS_RULE_OVERRIDE_REQUIRED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.ENERGY_READING_IMPLAUSIBLE, HttpStatus.ACCEPTED),
+            Map.entry(FacilitiesErrorCode.ENERGY_TARIFF_MISSING, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.ENERGY_DEVICE_DOUBLE_REGISTERED, HttpStatus.CONFLICT),
+            Map.entry(FacilitiesErrorCode.ENERGY_SELF_VERIFICATION, HttpStatus.FORBIDDEN),
+            Map.entry(FacilitiesErrorCode.SPACE_SCENARIO_UNCOMMITTED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.SPACE_OVERRIDE_INCOMPLETE, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.SPACE_CHANGE_UNLINKED_RESOLUTION, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.CLEANING_BOOKING_UNLINKED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.CLEANING_CHECKLIST_INCOMPLETE, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.CLEANING_RESOURCING_CONFLICT, HttpStatus.CONFLICT),
+            Map.entry(FacilitiesErrorCode.CLEANING_VENDOR_NOT_FOUND, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.EVENT_REFERENCE_UNRESOLVABLE, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.EVENT_RISK_ASSESSMENT_NOT_CURRENT, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.EVENT_UNRESOLVED_RESOURCE_REQUEST, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.PROJECT_APPROVAL_MISSING, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.PROJECT_PERMIT_MISSING, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.CONTRACTOR_COMPLIANCE_LAPSED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.VARIATION_NOT_APPROVED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.VARIATION_ESCALATION_REQUIRED, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.PROJECT_HANDOVER_INCOMPLETE, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.PROJECT_DEFECTS_OPEN, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.RISK_ASSESSMENT_NOT_CURRENT, HttpStatus.UNPROCESSABLE_ENTITY),
+            Map.entry(FacilitiesErrorCode.RISK_ASSESSMENT_NOT_LINKED, HttpStatus.UNPROCESSABLE_ENTITY));
 
     /** One field's rejection, shaped as the dashboard's form binding expects. */
     public record FieldErrorResponse(String field, String message, Object rejectedValue) {
