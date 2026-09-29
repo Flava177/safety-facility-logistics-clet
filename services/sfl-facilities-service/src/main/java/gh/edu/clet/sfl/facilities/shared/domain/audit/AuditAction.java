@@ -169,6 +169,9 @@ public enum AuditAction {
     ENERGY_ANOMALY_FLAGGED,
     ENERGY_TARIFF_MISSING_FLAGGED,
     SUSTAINABILITY_KPI_PUBLISHED,
+    ENERGY_READING_INGESTED,
+    ENERGY_PERIOD_CLOSED,
+    ENERGY_READING_RETENTION_PURGED,
     // ---- end of block
 
     // ---- S158 Space Planning & Move Management - SRS-SFL-S158-01..04. Owned by spaceplanning.
