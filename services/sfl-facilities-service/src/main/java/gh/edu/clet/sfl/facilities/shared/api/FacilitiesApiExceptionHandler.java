@@ -109,7 +109,14 @@ class FacilitiesApiExceptionHandler {
             Map.entry(FacilitiesErrorCode.PROJECT_HANDOVER_INCOMPLETE, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.PROJECT_DEFECTS_OPEN, HttpStatus.UNPROCESSABLE_ENTITY),
             Map.entry(FacilitiesErrorCode.RISK_ASSESSMENT_NOT_CURRENT, HttpStatus.UNPROCESSABLE_ENTITY),
-            Map.entry(FacilitiesErrorCode.RISK_ASSESSMENT_NOT_LINKED, HttpStatus.UNPROCESSABLE_ENTITY));
+            Map.entry(FacilitiesErrorCode.RISK_ASSESSMENT_NOT_LINKED, HttpStatus.UNPROCESSABLE_ENTITY),
+            // Added at merge - flagged by the S176 build as outside its own file boundary.
+            Map.entry(FacilitiesErrorCode.PROJECT_CONTRACTOR_UNASSIGNED, HttpStatus.UNPROCESSABLE_ENTITY),
+            // Added at merge - flagged by the S158 build as outside its own file boundary. Both name an
+            // unresolved cross-module dependency rather than a bad request from the caller, so 503
+            // rather than 422/400.
+            Map.entry(FacilitiesErrorCode.SPACE_CONSTRUCTION_INTAKE_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE),
+            Map.entry(FacilitiesErrorCode.SPACE_UTILISATION_SOURCE_UNAVAILABLE, HttpStatus.SERVICE_UNAVAILABLE));
 
     /** One field's rejection, shaped as the dashboard's form binding expects. */
     public record FieldErrorResponse(String field, String message, Object rejectedValue) {
