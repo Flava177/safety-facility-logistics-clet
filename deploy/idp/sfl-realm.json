@@ -102,6 +102,26 @@
       {
         "name": "HSE_MANAGER",
         "description": "SflRole.HSE_MANAGER"
+      },
+      {
+        "name": "FACILITIES_ENGINEER",
+        "description": "SflRole.FACILITIES_ENGINEER"
+      },
+      {
+        "name": "ENERGY_SUSTAINABILITY_OFFICER",
+        "description": "SflRole.ENERGY_SUSTAINABILITY_OFFICER"
+      },
+      {
+        "name": "SPACE_PLANNING_OFFICER",
+        "description": "SflRole.SPACE_PLANNING_OFFICER"
+      },
+      {
+        "name": "CONSTRUCTION_PROJECT_MANAGER",
+        "description": "SflRole.CONSTRUCTION_PROJECT_MANAGER"
+      },
+      {
+        "name": "EVENT_LOGISTICS_COORDINATOR",
+        "description": "SflRole.EVENT_LOGISTICS_COORDINATOR"
       }
     ]
   },

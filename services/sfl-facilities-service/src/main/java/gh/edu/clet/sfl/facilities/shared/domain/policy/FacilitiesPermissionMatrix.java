@@ -336,7 +336,178 @@ public final class FacilitiesPermissionMatrix {
         // HSE manager - reads the estate to place an incident and judge a location's standing.
         matrix.put(SflRole.HSE_MANAGER, union(READ_ONLY, SflPermission.FACILITIES_DASHBOARD_DRILLDOWN));
 
+        grantPhaseTwo(matrix);
+
         return Map.copyOf(matrix);
+    }
+
+    /**
+     * The Phase 2 IFIMP grants - S156, S157, S158, S169, S173, S176 (SRS 2026/002 §3.1).
+     *
+     * <p>Added as one block that unions into each role's existing set, rather than edited into the
+     * Phase 1 entries above, so a reviewer can read every Phase 2 decision in one place and can see
+     * that no Phase 1 grant moved. {@link #READ_ONLY} is deliberately <em>not</em> widened: it is shared
+     * by roles such as {@link SflRole#HSE_MANAGER} whose Phase 1 reach was judged on its own, and
+     * contractor insurance or a project budget is not what reading the estate earns.
+     *
+     * <p>The separations of duty worth reading twice, each named by the SRS:
+     * <ul>
+     *   <li><strong>S156</strong> - the {@link SflRole#FACILITIES_ENGINEER} writes threshold rules and
+     *       cannot disable one. Disabling needs {@code BMS_RULE_OVERRIDE} and a named accountable owner
+     *       (S156-02), held by the director and the maintenance supervisor - the author of a rule
+     *       switching it off alone is exactly the silent disable the requirement forbids.</li>
+     *   <li><strong>S157</strong> - the {@link SflRole#ENERGY_SUSTAINABILITY_OFFICER} enters manual meter
+     *       reads and cannot verify a held one. "Held for supervisor verification" (S157-01) means
+     *       somebody else; the per-record rule additionally refuses entered-by = verified-by.</li>
+     *   <li><strong>S158</strong> - the {@link SflRole#SPACE_PLANNING_OFFICER} commits scenarios but does
+     *       not approve an occupancy override: S158-02 requires "an accountable approver", which is the
+     *       director.</li>
+     *   <li><strong>S176</strong> - the {@link SflRole#CONSTRUCTION_PROJECT_MANAGER} registers projects and
+     *       proposes variations and approves neither. Ordinary variations are approved by the facilities
+     *       manager or director; the escalated approval past the cumulative threshold (S176-03) by the
+     *       director alone. Handover into the operational register is a facilities act (S176-04's user
+     *       story is the Facilities Officer), so it sits with the facilities manager, not the PM.</li>
+     *   <li><strong>Ingest</strong> permissions are held only by the integration principals. A person
+     *       who could post telemetry could fabricate a breach and raise a work order with it.</li>
+     * </ul>
+     */
+    private static void grantPhaseTwo(Map<SflRole, Set<SflPermission>> matrix) {
+        Set<SflPermission> phaseTwoRead = EnumSet.of(
+                SflPermission.FACILITIES_BMS_READ,
+                SflPermission.FACILITIES_ENERGY_READ,
+                SflPermission.FACILITIES_SPACE_PLAN_READ,
+                SflPermission.FACILITIES_CLEANING_READ,
+                SflPermission.FACILITIES_EVENT_READ,
+                SflPermission.FACILITIES_PROJECT_READ,
+                SflPermission.FACILITIES_VENDOR_INTEGRATION_READ);
+
+        grant(matrix, SflRole.FACILITIES_DIRECTOR, phaseTwoRead,
+                SflPermission.FACILITIES_BMS_RULE_OVERRIDE,
+                SflPermission.FACILITIES_BMS_QUARANTINE_RESOLVE,
+                SflPermission.FACILITIES_ENERGY_READING_VERIFY,
+                SflPermission.FACILITIES_ENERGY_BUDGET_MANAGE,
+                SflPermission.FACILITIES_SPACE_PLAN_COMMIT,
+                SflPermission.FACILITIES_OCCUPANCY_OVERRIDE_APPROVE,
+                SflPermission.FACILITIES_SPACE_CHANGE_REQUEST,
+                SflPermission.FACILITIES_SPACE_CHANGE_DECIDE,
+                SflPermission.FACILITIES_CLEANING_TASK_SUPERVISE,
+                SflPermission.FACILITIES_CLEANING_VENDOR_MANAGE,
+                SflPermission.FACILITIES_EVENT_COORDINATE,
+                SflPermission.FACILITIES_PROJECT_APPROVE,
+                SflPermission.FACILITIES_PROJECT_HANDOVER,
+                SflPermission.FACILITIES_PROJECT_CLOSE,
+                SflPermission.FACILITIES_VARIATION_APPROVE,
+                SflPermission.FACILITIES_VARIATION_ESCALATED_APPROVE);
+
+        // Facilities manager - also the Cleaning Supervisor, Facilities Officer and, where no dedicated
+        // coordinator exists, the event coordinator of the S169/S173/S176 user stories.
+        grant(matrix, SflRole.FACILITIES_MANAGER, phaseTwoRead,
+                SflPermission.FACILITIES_BMS_QUARANTINE_RESOLVE,
+                SflPermission.FACILITIES_ENERGY_READING_VERIFY,
+                SflPermission.FACILITIES_SPACE_CHANGE_REQUEST,
+                SflPermission.FACILITIES_SPACE_CHANGE_DECIDE,
+                SflPermission.FACILITIES_CLEANING_SCHEDULE_MANAGE,
+                SflPermission.FACILITIES_CLEANING_REQUEST,
+                SflPermission.FACILITIES_CLEANING_TASK_SUPERVISE,
+                SflPermission.FACILITIES_CLEANING_VENDOR_MANAGE,
+                SflPermission.FACILITIES_EVENT_COORDINATE,
+                SflPermission.FACILITIES_PROJECT_HANDOVER,
+                SflPermission.FACILITIES_VARIATION_APPROVE);
+
+        grant(matrix, SflRole.IFIMP_MAINTENANCE_SUPERVISOR, phaseTwoRead,
+                SflPermission.FACILITIES_BMS_RULE_OVERRIDE,
+                SflPermission.FACILITIES_BMS_DEVICE_MANAGE,
+                SflPermission.FACILITIES_BMS_QUARANTINE_RESOLVE,
+                SflPermission.FACILITIES_CLEANING_TASK_SUPERVISE);
+
+        grant(matrix, SflRole.IFIMP_TECHNICIAN, EnumSet.of(SflPermission.FACILITIES_BMS_READ,
+                SflPermission.FACILITIES_CLEANING_READ),
+                SflPermission.FACILITIES_CLEANING_TASK_EXECUTE);
+
+        // A contractor cleaner works the tasks assigned to them and nothing else; the per-record rule in
+        // S169 narrows CLEANING_READ to those, as S153 narrows WORK_ORDER_READ.
+        grant(matrix, SflRole.VENDOR_TECHNICIAN, EnumSet.of(SflPermission.FACILITIES_CLEANING_READ),
+                SflPermission.FACILITIES_CLEANING_TASK_EXECUTE);
+
+        // Occupant and unit head: a reactive cleaning request, feedback on a finished clean, and a
+        // space-change request - each narrowed per record to the requester's own.
+        grant(matrix, SflRole.IFIMP_REQUESTER, EnumSet.noneOf(SflPermission.class),
+                SflPermission.FACILITIES_CLEANING_REQUEST,
+                SflPermission.FACILITIES_CLEANING_FEEDBACK_SUBMIT,
+                SflPermission.FACILITIES_SPACE_CHANGE_REQUEST);
+
+        grant(matrix, SflRole.FACILITIES_ENGINEER, union(READ_ONLY, phaseTwoRead.toArray(SflPermission[]::new)),
+                SflPermission.FACILITIES_BMS_RULE_MANAGE,
+                SflPermission.FACILITIES_BMS_DEVICE_MANAGE,
+                SflPermission.FACILITIES_BMS_QUARANTINE_RESOLVE,
+                SflPermission.FACILITIES_DEVICE_REFERENCE_REGISTER,
+                SflPermission.FACILITIES_FAULT_REPORT,
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN);
+
+        grant(matrix, SflRole.ENERGY_SUSTAINABILITY_OFFICER,
+                union(READ_ONLY, SflPermission.FACILITIES_BMS_READ, SflPermission.FACILITIES_ENERGY_READ,
+                        SflPermission.FACILITIES_VENDOR_INTEGRATION_READ),
+                SflPermission.FACILITIES_ENERGY_METER_MANAGE,
+                SflPermission.FACILITIES_ENERGY_READING_ENTER,
+                SflPermission.FACILITIES_ENERGY_BUDGET_MANAGE,
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN);
+
+        grant(matrix, SflRole.SPACE_PLANNING_OFFICER,
+                union(READ_ONLY, SflPermission.FACILITIES_SPACE_PLAN_READ, SflPermission.FACILITIES_PROJECT_READ),
+                SflPermission.FACILITIES_SPACE_PLAN_MANAGE,
+                SflPermission.FACILITIES_SPACE_PLAN_COMMIT,
+                SflPermission.FACILITIES_OCCUPANCY_STANDARD_MANAGE,
+                SflPermission.FACILITIES_SPACE_CHANGE_REQUEST,
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN);
+
+        grant(matrix, SflRole.CONSTRUCTION_PROJECT_MANAGER,
+                union(READ_ONLY, SflPermission.FACILITIES_PROJECT_READ, SflPermission.FACILITIES_SPACE_PLAN_READ),
+                SflPermission.FACILITIES_PROJECT_MANAGE,
+                SflPermission.FACILITIES_CONTRACTOR_MANAGE,
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN);
+
+        grant(matrix, SflRole.EVENT_LOGISTICS_COORDINATOR,
+                union(READ_ONLY, SflPermission.FACILITIES_EVENT_READ, SflPermission.FACILITIES_CLEANING_READ),
+                SflPermission.FACILITIES_EVENT_COORDINATE,
+                SflPermission.FACILITIES_BOOKING_REQUEST,
+                SflPermission.FACILITIES_CLEANING_REQUEST,
+                SflPermission.FACILITIES_DASHBOARD_DRILLDOWN);
+
+        // HSE: configures which event categories are higher-risk (S173-03) and verifies contractor
+        // compliance before site access (S176-02's user story is the HSS unit itself).
+        grant(matrix, SflRole.HSE_MANAGER, EnumSet.of(SflPermission.FACILITIES_EVENT_READ,
+                SflPermission.FACILITIES_PROJECT_READ, SflPermission.FACILITIES_BMS_READ),
+                SflPermission.FACILITIES_EVENT_RISK_CATEGORY_MANAGE,
+                SflPermission.FACILITIES_CONTRACTOR_MANAGE);
+
+        grant(matrix, SflRole.COMMAND_ROLE, EnumSet.of(SflPermission.FACILITIES_BMS_READ,
+                SflPermission.FACILITIES_EVENT_READ));
+        grant(matrix, SflRole.CENTRE_MANAGER, EnumSet.of(SflPermission.FACILITIES_BMS_READ,
+                SflPermission.FACILITIES_EVENT_READ, SflPermission.FACILITIES_CLEANING_READ),
+                SflPermission.FACILITIES_CLEANING_REQUEST);
+
+        // Read-and-prove roles read every Phase 2 register and change none.
+        grant(matrix, SflRole.COMPLIANCE_OFFICER, phaseTwoRead);
+        grant(matrix, SflRole.DTI_ADMIN, phaseTwoRead);
+
+        // Integration principals: the only holders of the ingest permissions.
+        Set<SflPermission> ingest = EnumSet.of(
+                SflPermission.FACILITIES_BMS_READ,
+                SflPermission.FACILITIES_VENDOR_INTEGRATION_READ,
+                SflPermission.FACILITIES_BMS_TELEMETRY_INGEST,
+                SflPermission.FACILITIES_ENERGY_READING_INGEST,
+                SflPermission.FACILITIES_EVENT_HANDOFF_INGEST);
+        grant(matrix, SflRole.INTEGRATION_ENGINEER, ingest);
+        grant(matrix, SflRole.SERVICE_INTEGRATION, ingest);
+    }
+
+    private static void grant(Map<SflRole, Set<SflPermission>> matrix, SflRole role, Set<SflPermission> base,
+            SflPermission... extra) {
+        EnumSet<SflPermission> combined = EnumSet.noneOf(SflPermission.class);
+        combined.addAll(matrix.getOrDefault(role, Set.of()));
+        combined.addAll(base);
+        combined.addAll(Set.of(extra));
+        matrix.put(role, Set.copyOf(combined));
     }
 
     private static Set<SflPermission> union(Set<SflPermission> base, SflPermission... extra) {

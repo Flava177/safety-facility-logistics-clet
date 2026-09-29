@@ -61,6 +61,7 @@ public record Booking(
         ReadinessHoldReason readinessHoldReason,
         Instant readinessHeldAt,
         String overrideReason,
+        CleaningRequirement cleaningRequirement,
         RecordLifecycleStatus lifecycleStatus,
         RecordMetadata metadata) {
 
@@ -82,6 +83,7 @@ public record Booking(
         Objects.requireNonNull(requestedAt, "requestedAt is required");
         closureReason = EstateCodes.blankToNull(closureReason);
         overrideReason = EstateCodes.blankToNull(overrideReason);
+        cleaningRequirement = CleaningRequirement.orNone(cleaningRequirement);
         Objects.requireNonNull(lifecycleStatus, "lifecycleStatus is required");
         Objects.requireNonNull(metadata, "metadata is required");
         if (expectedAttendees < 0) {
@@ -93,12 +95,12 @@ public record Booking(
     public static Booking request(UUID id, String bookingReference, String siteCode, UUID roomId,
             String roomCode, BookingPurpose purpose, String title, String description,
             BookingWindow window, int expectedAttendees, String requestedFor, boolean approvalRequired,
-            String overrideReason, String actorId, Instant at, SourceChannel channel,
-            String correlationId) {
+            String overrideReason, CleaningRequirement cleaningRequirement, String actorId, Instant at,
+            SourceChannel channel, String correlationId) {
         return new Booking(id, bookingReference, siteCode, roomId, roomCode, purpose, title, description,
                 window, BookingStatus.REQUESTED, expectedAttendees, actorId, requestedFor, at,
                 approvalRequired, null, null, null, null, null, null, null, overrideReason,
-                RecordLifecycleStatus.ACTIVE,
+                cleaningRequirement, RecordLifecycleStatus.ACTIVE,
                 RecordMetadata.createdBy(actorId, at, channel, correlationId));
     }
 
@@ -180,7 +182,7 @@ public record Booking(
         return new Booking(id, bookingReference, siteCode, roomId, roomCode, purpose, title, description,
                 window, status, expectedAttendees, requestedBy, requestedFor, requestedAt,
                 approvalRequired, approvalId, confirmedAt, startedAt, completedAt, closureReason,
-                reason, reason == null ? null : at, overrideReason, lifecycleStatus, metadata);
+                reason, reason == null ? null : at, overrideReason, cleaningRequirement, lifecycleStatus, metadata);
     }
 
     /**
@@ -212,7 +214,7 @@ public record Booking(
         return new Booking(id, bookingReference, siteCode, roomId, roomCode, purpose, title, description,
                 newWindow, status, expectedAttendees, requestedBy, requestedFor, requestedAt,
                 approvalRequired, approvalId, confirmedAt, startedAt, completedAt, closureReason,
-                null, null, overrideReason, lifecycleStatus,
+                null, null, overrideReason, cleaningRequirement, lifecycleStatus,
                 metadata.modifiedBy(actorId, at, channel, correlationId));
     }
 
@@ -222,7 +224,7 @@ public record Booking(
         return new Booking(id, bookingReference, siteCode, roomId, roomCode, purpose, title, description,
                 window, status, expectedAttendees, requestedBy, requestedFor, requestedAt,
                 approvalRequired, approvalId, confirmedAt, startedAt, completedAt, closureReason,
-                readinessHoldReason, readinessHeldAt, overrideReason, next,
+                readinessHoldReason, readinessHeldAt, overrideReason, cleaningRequirement, next,
                 metadata.modifiedBy(actorId, at, channel, correlationId));
     }
 
@@ -261,7 +263,7 @@ public record Booking(
         return new Booking(id, bookingReference, siteCode, roomId, roomCode, purpose, title, description,
                 window, newStatus, expectedAttendees, requestedBy, requestedFor, requestedAt,
                 approvalRequired, newApprovalId, newConfirmedAt, newStartedAt, newCompletedAt,
-                newClosureReason, newHold, newHeldAt, overrideReason, lifecycleStatus,
+                newClosureReason, newHold, newHeldAt, overrideReason, cleaningRequirement, lifecycleStatus,
                 metadata.modifiedBy(actorId, at, channel, correlationId));
     }
 }

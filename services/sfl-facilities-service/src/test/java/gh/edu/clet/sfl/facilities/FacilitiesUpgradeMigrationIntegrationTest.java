@@ -96,7 +96,12 @@ class FacilitiesUpgradeMigrationIntegrationTest {
                 .load();
         upgrade.migrate();
 
-        MigrationInfo v14 = upgrade.info().applied()[upgrade.info().applied().length - 1];
+        // Found by version rather than taken as the last applied: Phase 2 migrations (V15 onward) run in
+        // the same upgrade, and what this test proves is V14's behaviour on a populated database.
+        MigrationInfo v14 = java.util.Arrays.stream(upgrade.info().applied())
+                .filter(info -> "V14__row_level_security.sql".equals(info.getScript()))
+                .findFirst()
+                .orElseThrow();
         assertThat(v14.getScript()).isEqualTo("V14__row_level_security.sql");
         assertThat(v14.getState().isFailed()).isFalse();
 

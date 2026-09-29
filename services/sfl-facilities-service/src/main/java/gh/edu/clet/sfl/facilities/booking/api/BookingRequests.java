@@ -1,6 +1,7 @@
 package gh.edu.clet.sfl.facilities.booking.api;
 
 import gh.edu.clet.sfl.facilities.booking.domain.BookingPurpose;
+import gh.edu.clet.sfl.facilities.booking.domain.CleaningRequirement;
 import gh.edu.clet.sfl.facilities.booking.domain.ResourceCategory;
 import gh.edu.clet.sfl.facilities.booking.domain.SetupTaskStatus;
 import gh.edu.clet.sfl.facilities.shared.domain.model.RecordLifecycleStatus;
@@ -33,6 +34,8 @@ public final class BookingRequests {
      *        booking never briefly exists without the projector it was made for.
      * @param overrideReason only honoured when the space's readiness would otherwise refuse and the
      *        actor holds {@code FACILITIES_BOOKING_OVERRIDE}
+     * @param cleaningRequirement setup and/or teardown cleaning around the window. Omitted means none;
+     *        when present, S169 raises the cleaning task against this booking once it is confirmed
      */
     public record RequestBooking(
             @NotNull UUID roomId,
@@ -46,7 +49,8 @@ public final class BookingRequests {
             @Min(0) int expectedAttendees,
             @Size(max = 200) String requestedFor,
             Map<UUID, Integer> resources,
-            @Size(max = 2000) String overrideReason) {
+            @Size(max = 2000) String overrideReason,
+            CleaningRequirement cleaningRequirement) {
     }
 
     public record DecideBooking(

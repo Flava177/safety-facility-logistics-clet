@@ -76,8 +76,8 @@ public class BookingController {
                 service.request(new BookingCommands.RequestBooking(request.roomId(), request.purpose(),
                         request.title(), request.description(), request.startsAt(), request.endsAt(),
                         request.setupMinutes(), request.teardownMinutes(), request.expectedAttendees(),
-                        request.requestedFor(), request.resources(), request.overrideReason(), actor,
-                        channel, idempotencyKey, request)),
+                        request.requestedFor(), request.resources(), request.overrideReason(),
+                        request.cleaningRequirement(), actor, channel, idempotencyKey, request)),
                 clock);
         return ResponseEntity.created(URI.create("/api/v1/facilities/bookings/" + result.id()))
                 .body(ApiResponse.ok(result));

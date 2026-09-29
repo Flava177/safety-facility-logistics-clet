@@ -81,7 +81,7 @@ class BookingOptimisticLockingIntegrationTest {
                 now.plus(Duration.ofDays(1)).plus(Duration.ofHours(1)));
         String bookingReference = "BK" + UUID.randomUUID().toString().substring(0, 8).toUpperCase(Locale.ROOT);
         Booking requested = bookings.saveBooking(Booking.request(UUID.randomUUID(), bookingReference, siteCode,
-                roomId, roomCode, BookingPurpose.MEETING, "Standing meeting", null, window, 5, null, false, null,
+                roomId, roomCode, BookingPurpose.MEETING, "Standing meeting", null, window, 5, null, false, null, null,
                 "tester", now, SourceChannel.WEB, "corr-1"));
         assertThat(requested.metadata().version()).isZero();
 

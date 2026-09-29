@@ -89,7 +89,7 @@ final class BookingLifecycleCommands {
                 bookings.nextBookingReference(room.siteCode()), room.siteCode(), room.id(), room.roomCode(),
                 command.purpose(), command.title(), command.description(), window,
                 command.expectedAttendees(), command.requestedFor(), approvalRequired, overrideReason,
-                actor.actorId(), at, command.channel(), actor.correlationId());
+                command.cleaningRequirement(), actor.actorId(), at, command.channel(), actor.correlationId());
         Booking saved = bookings.saveBooking(booking);
 
         service.allocate(saved, requested, resources, actor, at, command.channel());
@@ -206,6 +206,7 @@ final class BookingLifecycleCommands {
         audit.record(actor, command.channel(), AuditAction.BOOKING_RESCHEDULED, "Booking",
                 moved.id().toString(), moved.siteCode(), booking, moved);
         service.publish("sfl.ifimp.booking-rescheduled.v1", moved, actor);
+        service.notifyRescheduled(moved, actor);
         return moved;
     }
 
@@ -253,6 +254,7 @@ final class BookingLifecycleCommands {
         audit.record(actor, command.channel(), AuditAction.BOOKING_CANCELLED, "Booking",
                 cancelled.id().toString(), cancelled.siteCode(), booking, cancelled);
         service.publish("sfl.ifimp.booking-cancelled.v1", cancelled, actor);
+        service.notifyWithdrawn(cancelled, "Booking cancelled: " + command.reason(), actor);
         return cancelled;
     }
 

@@ -121,7 +121,7 @@ management:
 sfl:
   service-boundary:
     schema: facilities
-    owns: "Facilities service for S152, S153 and S159"
+    owns: "Facilities service for S152, S153, S159 and Phase 2 S156, S157, S158, S169, S173, S176"
   security:
     # Secure unless deliberately opened. This defaulted to `false`, and the filter chain that opened
     # everything also carried `matchIfMissing = true` - so an environment that simply forgot the
@@ -158,6 +158,44 @@ sfl:
       # by retrying through it, and must not schedule the next attempt beyond the end of the week.
       retry-base: PT10S
       retry-cap: PT1H
+    # ---- Phase 2 vendor integration (SRS 2026/002 NFR-SEC2, CORR-07) ------------------------------
+    #
+    # The one authenticated inbox every inbound vendor message passes through - see
+    # VendorMessageVerifier. Each source is allowlisted for exactly one channel and a set of sites, with
+    # its own HMAC secret. The three shipped sources are SIMULATORS with the development secret; the
+    # service warns on startup about every source still carrying it. A real deployment overrides each
+    # secret from the platform secret store and registers real sources per site.
+    vendor-inbox:
+      signature-window: ${SFL_VENDOR_SIGNATURE_WINDOW:PT5M}
+      sources:
+        BMS-SIM:
+          channel: BMS_TELEMETRY
+          secret: ${SFL_VENDOR_BMS_SIM_SECRET:dev-only-not-a-real-secret}
+          sites: ["*"]
+        AMI-SIM:
+          channel: ENERGY_METERING
+          secret: ${SFL_VENDOR_AMI_SIM_SECRET:dev-only-not-a-real-secret}
+          sites: ["*"]
+        CCP-EVENTS-SIM:
+          channel: CCP_EVENTS
+          secret: ${SFL_VENDOR_CCP_EVENTS_SIM_SECRET:dev-only-not-a-real-secret}
+          sites: ["*"]
+    # Procurement-gate evidence per vendor integration. Blank = none on file, which is the truth for
+    # every entry today: GET /api/v1/facilities/vendor-integrations reports SIMULATED_ADAPTER_ONLY until
+    # an SRS §5.2 evidence reference is entered here. There is no "integrated" status to set.
+    vendor-integrations:
+      bms-iot:
+        system: S156
+        name: Building Management System / IoT platform
+        classification: Buy and Integrate
+        adapter: SimulatedBmsTelemetryAdapter
+        procurement-gate-evidence: ${SFL_S156_PROCUREMENT_GATE_EVIDENCE:}
+      energy-metering:
+        system: S157
+        name: Utility metering / AMI gateway
+        classification: Hybrid
+        adapter: SimulatedMeteringAdapter
+        procurement-gate-evidence: ${SFL_S157_PROCUREMENT_GATE_EVIDENCE:}
     booking:
       # Bounds how long a booking request can queue behind another one holding the same room/resource
       # advisory lock before giving up with a 409 rather than holding its connection (and the pool slot

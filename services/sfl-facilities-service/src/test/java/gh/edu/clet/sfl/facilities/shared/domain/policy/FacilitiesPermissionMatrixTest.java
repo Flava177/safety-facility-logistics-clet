@@ -80,7 +80,13 @@ class FacilitiesPermissionMatrixTest {
                 SflPermission.FACILITIES_FAULT_READ,
                 SflPermission.FACILITIES_BOOKING_READ,
                 SflPermission.FACILITIES_BOOKING_REQUEST,
-                SflPermission.FACILITIES_RESOURCE_READ);
+                SflPermission.FACILITIES_RESOURCE_READ,
+                // Phase 2, widened deliberately and by name: an occupant raises a reactive cleaning
+                // request and rates the clean afterwards (S169-01, -02), and a unit head submits a
+                // space-change request (S158-04). Each is narrowed per record to the requester's own.
+                SflPermission.FACILITIES_CLEANING_REQUEST,
+                SflPermission.FACILITIES_CLEANING_FEEDBACK_SUBMIT,
+                SflPermission.FACILITIES_SPACE_CHANGE_REQUEST);
     }
 
     /**

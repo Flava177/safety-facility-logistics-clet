@@ -568,7 +568,7 @@ class S159MandatoryScenariosTest {
 
             Booking overridden = bookings.request(new BookingCommands.RequestBooking(hall.id(),
                     BookingPurpose.LECTURE, "Resit briefing", null, TEN, ELEVEN, null, null, 40, null,
-                    Map.of(), "The Dean has authorised it in writing", centreManager, SourceChannel.WEB,
+                    Map.of(), "The Dean has authorised it in writing", null, centreManager, SourceChannel.WEB,
                     null, null));
 
             assertThat(overridden.wasOverridden()).isTrue();
@@ -582,7 +582,7 @@ class S159MandatoryScenariosTest {
 
             assertThatThrownBy(() -> bookings.request(new BookingCommands.RequestBooking(hall.id(),
                     BookingPurpose.LECTURE, "Resit briefing", null, TEN, ELEVEN, null, null, 40, null,
-                    Map.of(), "I really need the hall", manager, SourceChannel.WEB, null, null)))
+                    Map.of(), "I really need the hall", null, manager, SourceChannel.WEB, null, null)))
                     .isInstanceOf(FacilitiesException.SpaceNotBookableException.class);
             assertThat(audit.recorded(AuditAction.AUTHORIZATION_DENIED)).isTrue();
         }
@@ -906,8 +906,8 @@ class S159MandatoryScenariosTest {
     private Booking book(ActorContext actor, FacilityRoom room, BookingPurpose purpose, Instant from,
             Instant to, Map<UUID, Integer> resourceRequest) {
         return bookings.request(new BookingCommands.RequestBooking(room.id(), purpose, "Contract law", null,
-                from, to, null, null, 40, null, resourceRequest, null, actor, SourceChannel.WEB, null,
-                null));
+                from, to, null, null, 40, null, resourceRequest, null, null, actor, SourceChannel.WEB,
+                null, null));
     }
 
     private Booking requestAndApprove(BookingPurpose purpose, Instant from, Instant to) {

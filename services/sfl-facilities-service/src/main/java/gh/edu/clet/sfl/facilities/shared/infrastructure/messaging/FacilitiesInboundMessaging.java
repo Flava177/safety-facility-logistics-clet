@@ -54,10 +54,14 @@ public class FacilitiesInboundMessaging {
     /**
      * Whole programmes, not event names - see the class docblock.
      *
-     * <p>AVAMP publishes as {@code asset.*} and lives in the fleet service; add it here when facilities
-     * has a reason to care, which today it does not.
+     * <p>{@code avamp.#} added for Phase 2. S156 registers every BMS/IoT device as an AVAMP asset
+     * (SRS-SFL-S156-04) and quarantines telemetry from any device id AVAMP does not know; the only way
+     * facilities can know what AVAMP knows, without reaching into another service's schema, is to hear
+     * {@code sfl.avamp.asset-registered.v1} and keep its own projection. (The note that used to be here
+     * said AVAMP published as {@code asset.*}; that was renamed to the catalogue's {@code sfl.avamp.*}
+     * on 31 July 2026 and the note had not caught up.)
      */
-    private static final List<String> ROUTING_PATTERNS = List.of("ftlmp.#", "ssemp.#");
+    private static final List<String> ROUTING_PATTERNS = List.of("ftlmp.#", "ssemp.#", "avamp.#");
 
     @Bean
     Declarables facilitiesInboundTopology(
