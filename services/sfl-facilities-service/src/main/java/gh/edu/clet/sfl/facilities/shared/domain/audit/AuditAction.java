@@ -192,6 +192,10 @@ public enum AuditAction {
     SPACE_CHANGE_REQUEST_DECIDED,
     SPACE_CHANGE_REQUEST_LINKED,
     SPACE_CHANGE_REQUEST_RESOLVED,
+    // Added by the S158 build: the first half of the two-person override (S158-02), and its withdrawal
+    // when the room's allocation changes under it.
+    OCCUPANCY_OVERRIDE_REQUESTED,
+    OCCUPANCY_OVERRIDE_WITHDRAWN,
     // ---- end of block
 
     // ---- S169 Cleaning & Janitorial Schedule Management - SRS-SFL-S169-01..04. Owned by cleaning.
