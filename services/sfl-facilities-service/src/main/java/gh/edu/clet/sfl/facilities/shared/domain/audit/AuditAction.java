@@ -147,6 +147,10 @@ public enum AuditAction {
     BMS_SENSOR_OFFLINE_DETECTED,
     BMS_SENSOR_RECOVERED,
     BMS_CRITICAL_FAULT_ESCALATED,
+    /** An AVAMP asset event updated S156's local projection (S156-04). */
+    BMS_AVAMP_ASSET_PROJECTED,
+    /** The retention sweep deleted readings past the configured retention (S156-01). */
+    BMS_TELEMETRY_PURGED,
     // ---- end of block
 
     // ---- S157 Energy & Sustainability Monitoring - SRS-SFL-S157-01..04. Owned by energy.
