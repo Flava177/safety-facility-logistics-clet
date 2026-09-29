@@ -17,7 +17,7 @@ We implement to the SRS. Where the SRS and any earlier note disagree, **the SRS 
 The active SFL implementation is the **three-platform Spring Boot** workspace under `services/` -
 one deployable per programme, five schemas, three databases:
 
-- `sfl-facilities-service` - **SFL.IFIMP**, port 8091. S152 CAFM/IWMS, S153 CMMS, S159 Room & Resource Booking, hall-readiness. Schema `facilities`.
+- `sfl-facilities-service` - **SFL.IFIMP**, port 8091. S152 CAFM/IWMS, S153 CMMS, S159 Room & Resource Booking, hall-readiness, plus the six Phase 2 systems: S156 Building Management System/IoT, S157 Energy & Sustainability Monitoring, S158 Space Planning & Move Management, S169 Cleaning & Janitorial Schedule Management, S173 Event Logistics & Set-Up Workflow, S176 Construction Project Management. Schema `facilities`.
 - `sfl-safety-security-service` - **SFL.SSEMP**, port 8092. All of S160 Visitor, S163 HSE Incident/Near-Miss, S160a Physical Access Control Integration, S161 CCTV/VMS Integration, S162 Intrusion Detection & Alarm Monitoring and S162a Fire/Life-Safety Monitoring are now built in `safety_security`; S174 Emergency Notification is built in `emergency_notification`. S160a governs access policy, provisioning, overrides, SOC exceptions and occupancy over a recorded vendor gateway - see `accesscontrol` - and never controls a door itself. S161 governs camera inventory/health, a governed evidence-request-and-approval workflow, evidence-by-reference with hashing and access logging, live-view authorisation, analytics-alert triage and retention/disclosure governance over a recorded VMS gateway - see `cctv` - and never stores raw video by default. S162 runs the SOC alarm queue, escalation, zone arming/disarm and armed-response coordination over a recorded panel gateway - see `intrusion` - and never sits in the certified intrusion actuation path. S162a is observe-only by design - no outbound command/actuation port exists, unlike its four siblings - and its fast-lane trigger calls S174's break-glass activation in-process, see `lifesafety`. All four SSEMP Buy-and-Integrate systems (S160a, S161, S162, S162a) are now built; none is left as scope only.
 - `sfl-fleet-logistics-service` - **SFL.FTLMP**, port 8093. S166 Fleet, S168_fuel Fuel & Logbooks, S171 Mailroom/Courier & Dispatch (schema `fleet_logistics`) and AVAMP-Lite asset/device/location references (schema `asset_visibility`, package `..fleetlogistics.assets`). Serves the dashboard at `/ui`.
 - `sfl-service-common` - shared kernel (principal/RBAC, error & event envelopes, outbox/inbox contracts, integration-security primitives). Library, no schema.
@@ -1089,3 +1089,87 @@ anomaly raised from a logbook has no vehicle to file under at all.
 
 **464 fleet, 341 facilities, 41 SSEMP tests and 239 front-end tests, 0 skipped, against real
 PostgreSQL.**
+
+### Pass - Phase 2 IFIMP: S156, S157, S158, S169, S173, S176 (`sfl-facilities-service`)
+
+Built the six Phase 2 IFIMP systems named in SRS CLET/DTI/CL9/SFL/SRS/2026/002 §3.1, all owned by the
+Building & Infrastructure Unit, all landed as modules of the existing `sfl-facilities-service` /
+`facilities` schema alongside S152/S153/S159 - see ADR 0009 for why, and CORR-06 for why RLS could not
+wait for a second pass this time. Six modules were built in parallel worktrees against one foundation
+commit and merged in with zero conflicts, because the foundation pre-seeded each system's own delimited
+block in the shared enums.
+
+**Foundation, built once, ahead of the six modules:**
+
+- `facilities.apply_site_scope_policies()` (V15) turns V14's one-time RLS catalogue loop into a
+  function every Phase 2 migration calls last, so a table has its policy from the migration that
+  creates it - the ADR 0007 deferral Phase 1 paid for, closed structurally this time.
+  `Phase2RowLevelSecurityCoverageTest` fails the build on any site-scoped table left uncovered.
+- A real defect, found and fixed: outside an HTTP request the site-scope supplier returned nothing,
+  so under `sfl_app` every scheduled sweep, the outbox drainer and the broker listener would have read
+  zero rows. `PlatformThreads` marks scheduler/listener threads and scopes them to `*`.
+- One authenticated vendor inbox (`VendorMessageVerifier`) for every inbound vendor feed - S156
+  telemetry, S157 meter readings, the S078 event hand-off - source allowlist, channel, HMAC-SHA256
+  timestamp window, site, schema, idempotency. A rejection is recorded to the inbox, the hash chain,
+  the SIEM port and the outbox in its own transaction before the refusal is thrown.
+- `gh.edu.clet.sfl.common.hse.RiskAssessmentCurrency` in `sfl-service-common`, so S173's risk-gated
+  confirmation and the future S164/S165 (SSEMP) share one currency rule rather than each inventing one.
+- `AutomatedWorkOrderIntake` on S153 (the one door S156/S173/S176 raise work through), a
+  `BookingLifecycleObserver` + `CleaningRequirement` on S159 (what S169 hooks into), and
+  `BookingUtilisationReader` (S158's read-only view of S159).
+- Cross-module contracts published in each provider's own `application/contract` package - S156's
+  `BuildingDeviceDirectory`/`BuildingTelemetryObserver`, S169's `EventCleaningCapacity`, S158's
+  `ScenarioHandover`, S176's `ConstructionProjectIntake` - each consumed through the consumer's own
+  port, so no Phase 2 module depends on another's internals, and S158/S176 (each the other's provider
+  and consumer) merged with zero wiring needed beyond Spring picking up the real bean over the scaffold.
+
+**S156 Building Management System / IoT** (V16, `buildingsystems`) - authenticated telemetry behind a
+vendor-translator port with two shipped adapters (a simulator and a differently-shaped BACnet/MQTT
+bridge, proving replaceability); location resolved against S152, unresolvable readings quarantined;
+every device an AVAMP asset, fed by a local projection off `sfl.avamp.asset-registered.v1`;
+versioned/debounced threshold rules raising correlated S153 work orders; a health rollup that shows
+`UNKNOWN` rather than defaulting green; critical faults escalate immediately to the S162a/S174 fast
+lane - **recorded and drained, not delivered: SSEMP has no inbound event consumer anywhere in this
+codebase**, so the fast-lane latency target (NFR-PERF1) cannot be measured until one exists.
+
+**S157 Energy & Sustainability Monitoring** (V17, `energy`) - meters per utility/source; a meter whose
+device is already an S156 asset must stream through S156, not open a second vendor connection
+(`ENERGY_DEVICE_DOUBLE_REGISTERED`); manual readings outside a plausibility band held for a different
+person's verification; budgets/tariffs versioned so a later revision never rewrites a closed period's
+variance; sustainability KPIs always carry a completeness indicator and are never withheld for being
+partial.
+
+**S158 Space Planning & Move Management** (V18, `spaceplanning`, plus a new `space_allocations` table
+added to S152's own `masterdata` module - S152 had no allocation register, which the requirement's
+"never a parallel register" forced into scope) - versioned draft scenarios that never touch the S152
+register until an explicit, audited commit; occupancy compliance computed per allocation, never
+compliant by default; utilisation pulled read-only from S159 on a schedule (architecture-tested: no
+class outside one named adapter may depend on `booking`).
+
+**S169 Cleaning & Janitorial Schedule Management** (V19, `cleaning`) - routine schedules plus
+booking-triggered tasks raised automatically when a confirmed S159 booking carries a cleaning
+requirement; checklists with photo-evidence references (never bytes); SLA compliance computed from the
+task's own timestamps, never a vendor's self-report; capacity reservations for S173 that name the
+competing commitment on conflict rather than a bare refusal.
+
+**S173 Event Logistics & Set-Up Workflow** (V20, `eventlogistics`) - a confirmed S078 hand-off is the
+only way a set-up task can exist; resource requests route to S159/S153/S169, with S172 catering
+(Phase 3, unbuilt) recorded as an explicit manual-coordination item rather than dropped or shown
+fulfilled; higher-risk events require a current risk assessment via the shared `RiskAssessmentCurrency`
+- the S165 projection that would feed it has no publisher yet, so every higher-risk confirmation is
+correctly refused until S165 ships.
+
+**S176 Construction Project Management** (V21, `construction`) - the full PROPOSED→CLOSED lifecycle
+with its own approval-sign-off and permit gates (S164 permits held in a fail-closed local projection,
+same reason as S173's S165 gap); contractor compliance auto-suspends site access on expiry (recorded,
+not enforced - S160a/S160 have no consumer either); variations blocked past an escalation threshold
+until an escalated approver acts; handover applies the real S152 register update in the same
+transaction and refuses to complete without it.
+
+**Verification.** `784 tests, 0 failures, 0 errors, 0 skipped` for `sfl-service-common` +
+`sfl-facilities-service` together, against real PostgreSQL (RLS and migration suites included).
+SpotBugs clean on both modules. Migrations apply cleanly V1 through V21 on a virgin schema and on a
+populated one. Every module's own gap-and-conflict report is under `docs/facilities/S1xx_*`; the
+recurring theme is the same one S156 states plainly: SSEMP has nothing built yet that consumes an
+IFIMP event, so every cross-programme signal this pass adds is published, audited and SIEM-forwarded,
+and none of them is delivered.
