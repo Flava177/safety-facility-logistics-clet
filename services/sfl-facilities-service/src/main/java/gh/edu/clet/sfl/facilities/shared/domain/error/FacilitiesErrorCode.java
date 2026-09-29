@@ -114,6 +114,7 @@ public enum FacilitiesErrorCode {
     PROJECT_HANDOVER_INCOMPLETE("No S152 update recorded; project cannot be marked handed over."),
     PROJECT_DEFECTS_OPEN(
             "The project cannot close until all defects-liability items are closed or explicitly deferred with reason."),
+    PROJECT_CONTRACTOR_UNASSIGNED("No responsible contractor is recorded against the project; works cannot start."),
     // ---- end of block
 
     // ---- Phase 2 shared - vendor inbox and procurement gate

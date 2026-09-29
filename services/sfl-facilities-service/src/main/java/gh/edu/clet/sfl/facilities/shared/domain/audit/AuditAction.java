@@ -253,6 +253,11 @@ public enum AuditAction {
     DEFECT_DEFERRED,
     PROJECT_CLOSED,
     PROJECT_CLOSE_REFUSED,
+    PROJECT_CANCELLED,
+    PROJECT_MILESTONE_ACHIEVED,
+    PROJECT_CONTRACTOR_ASSIGNED,
+    PROJECT_PERMIT_STATUS_CHANGED,
+    PROJECT_SCENARIO_CONFIRMATION_RECORDED,
     // ---- end of block
 
     // ---- Phase 2 shared - the signed vendor inbox (SRS NFR-SEC2) and procurement-gate reporting (CORR-07).
