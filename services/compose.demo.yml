@@ -58,6 +58,7 @@ services:
       context: ..
       dockerfile: services/sfl-facilities-service/Dockerfile
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SFL_PORT: 8080
       SFL_FACILITIES_DB_URL: jdbc:postgresql://facilities-db:5432/sfl_facilities_service
       SFL_FACILITIES_DB_USERNAME: sfl
@@ -77,6 +78,7 @@ services:
       context: ..
       dockerfile: services/sfl-safety-security-service/Dockerfile
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SFL_PORT: 8080
       SFL_SAFETY_SECURITY_DB_URL: jdbc:postgresql://safety-security-db:5432/sfl_safety_security_service
       SFL_SAFETY_SECURITY_DB_USERNAME: sfl
@@ -96,6 +98,7 @@ services:
       context: ..
       dockerfile: services/sfl-fleet-logistics-service/Dockerfile
     environment:
+      SPRING_PROFILES_ACTIVE: local
       SFL_PORT: 8080
       SFL_FLEET_LOGISTICS_DB_URL: jdbc:postgresql://fleet-logistics-db:5432/sfl__fleet_vehicle_service
       SFL_FLEET_LOGISTICS_DB_USERNAME: sfl
