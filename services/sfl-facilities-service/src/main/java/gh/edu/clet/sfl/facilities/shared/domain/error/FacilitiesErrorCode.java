@@ -83,6 +83,13 @@ public enum FacilitiesErrorCode {
     SPACE_OVERRIDE_INCOMPLETE("A compliance override must carry a reason and an accountable approver."),
     SPACE_CHANGE_UNLINKED_RESOLUTION(
             "A request cannot be marked resolved without a linked outcome (scenario commit or S176 project reference)."),
+    // Integration-unavailable handling (S158-03 "standard integration-unavailable handling"; S158-01/-04
+    // hand-off to S176). Not SRS-named error states; added by the S158 build. Unmapped - fall back to 400,
+    // and should map to 503 at merge.
+    SPACE_CONSTRUCTION_INTAKE_UNAVAILABLE(
+            "Construction Project Management (S176) is not available to receive this project; nothing was committed."),
+    SPACE_UTILISATION_SOURCE_UNAVAILABLE(
+            "Room and Resource Booking (S159) utilisation could not be read; existing snapshots and signals are unchanged."),
     // ---- end of block
 
     // ---- S169 Cleaning
